@@ -1,0 +1,28 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "nodetool-huggingface"
+version = "0.6.0"
+description = "HuggingFace nodes for Nodetool"
+readme = "README.md"
+authors = ["Matthias Georgi <matti.georgi@gmail.com>"]
+packages = [
+  { include = "nodetool", from = "src" },
+  { include = "RealESRGAN", from = "src" },
+]
+package-mode = true
+
+[tool.poetry.dependencies]
+python = "^3.10"
+nodetool-core = { git = "https://github.com/nodetool-ai/nodetool-core.git", rev = "main" }
+torch = "2.4.1"
+torchsde = "0.2.6"
+torchvision = "0.19.1"
+torchaudio = "2.4.1"
+diffusers = { extras = ["torch"], version = "*" }
+transformers = "*"
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
