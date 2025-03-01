@@ -6,7 +6,7 @@ from nodetool.workflows.processing_context import ProcessingContext
 from pydantic import Field
 from transformers import Pipeline, pipeline
 from typing import Any
-from nodetool.model_manager import ModelManager
+from nodetool.common.model_manager import ModelManager
 from huggingface_hub.file_download import try_to_load_from_cache
 from typing import Any, TypeVar
 
