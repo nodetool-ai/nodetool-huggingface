@@ -25,6 +25,3 @@ diffusers = { extras = ["torch"], version = "*" }
 transformers = "*"
 paddleocr = "*"
 paddlepaddle = "*"
-
-[tool.poetry.requires-plugins]
-poetry-plugin-export = ">=1.8"
