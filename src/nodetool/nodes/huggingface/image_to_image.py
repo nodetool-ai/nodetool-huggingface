@@ -21,10 +21,10 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
     StableDiffusionXLBase,
     get_scheduler_class,
 )
-from nodetool.providers.huggingface.huggingface_node import progress_callback
+from nodetool.nodes.huggingface.huggingface_node import progress_callback
 from nodetool.workflows.processing_context import ProcessingContext
 from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
-from diffusers.models.controlnet import ControlNetModel
+from diffusers.models.controlnets.controlnet import ControlNetModel
 from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import (
     StableDiffusionControlNetImg2ImgPipeline,
 )

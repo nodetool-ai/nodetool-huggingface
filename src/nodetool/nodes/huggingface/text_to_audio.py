@@ -2,11 +2,9 @@ import torch
 from nodetool.metadata.types import (
     AudioRef,
     HFTextToAudio,
-    HFTextToSpeech,
     HuggingFaceModel,
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
-from nodetool.providers.huggingface.huggingface_node import HuggingfaceNode
 from nodetool.workflows.processing_context import ProcessingContext
 from diffusers.pipelines.audioldm2.pipeline_audioldm2 import AudioLDM2Pipeline
 from diffusers.pipelines.audioldm.pipeline_audioldm import AudioLDMPipeline

@@ -1,6 +1,6 @@
 import torch
 from nodetool.common.environment import Environment
-from nodetool.providers.huggingface.huggingface_node import HuggingfaceNode
+from nodetool.nodes.huggingface.huggingface_node import HuggingfaceNode
 from nodetool.types.job import JobUpdate
 from nodetool.workflows.processing_context import ProcessingContext
 from pydantic import Field

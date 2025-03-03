@@ -5,7 +5,6 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
     StableDiffusionBaseNode,
     StableDiffusionXLBase,
 )
-from nodetool.providers.huggingface.huggingface_node import progress_callback
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress
 
@@ -497,7 +496,7 @@ class StableDiffusion(StableDiffusionBaseNode):
         default=512, ge=256, le=1024, description="Height of the generated image"
     )
     _pipeline: StableDiffusionPipeline | None = None
-    
+
     @classmethod
     def get_basic_fields(cls):
         return super().get_basic_fields() + ["width", "height"]
