@@ -300,7 +300,7 @@ class ChunksToSRT(BaseNode):
     - Generates properly formatted SRT file content
     """
 
-    chunks: List[AudioChunk] = Field(
+    chunks: list[AudioChunk] = Field(
         default=[],
         title="Audio Chunks",
         description="List of audio chunks from Whisper transcription",

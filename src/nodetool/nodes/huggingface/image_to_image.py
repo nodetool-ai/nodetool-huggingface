@@ -17,9 +17,7 @@ from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineN
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     HF_CONTROLNET_MODELS,
     StableDiffusionBaseNode,
-    StableDiffusionScheduler,
     StableDiffusionXLBase,
-    get_scheduler_class,
 )
 from nodetool.nodes.huggingface.huggingface_node import progress_callback
 from nodetool.workflows.processing_context import ProcessingContext
@@ -758,8 +756,8 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
         default=ImageRef(),
         description="The initial image for Image-to-Image generation.",
     )
-    scheduler: StableDiffusionScheduler = Field(
-        default=StableDiffusionScheduler.HeunDiscreteScheduler,
+    scheduler: StableDiffusionBaseNode.StableDiffusionScheduler = Field(
+        default=StableDiffusionBaseNode.StableDiffusionScheduler.HeunDiscreteScheduler,
         description="The scheduler to use for the diffusion process.",
     )
     seed: int = Field(
@@ -810,9 +808,13 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
 
-    def _set_scheduler(self, scheduler_type: StableDiffusionScheduler):
+    def _set_scheduler(
+        self, scheduler_type: StableDiffusionBaseNode.StableDiffusionScheduler
+    ):
         if self._pipeline is not None:
-            scheduler_class = get_scheduler_class(scheduler_type)
+            scheduler_class = StableDiffusionBaseNode.get_scheduler_class(
+                scheduler_type
+            )
             self._pipeline.scheduler = scheduler_class.from_config(
                 self._pipeline.scheduler.config
             )

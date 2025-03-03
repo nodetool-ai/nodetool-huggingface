@@ -29,7 +29,7 @@ class Reranker(HuggingFacePipelineNode):
         title="Query Text",
         description="The query text to compare against candidates",
     )
-    candidates: List[str] = Field(
+    candidates: list[str] = Field(
         default=[],
         title="Candidate Texts",
         description="List of candidate texts to rank",

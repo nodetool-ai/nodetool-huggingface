@@ -543,54 +543,6 @@ HF_UNET_MODELS = [
 ]
 
 
-class StableDiffusionScheduler(str, Enum):
-    DPMSolverSDEScheduler = "DPMSolverSDEScheduler"
-    EulerDiscreteScheduler = "EulerDiscreteScheduler"
-    LMSDiscreteScheduler = "LMSDiscreteScheduler"
-    DDIMScheduler = "DDIMScheduler"
-    DDPMScheduler = "DDPMScheduler"
-    HeunDiscreteScheduler = "HeunDiscreteScheduler"
-    DPMSolverMultistepScheduler = "DPMSolverMultistepScheduler"
-    DEISMultistepScheduler = "DEISMultistepScheduler"
-    PNDMScheduler = "PNDMScheduler"
-    EulerAncestralDiscreteScheduler = "EulerAncestralDiscreteScheduler"
-    UniPCMultistepScheduler = "UniPCMultistepScheduler"
-    KDPM2DiscreteScheduler = "KDPM2DiscreteScheduler"
-    DPMSolverSinglestepScheduler = "DPMSolverSinglestepScheduler"
-    KDPM2AncestralDiscreteScheduler = "KDPM2AncestralDiscreteScheduler"
-
-
-def get_scheduler_class(scheduler: StableDiffusionScheduler):
-    if scheduler == StableDiffusionScheduler.DPMSolverSDEScheduler:
-        return DPMSolverSDEScheduler
-    elif scheduler == StableDiffusionScheduler.EulerDiscreteScheduler:
-        return EulerDiscreteScheduler
-    elif scheduler == StableDiffusionScheduler.LMSDiscreteScheduler:
-        return LMSDiscreteScheduler
-    elif scheduler == StableDiffusionScheduler.DDIMScheduler:
-        return DDIMScheduler
-    elif scheduler == StableDiffusionScheduler.DDPMScheduler:
-        return DDPMScheduler
-    elif scheduler == StableDiffusionScheduler.HeunDiscreteScheduler:
-        return HeunDiscreteScheduler
-    elif scheduler == StableDiffusionScheduler.DPMSolverMultistepScheduler:
-        return DPMSolverMultistepScheduler
-    elif scheduler == StableDiffusionScheduler.DEISMultistepScheduler:
-        return DEISMultistepScheduler
-    elif scheduler == StableDiffusionScheduler.PNDMScheduler:
-        return PNDMScheduler
-    elif scheduler == StableDiffusionScheduler.EulerAncestralDiscreteScheduler:
-        return EulerAncestralDiscreteScheduler
-    elif scheduler == StableDiffusionScheduler.UniPCMultistepScheduler:
-        return UniPCMultistepScheduler
-    elif scheduler == StableDiffusionScheduler.KDPM2DiscreteScheduler:
-        return KDPM2DiscreteScheduler
-    elif scheduler == StableDiffusionScheduler.DPMSolverSinglestepScheduler:
-        return DPMSolverSinglestepScheduler
-    elif scheduler == StableDiffusionScheduler.KDPM2AncestralDiscreteScheduler:
-        return KDPM2AncestralDiscreteScheduler
-
-
 class StableDiffusionDetailLevel(str, Enum):
     LOW = "Low"
     MEDIUM = "Medium"
@@ -598,8 +550,6 @@ class StableDiffusionDetailLevel(str, Enum):
 
 
 def load_loras(pipeline: Any, loras: list[HFLoraSDConfig] | list[HFLoraSDXLConfig]):
-    log.info(f"Loading LORAS {loras}")
-
     loras = [lora for lora in loras if lora.lora.is_set()]  # type: ignore
 
     if len(loras) == 0:
@@ -616,8 +566,6 @@ def load_loras(pipeline: Any, loras: list[HFLoraSDConfig] | list[HFLoraSDXLConfi
             raise ValueError(
                 f"Install {lora.lora.repo_id}/{lora.lora.path} LORA to use it (Recommended Models above)"
             )
-        log.info(f"Loading LORA {lora.lora.repo_id}/{lora.lora.path}")
-
         base_name = os.path.basename(lora.lora.path or "").split(".")[0]
         lora_names.append(base_name)
         lora_weights.append(lora.strength)
@@ -632,35 +580,31 @@ def quantize_to_multiple_of_64(value):
 
 def upscale_latents(latents: torch.Tensor, scale_factor: int = 2) -> torch.Tensor:
     """Upscale latents using torch interpolation.
-    
+
     Args:
         latents: Input latents tensor of shape (B, C, H, W)
         scale_factor: Factor to scale dimensions by
-        
+
     Returns:
         Upscaled latents tensor
     """
     # Ensure input is on correct device
     if not isinstance(latents, torch.Tensor):
         raise ValueError("Input must be a torch tensor")
-        
+
     # Get current dimensions
     batch_size, channels, height, width = latents.shape
-    
+
     # Calculate new dimensions
     new_height = height * scale_factor
     new_width = width * scale_factor
 
     # Use interpolate for upscaling
     upscaled = torch.nn.functional.interpolate(
-        latents,
-        size=(new_height, new_width),
-        mode='bicubic',
-        align_corners=False
+        latents, size=(new_height, new_width), mode="bicubic", align_corners=False
     )
 
     return upscaled
-
 
 
 class StableDiffusionUpscaler(str, Enum):
@@ -670,6 +614,54 @@ class StableDiffusionUpscaler(str, Enum):
 
 
 class StableDiffusionBaseNode(HuggingFacePipelineNode):
+
+    class StableDiffusionScheduler(str, Enum):
+        DPMSolverSDEScheduler = "DPMSolverSDEScheduler"
+        EulerDiscreteScheduler = "EulerDiscreteScheduler"
+        LMSDiscreteScheduler = "LMSDiscreteScheduler"
+        DDIMScheduler = "DDIMScheduler"
+        DDPMScheduler = "DDPMScheduler"
+        HeunDiscreteScheduler = "HeunDiscreteScheduler"
+        DPMSolverMultistepScheduler = "DPMSolverMultistepScheduler"
+        DEISMultistepScheduler = "DEISMultistepScheduler"
+        PNDMScheduler = "PNDMScheduler"
+        EulerAncestralDiscreteScheduler = "EulerAncestralDiscreteScheduler"
+        UniPCMultistepScheduler = "UniPCMultistepScheduler"
+        KDPM2DiscreteScheduler = "KDPM2DiscreteScheduler"
+        DPMSolverSinglestepScheduler = "DPMSolverSinglestepScheduler"
+        KDPM2AncestralDiscreteScheduler = "KDPM2AncestralDiscreteScheduler"
+
+    @classmethod
+    def get_scheduler_class(cls, scheduler: StableDiffusionScheduler):
+        if scheduler == cls.StableDiffusionScheduler.DPMSolverSDEScheduler:
+            return DPMSolverSDEScheduler
+        elif scheduler == cls.StableDiffusionScheduler.EulerDiscreteScheduler:
+            return EulerDiscreteScheduler
+        elif scheduler == cls.StableDiffusionScheduler.LMSDiscreteScheduler:
+            return LMSDiscreteScheduler
+        elif scheduler == cls.StableDiffusionScheduler.DDIMScheduler:
+            return DDIMScheduler
+        elif scheduler == cls.StableDiffusionScheduler.DDPMScheduler:
+            return DDPMScheduler
+        elif scheduler == cls.StableDiffusionScheduler.HeunDiscreteScheduler:
+            return HeunDiscreteScheduler
+        elif scheduler == cls.StableDiffusionScheduler.DPMSolverMultistepScheduler:
+            return DPMSolverMultistepScheduler
+        elif scheduler == cls.StableDiffusionScheduler.DEISMultistepScheduler:
+            return DEISMultistepScheduler
+        elif scheduler == cls.StableDiffusionScheduler.PNDMScheduler:
+            return PNDMScheduler
+        elif scheduler == cls.StableDiffusionScheduler.EulerAncestralDiscreteScheduler:
+            return EulerAncestralDiscreteScheduler
+        elif scheduler == cls.StableDiffusionScheduler.UniPCMultistepScheduler:
+            return UniPCMultistepScheduler
+        elif scheduler == cls.StableDiffusionScheduler.KDPM2DiscreteScheduler:
+            return KDPM2DiscreteScheduler
+        elif scheduler == cls.StableDiffusionScheduler.DPMSolverSinglestepScheduler:
+            return DPMSolverSinglestepScheduler
+        elif scheduler == cls.StableDiffusionScheduler.KDPM2AncestralDiscreteScheduler:
+            return KDPM2AncestralDiscreteScheduler
+
     model: HFStableDiffusion = Field(
         default=HFStableDiffusion(),
         description="The model to use for image generation.",
@@ -796,7 +788,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             )
 
     def _set_scheduler(self, scheduler_type: StableDiffusionScheduler):
-        scheduler_class = get_scheduler_class(scheduler_type)
+        scheduler_class = self.get_scheduler_class(scheduler_type)
         self._pipeline.scheduler = scheduler_class.from_config(
             self._pipeline.scheduler.config
         )
@@ -927,8 +919,12 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             low_res_latents = low_res_result.images
 
             if self.upscaler == StableDiffusionUpscaler.LATENT:
-                if not await context.is_huggingface_model_cached("stabilityai/sd-x2-latent-upscaler"):
-                    raise ValueError("Latent upscaler stabilityai/sd-x2-latent-upscaler is required. Please install it from RECOMMENDED_MODELS")
+                if not await context.is_huggingface_model_cached(
+                    "stabilityai/sd-x2-latent-upscaler"
+                ):
+                    raise ValueError(
+                        "Latent upscaler stabilityai/sd-x2-latent-upscaler is required. Please install it from RECOMMENDED_MODELS"
+                    )
 
                 self._upscaler = await self.load_model(
                     context=context,
@@ -948,7 +944,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                     output_type="latent",
                     callback=self.progress_callback(context, low_res_steps, total),
                     callback_steps=1,
-                ).images # type: ignore
+                ).images  # type: ignore
             elif self.upscaler == StableDiffusionUpscaler.BICUBIC:
                 log.info("Using torch interpolation upscaling")
                 # Fallback to torch interpolation upscaling
@@ -994,7 +990,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                 callback=self.progress_callback(context, low_res_steps + 20, total),
                 callback_steps=1,
                 **hires_kwargs,
-            ).images[ # type: ignore
+            ).images[  # type: ignore
                 0
             ]
         else:
@@ -1018,6 +1014,54 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
 
 
 class StableDiffusionXLBase(HuggingFacePipelineNode):
+
+    class StableDiffusionScheduler(str, Enum):
+        DPMSolverSDEScheduler = "DPMSolverSDEScheduler"
+        EulerDiscreteScheduler = "EulerDiscreteScheduler"
+        LMSDiscreteScheduler = "LMSDiscreteScheduler"
+        DDIMScheduler = "DDIMScheduler"
+        DDPMScheduler = "DDPMScheduler"
+        HeunDiscreteScheduler = "HeunDiscreteScheduler"
+        DPMSolverMultistepScheduler = "DPMSolverMultistepScheduler"
+        DEISMultistepScheduler = "DEISMultistepScheduler"
+        PNDMScheduler = "PNDMScheduler"
+        EulerAncestralDiscreteScheduler = "EulerAncestralDiscreteScheduler"
+        UniPCMultistepScheduler = "UniPCMultistepScheduler"
+        KDPM2DiscreteScheduler = "KDPM2DiscreteScheduler"
+        DPMSolverSinglestepScheduler = "DPMSolverSinglestepScheduler"
+        KDPM2AncestralDiscreteScheduler = "KDPM2AncestralDiscreteScheduler"
+
+    @classmethod
+    def get_scheduler_class(cls, scheduler: StableDiffusionScheduler):
+        if scheduler == cls.StableDiffusionScheduler.DPMSolverSDEScheduler:
+            return DPMSolverSDEScheduler
+        elif scheduler == cls.StableDiffusionScheduler.EulerDiscreteScheduler:
+            return EulerDiscreteScheduler
+        elif scheduler == cls.StableDiffusionScheduler.LMSDiscreteScheduler:
+            return LMSDiscreteScheduler
+        elif scheduler == cls.StableDiffusionScheduler.DDIMScheduler:
+            return DDIMScheduler
+        elif scheduler == cls.StableDiffusionScheduler.DDPMScheduler:
+            return DDPMScheduler
+        elif scheduler == cls.StableDiffusionScheduler.HeunDiscreteScheduler:
+            return HeunDiscreteScheduler
+        elif scheduler == cls.StableDiffusionScheduler.DPMSolverMultistepScheduler:
+            return DPMSolverMultistepScheduler
+        elif scheduler == cls.StableDiffusionScheduler.DEISMultistepScheduler:
+            return DEISMultistepScheduler
+        elif scheduler == cls.StableDiffusionScheduler.PNDMScheduler:
+            return PNDMScheduler
+        elif scheduler == cls.StableDiffusionScheduler.EulerAncestralDiscreteScheduler:
+            return EulerAncestralDiscreteScheduler
+        elif scheduler == cls.StableDiffusionScheduler.UniPCMultistepScheduler:
+            return UniPCMultistepScheduler
+        elif scheduler == cls.StableDiffusionScheduler.KDPM2DiscreteScheduler:
+            return KDPM2DiscreteScheduler
+        elif scheduler == cls.StableDiffusionScheduler.DPMSolverSinglestepScheduler:
+            return DPMSolverSinglestepScheduler
+        elif scheduler == cls.StableDiffusionScheduler.KDPM2AncestralDiscreteScheduler:
+            return KDPM2AncestralDiscreteScheduler
+
     model: HFStableDiffusionXL = Field(
         default=HFStableDiffusionXL(),
         description="The Stable Diffusion XL model to use for generation.",
@@ -1108,7 +1152,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         return False
 
     def _set_scheduler(self, scheduler_type: StableDiffusionScheduler):
-        scheduler_class = get_scheduler_class(scheduler_type)
+        scheduler_class = self.get_scheduler_class(scheduler_type)
         if "turbo" in self.model.repo_id:
             self._pipeline.scheduler = scheduler_class.from_config(
                 self._pipeline.scheduler.config,
