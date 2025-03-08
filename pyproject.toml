@@ -14,6 +14,7 @@ packages = [
 ]
 package-mode = true
 include = ["src/nodetool/package-metadata/nodetool-huggingface.json"]
+repository = "https://github.com/nodetool-ai/nodetool-huggingface"
 
 [tool.poetry.dependencies]
 python = "^3.10"
