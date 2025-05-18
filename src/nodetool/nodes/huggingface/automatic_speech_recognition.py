@@ -165,6 +165,10 @@ class Whisper(HuggingFacePipelineNode):
                 allow_patterns=["model.safetensors", "*.json", "*.txt"],
             ),
             HFAutomaticSpeechRecognition(
+                repo_id="openai/whisper-large-v3-turbo",
+                allow_patterns=["model.safetensors", "*.json", "*.txt"],
+            ),
+            HFAutomaticSpeechRecognition(
                 repo_id="openai/whisper-large-v2",
                 allow_patterns=["model.safetensors", "*.json", "*.txt"],
             ),
