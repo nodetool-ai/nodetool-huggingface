@@ -2,7 +2,9 @@
   "name": "nodetool-huggingface",
   "description": "HuggingFace nodes for Nodetool",
   "version": "0.6.0",
-  "authors": ["Matthias Georgi <matti.georgi@gmail.com>"],
+  "authors": [
+    "Matthias Georgi <matti.georgi@gmail.com>"
+  ],
   "repo_id": "nodetool-ai/nodetool-huggingface",
   "nodes": [
     {
@@ -67,10 +69,17 @@
         {
           "type": "hf.text_to_audio",
           "repo_id": "cvssp/audioldm-s-full-v2",
-          "allow_patterns": ["*.safetensors", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt"
+          ]
         }
       ],
-      "basic_fields": ["model", "prompt"],
+      "basic_fields": [
+        "model",
+        "prompt"
+      ],
       "is_dynamic": false
     },
     {
@@ -155,10 +164,17 @@
         {
           "type": "hf.text_to_audio",
           "repo_id": "cvssp/audioldm2",
-          "allow_patterns": ["*.safetensors", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt"
+          ]
         }
       ],
-      "basic_fields": ["model", "prompt"],
+      "basic_fields": [
+        "model",
+        "prompt"
+      ],
       "is_dynamic": false
     },
     {
@@ -214,10 +230,17 @@
         {
           "type": "hf.text_to_audio",
           "repo_id": "harmonai/maestro-150k",
-          "allow_patterns": ["*.bin", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "*.txt"
+          ]
         }
       ],
-      "basic_fields": ["model", "prompt"],
+      "basic_fields": [
+        "model",
+        "prompt"
+      ],
       "is_dynamic": false
     },
     {
@@ -268,35 +291,62 @@
         {
           "type": "hf.text_to_audio",
           "repo_id": "facebook/musicgen-small",
-          "allow_patterns": ["*.safetensors", "*.json", "*.model"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.model"
+          ]
         },
         {
           "type": "hf.text_to_audio",
           "repo_id": "facebook/musicgen-medium",
-          "allow_patterns": ["*.safetensors", "*.json", "*.model"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.model"
+          ]
         },
         {
           "type": "hf.text_to_audio",
           "repo_id": "facebook/musicgen-large",
-          "allow_patterns": ["*.safetensors", "*.json", "*.model"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.model"
+          ]
         },
         {
           "type": "hf.text_to_audio",
           "repo_id": "facebook/musicgen-melody",
-          "allow_patterns": ["*.safetensors", "*.json", "*.model"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.model"
+          ]
         },
         {
           "type": "hf.text_to_audio",
           "repo_id": "facebook/musicgen-stereo-small",
-          "allow_patterns": ["*.safetensors", "*.json", "*.model"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.model"
+          ]
         },
         {
           "type": "hf.text_to_audio",
           "repo_id": "facebook/musicgen-stereo-large",
-          "allow_patterns": ["*.safetensors", "*.json", "*.model"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.model"
+          ]
         }
       ],
-      "basic_fields": ["model", "prompt"],
+      "basic_fields": [
+        "model",
+        "prompt"
+      ],
       "is_dynamic": false
     },
     {
@@ -356,10 +406,17 @@
         {
           "type": "hf.text_to_audio",
           "repo_id": "ucsd-reach/musicldm",
-          "allow_patterns": ["*.safetensors", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt"
+          ]
         }
       ],
-      "basic_fields": ["model", "prompt"],
+      "basic_fields": [
+        "model",
+        "prompt"
+      ],
       "is_dynamic": false
     },
     {
@@ -433,10 +490,17 @@
         {
           "type": "hf.text_to_audio",
           "repo_id": "stabilityai/stable-audio-open-1.0",
-          "allow_patterns": ["*.safetensors", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt"
+          ]
         }
       ],
-      "basic_fields": ["model", "prompt"],
+      "basic_fields": [
+        "model",
+        "prompt"
+      ],
       "is_dynamic": false
     },
     {
@@ -495,25 +559,45 @@
         {
           "type": "hf.question_answering",
           "repo_id": "distilbert-base-cased-distilled-squad",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.question_answering",
           "repo_id": "bert-large-uncased-whole-word-masking-finetuned-squad",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.question_answering",
           "repo_id": "deepset/roberta-base-squad2",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.question_answering",
           "repo_id": "distilbert-base-uncased-distilled-squad",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         }
       ],
-      "basic_fields": ["model", "context", "question"],
+      "basic_fields": [
+        "model",
+        "context",
+        "question"
+      ],
       "is_dynamic": false
     },
     {
@@ -600,25 +684,45 @@
         {
           "type": "hf.table_question_answering",
           "repo_id": "google/tapas-base-finetuned-wtq",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.table_question_answering",
           "repo_id": "google/tapas-large-finetuned-wtq",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.table_question_answering",
           "repo_id": "microsoft/tapex-large-finetuned-tabfact",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.table_question_answering",
           "repo_id": "google/tapas-large-finetuned-squad",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         }
       ],
-      "basic_fields": ["model", "dataframe", "question"],
+      "basic_fields": [
+        "model",
+        "dataframe",
+        "question"
+      ],
       "is_dynamic": false
     },
     {
@@ -662,7 +766,10 @@
       ],
       "the_model_info": {},
       "recommended_models": [],
-      "basic_fields": ["segments", "segment_label"],
+      "basic_fields": [
+        "segments",
+        "segment_label"
+      ],
       "is_dynamic": false
     },
     {
@@ -701,7 +808,9 @@
           "repo_id": "facebook/sam2-hiera-large"
         }
       ],
-      "basic_fields": ["image"],
+      "basic_fields": [
+        "image"
+      ],
       "is_dynamic": false
     },
     {
@@ -750,15 +859,28 @@
         {
           "type": "hf.image_segmentation",
           "repo_id": "nvidia/segformer-b3-finetuned-ade-512-512",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json"
+          ]
         },
         {
           "type": "hf.image_segmentation",
           "repo_id": "mattmdjaga/segformer_b2_clothes",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json"
+          ]
         }
       ],
-      "basic_fields": ["model", "image"],
+      "basic_fields": [
+        "model",
+        "image"
+      ],
       "is_dynamic": false
     },
     {
@@ -802,7 +924,10 @@
       ],
       "the_model_info": {},
       "recommended_models": [],
-      "basic_fields": ["image", "segments"],
+      "basic_fields": [
+        "image",
+        "segments"
+      ],
       "is_dynamic": false
     },
     {
@@ -974,7 +1099,11 @@
           "name": "upscaler",
           "type": {
             "type": "enum",
-            "values": ["None", "Latent", "Bicubic"],
+            "values": [
+              "None",
+              "Latent",
+              "Bicubic"
+            ],
             "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler"
           },
           "default": "None",
@@ -1106,7 +1235,12 @@
           ]
         }
       ],
-      "basic_fields": ["model", "prompt", "width", "height"],
+      "basic_fields": [
+        "model",
+        "prompt",
+        "width",
+        "height"
+      ],
       "is_dynamic": false
     },
     {
@@ -1368,7 +1502,14 @@
           "path": "DreamShaperXL_Turbo_v2_1.safetensors"
         }
       ],
-      "basic_fields": ["model", "prompt", "width", "height", "width", "height"],
+      "basic_fields": [
+        "model",
+        "prompt",
+        "width",
+        "height",
+        "width",
+        "height"
+      ],
       "is_dynamic": false
     },
     {
@@ -1448,12 +1589,22 @@
         {
           "type": "hf.image_classification",
           "repo_id": "apple/mobilevit-small",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json"
+          ]
         },
         {
           "type": "hf.image_classification",
           "repo_id": "apple/mobilevit-xx-small",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json"
+          ]
         },
         {
           "type": "hf.image_classification",
@@ -1486,7 +1637,10 @@
           ]
         }
       ],
-      "basic_fields": ["model", "image"],
+      "basic_fields": [
+        "model",
+        "image"
+      ],
       "is_dynamic": false
     },
     {
@@ -1603,7 +1757,11 @@
           ]
         }
       ],
-      "basic_fields": ["model", "image", "candidate_labels"],
+      "basic_fields": [
+        "model",
+        "image",
+        "candidate_labels"
+      ],
       "is_dynamic": false
     },
     {
@@ -1682,25 +1840,45 @@
         {
           "type": "hf.fill_mask",
           "repo_id": "bert-base-uncased",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.fill_mask",
           "repo_id": "roberta-base",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.fill_mask",
           "repo_id": "distilbert-base-uncased",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.fill_mask",
           "repo_id": "albert-base-v2",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         }
       ],
-      "basic_fields": ["model", "inputs", "top_k"],
+      "basic_fields": [
+        "model",
+        "inputs",
+        "top_k"
+      ],
       "is_dynamic": false
     },
     {
@@ -1751,25 +1929,45 @@
         {
           "type": "hf.image_to_text",
           "repo_id": "Salesforce/blip-image-captioning-base",
-          "allow_patterns": ["*.bin", "*.json", "*.txt    "]
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "*.txt    "
+          ]
         },
         {
           "type": "hf.image_to_text",
           "repo_id": "Salesforce/blip-image-captioning-large",
-          "allow_patterns": ["*.bin", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "*.txt"
+          ]
         },
         {
           "type": "hf.image_to_text",
           "repo_id": "nlpconnect/vit-gpt2-image-captioning",
-          "allow_patterns": ["*.bin", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "*.txt"
+          ]
         },
         {
           "type": "hf.image_to_text",
           "repo_id": "microsoft/git-base-coco",
-          "allow_patterns": ["*.bin", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "*.txt"
+          ]
         }
       ],
-      "basic_fields": ["model", "image", "max_new_tokens"],
+      "basic_fields": [
+        "model",
+        "image",
+        "max_new_tokens"
+      ],
       "is_dynamic": false
     },
     {
@@ -1820,10 +2018,18 @@
         {
           "type": "hf.visual_question_answering",
           "repo_id": "Salesforce/blip-vqa-base",
-          "allow_patterns": ["*.bin", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "*.txt"
+          ]
         }
       ],
-      "basic_fields": ["model", "image", "question"],
+      "basic_fields": [
+        "model",
+        "image",
+        "question"
+      ],
       "is_dynamic": false
     },
     {
@@ -1882,15 +2088,25 @@
         {
           "type": "hf.audio_classification",
           "repo_id": "MIT/ast-finetuned-audioset-10-10-0.4593",
-          "allow_patterns": ["*.safetensors", "*.json"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json"
+          ]
         },
         {
           "type": "hf.audio_classification",
           "repo_id": "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition",
-          "allow_patterns": ["pytorch_model.bin", "*.json"]
+          "allow_patterns": [
+            "pytorch_model.bin",
+            "*.json"
+          ]
         }
       ],
-      "basic_fields": ["model", "audio", "top_k"],
+      "basic_fields": [
+        "model",
+        "audio",
+        "top_k"
+      ],
       "is_dynamic": false
     },
     {
@@ -1949,10 +2165,18 @@
         {
           "type": "hf.zero_shot_audio_classification",
           "repo_id": "laion/clap-htsat-unfused",
-          "allow_patterns": ["model.safetensors", "*.json", "*.txt"]
+          "allow_patterns": [
+            "model.safetensors",
+            "*.json",
+            "*.txt"
+          ]
         }
       ],
-      "basic_fields": ["model", "audio", "candidate_labels"],
+      "basic_fields": [
+        "model",
+        "audio",
+        "candidate_labels"
+      ],
       "is_dynamic": false
     },
     {
@@ -1991,7 +2215,10 @@
       ],
       "the_model_info": {},
       "recommended_models": [],
-      "basic_fields": ["image", "prompt"],
+      "basic_fields": [
+        "image",
+        "prompt"
+      ],
       "is_dynamic": false
     },
     {
@@ -2136,7 +2363,10 @@
           "path": "RealESRGAN_x4plus_anime_6B.pth"
         }
       ],
-      "basic_fields": ["image", "model"],
+      "basic_fields": [
+        "image",
+        "model"
+      ],
       "is_dynamic": false
     },
     {
@@ -2308,7 +2538,11 @@
           "name": "upscaler",
           "type": {
             "type": "enum",
-            "values": ["None", "Latent", "Bicubic"],
+            "values": [
+              "None",
+              "Latent",
+              "Bicubic"
+            ],
             "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler"
           },
           "default": "None",
@@ -2704,7 +2938,11 @@
           "name": "upscaler",
           "type": {
             "type": "enum",
-            "values": ["None", "Latent", "Bicubic"],
+            "values": [
+              "None",
+              "Latent",
+              "Bicubic"
+            ],
             "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler"
           },
           "default": "None",
@@ -2715,7 +2953,9 @@
           "name": "controlnet",
           "type": {
             "type": "enum",
-            "values": ["lllyasviel/control_v11p_sd15_inpaint"],
+            "values": [
+              "lllyasviel/control_v11p_sd15_inpaint"
+            ],
             "type_name": "nodetool.nodes.huggingface.image_to_image.StableDiffusionControlNetModel"
           },
           "default": "lllyasviel/control_v11p_sd15_inpaint",
@@ -3042,7 +3282,11 @@
           "name": "upscaler",
           "type": {
             "type": "enum",
-            "values": ["None", "Latent", "Bicubic"],
+            "values": [
+              "None",
+              "Latent",
+              "Bicubic"
+            ],
             "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler"
           },
           "default": "None",
@@ -3429,7 +3673,11 @@
           "name": "upscaler",
           "type": {
             "type": "enum",
-            "values": ["None", "Latent", "Bicubic"],
+            "values": [
+              "None",
+              "Latent",
+              "Bicubic"
+            ],
             "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler"
           },
           "default": "None",
@@ -3559,7 +3807,12 @@
           ]
         }
       ],
-      "basic_fields": ["model", "prompt", "init_image", "strength"],
+      "basic_fields": [
+        "model",
+        "prompt",
+        "init_image",
+        "strength"
+      ],
       "is_dynamic": false
     },
     {
@@ -3731,7 +3984,11 @@
           "name": "upscaler",
           "type": {
             "type": "enum",
-            "values": ["None", "Latent", "Bicubic"],
+            "values": [
+              "None",
+              "Latent",
+              "Bicubic"
+            ],
             "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler"
           },
           "default": "None",
@@ -4004,7 +4261,11 @@
           ]
         }
       ],
-      "basic_fields": ["prompt", "negative_prompt", "image"],
+      "basic_fields": [
+        "prompt",
+        "negative_prompt",
+        "image"
+      ],
       "is_dynamic": false
     },
     {
@@ -4984,15 +5245,29 @@
         {
           "type": "hf.image_to_image",
           "repo_id": "caidas/swin2SR-lightweight-sr-x2-64",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json"
+          ]
         },
         {
           "type": "hf.image_to_image",
           "repo_id": "caidas/swin2SR-realworld-sr-x4-64-bsrgan-psnr",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json"
+          ]
         }
       ],
-      "basic_fields": ["image", "prompt", "model"],
+      "basic_fields": [
+        "image",
+        "prompt",
+        "model"
+      ],
       "is_dynamic": false
     },
     {
@@ -5034,25 +5309,44 @@
         {
           "type": "hf.sentence_similarity",
           "repo_id": "sentence-transformers/all-mpnet-base-v2",
-          "allow_patterns": ["*.safetensors", "*.txt", "*,json"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*,json"
+          ]
         },
         {
           "type": "hf.sentence_similarity",
           "repo_id": "sentence-transformers/all-MiniLM-L6-v2",
-          "allow_patterns": ["*.safetensors", "*.txt", "*,json"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*,json"
+          ]
         },
         {
           "type": "hf.sentence_similarity",
           "repo_id": "BAAI/bge-m3",
-          "allow_patterns": ["*.safetensors", "*.txt", "*,json"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*,json"
+          ]
         },
         {
           "type": "hf.sentence_similarity",
           "repo_id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
-          "allow_patterns": ["*.safetensors", "*.txt", "*,json"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*,json"
+          ]
         }
       ],
-      "basic_fields": ["model", "inputs"],
+      "basic_fields": [
+        "model",
+        "inputs"
+      ],
       "is_dynamic": false
     },
     {
@@ -5103,25 +5397,44 @@
         {
           "type": "hf.text2text_generation",
           "repo_id": "google/flan-t5-small",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.text2text_generation",
           "repo_id": "google/flan-t5-base",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.text2text_generation",
           "repo_id": "google/flan-t5-large",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.text2text_generation",
           "repo_id": "gokaygokay/Flux-Prompt-Enhance",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         }
       ],
-      "basic_fields": ["model", "text"],
+      "basic_fields": [
+        "model",
+        "text"
+      ],
       "is_dynamic": false
     },
     {
@@ -5163,20 +5476,35 @@
         {
           "type": "hf.feature_extraction",
           "repo_id": "mixedbread-ai/mxbai-embed-large-v1",
-          "allow_patterns": ["*.safetensors", "*.txt", "*,json"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*,json"
+          ]
         },
         {
           "type": "hf.feature_extraction",
           "repo_id": "BAAI/bge-base-en-v1.5",
-          "allow_patterns": ["*.safetensors", "*.txt", "*,json"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*,json"
+          ]
         },
         {
           "type": "hf.feature_extraction",
           "repo_id": "BAAI/bge-large-en-v1.5",
-          "allow_patterns": ["*.safetensors", "*.txt", "*,json"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*,json"
+          ]
         }
       ],
-      "basic_fields": ["model", "inputs"],
+      "basic_fields": [
+        "model",
+        "inputs"
+      ],
       "is_dynamic": false
     },
     {
@@ -5241,7 +5569,10 @@
           ]
         }
       ],
-      "basic_fields": ["model", "image"],
+      "basic_fields": [
+        "model",
+        "image"
+      ],
       "is_dynamic": false
     },
     {
@@ -5283,15 +5614,26 @@
         {
           "type": "hf.text_to_speech",
           "repo_id": "suno/bark",
-          "allow_patterns": ["*.bin", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "*.txt"
+          ]
         },
         {
           "type": "hf.text_to_speech",
           "repo_id": "suno/bark-small",
-          "allow_patterns": ["*.bin", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "*.txt"
+          ]
         }
       ],
-      "basic_fields": ["model", "prompt"],
+      "basic_fields": [
+        "model",
+        "prompt"
+      ],
       "is_dynamic": false
     },
     {
@@ -5333,25 +5675,44 @@
         {
           "type": "hf.text_to_speech",
           "repo_id": "facebook/mms-tts-eng",
-          "allow_patterns": ["*.bin", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "*.txt"
+          ]
         },
         {
           "type": "hf.text_to_speech",
           "repo_id": "facebook/mms-tts-kor",
-          "allow_patterns": ["*.bin", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "*.txt"
+          ]
         },
         {
           "type": "hf.text_to_speech",
           "repo_id": "facebook/mms-tts-fra",
-          "allow_patterns": ["*.bin", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "*.txt"
+          ]
         },
         {
           "type": "hf.text_to_speech",
           "repo_id": "facebook/mms-tts-deu",
-          "allow_patterns": ["*.bin", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "*.txt"
+          ]
         }
       ],
-      "basic_fields": ["model", "text"],
+      "basic_fields": [
+        "model",
+        "text"
+      ],
       "is_dynamic": false
     },
     {
@@ -5401,15 +5762,26 @@
         {
           "type": "hf.text_classification",
           "repo_id": "cardiffnlp/twitter-roberta-base-sentiment-latest",
-          "allow_patterns": ["*.json", "*.txt", "*.bin"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.bin"
+          ]
         },
         {
           "type": "hf.text_classification",
           "repo_id": "michellejieli/emotion_text_classifier",
-          "allow_patterns": ["*.json", "*.txt", "*.bin"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.bin"
+          ]
         }
       ],
-      "basic_fields": ["model", "prompt"],
+      "basic_fields": [
+        "model",
+        "prompt"
+      ],
       "is_dynamic": false
     },
     {
@@ -5477,40 +5849,73 @@
         {
           "type": "hf.zero_shot_classification",
           "repo_id": "facebook/bart-large-mnli",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.zero_shot_classification",
           "repo_id": "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.zero_shot_classification",
           "repo_id": "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.zero_shot_classification",
           "repo_id": "tasksource/ModernBERT-base-nli",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.zero_shot_classification",
           "repo_id": "cross-encoder/nli-deberta-v3-base",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.zero_shot_classification",
           "repo_id": "microsoft/deberta-v2-xlarge-mnli",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.zero_shot_classification",
           "repo_id": "roberta-large-mnli",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         }
       ],
-      "basic_fields": ["model", "inputs", "candidate_labels", "multi_label"],
+      "basic_fields": [
+        "model",
+        "inputs",
+        "candidate_labels",
+        "multi_label"
+      ],
       "is_dynamic": false
     },
     {
@@ -5682,7 +6087,11 @@
           "name": "upscaler",
           "type": {
             "type": "enum",
-            "values": ["None", "Latent", "Bicubic"],
+            "values": [
+              "None",
+              "Latent",
+              "Bicubic"
+            ],
             "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler"
           },
           "default": "None",
@@ -5792,7 +6201,10 @@
           ]
         }
       ],
-      "basic_fields": ["model", "prompt"],
+      "basic_fields": [
+        "model",
+        "prompt"
+      ],
       "is_dynamic": false
     },
     {
@@ -6054,7 +6466,12 @@
           "path": "DreamShaperXL_Turbo_v2_1.safetensors"
         }
       ],
-      "basic_fields": ["model", "prompt", "width", "height"],
+      "basic_fields": [
+        "model",
+        "prompt",
+        "width",
+        "height"
+      ],
       "is_dynamic": false
     },
     {
@@ -6192,20 +6609,37 @@
         {
           "type": "hf.translation",
           "repo_id": "google-t5/t5-base",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.translation",
           "repo_id": "google-t5/t5-large",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.translation",
           "repo_id": "google-t5/t5-small",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         }
       ],
-      "basic_fields": ["model", "inputs", "source_lang", "target_lang"],
+      "basic_fields": [
+        "model",
+        "inputs",
+        "source_lang",
+        "target_lang"
+      ],
       "is_dynamic": false
     },
     {
@@ -6269,20 +6703,36 @@
         {
           "type": "hf.reranker",
           "repo_id": "BAAI/bge-reranker-v2-m3",
-          "allow_patterns": ["*.safetensors", "*.txt", "*.json"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ]
         },
         {
           "type": "hf.reranker",
           "repo_id": "BAAI/bge-reranker-base",
-          "allow_patterns": ["*.safetensors", "*.txt", "*.json"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ]
         },
         {
           "type": "hf.reranker",
           "repo_id": "BAAI/bge-reranker-large",
-          "allow_patterns": ["*.safetensors", "*.txt", "*.json"]
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ]
         }
       ],
-      "basic_fields": ["model", "query", "candidates"],
+      "basic_fields": [
+        "model",
+        "query",
+        "candidates"
+      ],
       "is_dynamic": false
     },
     {
@@ -6364,25 +6814,44 @@
         {
           "type": "hf.text_generation",
           "repo_id": "gpt2",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.text_generation",
           "repo_id": "distilgpt2",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.text_generation",
           "repo_id": "Qwen/Qwen2-0.5B-Instruct",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.text_generation",
           "repo_id": "bigcode/starcoder",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         }
       ],
-      "basic_fields": ["model", "prompt"],
+      "basic_fields": [
+        "model",
+        "prompt"
+      ],
       "is_dynamic": false
     },
     {
@@ -6426,7 +6895,10 @@
       ],
       "the_model_info": {},
       "recommended_models": [],
-      "basic_fields": ["chunks", "time_offset"],
+      "basic_fields": [
+        "chunks",
+        "time_offset"
+      ],
       "is_dynamic": false
     },
     {
@@ -6458,7 +6930,10 @@
           "name": "task",
           "type": {
             "type": "enum",
-            "values": ["transcribe", "translate"],
+            "values": [
+              "transcribe",
+              "translate"
+            ],
             "type_name": "nodetool.nodes.huggingface.automatic_speech_recognition.Task"
           },
           "default": "transcribe",
@@ -6543,7 +7018,11 @@
           "name": "timestamps",
           "type": {
             "type": "enum",
-            "values": ["none", "word", "sentence"],
+            "values": [
+              "none",
+              "word",
+              "sentence"
+            ],
             "type_name": "nodetool.nodes.huggingface.automatic_speech_recognition.Timestamps"
           },
           "default": "none",
@@ -6575,35 +7054,45 @@
         {
           "type": "hf.automatic_speech_recognition",
           "repo_id": "openai/whisper-large-v3",
-          "allow_patterns": ["model.safetensors", "*.json", "*.txt"]
-        },
-        {
-          "type": "hf.automatic_speech_recognition",
-          "repo_id": "openai/whisper-large-v3-turbo",
-          "allow_patterns": ["model.safetensors", "*.json", "*.txt"]
-        },
-        {
-          "type": "hf.automatic_speech_recognition",
-          "repo_id": "openai/whisper-medium",
-          "allow_patterns": ["model.safetensors", "*.json", "*.txt"]
+          "allow_patterns": [
+            "model.safetensors",
+            "*.json",
+            "*.txt"
+          ]
         },
         {
           "type": "hf.automatic_speech_recognition",
           "repo_id": "openai/whisper-large-v2",
-          "allow_patterns": ["model.safetensors", "*.json", "*.txt"]
+          "allow_patterns": [
+            "model.safetensors",
+            "*.json",
+            "*.txt"
+          ]
         },
         {
           "type": "hf.automatic_speech_recognition",
           "repo_id": "openai/whisper-small",
-          "allow_patterns": ["model.safetensors", "*.json", "*.txt"]
+          "allow_patterns": [
+            "model.safetensors",
+            "*.json",
+            "*.txt"
+          ]
         },
         {
           "type": "hf.automatic_speech_recognition",
           "repo_id": "Systran/faster-whisper-large-v3",
-          "allow_patterns": ["model.bin", "*.json", "*.txt"]
+          "allow_patterns": [
+            "model.bin",
+            "*.json",
+            "*.txt"
+          ]
         }
       ],
-      "basic_fields": ["model", "audio", "task"],
+      "basic_fields": [
+        "model",
+        "audio",
+        "task"
+      ],
       "is_dynamic": false
     },
     {
@@ -6663,20 +7152,35 @@
         {
           "type": "hf.text_generation",
           "repo_id": "Falconsai/text_summarization",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.text_generation",
           "repo_id": "Falconsai/medical_summarization",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         },
         {
           "type": "hf.text_generation",
           "repo_id": "imvladikon/het5_summarization",
-          "allow_patterns": ["*.json", "*.txt", "*.safetensors"]
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ]
         }
       ],
-      "basic_fields": ["model", "inputs"],
+      "basic_fields": [
+        "model",
+        "inputs"
+      ],
       "is_dynamic": false
     },
     {
@@ -7339,7 +7843,12 @@
         {
           "type": "hf.object_detection",
           "repo_id": "facebook/detr-resnet-50",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json"
+          ]
         },
         {
           "type": "hf.object_detection",
@@ -7374,20 +7883,38 @@
         {
           "type": "hf.object_detection",
           "repo_id": "microsoft/table-transformer-detection",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json"
+          ]
         },
         {
           "type": "hf.object_detection",
           "repo_id": "microsoft/table-transformer-structure-recognition-v1.1-all",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json"
+          ]
         },
         {
           "type": "hf.object_detection",
           "repo_id": "valentinafeve/yolos-fashionpedia",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json"
+          ]
         }
       ],
-      "basic_fields": ["model", "image"],
+      "basic_fields": [
+        "model",
+        "image"
+      ],
       "is_dynamic": false
     },
     {
@@ -7431,7 +7958,10 @@
       ],
       "the_model_info": {},
       "recommended_models": [],
-      "basic_fields": ["image", "objects"],
+      "basic_fields": [
+        "image",
+        "objects"
+      ],
       "is_dynamic": false
     },
     {
@@ -7507,32 +8037,68 @@
         {
           "type": "hf.zero_shot_object_detection",
           "repo_id": "google/owlvit-base-patch32",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json", "txt"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json",
+            "txt"
+          ]
         },
         {
           "type": "hf.zero_shot_object_detection",
           "repo_id": "google/owlvit-large-patch14",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json", "txt"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json",
+            "txt"
+          ]
         },
         {
           "type": "hf.zero_shot_object_detection",
           "repo_id": "google/owlvit-base-patch16",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json", "txt"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json",
+            "txt"
+          ]
         },
         {
           "type": "hf.zero_shot_object_detection",
           "repo_id": "google/owlv2-base-patch16",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json", "txt"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json",
+            "txt"
+          ]
         },
         {
           "type": "hf.zero_shot_object_detection",
           "repo_id": "google/owlv2-base-patch16-ensemble",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json", "txt"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json",
+            "txt"
+          ]
         },
         {
           "type": "hf.zero_shot_object_detection",
           "repo_id": "IDEA-Research/grounding-dino-tiny",
-          "allow_patterns": ["README.md", "*.bin", "*.json", "**/*.json", "txt"]
+          "allow_patterns": [
+            "README.md",
+            "*.bin",
+            "*.json",
+            "**/*.json",
+            "txt"
+          ]
         }
       ],
       "basic_fields": [
@@ -7635,7 +8201,11 @@
         {
           "type": "hf.text_to_video",
           "repo_id": "guoyww/animatediff-motion-adapter-v1-5-2",
-          "allow_patterns": ["*.fp16.safetensors", "*.json", "*.txt"]
+          "allow_patterns": [
+            "*.fp16.safetensors",
+            "*.json",
+            "*.txt"
+          ]
         },
         {
           "type": "hf.stable_diffusion",
@@ -7698,7 +8268,10 @@
           ]
         }
       ],
-      "basic_fields": ["model", "prompt"],
+      "basic_fields": [
+        "model",
+        "prompt"
+      ],
       "is_dynamic": false
     },
     {
@@ -7833,7 +8406,12 @@
           "name": "aggregation_strategy",
           "type": {
             "type": "enum",
-            "values": ["simple", "first", "average", "max"],
+            "values": [
+              "simple",
+              "first",
+              "average",
+              "max"
+            ],
             "type_name": "nodetool.nodes.huggingface.token_classification.AggregationStrategy"
           },
           "default": "simple",
@@ -7851,7 +8429,11 @@
       ],
       "the_model_info": {},
       "recommended_models": [],
-      "basic_fields": ["model", "inputs", "aggregation_strategy"],
+      "basic_fields": [
+        "model",
+        "inputs",
+        "aggregation_strategy"
+      ],
       "is_dynamic": false
     }
   ],
