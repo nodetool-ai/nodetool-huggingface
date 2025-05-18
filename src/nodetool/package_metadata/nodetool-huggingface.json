@@ -7854,5 +7854,161 @@
       "basic_fields": ["model", "inputs", "aggregation_strategy"],
       "is_dynamic": false
     }
+  ],
+  "examples": [
+    {
+      "id": "5960bd1b-dc4a-4195-8885-346bc0201f61",
+      "name": "Music Generator",
+      "description": "Generate multi-instrument music using MusicGen model",
+      "tags": [],
+      "thumbnail_url": ""
+    },
+    {
+      "id": "add_subtitles_to_video",
+      "name": "Add Subtitles To Video",
+      "description": "This workflow automatically transcribes speech in videos and adds subtitles. It extracts audio from the input video, uses OpenAI's Whisper model to generate word-level timestamps and transcriptions, and then renders the subtitles back onto the original video. Perfect for creating accessible content, adding captions to social media videos, or transcribing presentations.",
+      "tags": [
+        "start",
+        "video"
+      ],
+      "thumbnail_url": ""
+    },
+    {
+      "id": "style_transfer",
+      "name": "Style Transfer",
+      "description": "Transform your images by applying artistic styles from reference images. This workflow uses IP-Adapter to transfer visual styles while ControlNet preserves the original structure. Perfect for creating artistic variations of portraits or other images.",
+      "tags": [
+        "huggingface",
+        "image",
+        "start"
+      ],
+      "thumbnail_url": ""
+    },
+    {
+      "id": "object_detection",
+      "name": "Object Detection",
+      "description": "Detect objects in an image and visualize the detections",
+      "tags": [
+        "huggingface",
+        "start"
+      ],
+      "thumbnail_url": ""
+    },
+    {
+      "id": "e5827a0faff611efa02a00006da6d6e7",
+      "name": "Stable Diffusion",
+      "description": "Generate images using Stable Diffusion with Realistic Vision model",
+      "tags": [
+        "image"
+      ],
+      "thumbnail_url": ""
+    },
+    {
+      "id": "segmentation",
+      "name": "Segmentation",
+      "description": "Segment images and visualize the segments",
+      "tags": [
+        "huggingface",
+        "image"
+      ],
+      "thumbnail_url": ""
+    },
+    {
+      "id": "648722dc-4bc1-4637-87bd-69d5050638be",
+      "name": "Piano track",
+      "description": "Generate piano music using AI composition models",
+      "tags": [],
+      "thumbnail_url": ""
+    },
+    {
+      "id": "6e96807232a211f0a8870000194fbf00",
+      "name": "Movie Posters",
+      "description": "Create cinematic movie posters using AI image generation",
+      "tags": [
+        "start",
+        "image"
+      ],
+      "thumbnail_url": ""
+    },
+    {
+      "id": "transcribe_audio",
+      "name": "Transcribe Audio",
+      "description": "Convert speech to text using Whisper model with word-level timestamps",
+      "tags": [
+        "start",
+        "audio"
+      ],
+      "thumbnail_url": ""
+    },
+    {
+      "id": "generate_music",
+      "name": "Generate Music",
+      "description": "Create musical compositions using AI-generated ideas and MusicGen",
+      "tags": [
+        "audio"
+      ],
+      "thumbnail_url": ""
+    },
+    {
+      "id": "2406029c124211f0a0320000519c2db3",
+      "name": "Pokemon Maker",
+      "description": "Create unique and imaginative Pokemon with detailed descriptions and visually stunning images using AI. Input animal inspirations and get custom Pokemon with types, abilities, and personalities.",
+      "tags": [
+        "stable diffusion",
+        "start"
+      ],
+      "thumbnail_url": ""
+    },
+    {
+      "id": "01ddcf16e35711ef80af000038478aae",
+      "name": "Audio To Image",
+      "description": "Transform spoken descriptions into images with this workflow. Record or upload audio, which is transcribed by Whisper and then visualized by Stable Diffusion. Perfect for quickly generating images from verbal ideas without typing.",
+      "tags": [
+        "huggingface",
+        "multimodal",
+        "start"
+      ],
+      "thumbnail_url": ""
+    },
+    {
+      "id": "3dc7a22e12f311f0a84600004c6eb2d5",
+      "name": "Audio To Spectrogram",
+      "description": "Create a spectrogram from an audio file and use creative upscaling to transform it into wall-worthy art.",
+      "tags": [
+        "audio",
+        "multimodal",
+        "start"
+      ],
+      "thumbnail_url": ""
+    },
+    {
+      "id": "depth_estimation",
+      "name": "Depth Estimation",
+      "description": "Estimate the depth of an image",
+      "tags": [
+        "image"
+      ],
+      "thumbnail_url": ""
+    },
+    {
+      "id": "f1d42e6a12fb11f0901100001aeb0d2f",
+      "name": "Summarize Audio",
+      "description": "Transcribe an audio file and summarize the text.",
+      "tags": [
+        "audio",
+        "start"
+      ],
+      "thumbnail_url": ""
+    },
+    {
+      "id": "dfff77a8f38911ef919400004a056799",
+      "name": "Upscaling",
+      "description": "Upscale low-resolution images to higher quality using RealESRGAN, a powerful AI model that enhances details and clarity without artifacts.",
+      "tags": [
+        "image",
+        "start"
+      ],
+      "thumbnail_url": ""
+    }
   ]
 }
