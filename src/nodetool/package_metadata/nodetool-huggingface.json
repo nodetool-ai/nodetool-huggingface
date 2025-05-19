@@ -7062,7 +7062,25 @@
         },
         {
           "type": "hf.automatic_speech_recognition",
+          "repo_id": "openai/whisper-large-v3-turbo",
+          "allow_patterns": [
+            "model.safetensors",
+            "*.json",
+            "*.txt"
+          ]
+        },
+        {
+          "type": "hf.automatic_speech_recognition",
           "repo_id": "openai/whisper-large-v2",
+          "allow_patterns": [
+            "model.safetensors",
+            "*.json",
+            "*.txt"
+          ]
+        },
+        {
+          "type": "hf.automatic_speech_recognition",
+          "repo_id": "openai/whisper-medium",
           "allow_patterns": [
             "model.safetensors",
             "*.json",
@@ -8437,13 +8455,39 @@
       "is_dynamic": false
     }
   ],
+  "assets": [
+    {
+      "package_name": "nodetool-huggingface",
+      "name": "Object Detection.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
+      "name": "Stable Diffusion.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
+      "name": "Style Transfer.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
+      "name": "Movie Posters.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
+      "name": "stable_diffusion_xl.jpg",
+      "path": ""
+    }
+  ],
   "examples": [
     {
       "id": "5960bd1b-dc4a-4195-8885-346bc0201f61",
       "name": "Music Generator",
       "description": "Generate multi-instrument music using MusicGen model",
-      "tags": [],
-      "thumbnail_url": ""
+      "tags": []
     },
     {
       "id": "add_subtitles_to_video",
@@ -8452,8 +8496,7 @@
       "tags": [
         "start",
         "video"
-      ],
-      "thumbnail_url": ""
+      ]
     },
     {
       "id": "style_transfer",
@@ -8463,8 +8506,7 @@
         "huggingface",
         "image",
         "start"
-      ],
-      "thumbnail_url": ""
+      ]
     },
     {
       "id": "object_detection",
@@ -8473,8 +8515,7 @@
       "tags": [
         "huggingface",
         "start"
-      ],
-      "thumbnail_url": ""
+      ]
     },
     {
       "id": "e5827a0faff611efa02a00006da6d6e7",
@@ -8482,8 +8523,7 @@
       "description": "Generate images using Stable Diffusion with Realistic Vision model",
       "tags": [
         "image"
-      ],
-      "thumbnail_url": ""
+      ]
     },
     {
       "id": "segmentation",
@@ -8492,15 +8532,13 @@
       "tags": [
         "huggingface",
         "image"
-      ],
-      "thumbnail_url": ""
+      ]
     },
     {
       "id": "648722dc-4bc1-4637-87bd-69d5050638be",
       "name": "Piano track",
       "description": "Generate piano music using AI composition models",
-      "tags": [],
-      "thumbnail_url": ""
+      "tags": []
     },
     {
       "id": "6e96807232a211f0a8870000194fbf00",
@@ -8508,9 +8546,9 @@
       "description": "Create cinematic movie posters using AI image generation",
       "tags": [
         "start",
-        "image"
-      ],
-      "thumbnail_url": ""
+        "image",
+        "huggingface"
+      ]
     },
     {
       "id": "transcribe_audio",
@@ -8519,8 +8557,7 @@
       "tags": [
         "start",
         "audio"
-      ],
-      "thumbnail_url": ""
+      ]
     },
     {
       "id": "generate_music",
@@ -8528,8 +8565,7 @@
       "description": "Create musical compositions using AI-generated ideas and MusicGen",
       "tags": [
         "audio"
-      ],
-      "thumbnail_url": ""
+      ]
     },
     {
       "id": "2406029c124211f0a0320000519c2db3",
@@ -8538,8 +8574,7 @@
       "tags": [
         "stable diffusion",
         "start"
-      ],
-      "thumbnail_url": ""
+      ]
     },
     {
       "id": "01ddcf16e35711ef80af000038478aae",
@@ -8549,8 +8584,7 @@
         "huggingface",
         "multimodal",
         "start"
-      ],
-      "thumbnail_url": ""
+      ]
     },
     {
       "id": "3dc7a22e12f311f0a84600004c6eb2d5",
@@ -8560,8 +8594,7 @@
         "audio",
         "multimodal",
         "start"
-      ],
-      "thumbnail_url": ""
+      ]
     },
     {
       "id": "depth_estimation",
@@ -8569,8 +8602,7 @@
       "description": "Estimate the depth of an image",
       "tags": [
         "image"
-      ],
-      "thumbnail_url": ""
+      ]
     },
     {
       "id": "f1d42e6a12fb11f0901100001aeb0d2f",
@@ -8579,8 +8611,7 @@
       "tags": [
         "audio",
         "start"
-      ],
-      "thumbnail_url": ""
+      ]
     },
     {
       "id": "dfff77a8f38911ef919400004a056799",
@@ -8589,8 +8620,7 @@
       "tags": [
         "image",
         "start"
-      ],
-      "thumbnail_url": ""
+      ]
     }
   ]
 }
