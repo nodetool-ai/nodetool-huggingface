@@ -149,7 +149,7 @@
       {
         "id": "16",
         "parent_id": null,
-        "type": "ollama.text.Ollama",
+        "type": "nodetool.llms.LLM",
         "data": {
           "model": {
             "type": "llama_model",

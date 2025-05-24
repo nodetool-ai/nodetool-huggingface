@@ -31,7 +31,7 @@
       {
         "id": "3",
         "parent_id": null,
-        "type": "nodetool.group.Loop",
+        "type": "nodetool.workflows.base_node.Group",
         "data": {},
         "ui_properties": {
           "position": {
@@ -268,7 +268,7 @@
       {
         "id": "432",
         "parent_id": null,
-        "type": "nodetool.audio.transform.ConcatList",
+        "type": "lib.audio.transform.ConcatList",
         "data": {},
         "ui_properties": {
           "position": {
