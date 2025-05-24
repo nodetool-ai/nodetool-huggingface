@@ -7,7 +7,8 @@
   "description": "Convert speech to text using Whisper model with word-level timestamps",
   "tags": [
     "start",
-    "audio"
+    "audio",
+    "huggingface"
   ],
   "thumbnail": null,
   "thumbnail_url": "/examples/transcribe_audio.jpg",

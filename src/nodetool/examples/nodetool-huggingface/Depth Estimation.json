@@ -6,7 +6,8 @@
   "name": "Depth Estimation",
   "description": "Estimate the depth of an image",
   "tags": [
-    "image"
+    "image",
+    "huggingface"
   ],
   "thumbnail": "",
   "thumbnail_url": "/examples/depth_estimation.png",

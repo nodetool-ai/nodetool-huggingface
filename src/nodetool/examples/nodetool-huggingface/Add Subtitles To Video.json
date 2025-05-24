@@ -7,7 +7,8 @@
   "description": "This workflow automatically transcribes speech in videos and adds subtitles. It extracts audio from the input video, uses OpenAI's Whisper model to generate word-level timestamps and transcriptions, and then renders the subtitles back onto the original video. Perfect for creating accessible content, adding captions to social media videos, or transcribing presentations.",
   "tags": [
     "start",
-    "video"
+    "video",
+    "huggingface"
   ],
   "thumbnail": null,
   "thumbnail_url": "/examples/add_subtitles_to_video.jpg",

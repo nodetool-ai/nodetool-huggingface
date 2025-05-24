@@ -1883,6 +1883,97 @@
     },
     {
       "title": "Image To Text",
+      "description": "Generates textual descriptions from images.\n    image, captioning, OCR, image-to-text\n\n    Use cases:\n    - Generate captions for images\n    - Extract text from images (OCR)\n    - Describe image content for visually impaired users\n    - Build accessibility features for visual content",
+      "namespace": "huggingface.image_to_text",
+      "node_type": "huggingface.image_to_text.ImageToText",
+      "layout": "default",
+      "properties": [
+        {
+          "name": "model",
+          "type": {
+            "type": "hf.image_to_text"
+          },
+          "default": {},
+          "title": "Model ID on Huggingface",
+          "description": "The model ID to use for image-to-text generation"
+        },
+        {
+          "name": "image",
+          "type": {
+            "type": "image"
+          },
+          "default": {},
+          "title": "Input Image",
+          "description": "The image to generate text from"
+        },
+        {
+          "name": "max_new_tokens",
+          "type": {
+            "type": "int"
+          },
+          "title": "Max New Tokens",
+          "description": "The maximum number of tokens to generate (if supported by model)"
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "str"
+          },
+          "name": "output"
+        }
+      ],
+      "the_model_info": {},
+      "recommended_models": [
+        {
+          "type": "hf.image_to_text",
+          "repo_id": "Salesforce/blip-image-captioning-base",
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ]
+        },
+        {
+          "type": "hf.image_to_text",
+          "repo_id": "Salesforce/blip2-opt-2.7b",
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ]
+        },
+        {
+          "type": "hf.image_to_text",
+          "repo_id": "microsoft/git-base",
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ]
+        },
+        {
+          "type": "hf.image_to_text",
+          "repo_id": "nlpconnect/vit-gpt2-image-captioning",
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ]
+        }
+      ],
+      "basic_fields": [
+        "model",
+        "image"
+      ],
+      "is_dynamic": false
+    },
+    {
+      "title": "Image To Text",
       "description": "Generates text descriptions from images.\n    image, text, captioning, vision-language\n\n    Use cases:\n    - Automatic image captioning\n    - Assisting visually impaired users\n    - Enhancing image search capabilities\n    - Generating alt text for web images",
       "namespace": "huggingface.multimodal",
       "node_type": "huggingface.multimodal.ImageToText",
@@ -8458,7 +8549,22 @@
   "assets": [
     {
       "package_name": "nodetool-huggingface",
+      "name": "Summarize Audio.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
+      "name": "Upscaling.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
       "name": "Object Detection.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
+      "name": "Image Enhance.jpg",
       "path": ""
     },
     {
@@ -8468,7 +8574,27 @@
     },
     {
       "package_name": "nodetool-huggingface",
+      "name": "Piano Track.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
+      "name": "Segmentation.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
+      "name": "Audio To Image.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
       "name": "Style Transfer.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
+      "name": "Transcribe Audio.jpg",
       "path": ""
     },
     {
@@ -8478,7 +8604,27 @@
     },
     {
       "package_name": "nodetool-huggingface",
+      "name": "Audio To Spectrogram.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
+      "name": "Depth Estimation.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
+      "name": "Add Subtitles To Video.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
       "name": "stable_diffusion_xl.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
+      "name": "Pokemon Maker.jpg",
       "path": ""
     }
   ],
@@ -8487,7 +8633,10 @@
       "id": "5960bd1b-dc4a-4195-8885-346bc0201f61",
       "name": "Music Generator",
       "description": "Generate multi-instrument music using MusicGen model",
-      "tags": []
+      "tags": [
+        "audio",
+        "huggingface"
+      ]
     },
     {
       "id": "add_subtitles_to_video",
@@ -8495,7 +8644,8 @@
       "description": "This workflow automatically transcribes speech in videos and adds subtitles. It extracts audio from the input video, uses OpenAI's Whisper model to generate word-level timestamps and transcriptions, and then renders the subtitles back onto the original video. Perfect for creating accessible content, adding captions to social media videos, or transcribing presentations.",
       "tags": [
         "start",
-        "video"
+        "video",
+        "huggingface"
       ]
     },
     {
@@ -8518,14 +8668,6 @@
       ]
     },
     {
-      "id": "e5827a0faff611efa02a00006da6d6e7",
-      "name": "Stable Diffusion",
-      "description": "Generate images using Stable Diffusion with Realistic Vision model",
-      "tags": [
-        "image"
-      ]
-    },
-    {
       "id": "segmentation",
       "name": "Segmentation",
       "description": "Segment images and visualize the segments",
@@ -8538,7 +8680,10 @@
       "id": "648722dc-4bc1-4637-87bd-69d5050638be",
       "name": "Piano track",
       "description": "Generate piano music using AI composition models",
-      "tags": []
+      "tags": [
+        "audio",
+        "huggingface"
+      ]
     },
     {
       "id": "6e96807232a211f0a8870000194fbf00",
@@ -8556,25 +8701,15 @@
       "description": "Convert speech to text using Whisper model with word-level timestamps",
       "tags": [
         "start",
-        "audio"
+        "audio",
+        "huggingface"
       ]
     },
     {
-      "id": "generate_music",
-      "name": "Generate Music",
-      "description": "Create musical compositions using AI-generated ideas and MusicGen",
-      "tags": [
-        "audio"
-      ]
-    },
-    {
-      "id": "2406029c124211f0a0320000519c2db3",
+      "id": "8675bdaa388a11f0951800006f96a7c6",
       "name": "Pokemon Maker",
-      "description": "Create unique and imaginative Pokemon with detailed descriptions and visually stunning images using AI. Input animal inspirations and get custom Pokemon with types, abilities, and personalities.",
-      "tags": [
-        "stable diffusion",
-        "start"
-      ]
+      "description": "",
+      "tags": []
     },
     {
       "id": "01ddcf16e35711ef80af000038478aae",
@@ -8593,7 +8728,8 @@
       "tags": [
         "audio",
         "multimodal",
-        "start"
+        "start",
+        "huggingface"
       ]
     },
     {
@@ -8601,7 +8737,8 @@
       "name": "Depth Estimation",
       "description": "Estimate the depth of an image",
       "tags": [
-        "image"
+        "image",
+        "huggingface"
       ]
     },
     {
@@ -8610,7 +8747,8 @@
       "description": "Transcribe an audio file and summarize the text.",
       "tags": [
         "audio",
-        "start"
+        "start",
+        "huggingface"
       ]
     },
     {
@@ -8619,7 +8757,8 @@
       "description": "Upscale low-resolution images to higher quality using RealESRGAN, a powerful AI model that enhances details and clarity without artifacts.",
       "tags": [
         "image",
-        "start"
+        "start",
+        "huggingface"
       ]
     }
   ]

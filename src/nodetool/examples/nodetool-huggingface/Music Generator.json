@@ -5,7 +5,10 @@
   "updated_at": "2024-12-25T17:44:30.981695",
   "name": "Music Generator",
   "description": "Generate multi-instrument music using MusicGen model",
-  "tags": null,
+  "tags": [
+    "audio",
+    "huggingface"
+  ],
   "thumbnail": null,
   "thumbnail_url": null,
   "graph": {

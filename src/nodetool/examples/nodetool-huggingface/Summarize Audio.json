@@ -7,7 +7,8 @@
   "description": "Transcribe an audio file and summarize the text.",
   "tags": [
     "audio",
-    "start"
+    "start",
+    "huggingface"
   ],
   "thumbnail": null,
   "thumbnail_url": "/examples/summarize_audio.jpg",

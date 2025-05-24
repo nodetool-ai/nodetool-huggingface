@@ -5,7 +5,10 @@
   "updated_at": "2024-12-25T17:46:12.860877",
   "name": "Piano track",
   "description": "Generate piano music using AI composition models",
-  "tags": null,
+  "tags": [
+    "audio",
+    "huggingface"
+  ],
   "thumbnail": null,
   "thumbnail_url": null,
   "graph": {

@@ -1,104 +1,17 @@
 {
-  "id": "2406029c124211f0a0320000519c2db3",
+  "id": "8675bdaa388a11f0951800006f96a7c6",
   "access": "public",
-  "created_at": "2025-04-05T19:40:42.781527",
-  "updated_at": "2025-04-05T19:40:42.781595",
+  "created_at": "2025-05-24T12:49:01.702500",
+  "updated_at": "2025-05-24T12:49:01.702527",
   "name": "Pokemon Maker",
-  "description": "Create unique and imaginative Pokemon with detailed descriptions and visually stunning images using AI. Input animal inspirations and get custom Pokemon with types, abilities, and personalities.",
-  "tags": [
-    "stable diffusion",
-    "start"
-  ],
+  "description": "",
+  "tags": null,
   "thumbnail": null,
-  "thumbnail_url": "/examples/pokemon_maker.png",
+  "thumbnail_url": null,
   "graph": {
     "nodes": [
       {
-        "id": "2",
-        "parent_id": null,
-        "type": "nodetool.workflows.base_node.Preview",
-        "data": {
-          "name": "dataframe_output_2024-06-22"
-        },
-        "ui_properties": {
-          "position": {
-            "x": 894,
-            "y": 151
-          },
-          "zIndex": 0,
-          "width": 783,
-          "height": 164,
-          "selectable": true
-        },
-        "dynamic_properties": {}
-      },
-      {
-        "id": "3",
-        "parent_id": null,
-        "type": "nodetool.workflows.base_node.Group",
-        "data": {},
-        "ui_properties": {
-          "position": {
-            "x": 894,
-            "y": 365
-          },
-          "zIndex": -10,
-          "width": 924,
-          "height": 332,
-          "selectable": false
-        },
-        "dynamic_properties": {}
-      },
-      {
-        "id": "13",
-        "parent_id": "3",
-        "type": "nodetool.input.GroupInput",
-        "data": {},
-        "ui_properties": {
-          "position": {
-            "x": 50,
-            "y": 154
-          },
-          "zIndex": 0,
-          "width": 200,
-          "selectable": true
-        },
-        "dynamic_properties": {}
-      },
-      {
-        "id": "16",
-        "parent_id": "3",
-        "type": "huggingface.text_to_image.StableDiffusion",
-        "data": {
-          "model": {
-            "type": "hf.stable_diffusion",
-            "repo_id": "Lykon/DreamShaper",
-            "path": "DreamShaper_4BakedVae_fp16.safetensors"
-          },
-          "negative_prompt": "blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
-          "seed": -1,
-          "num_inference_steps": 25,
-          "guidance_scale": 7.5,
-          "scheduler": "EulerDiscreteScheduler",
-          "ip_adapter_scale": 0.5,
-          "width": 512,
-          "height": 512,
-          "detail_level": 0.8
-        },
-        "ui_properties": {
-          "position": {
-            "x": 510,
-            "y": 50
-          },
-          "zIndex": 0,
-          "width": 200,
-          "title": "Pokemon Image Creator",
-          "selectable": true
-        },
-        "dynamic_properties": {}
-      },
-      {
-        "id": "428",
+        "id": "a8526bd1-ff31-4169-b939-39690eaefa61",
         "parent_id": null,
         "type": "nodetool.workflows.base_node.Comment",
         "data": {
@@ -218,14 +131,6 @@
               "type": "paragraph",
               "children": [
                 {
-                  "text": "\u2022 Descriptions are formatted into prompts for image generation"
-                }
-              ]
-            },
-            {
-              "type": "paragraph",
-              "children": [
-                {
                   "text": "\u2022 Stable Diffusion creates visually appealing Pokemon images that match the descriptions"
                 }
               ]
@@ -242,7 +147,7 @@
               "type": "paragraph",
               "children": [
                 {
-                  "text": "Perfect for Pokemon fans, game designers, artists, or anyone who wants to explore creative creature design!"
+                  "text": ""
                 }
               ]
             }
@@ -250,47 +155,30 @@
           "comment_color": "#eee8d5"
         },
         "ui_properties": {
+          "selected": false,
           "position": {
-            "x": 16,
-            "y": -283
+            "x": 299,
+            "y": -49
           },
           "zIndex": 0,
-          "width": 860,
-          "height": 277,
+          "width": 676,
+          "height": 214,
           "selectable": true
         },
         "dynamic_properties": {}
       },
       {
-        "id": "436",
-        "parent_id": "3",
-        "type": "nodetool.text.Template",
-        "data": {
-          "string": "{{name}}, Pokemon, {{appearance}}, {{personality}}"
-        },
-        "ui_properties": {
-          "position": {
-            "x": 280,
-            "y": 95
-          },
-          "zIndex": 0,
-          "width": 200,
-          "title": "Pokemon Image Prompt Builder",
-          "selectable": true
-        },
-        "dynamic_properties": {}
-      },
-      {
-        "id": "437",
+        "id": "464a17c1-c916-4b24-8e23-856160732293",
         "parent_id": null,
         "type": "nodetool.text.FormatText",
         "data": {
-          "template": "Create a 3 compelling Pok\u00e9mons. \n\nDefine its primary types, signature ability, and a few key moves. How do these elements make it unique and balanced within the Pok\u00e9mon world?\n\nDescribe its physical appearance, patterns, colors, and any special features. How does its design reflect its typing, abilities, and the animals it\u2019s inspired by?\n\nPersonality\nWhat is this Pok\u00e9mon\u2019s temperament? \nIs it mischievous, protective, or solitary? \nWhat role does it play in its habitat or the Pok\u00e9mon world\u2019s mythology? \nDoes it have a special legend, evolutionary line, or connection to other Pok\u00e9mon?\n\nEnsure the Pok\u00e9mon feels organic, balanced, and full of storytelling potential. \n\nTake inspiration from these animals: {{animals}}"
+          "template": "Create a 3 compelling Pok\u00e9mons. \n\nDefine its primary types, signature ability, and a few key moves. How do these elements make it unique and balanced within the Pok\u00e9mon world?\n\nDescribe its physical appearance, patterns, colors, and any special features. How does its design reflect its typing, abilities, and the animals it\u2019s inspired by?\n\nTake inspiration from these animals: {{animals}}"
         },
         "ui_properties": {
+          "selected": false,
           "position": {
-            "x": 280,
-            "y": 50
+            "x": 521,
+            "y": 194
           },
           "zIndex": 0,
           "width": 351,
@@ -298,12 +186,11 @@
           "selectable": true
         },
         "dynamic_properties": {
-          "name": "",
           "animals": ""
         }
       },
       {
-        "id": "438",
+        "id": "2f773f4f-c863-4215-bb89-e8cc09e95472",
         "parent_id": null,
         "type": "nodetool.input.StringInput",
         "data": {
@@ -312,9 +199,10 @@
           "value": "lion, eagle, dragon, bear"
         },
         "ui_properties": {
+          "selected": false,
           "position": {
-            "x": 50,
-            "y": 192
+            "x": 291,
+            "y": 268
           },
           "zIndex": 0,
           "width": 200,
@@ -324,60 +212,123 @@
         "dynamic_properties": {}
       },
       {
-        "id": "de3817c1-f160-440a-b271-fbe4a5654853",
+        "id": "7613de08-0407-42aa-8dc8-3b7777e9529d",
         "parent_id": null,
-        "type": "nodetool.generators.DataGenerator",
+        "type": "nodetool.generators.ListGenerator",
         "data": {
-          "input_text": "",
-          "max_tokens": 4096,
-          "columns": {
-            "type": "record_type",
-            "columns": [
-              {
-                "name": "name",
-                "data_type": "string",
-                "description": ""
-              },
-              {
-                "name": "appearance",
-                "data_type": "string",
-                "description": ""
-              },
-              {
-                "name": "personality",
-                "data_type": "string",
-                "description": ""
-              }
-            ]
+          "model": {
+            "type": "language_model",
+            "id": "qwen3:4b",
+            "provider": "ollama"
           },
-          "model": "gemma3:1b"
+          "input_text": "",
+          "max_tokens": 4096
         },
         "ui_properties": {
           "selected": false,
           "position": {
-            "x": 661,
-            "y": 154
+            "x": 902,
+            "y": 224
           },
           "zIndex": 0,
-          "width": 173,
+          "width": 200,
           "selectable": true
         },
         "dynamic_properties": {}
       },
       {
-        "id": "1c842bb3-9218-46c9-8ca8-3de0f42ade2e",
-        "parent_id": "3",
-        "type": "nodetool.output.ImageOutput",
+        "id": "3089f8c8-cc14-4122-aa63-772fc29475a4",
+        "parent_id": null,
+        "type": "huggingface.text_to_image.StableDiffusion",
         "data": {
-          "name": "image"
+          "model": {
+            "type": "hf.stable_diffusion",
+            "repo_id": "Lykon/DreamShaper",
+            "path": "DreamShaper_4BakedVae_fp16.safetensors"
+          },
+          "negative_prompt": "(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+          "seed": -1,
+          "num_inference_steps": 25,
+          "guidance_scale": 7.5,
+          "scheduler": "EulerDiscreteScheduler",
+          "loras": [],
+          "ip_adapter_model": {},
+          "ip_adapter_image": {},
+          "ip_adapter_scale": 0.5,
+          "detail_level": 0.5,
+          "enable_tiling": false,
+          "enable_cpu_offload": false,
+          "upscaler": "None",
+          "width": 512,
+          "height": 512
         },
         "ui_properties": {
+          "selected": false,
           "position": {
-            "x": 740,
-            "y": 51
+            "x": 1132,
+            "y": 196
           },
           "zIndex": 0,
-          "width": 134,
+          "width": 200,
+          "selectable": true
+        },
+        "dynamic_properties": {}
+      },
+      {
+        "id": "a5882076-fe47-4296-b4f1-905458aab299",
+        "parent_id": null,
+        "type": "nodetool.output.ImageOutput",
+        "data": {
+          "name": "image_output"
+        },
+        "ui_properties": {
+          "selected": false,
+          "position": {
+            "x": 1375,
+            "y": 245
+          },
+          "zIndex": 0,
+          "width": 200,
+          "selectable": true
+        },
+        "dynamic_properties": {}
+      },
+      {
+        "id": "974c3a59-575f-4b97-91f9-9fefd8c990b6",
+        "parent_id": null,
+        "type": "nodetool.workflows.base_node.Preview",
+        "data": {
+          "name": "str_item"
+        },
+        "ui_properties": {
+          "selected": false,
+          "position": {
+            "x": 1119,
+            "y": 504
+          },
+          "zIndex": 0,
+          "width": 241,
+          "height": 207,
+          "selectable": true
+        },
+        "dynamic_properties": {}
+      },
+      {
+        "id": "d8da38e5-2858-4076-9ba7-c39f69a69ba5",
+        "parent_id": null,
+        "type": "nodetool.workflows.base_node.Preview",
+        "data": {
+          "name": "image_output"
+        },
+        "ui_properties": {
+          "selected": false,
+          "position": {
+            "x": 1386,
+            "y": 373
+          },
+          "zIndex": 0,
+          "width": 160,
+          "height": 160,
           "selectable": true
         },
         "dynamic_properties": {}
@@ -385,64 +336,60 @@
     ],
     "edges": [
       {
-        "id": "0af59b2d-e541-4e63-ae75-5b19bdccc325",
-        "source": "13",
+        "id": "577c1b9c-4a32-4a45-a69d-f9cf07e789aa",
+        "source": "464a17c1-c916-4b24-8e23-856160732293",
         "sourceHandle": "output",
-        "target": "436",
-        "targetHandle": "values",
+        "target": "7613de08-0407-42aa-8dc8-3b7777e9529d",
+        "targetHandle": "prompt",
+        "ui_properties": {
+          "className": "str"
+        }
+      },
+      {
+        "id": "0788574b-3b79-4c79-bea9-c5981ddee5c4",
+        "source": "7613de08-0407-42aa-8dc8-3b7777e9529d",
+        "sourceHandle": "item",
+        "target": "3089f8c8-cc14-4122-aa63-772fc29475a4",
+        "targetHandle": "prompt",
+        "ui_properties": {
+          "className": "str"
+        }
+      },
+      {
+        "id": "ac15457c-3da4-4ec4-8ac4-80634b31ce65",
+        "source": "3089f8c8-cc14-4122-aa63-772fc29475a4",
+        "sourceHandle": "output",
+        "target": "a5882076-fe47-4296-b4f1-905458aab299",
+        "targetHandle": "value",
+        "ui_properties": {
+          "className": "image"
+        }
+      },
+      {
+        "id": "5faf6242-3f30-4842-a6a3-a4f579c1a30f",
+        "source": "2f773f4f-c863-4215-bb89-e8cc09e95472",
+        "sourceHandle": "output",
+        "target": "464a17c1-c916-4b24-8e23-856160732293",
+        "targetHandle": "animals",
         "ui_properties": {
           "className": "any"
         }
       },
       {
-        "id": "43d61444-a04c-4da4-8cfc-91ca1506df66",
-        "source": "438",
-        "sourceHandle": "output",
-        "target": "437",
-        "targetHandle": "animals",
-        "ui_properties": {
-          "className": "str"
-        }
-      },
-      {
-        "id": "de891b0b-3a12-473f-8e55-c7bea7bb3950",
-        "source": "436",
-        "sourceHandle": "output",
-        "target": "16",
-        "targetHandle": "prompt",
-        "ui_properties": {
-          "className": "str"
-        }
-      },
-      {
-        "id": "fe7c1e9c-75bc-4fa0-9e8b-2dfbcc6d3fa5",
-        "source": "de3817c1-f160-440a-b271-fbe4a5654853",
-        "sourceHandle": "output",
-        "target": "2",
+        "id": "b4dca6cf-8131-496b-bc3f-93ceed96e585",
+        "source": "7613de08-0407-42aa-8dc8-3b7777e9529d",
+        "sourceHandle": "item",
+        "target": "974c3a59-575f-4b97-91f9-9fefd8c990b6",
         "targetHandle": "value",
-        "ui_properties": null
+        "ui_properties": {
+          "className": "str"
+        }
       },
       {
-        "id": "4b70baa7-29d2-42eb-bda4-bc3bef354feb",
-        "source": "de3817c1-f160-440a-b271-fbe4a5654853",
+        "id": "6db5ddbb-6631-4655-bbe6-11b6f7884ef3",
+        "source": "3089f8c8-cc14-4122-aa63-772fc29475a4",
         "sourceHandle": "output",
-        "target": "3",
-        "targetHandle": "input",
-        "ui_properties": null
-      },
-      {
-        "id": "f7df775a-e486-416c-ba23-b138dc64f7d6",
-        "source": "437",
-        "sourceHandle": "output",
-        "target": "de3817c1-f160-440a-b271-fbe4a5654853",
-        "targetHandle": "prompt",
-        "ui_properties": null
-      },
-      {
-        "id": "4a72f8ec-9143-4240-a227-6bc1bac1118f",
-        "source": "16",
-        "sourceHandle": "output",
-        "target": "1c842bb3-9218-46c9-8ca8-3de0f42ade2e",
+        "target": "d8da38e5-2858-4076-9ba7-c39f69a69ba5",
         "targetHandle": "value",
         "ui_properties": {
           "className": "image"
@@ -452,5 +399,7 @@
   },
   "input_schema": null,
   "output_schema": null,
-  "settings": null
+  "settings": null,
+  "package_name": "nodetool-huggingface",
+  "path": null
 }

@@ -8,7 +8,8 @@
   "tags": [
     "audio",
     "multimodal",
-    "start"
+    "start",
+    "huggingface"
   ],
   "thumbnail": null,
   "thumbnail_url": "/examples/audio_to_spectrogram.jpg",
