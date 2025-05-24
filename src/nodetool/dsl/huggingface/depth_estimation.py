@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 import typing
 from typing import Any
+import nodetool.metadata.types
 import nodetool.metadata.types as types
 from nodetool.dsl.graph import GraphNode
 
@@ -17,10 +18,21 @@ class DepthEstimation(GraphNode):
     - Improve scene understanding in autonomous vehicles
     """
 
-    model: types.HFDepthEstimation | GraphNode | tuple[GraphNode, str] = Field(default=types.HFDepthEstimation(type='hf.depth_estimation', repo_id='LiheYoung/depth-anything-base-hf', path=None, allow_patterns=None, ignore_patterns=None), description='The model ID to use for depth estimation')
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(default=types.ImageRef(type='image', uri='', asset_id=None, data=None), description='The input image for depth estimation')
+    model: types.HFDepthEstimation | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.HFDepthEstimation(
+            type="hf.depth_estimation",
+            repo_id="LiheYoung/depth-anything-base-hf",
+            path=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model ID to use for depth estimation",
+    )
+    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The input image for depth estimation",
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.depth_estimation.DepthEstimation"
-
-
+    def get_node_type(cls):
+        return "huggingface.depth_estimation.DepthEstimation"

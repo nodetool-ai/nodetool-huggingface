@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 import typing
 from typing import Any
+import nodetool.metadata.types
 import nodetool.metadata.types as types
 from nodetool.dsl.graph import GraphNode
 
@@ -17,11 +18,24 @@ class FillMask(GraphNode):
     - Generating text options
     """
 
-    model: types.HFFillMask | GraphNode | tuple[GraphNode, str] = Field(default=types.HFFillMask(type='hf.fill_mask', repo_id='', path=None, allow_patterns=None, ignore_patterns=None), description='The model ID to use for fill-mask task')
-    inputs: str | GraphNode | tuple[GraphNode, str] = Field(default='The capital of France is [MASK].', description='The input text with [MASK] token to be filled')
-    top_k: int | GraphNode | tuple[GraphNode, str] = Field(default=5, description='Number of top predictions to return')
+    model: types.HFFillMask | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.HFFillMask(
+            type="hf.fill_mask",
+            repo_id="",
+            path=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model ID to use for fill-mask task",
+    )
+    inputs: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="The capital of France is [MASK].",
+        description="The input text with [MASK] token to be filled",
+    )
+    top_k: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=5, description="Number of top predictions to return"
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.fill_mask.FillMask"
-
-
+    def get_node_type(cls):
+        return "huggingface.fill_mask.FillMask"

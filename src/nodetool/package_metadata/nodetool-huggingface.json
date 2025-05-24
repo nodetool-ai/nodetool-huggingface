@@ -8630,15 +8630,6 @@
   ],
   "examples": [
     {
-      "id": "5960bd1b-dc4a-4195-8885-346bc0201f61",
-      "name": "Music Generator",
-      "description": "Generate multi-instrument music using MusicGen model",
-      "tags": [
-        "audio",
-        "huggingface"
-      ]
-    },
-    {
       "id": "add_subtitles_to_video",
       "name": "Add Subtitles To Video",
       "description": "This workflow automatically transcribes speech in videos and adds subtitles. It extracts audio from the input video, uses OpenAI's Whisper model to generate word-level timestamps and transcriptions, and then renders the subtitles back onto the original video. Perfect for creating accessible content, adding captions to social media videos, or transcribing presentations.",
@@ -8674,15 +8665,6 @@
       "tags": [
         "huggingface",
         "image"
-      ]
-    },
-    {
-      "id": "648722dc-4bc1-4637-87bd-69d5050638be",
-      "name": "Piano track",
-      "description": "Generate piano music using AI composition models",
-      "tags": [
-        "audio",
-        "huggingface"
       ]
     },
     {

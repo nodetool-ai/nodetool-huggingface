@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 import typing
 from typing import Any
+import nodetool.metadata.types
 import nodetool.metadata.types as types
 from nodetool.dsl.graph import GraphNode
 
@@ -25,11 +26,23 @@ class TextToText(GraphNode):
     - Q: Who ate the cookie? followed by the text of the cookie monster.
     """
 
-    model: types.HFText2TextGeneration | GraphNode | tuple[GraphNode, str] = Field(default=types.HFText2TextGeneration(type='hf.text2text_generation', repo_id='', path=None, allow_patterns=None, ignore_patterns=None), description='The model ID to use for the text-to-text generation')
-    text: str | GraphNode | tuple[GraphNode, str] = Field(default='', description='The input text for the text-to-text task')
-    max_length: int | GraphNode | tuple[GraphNode, str] = Field(default=50, description='The maximum length of the generated text')
+    model: types.HFText2TextGeneration | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.HFText2TextGeneration(
+            type="hf.text2text_generation",
+            repo_id="",
+            path=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model ID to use for the text-to-text generation",
+    )
+    text: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="", description="The input text for the text-to-text task"
+    )
+    max_length: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=50, description="The maximum length of the generated text"
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.text_to_text.TextToText"
-
-
+    def get_node_type(cls):
+        return "huggingface.text_to_text.TextToText"

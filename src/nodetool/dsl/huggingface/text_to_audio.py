@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 import typing
 from typing import Any
+import nodetool.metadata.types
 import nodetool.metadata.types as types
 from nodetool.dsl.graph import GraphNode
 
@@ -17,14 +18,26 @@ class AudioLDM(GraphNode):
     - Explore AI-generated audio for music production or sound design
     """
 
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(default='Techno music with a strong, upbeat tempo and high melodic riffs', description='A text prompt describing the desired audio.')
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(default=10, description='Number of denoising steps. More steps generally improve quality but increase generation time.')
-    audio_length_in_s: float | GraphNode | tuple[GraphNode, str] = Field(default=5.0, description='The desired duration of the generated audio in seconds.')
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(default=0, description='Seed for the random number generator. Use -1 for a random seed.')
+    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="Techno music with a strong, upbeat tempo and high melodic riffs",
+        description="A text prompt describing the desired audio.",
+    )
+    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=10,
+        description="Number of denoising steps. More steps generally improve quality but increase generation time.",
+    )
+    audio_length_in_s: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=5.0,
+        description="The desired duration of the generated audio in seconds.",
+    )
+    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=0,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.text_to_audio.AudioLDM"
-
+    def get_node_type(cls):
+        return "huggingface.text_to_audio.AudioLDM"
 
 
 class AudioLDM2(GraphNode):
@@ -39,16 +52,33 @@ class AudioLDM2(GraphNode):
     - Explore AI-generated audio for creative sound design
     """
 
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(default='The sound of a hammer hitting a wooden surface.', description='A text prompt describing the desired audio.')
-    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(default='Low quality.', description="A text prompt describing what you don't want in the audio.")
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(default=200, description='Number of denoising steps. More steps generally improve quality but increase generation time.')
-    audio_length_in_s: float | GraphNode | tuple[GraphNode, str] = Field(default=10.0, description='The desired duration of the generated audio in seconds.')
-    num_waveforms_per_prompt: int | GraphNode | tuple[GraphNode, str] = Field(default=3, description='Number of audio samples to generate per prompt.')
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(default=0, description='Seed for the random number generator. Use -1 for a random seed.')
+    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="The sound of a hammer hitting a wooden surface.",
+        description="A text prompt describing the desired audio.",
+    )
+    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="Low quality.",
+        description="A text prompt describing what you don't want in the audio.",
+    )
+    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=200,
+        description="Number of denoising steps. More steps generally improve quality but increase generation time.",
+    )
+    audio_length_in_s: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=10.0,
+        description="The desired duration of the generated audio in seconds.",
+    )
+    num_waveforms_per_prompt: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=3, description="Number of audio samples to generate per prompt."
+    )
+    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=0,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.text_to_audio.AudioLDM2"
-
+    def get_node_type(cls):
+        return "huggingface.text_to_audio.AudioLDM2"
 
 
 class DanceDiffusion(GraphNode):
@@ -63,13 +93,22 @@ class DanceDiffusion(GraphNode):
     - Explore AI-composed musical ideas
     """
 
-    audio_length_in_s: float | GraphNode | tuple[GraphNode, str] = Field(default=4.0, description='The desired duration of the generated audio in seconds.')
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(default=50, description='Number of denoising steps. More steps generally improve quality but increase generation time.')
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(default=0, description='Seed for the random number generator. Use -1 for a random seed.')
+    audio_length_in_s: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=4.0,
+        description="The desired duration of the generated audio in seconds.",
+    )
+    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=50,
+        description="Number of denoising steps. More steps generally improve quality but increase generation time.",
+    )
+    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=0,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.text_to_audio.DanceDiffusion"
-
+    def get_node_type(cls):
+        return "huggingface.text_to_audio.DanceDiffusion"
 
 
 class MusicGen(GraphNode):
@@ -83,13 +122,26 @@ class MusicGen(GraphNode):
     - Prototype musical ideas quickly
     """
 
-    model: types.HFTextToAudio | GraphNode | tuple[GraphNode, str] = Field(default=types.HFTextToAudio(type='hf.text_to_audio', repo_id='', path=None, allow_patterns=None, ignore_patterns=None), description='The model ID to use for the audio generation')
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(default='', description='The input text to the model')
-    max_new_tokens: int | GraphNode | tuple[GraphNode, str] = Field(default=1024, description='The maximum number of tokens to generate')
+    model: types.HFTextToAudio | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.HFTextToAudio(
+            type="hf.text_to_audio",
+            repo_id="",
+            path=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model ID to use for the audio generation",
+    )
+    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="", description="The input text to the model"
+    )
+    max_new_tokens: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=1024, description="The maximum number of tokens to generate"
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.text_to_audio.MusicGen"
-
+    def get_node_type(cls):
+        return "huggingface.text_to_audio.MusicGen"
 
 
 class MusicLDM(GraphNode):
@@ -103,14 +155,30 @@ class MusicLDM(GraphNode):
     - Prototype musical ideas quickly
     """
 
-    model: types.HFTextToAudio | GraphNode | tuple[GraphNode, str] = Field(default=types.HFTextToAudio(type='hf.text_to_audio', repo_id='', path=None, allow_patterns=None, ignore_patterns=None), description='The model ID to use for the audio generation')
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(default='', description='The input text to the model')
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(default=10, description='The number of inference steps to use for the generation')
-    audio_length_in_s: float | GraphNode | tuple[GraphNode, str] = Field(default=5.0, description='The length of the generated audio in seconds')
+    model: types.HFTextToAudio | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.HFTextToAudio(
+            type="hf.text_to_audio",
+            repo_id="",
+            path=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model ID to use for the audio generation",
+    )
+    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="", description="The input text to the model"
+    )
+    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=10,
+        description="The number of inference steps to use for the generation",
+    )
+    audio_length_in_s: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=5.0, description="The length of the generated audio in seconds"
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.text_to_audio.MusicLDM"
-
+    def get_node_type(cls):
+        return "huggingface.text_to_audio.MusicLDM"
 
 
 class StableAudioNode(GraphNode):
@@ -126,13 +194,27 @@ class StableAudioNode(GraphNode):
     - Generate experimental audio content
     """
 
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(default='A peaceful piano melody.', description='A text prompt describing the desired audio.')
-    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(default='Low quality.', description="A text prompt describing what you don't want in the audio.")
-    duration: float | GraphNode | tuple[GraphNode, str] = Field(default=10.0, description='The desired duration of the generated audio in seconds.')
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(default=200, description='Number of denoising steps. More steps generally improve quality but increase generation time.')
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(default=0, description='Seed for the random number generator. Use -1 for a random seed.')
+    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="A peaceful piano melody.",
+        description="A text prompt describing the desired audio.",
+    )
+    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="Low quality.",
+        description="A text prompt describing what you don't want in the audio.",
+    )
+    duration: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=10.0,
+        description="The desired duration of the generated audio in seconds.",
+    )
+    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=200,
+        description="Number of denoising steps. More steps generally improve quality but increase generation time.",
+    )
+    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=0,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.text_to_audio.StableAudio"
-
-
+    def get_node_type(cls):
+        return "huggingface.text_to_audio.StableAudio"

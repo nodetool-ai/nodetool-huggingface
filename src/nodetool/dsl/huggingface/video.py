@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 import typing
 from typing import Any
+import nodetool.metadata.types
 import nodetool.metadata.types as types
 from nodetool.dsl.graph import GraphNode
 
@@ -16,17 +17,40 @@ class AnimateDiffNode(GraphNode):
     - Produce animated illustrations for digital media
     """
 
-    model: types.HFStableDiffusion | GraphNode | tuple[GraphNode, str] = Field(default=types.HFStableDiffusion(type='hf.stable_diffusion', repo_id='', path=None, allow_patterns=None, ignore_patterns=None), description='The model to use for image generation.')
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(default='masterpiece, bestquality, highlydetailed, ultradetailed, sunset, orange sky, warm lighting, fishing boats, ocean waves seagulls, rippling water, wharf, silhouette, serene atmosphere, dusk, evening glow, golden hour, coastal landscape, seaside scenery', description='A text prompt describing the desired animation.')
-    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(default='bad quality, worse quality', description="A text prompt describing what you don't want in the animation.")
-    num_frames: int | GraphNode | tuple[GraphNode, str] = Field(default=16, description='The number of frames in the animation.')
-    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(default=7.5, description='Scale for classifier-free guidance.')
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(default=25, description='The number of denoising steps.')
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(default=42, description='Seed for the random number generator.')
+    model: types.HFStableDiffusion | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.HFStableDiffusion(
+            type="hf.stable_diffusion",
+            repo_id="",
+            path=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model to use for image generation.",
+    )
+    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="masterpiece, bestquality, highlydetailed, ultradetailed, sunset, orange sky, warm lighting, fishing boats, ocean waves seagulls, rippling water, wharf, silhouette, serene atmosphere, dusk, evening glow, golden hour, coastal landscape, seaside scenery",
+        description="A text prompt describing the desired animation.",
+    )
+    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="bad quality, worse quality",
+        description="A text prompt describing what you don't want in the animation.",
+    )
+    num_frames: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=16, description="The number of frames in the animation."
+    )
+    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=7.5, description="Scale for classifier-free guidance."
+    )
+    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=25, description="The number of denoising steps."
+    )
+    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=42, description="Seed for the random number generator."
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.video.AnimateDiff"
-
+    def get_node_type(cls):
+        return "huggingface.video.AnimateDiff"
 
 
 class StableVideoDiffusion(GraphNode):
@@ -40,14 +64,26 @@ class StableVideoDiffusion(GraphNode):
     - Prototype video ideas from still concept art
     """
 
-    input_image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(default=types.ImageRef(type='image', uri='', asset_id=None, data=None), description='The input image to generate the video from, resized to 1024x576.')
-    num_frames: int | GraphNode | tuple[GraphNode, str] = Field(default=14, description='Number of frames to generate.')
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(default=25, description='Number of steps per generated frame')
-    fps: int | GraphNode | tuple[GraphNode, str] = Field(default=7, description='Frames per second for the output video.')
-    decode_chunk_size: int | GraphNode | tuple[GraphNode, str] = Field(default=8, description='Number of frames to decode at once.')
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(default=42, description='Random seed for generation.')
+    input_image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The input image to generate the video from, resized to 1024x576.",
+    )
+    num_frames: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=14, description="Number of frames to generate."
+    )
+    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=25, description="Number of steps per generated frame"
+    )
+    fps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=7, description="Frames per second for the output video."
+    )
+    decode_chunk_size: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=8, description="Number of frames to decode at once."
+    )
+    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=42, description="Random seed for generation."
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.video.StableVideoDiffusion"
-
-
+    def get_node_type(cls):
+        return "huggingface.video.StableVideoDiffusion"

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 import typing
 from typing import Any
+import nodetool.metadata.types
 import nodetool.metadata.types as types
 from nodetool.dsl.graph import GraphNode
 
@@ -11,12 +12,16 @@ class FindSegment(GraphNode):
     image, segmentation, object detection, mask
     """
 
-    segments: list[types.ImageSegmentationResult] | GraphNode | tuple[GraphNode, str] = Field(default={}, description='The segmentation masks to search')
-    segment_label: str | GraphNode | tuple[GraphNode, str] = Field(default='', description='The label of the segment to extract')
+    segments: (
+        list[types.ImageSegmentationResult] | GraphNode | tuple[GraphNode, str]
+    ) = Field(default={}, description="The segmentation masks to search")
+    segment_label: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="", description="The label of the segment to extract"
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.image_segmentation.FindSegment"
-
+    def get_node_type(cls):
+        return "huggingface.image_segmentation.FindSegment"
 
 
 class SAM2Segmentation(GraphNode):
@@ -31,11 +36,14 @@ class SAM2Segmentation(GraphNode):
     - Scene understanding and object detection
     """
 
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(default=types.ImageRef(type='image', uri='', asset_id=None, data=None), description='The input image to segment')
+    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The input image to segment",
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.image_segmentation.SAM2Segmentation"
-
+    def get_node_type(cls):
+        return "huggingface.image_segmentation.SAM2Segmentation"
 
 
 class Segmentation(GraphNode):
@@ -48,12 +56,24 @@ class Segmentation(GraphNode):
     - Segmenting facial features in images
     """
 
-    model: types.HFImageSegmentation | GraphNode | tuple[GraphNode, str] = Field(default=types.HFImageSegmentation(type='hf.image_segmentation', repo_id='nvidia/segformer-b3-finetuned-ade-512-512', path=None, allow_patterns=None, ignore_patterns=None), description='The model ID to use for the segmentation')
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(default=types.ImageRef(type='image', uri='', asset_id=None, data=None), description='The input image to segment')
+    model: types.HFImageSegmentation | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.HFImageSegmentation(
+            type="hf.image_segmentation",
+            repo_id="nvidia/segformer-b3-finetuned-ade-512-512",
+            path=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model ID to use for the segmentation",
+    )
+    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The input image to segment",
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.image_segmentation.Segmentation"
-
+    def get_node_type(cls):
+        return "huggingface.image_segmentation.Segmentation"
 
 
 class VisualizeSegmentation(GraphNode):
@@ -67,10 +87,14 @@ class VisualizeSegmentation(GraphNode):
     - Create labeled images for presentations or reports
     """
 
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(default=types.ImageRef(type='image', uri='', asset_id=None, data=None), description='The input image to visualize')
-    segments: list[types.ImageSegmentationResult] | GraphNode | tuple[GraphNode, str] = Field(default=[], description='The segmentation masks to visualize')
+    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The input image to visualize",
+    )
+    segments: (
+        list[types.ImageSegmentationResult] | GraphNode | tuple[GraphNode, str]
+    ) = Field(default=[], description="The segmentation masks to visualize")
 
     @classmethod
-    def get_node_type(cls): return "huggingface.image_segmentation.VisualizeSegmentation"
-
-
+    def get_node_type(cls):
+        return "huggingface.image_segmentation.VisualizeSegmentation"

@@ -282,7 +282,7 @@
       {
         "id": "f5a22c08-54ee-4706-8947-b07aaab56810",
         "parent_id": null,
-        "type": "lib.data.numpy.conversion.ConvertToImage",
+        "type": "lib.numpy.conversion.ConvertToImage",
         "data": {},
         "ui_properties": {
           "selected": false,

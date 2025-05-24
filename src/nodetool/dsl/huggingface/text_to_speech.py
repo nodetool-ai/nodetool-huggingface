@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 import typing
 from typing import Any
+import nodetool.metadata.types
 import nodetool.metadata.types as types
 from nodetool.dsl.graph import GraphNode
 
@@ -16,12 +17,23 @@ class Bark(GraphNode):
     - Generate automated announcements for public spaces
     """
 
-    model: types.HFTextToSpeech | GraphNode | tuple[GraphNode, str] = Field(default=types.HFTextToSpeech(type='hf.text_to_speech', repo_id='', path=None, allow_patterns=None, ignore_patterns=None), description='The model ID to use for the image generation')
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(default='', description='The input text to the model')
+    model: types.HFTextToSpeech | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.HFTextToSpeech(
+            type="hf.text_to_speech",
+            repo_id="",
+            path=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model ID to use for the image generation",
+    )
+    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="", description="The input text to the model"
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.text_to_speech.Bark"
-
+    def get_node_type(cls):
+        return "huggingface.text_to_speech.Bark"
 
 
 class TextToSpeech(GraphNode):
@@ -35,10 +47,21 @@ class TextToSpeech(GraphNode):
     - Produce audio narrations for videos, presentations, or e-learning content
     """
 
-    model: types.HFTextToSpeech | GraphNode | tuple[GraphNode, str] = Field(default=types.HFTextToSpeech(type='hf.text_to_speech', repo_id='', path=None, allow_patterns=None, ignore_patterns=None), description='The model ID to use for text-to-speech generation')
-    text: str | GraphNode | tuple[GraphNode, str] = Field(default='Hello, this is a test of the text-to-speech system.', description='The text to convert to speech')
+    model: types.HFTextToSpeech | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.HFTextToSpeech(
+            type="hf.text_to_speech",
+            repo_id="",
+            path=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model ID to use for text-to-speech generation",
+    )
+    text: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="Hello, this is a test of the text-to-speech system.",
+        description="The text to convert to speech",
+    )
 
     @classmethod
-    def get_node_type(cls): return "huggingface.text_to_speech.TextToSpeech"
-
-
+    def get_node_type(cls):
+        return "huggingface.text_to_speech.TextToSpeech"
