@@ -13,7 +13,7 @@ packages = [
   { include = "RealESRGAN", from = "src" },
 ]
 package-mode = true
-include = ["src/nodetool/package-metadata/nodetool-huggingface.json"]
+include = ["src/nodetool/package_metadata/nodetool-huggingface.json", "src/nodetool/assets/nodetool-huggingface/Summarize Audio.jpg", "src/nodetool/assets/nodetool-huggingface/Upscaling.jpg", "src/nodetool/assets/nodetool-huggingface/Object Detection.jpg", "src/nodetool/assets/nodetool-huggingface/Image Enhance.jpg", "src/nodetool/assets/nodetool-huggingface/Stable Diffusion.jpg", "src/nodetool/assets/nodetool-huggingface/Piano Track.jpg", "src/nodetool/assets/nodetool-huggingface/Segmentation.jpg", "src/nodetool/assets/nodetool-huggingface/Audio To Image.jpg", "src/nodetool/assets/nodetool-huggingface/Style Transfer.jpg", "src/nodetool/assets/nodetool-huggingface/Transcribe Audio.jpg", "src/nodetool/assets/nodetool-huggingface/Movie Posters.jpg", "src/nodetool/assets/nodetool-huggingface/Audio To Spectrogram.jpg", "src/nodetool/assets/nodetool-huggingface/Depth Estimation.jpg", "src/nodetool/assets/nodetool-huggingface/Add Subtitles To Video.jpg", "src/nodetool/assets/nodetool-huggingface/stable_diffusion_xl.jpg", "src/nodetool/assets/nodetool-huggingface/Pokemon Maker.jpg"]
 repository = "https://github.com/nodetool-ai/nodetool-huggingface"
 
 [tool.poetry.dependencies]
