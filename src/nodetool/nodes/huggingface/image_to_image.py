@@ -480,7 +480,7 @@ class StableDiffusionControlNetModel(str, Enum):
 class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
     """
     Performs inpainting on images using Stable Diffusion with ControlNet guidance.
-    image, inpainting, controlnet, SD
+    image, inpainting, controlnet, SD, style-transfer, ipadapter
 
     Use cases:
     - Remove unwanted objects from images with precise control
@@ -566,7 +566,7 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
 class StableDiffusionInpaintNode(StableDiffusionBaseNode):
     """
     Performs inpainting on images using Stable Diffusion.
-    image, inpainting, AI, SD
+    image, inpainting, SD
 
     Use cases:
     - Remove unwanted objects from images
@@ -632,7 +632,7 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
 class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
     """
     Transforms existing images using Stable Diffusion with ControlNet guidance.
-    image, generation, image-to-image, controlnet, SD
+    image, generation, image-to-image, controlnet, SD, style-transfer, ipadapter
 
     Use cases:
     - Modify existing images with precise control over composition and structure
