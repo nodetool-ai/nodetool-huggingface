@@ -439,7 +439,7 @@ import nodetool.nodes.huggingface.stable_diffusion_base
 class StableDiffusionImg2ImgNode(GraphNode):
     """
     Transforms existing images based on text prompts using Stable Diffusion.
-    image, generation, image-to-image, SD, img2img
+    image, generation, image-to-image, SD, img2img, style-transfer, ipadapter
 
     Use cases:
     - Modifying existing images to fit a specific style or theme
@@ -826,7 +826,7 @@ import nodetool.nodes.huggingface.stable_diffusion_base
 class StableDiffusionXLImg2Img(GraphNode):
     """
     Transforms existing images based on text prompts using Stable Diffusion XL.
-    image, generation, image-to-image, SDXL
+    image, generation, image-to-image, SDXL, style-transfer, ipadapter
 
     Use cases:
     - Modifying existing images to fit a specific style or theme
