@@ -67,7 +67,7 @@ class TextToText(HuggingFacePipelineNode):
     def get_basic_fields(cls) -> list[str]:
         return ["model", "text"]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context, "text2text-generation", self.model.repo_id
         )

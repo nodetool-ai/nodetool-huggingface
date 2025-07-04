@@ -64,7 +64,7 @@ class ImageToText(HuggingFacePipelineNode):
     def required_inputs(self):
         return ["image"]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context=context,
             pipeline_task="image-to-text",
@@ -120,7 +120,7 @@ class VisualQuestionAnswering(HuggingFacePipelineNode):
             ),
         ]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context=context,
             pipeline_task="visual-question-answering",
@@ -196,7 +196,7 @@ class VisualQuestionAnswering(HuggingFacePipelineNode):
 #             ),
 #         ]
 
-#     async def initialize(self, context: ProcessingContext):
+#     async def preload_model(self, context: ProcessingContext):
 #         self._model = await self.load_model(
 #             context=context,
 #             model_id=self.model.repo_id,

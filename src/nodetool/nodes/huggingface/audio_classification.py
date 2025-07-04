@@ -65,7 +65,7 @@ class AudioClassifier(HuggingFacePipelineNode):
     def required_inputs(self):
         return ["audio"]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context=context,
             pipeline_task="audio-classification",
@@ -134,7 +134,7 @@ class ZeroShotAudioClassifier(HuggingFacePipelineNode):
     def pipeline_task(self) -> str:
         return "zero-shot-audio-classification"
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_model(
             context, ZeroShotAudioClassificationPipeline, self.model.repo_id
         )

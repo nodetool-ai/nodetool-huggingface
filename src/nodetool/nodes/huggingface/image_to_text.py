@@ -61,7 +61,7 @@ class ImageToText(HuggingFacePipelineNode):
     def required_inputs(self):
         return ["image"]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context, "image-to-text", self.model.repo_id
         )

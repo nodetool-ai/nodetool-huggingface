@@ -84,7 +84,7 @@ class ImageClassifier(HuggingFacePipelineNode):
         if self._pipeline is not None:
             self._pipeline.model.to(device)  # type: ignore
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context=context,
             pipeline_task="image-classification",
@@ -164,7 +164,7 @@ class ZeroShotImageClassifier(HuggingFacePipelineNode):
     def get_model_id(self):
         return self.model.repo_id
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context=context,
             pipeline_task="zero-shot-image-classification",

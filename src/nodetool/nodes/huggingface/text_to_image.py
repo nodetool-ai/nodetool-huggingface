@@ -66,7 +66,7 @@ log = Environment.get_logger()
 
 #     _pipeline: AuraFlowPipeline | None = None
 
-#     async def initialize(self, context: ProcessingContext):
+#     async def preload_model(self, context: ProcessingContext):
 #         self._pipeline = AuraFlowPipeline.from_pretrained(
 #             "fal/AuraFlow", torch_dtype=torch.float16
 #         )  # type: ignore
@@ -143,7 +143,7 @@ log = Environment.get_logger()
 #     _prior_pipeline: KandinskyV22PriorPipeline | None = None
 #     _pipeline: KandinskyV22Pipeline | None = None
 
-#     async def initialize(self, context: ProcessingContext):
+#     async def preload_model(self, context: ProcessingContext):
 #         self._prior_pipeline = KandinskyV22PriorPipeline.from_pretrained(
 #             "kandinsky-community/kandinsky-2-2-prior", torch_dtype=torch.float16
 #         )  # type: ignore
@@ -245,7 +245,7 @@ log = Environment.get_logger()
 #             ),
 #         ]
 
-#     async def initialize(self, context: ProcessingContext):
+#     async def preload_model(self, context: ProcessingContext):
 #         self._pipeline = await self.load_model(
 #             context=context,
 #             model_id="PixArt-alpha/PixArt-XL-2-1024-MS",
@@ -353,7 +353,7 @@ log = Environment.get_logger()
 #             ),
 #         ]
 
-#     async def initialize(self, context: ProcessingContext):
+#     async def preload_model(self, context: ProcessingContext):
 #         self._pipeline = await self.load_model(
 #             context=context,
 #             model_id="PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
@@ -445,7 +445,7 @@ log = Environment.get_logger()
 #     def get_model_id(self):
 #         return "kandinsky-community/kandinsky-3"
 
-#     async def initialize(self, context: ProcessingContext):
+#     async def preload_model(self, context: ProcessingContext):
 #         self._pipeline = await self.load_model(
 #             context=context,
 #             model_id="kandinsky-community/kandinsky-3",
@@ -513,8 +513,8 @@ class StableDiffusion(StableDiffusionBaseNode):
     def get_title(cls):
         return "Stable Diffusion"
 
-    async def initialize(self, context: ProcessingContext):
-        await super().initialize(context)
+    async def preload_model(self, context: ProcessingContext):
+        await super().preload_model(context)
         self._pipeline = await self.load_model(
             context=context,
             model_class=StableDiffusionPipeline,
@@ -552,7 +552,7 @@ class StableDiffusionXL(StableDiffusionXLBase):
     def get_title(cls):
         return "Stable Diffusion XL"
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         if "playground" in self.model.repo_id:
             raise ValueError("Playground models are not supported in this node")
 
@@ -906,7 +906,7 @@ class FluxText2Image(HuggingFacePipelineNode):
         
         return None
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         # Determine torch dtype based on variant
         torch_dtype = torch.bfloat16 if self.variant in [FluxVariant.SCHNELL, FluxVariant.DEV] else torch.float16
         

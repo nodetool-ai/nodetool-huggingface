@@ -132,7 +132,7 @@ class AnimateDiffNode(HuggingFacePipelineNode):
             ),
         ]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         adapter = await self.load_model(
             context=context,
             model_class=MotionAdapter,
@@ -236,7 +236,7 @@ class StableVideoDiffusion(HuggingFacePipelineNode):
             ),
         ]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_model(
             context=context,
             model_class=StableVideoDiffusionPipeline,

@@ -80,7 +80,7 @@ class Segmentation(HuggingFacePipelineNode):
         if self._pipeline is not None:
             self._pipeline.model.to(device)  # type: ignore
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context, "image-segmentation", self.get_model_id(), device=context.device
         )  # type: ignore
@@ -135,7 +135,7 @@ class SAM2Segmentation(HuggingFacePipelineNode):
     def get_title(cls) -> str:
         return "SAM2 Segmentation"
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_model(
             context=context,
             model_id="facebook/sam2-hiera-large",

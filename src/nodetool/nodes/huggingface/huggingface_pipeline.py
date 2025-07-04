@@ -31,7 +31,7 @@ class HuggingFacePipelineNode(HuggingfaceNode):
         pipeline_task: str,
         model_id: Any,
         device: str | None = None,
-        torch_dtype: torch.dtype | None = torch.float16,
+        torch_dtype: torch.dtype | None = None,
         **kwargs: Any,
     ):
         if model_id == "" or model_id is None:
@@ -59,7 +59,7 @@ class HuggingFacePipelineNode(HuggingfaceNode):
             torch_dtype=torch_dtype,
             device=device,
             **kwargs,
-        )
+        ) # type: ignore
         ModelManager.set_model(self.id, model_id, pipeline_task, model)
         return model  # type: ignore
 
@@ -68,8 +68,8 @@ class HuggingFacePipelineNode(HuggingfaceNode):
         context: ProcessingContext,
         model_class: type[T],
         model_id: str,
-        variant: str | None = "fp16",
-        torch_dtype: torch.dtype | None = torch.float16,
+        variant: str | None = None,
+        torch_dtype: torch.dtype | None = None,
         path: str | None = None,
         skip_cache: bool = False,
         **kwargs: Any,

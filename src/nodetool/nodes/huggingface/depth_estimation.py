@@ -63,7 +63,7 @@ class DepthEstimation(HuggingFacePipelineNode):
     def get_model_id(self):
         return self.model.repo_id
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context, "depth-estimation", self.get_model_id(), device=context.device
         )

@@ -35,7 +35,7 @@ class TextClassifier(HuggingFacePipelineNode):
             ]
         ]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context, "text-classification", self.model.repo_id
         )
@@ -115,7 +115,7 @@ class ZeroShotTextClassifier(HuggingFacePipelineNode):
         description="Whether to perform multi-label classification",
     )
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         # load model directly onto device
         self._pipeline = await self.load_pipeline(
             context=context,

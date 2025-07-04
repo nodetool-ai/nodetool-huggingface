@@ -94,7 +94,7 @@ class MusicGen(HuggingFacePipelineNode):
     def get_model_id(self):
         return self.model.repo_id
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         if not context.is_huggingface_model_cached(self.model.repo_id):
             raise ValueError(f"Download the model {self.model.repo_id} first")
 
@@ -181,7 +181,7 @@ class MusicLDM(HuggingFacePipelineNode):
             ),
         ]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_model(
             context, MusicLDMPipeline, self.model.repo_id
         )
@@ -252,7 +252,7 @@ class AudioLDM(HuggingFacePipelineNode):
             ),
         ]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_model(
             context, AudioLDMPipeline, "cvssp/audioldm-s-full-v2"
         )
@@ -349,7 +349,7 @@ class AudioLDM2(HuggingFacePipelineNode):
             ),
         ]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_model(
             context, AudioLDM2Pipeline, "cvssp/audioldm2", variant=None
         )
@@ -434,7 +434,7 @@ class DanceDiffusion(HuggingFacePipelineNode):
             ),
         ]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_model(
             context, DiffusionPipeline, "harmonai/maestro-150k"
         )
@@ -512,7 +512,7 @@ class StableAudioNode(HuggingFacePipelineNode):
             ),
         ]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_model(
             context=context,
             model_class=StableAudioPipeline,
@@ -623,7 +623,7 @@ class StableAudioNode(HuggingFacePipelineNode):
 #             ),
 #         ]
 
-#     async def initialize(self, context: ProcessingContext):
+#     async def preload_model(self, context: ProcessingContext):
 #         self._model = await self.load_model(
 #             context=context,
 #             model_class=ParlerTTSForConditionalGeneration,

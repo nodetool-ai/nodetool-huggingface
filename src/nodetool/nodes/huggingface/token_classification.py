@@ -43,7 +43,7 @@ class TokenClassification(HuggingFacePipelineNode):
         description="Strategy to aggregate tokens into entities",
     )
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context, "token-classification", self.model.repo_id
         )

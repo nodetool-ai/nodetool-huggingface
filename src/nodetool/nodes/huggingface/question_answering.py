@@ -62,7 +62,7 @@ class QuestionAnswering(HuggingFacePipelineNode):
             ),
         ]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context, "question-answering", self.model.repo_id
         )
@@ -136,7 +136,7 @@ class TableQuestionAnswering(HuggingFacePipelineNode):
         description="The question to be answered based on the table",
     )
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context, "table-question-answering", self.model.repo_id
         )

@@ -86,7 +86,7 @@ class BaseImageToImage(HuggingFacePipelineNode):
     def get_model_id(self):
         raise NotImplementedError("Subclass must implement abstract method")
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context, "image-to-image", self.get_model_id(), device=context.device
         )
@@ -158,7 +158,7 @@ class RealESRGANNode(BaseNode):
     def required_inputs(self):
         return ["image"]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         assert self.model.path is not None, "Model is not set"
 
         model_path = try_to_load_from_cache(self.model.repo_id, self.model.path)
@@ -298,7 +298,7 @@ class Kandinsky3Img2Img(HuggingFacePipelineNode):
     def get_model_id(self) -> str:
         return "kandinsky-community/kandinsky-3"
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_model(
             context=context,
             model_id="kandinsky-community/kandinsky-3",
@@ -677,8 +677,8 @@ class StableDiffusionControlNetNode(StableDiffusionBaseNode):
             self._pipeline.vae.to(device)
             self._pipeline.text_encoder.to(device)
 
-    async def initialize(self, context: ProcessingContext):
-        await super().initialize(context)
+    async def preload_model(self, context: ProcessingContext):
+        await super().preload_model(context)
         controlnet = await self.load_model(
             context=context,
             model_class=ControlNetModel,
@@ -743,8 +743,8 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
     def get_title(cls):
         return "Stable Diffusion (Img2Img)"
 
-    async def initialize(self, context: ProcessingContext):
-        await super().initialize(context)
+    async def preload_model(self, context: ProcessingContext):
+        await super().preload_model(context)
         self._pipeline = await self.load_model(
             context=context,
             model_class=StableDiffusionImg2ImgPipeline,
@@ -824,8 +824,8 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
     def get_title(cls):
         return "Stable Diffusion ControlNet Inpaint"
 
-    async def initialize(self, context: ProcessingContext):
-        await super().initialize(context)
+    async def preload_model(self, context: ProcessingContext):
+        await super().preload_model(context)
         controlnet = await self.load_pipeline(
             context,
             "controlnet",
@@ -896,8 +896,8 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
     def get_title(cls):
         return "Stable Diffusion (Inpaint)"
 
-    async def initialize(self, context: ProcessingContext):
-        await super().initialize(context)
+    async def preload_model(self, context: ProcessingContext):
+        await super().preload_model(context)
         if self._pipeline is None:
             self._pipeline = await self.load_model(
                 context=context,
@@ -972,8 +972,8 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
     def get_title(cls):
         return "Stable Diffusion ControlNet (Img2Img)"
 
-    async def initialize(self, context: ProcessingContext):
-        await super().initialize(context)
+    async def preload_model(self, context: ProcessingContext):
+        await super().preload_model(context)
         if not context.is_huggingface_model_cached(self.controlnet.repo_id):
             raise ValueError(
                 f"ControlNet model {self.controlnet.repo_id} must be downloaded first"
@@ -1094,7 +1094,7 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
             )
         ]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_model(
             context=context,
             model_class=StableDiffusionUpscalePipeline,
@@ -1179,7 +1179,7 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
     def get_title(cls):
         return "Stable Diffusion XL (Img2Img)"
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_model(
             context=context,
             model_class=StableDiffusionXLImg2ImgPipeline,
@@ -1238,7 +1238,7 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
     def get_title(cls):
         return "Stable Diffusion XL (Inpaint)"
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         if self._pipeline is None:
             self._pipeline = await self.load_model(
                 context=context,
@@ -1309,7 +1309,7 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
     def get_title(cls):
         return "Stable Diffusion XL ControlNet"
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         controlnet = await self.load_model(
             context=context,
             model_class=ControlNetModel,
@@ -1448,7 +1448,7 @@ class OmniGenNode(HuggingFacePipelineNode):
     def get_model_id(self) -> str:
         return "Shitao/OmniGen-v1-diffusers"
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_model(
             context=context,
             model_id="Shitao/OmniGen-v1-diffusers",

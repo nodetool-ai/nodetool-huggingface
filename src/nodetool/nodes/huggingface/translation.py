@@ -105,7 +105,7 @@ class Translation(HuggingFacePipelineNode):
             ),
         ]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         """
         Initializes the translation pipeline by loading the specified model.
         """

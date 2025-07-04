@@ -77,7 +77,7 @@ class TextGeneration(HuggingFacePipelineNode):
             ),
         ]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context, "text-generation", self.model.repo_id
         )

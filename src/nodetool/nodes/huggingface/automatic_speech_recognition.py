@@ -195,7 +195,7 @@ class Whisper(HuggingFacePipelineNode):
     def required_inputs(self):
         return ["audio"]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         logger.info("Initializing Whisper model...")
         torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 

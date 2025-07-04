@@ -50,7 +50,7 @@ class Bark(HuggingFacePipelineNode):
     async def move_to_device(self, device: str):
         pass
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context=context,
             pipeline_task="text-to-speech",
@@ -109,7 +109,7 @@ class Bark(HuggingFacePipelineNode):
 #     def get_model_id(self):
 #         return self.model.repo_id
 
-#     async def initialize(self, context: ProcessingContext):
+#     async def preload_model(self, context: ProcessingContext):
 #         self._model = await self.load_model(
 #             context=context,
 #             model_class=ParlerTTSForConditionalGeneration,
@@ -195,7 +195,7 @@ class TextToSpeech(HuggingFacePipelineNode):
     def get_model_id(self):
         return self.model.repo_id
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context,
             "text-to-speech",
@@ -263,7 +263,7 @@ class TextToSpeech(HuggingFacePipelineNode):
 #     _model: SpeechT5ForTextToSpeech | None = None
 #     # _vododer: SpeechT5HifiGan | None = None
 
-#     async def initialize(self, context: ProcessingContext):
+#     async def preload_model(self, context: ProcessingContext):
 #         model_name = "microsoft/speecht5_tts"
 #         self._processor = SpeechT5Processor.from_pretrained(model_name)  # type: ignore
 #         self._model = SpeechT5ForTextToSpeech.from_pretrained(model_name)  # type: ignore

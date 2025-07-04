@@ -93,7 +93,7 @@ class ObjectDetection(HuggingFacePipelineNode):
     def get_model_id(self):
         return self.model.repo_id
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context, "object-detection", self.get_model_id(), device=context.device
         )
@@ -278,7 +278,7 @@ class ZeroShotObjectDetection(HuggingFacePipelineNode):
     def get_model_id(self):
         return self.model.repo_id
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context,
             "zero-shot-object-detection",

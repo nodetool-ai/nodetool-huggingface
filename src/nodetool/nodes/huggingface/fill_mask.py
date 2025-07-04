@@ -58,7 +58,7 @@ class FillMask(HuggingFacePipelineNode):
             ),
         ]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context, "fill-mask", self.model.repo_id
         )

@@ -55,7 +55,7 @@ class Reranker(HuggingFacePipelineNode):
             ),
         ]
 
-    async def initialize(self, context: ProcessingContext):
+    async def preload_model(self, context: ProcessingContext):
 
         self._tokenizer = await self.load_model(
             context=context,
