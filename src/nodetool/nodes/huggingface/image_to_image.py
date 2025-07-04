@@ -1,5 +1,7 @@
 from enum import Enum
 import re
+from typing import Any
+from nodetool.workflows.types import NodeProgress
 import numpy as np
 import torch
 from RealESRGAN import RealESRGAN
@@ -21,8 +23,10 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
 )
 from nodetool.nodes.huggingface.huggingface_node import progress_callback
 from nodetool.workflows.processing_context import ProcessingContext
+from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
-from diffusers.models.controlnet import ControlNetModel
+from diffusers.pipelines.auto_pipeline import AutoPipelineForInpainting
+from diffusers.models.controlnets.controlnet import ControlNetModel
 from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import (
     StableDiffusionControlNetImg2ImgPipeline,
 )
@@ -322,6 +326,295 @@ class Kandinsky3Img2Img(HuggingFacePipelineNode):
             callback=progress_callback(self.id, self.num_inference_steps, context),
             callback_steps=1,
         )  # type: ignore
+
+        image = output.images[0]
+
+        return await context.image_from_pil(image)
+
+class ModelVariant(Enum):
+    DEFAULT = "default"
+    FP16 = "fp16"
+    FP32 = "fp32"
+    BF16 = "bf16"
+
+class LoadImageToImageModel(HuggingFacePipelineNode):
+    """
+    Load HuggingFace model for image-to-image generation from a repo_id.
+
+    Use cases:
+    - Loads a pipeline directly from a repo_id
+    - Used for AutoPipelineForImage2Image
+    """
+
+    repo_id: str = Field(
+        default="",
+        description="The repository ID of the model to use for image-to-image generation.",
+    )
+
+    variant: ModelVariant = Field(
+        default=ModelVariant.FP16,
+        description="The variant of the model to use for image-to-image generation.",
+    )
+
+    async def preload_model(self, context: ProcessingContext):
+        await self.load_model(
+            context=context,
+            model_id=self.repo_id,
+            model_class=AutoPipelineForImage2Image,
+            torch_dtype=torch.float16,
+            use_safetensors=True,
+            variant=self.variant.value if self.variant != ModelVariant.DEFAULT else None,
+        ) 
+
+    async def process(self, context: ProcessingContext) -> HFImageToImage:
+        return HFImageToImage(
+            repo_id=self.repo_id,
+            variant=self.variant.value if self.variant != ModelVariant.DEFAULT else None,
+        )
+
+
+def pipeline_progress_callback(node_id: str, total_steps: int, context: ProcessingContext):
+    def callback(pipeline: DiffusionPipeline, step: int, timestep: int, kwargs: dict[str, Any]) -> dict[str, Any]:
+        context.post_message(
+            NodeProgress(
+                node_id=node_id,
+                progress=step,
+                total=total_steps,
+            )
+        )
+        return kwargs
+
+    return callback
+
+class AutoPipelineImg2Img(HuggingFacePipelineNode):
+    """
+    Transforms existing images based on text prompts using AutoPipeline for Image-to-Image.
+    This node automatically detects the appropriate pipeline class based on the model used.
+    image, generation, image-to-image, autopipeline
+
+    Use cases:
+    - Transform existing images with any compatible model (Stable Diffusion, SDXL, Kandinsky, etc.)
+    - Apply specific styles or concepts to photographs or artwork
+    - Modify existing images based on text descriptions
+    - Create variations of existing visual content with automatic pipeline selection
+    """
+
+    model: HFImageToImage = Field(
+        default=HFImageToImage(),
+        description="The HuggingFace model to use for image-to-image generation.",
+    )
+    prompt: str = Field(
+        default="A beautiful landscape with mountains and a lake at sunset",
+        description="Text prompt describing the desired image transformation.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Text prompt describing what should not appear in the generated image.",
+    )
+    image: ImageRef = Field(
+        default=ImageRef(),
+        title="Input Image",
+        description="The input image to transform",
+    )
+    strength: float = Field(
+        default=0.8,
+        description="Strength of the transformation. Higher values allow for more deviation from the original image.",
+        ge=0.0,
+        le=1.0,
+    )
+    num_inference_steps: int = Field(
+        default=25,
+        description="Number of denoising steps.",
+        ge=1,
+        le=100,
+    )
+    guidance_scale: float = Field(
+        default=7.5,
+        description="Guidance scale for generation. Higher values follow the prompt more closely.",
+        ge=1.0,
+        le=20.0,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+        ge=-1,
+    )
+
+    _pipeline: AutoPipelineForImage2Image | None = None
+
+    @classmethod
+    def get_basic_fields(cls):
+        return ["model", "image", "prompt", "negative_prompt", "strength"]
+
+    def required_inputs(self):
+        return ["image"]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "AutoPipeline Image-to-Image"
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id
+
+    async def preload_model(self, context: ProcessingContext):
+        self._pipeline = await self.load_model(
+            context=context,
+            model_id=self.model.repo_id,
+            path=self.model.path,
+            model_class=AutoPipelineForImage2Image,
+            torch_dtype=torch.float16,
+            use_safetensors=True,
+            variant=self.model.variant,
+        )
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None:
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        # Set up the generator for reproducibility
+        generator = torch.Generator(device="cpu")
+        if self.seed != -1:
+            generator = generator.manual_seed(self.seed)
+
+        input_image = await context.image_to_pil(self.image)
+        
+        # Prepare kwargs for the pipeline
+        kwargs = {
+            "prompt": self.prompt,
+            "image": input_image,
+            "strength": self.strength,
+            "num_inference_steps": self.num_inference_steps,
+            "guidance_scale": self.guidance_scale,
+            "generator": generator,
+            "callback_on_step_end": pipeline_progress_callback(self.id, self.num_inference_steps, context),
+        }
+        
+        # Add negative prompt if provided
+        if self.negative_prompt:
+            kwargs["negative_prompt"] = self.negative_prompt
+
+        output = self._pipeline(**kwargs)  # type: ignore
+        image = output.images[0]
+
+        return await context.image_from_pil(image)
+
+
+class AutoPipelineInpaint(HuggingFacePipelineNode):
+    """
+    Performs inpainting on images using AutoPipeline for Inpainting.
+    This node automatically detects the appropriate pipeline class based on the model used.
+    image, inpainting, autopipeline, stable-diffusion, SDXL, kandinsky
+
+    Use cases:
+    - Remove unwanted objects from images with any compatible model
+    - Fill in missing parts of images using various diffusion models
+    - Modify specific areas of images while preserving the rest
+    - Automatic pipeline selection for different model architectures
+    """
+
+    model: HFImageToImage = Field(
+        default=HFImageToImage(),
+        description="The HuggingFace model to use for inpainting.",
+    )
+    prompt: str = Field(
+        default="",
+        description="Text prompt describing what should be generated in the masked area.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Text prompt describing what should not appear in the generated content.",
+    )
+    image: ImageRef = Field(
+        default=ImageRef(),
+        title="Input Image",
+        description="The input image to inpaint",
+    )
+    mask_image: ImageRef = Field(
+        default=ImageRef(),
+        title="Mask Image",
+        description="The mask image indicating areas to be inpainted (white areas will be inpainted)",
+    )
+    num_inference_steps: int = Field(
+        default=25,
+        description="Number of denoising steps.",
+        ge=1,
+        le=100,
+    )
+    guidance_scale: float = Field(
+        default=7.5,
+        description="Guidance scale for generation. Higher values follow the prompt more closely.",
+        ge=1.0,
+        le=20.0,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+        ge=-1,
+    )
+
+    _pipeline: AutoPipelineForInpainting | None = None
+
+    @classmethod
+    def get_basic_fields(cls):
+        return ["model", "image", "mask_image", "prompt", "negative_prompt"]
+
+    def required_inputs(self):
+        return ["image", "mask_image"]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "AutoPipeline Inpainting"
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id
+
+    async def preload_model(self, context: ProcessingContext):
+        self._pipeline = await self.load_model(
+            context=context,
+            model_id=self.model.repo_id,
+            path=self.model.path,
+            model_class=AutoPipelineForInpainting,
+            torch_dtype=torch.float16 if self.model.variant == ModelVariant.FP16 else torch.bfloat16 if self.model.variant == ModelVariant.BF16 else torch.float32,
+            use_safetensors=True,
+            variant=self.model.variant,
+        )
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None:
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        # Set up the generator for reproducibility
+        generator = torch.Generator(device="cpu")
+        if self.seed != -1:
+            generator = generator.manual_seed(self.seed)
+
+        input_image = await context.image_to_pil(self.image)
+        mask_image = await context.image_to_pil(self.mask_image)
+        
+        # Prepare kwargs for the pipeline
+        kwargs = {
+            "prompt": self.prompt,
+            "image": input_image,
+            "mask_image": mask_image,
+            "num_inference_steps": self.num_inference_steps,
+            "guidance_scale": self.guidance_scale,
+            "generator": generator,
+            "callback_on_step_end": pipeline_progress_callback(self.id, self.num_inference_steps, context),
+        }
+        
+        # Add negative prompt if provided
+        if self.negative_prompt:
+            kwargs["negative_prompt"] = self.negative_prompt
+
+        output = self._pipeline(**kwargs) # type: ignore
 
         image = output.images[0]
 
@@ -841,7 +1134,7 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
             image=input_image,
             num_inference_steps=self.num_inference_steps,
             guidance_scale=self.guidance_scale,
-            callback=progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
+            callback_on_step_end=progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
         ).images[  # type: ignore
             0
         ]
@@ -1051,7 +1344,7 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
             controlnet_conditioning_scale=self.controlnet_conditioning_scale,
             num_inference_steps=self.num_inference_steps,
             generator=generator,
-            callback=self.progress_callback(context),
+            callback_on_step_end=self.progress_callback(context),
             callback_steps=1,
         )
 

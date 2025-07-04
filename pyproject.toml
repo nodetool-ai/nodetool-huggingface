@@ -45,3 +45,5 @@ diffusers = { extras = ["torch"], version = "*" }
 transformers = "*"
 paddleocr = "*"
 paddlepaddle = "*"
+quanto = "*"
+bitsandbytes = "*"

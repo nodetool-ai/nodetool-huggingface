@@ -12,7 +12,6 @@ from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
 
 from pydantic import Field
-from typing import Optional, Tuple, ClassVar, List
 from transformers import (
     AutomaticSpeechRecognitionPipeline,
     AutoModelForSpeechSeq2Seq,
