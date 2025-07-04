@@ -31,6 +31,7 @@ class TextToText(GraphNode):
             type="hf.text2text_generation",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),

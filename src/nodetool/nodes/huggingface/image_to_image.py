@@ -23,6 +23,8 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
 )
 from nodetool.nodes.huggingface.huggingface_node import progress_callback
 from nodetool.workflows.processing_context import ProcessingContext
+
+from diffusers import OmniGenPipeline
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
 from diffusers.pipelines.auto_pipeline import AutoPipelineForInpainting
@@ -1348,217 +1350,155 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
             callback_steps=1,
         )
 
-        return await context.image_from_pil(output.images[0])  # type: ignore
 
+class OmniGenNode(HuggingFacePipelineNode):
+    """
+    Generates and edits images using the OmniGen model, supporting multimodal inputs.
+    image, generation, text-to-image, image-editing, multimodal, omnigen
 
-# class Kandinsky2Img2Img(BaseNode):
-#     """
-#     Transforms existing images based on text prompts using the Kandinsky 2.2 model.
-#     image, generation, image-to-image
+    Use cases:
+    - Generate images from text prompts
+    - Edit existing images with text instructions
+    - Controllable image generation with reference images
+    - Visual reasoning and image manipulation
+    - ID and object preserving generation
+    """
 
-#     Use cases:
-#     - Transform existing images based on text prompts
-#     - Apply specific styles or concepts to existing images
-#     - Modify photographs or artworks with AI-generated elements
-#     - Create variations of existing visual content
-#     """
+    prompt: str = Field(
+        default="A realistic photo of a young woman sitting on a sofa, holding a book and facing the camera.",
+        description="The text prompt for image generation. Use <img><|image_1|></img> placeholders to reference input images.",
+    )
+    input_images: list[ImageRef] = Field(
+        default=[],
+        description="List of input images to use for editing or as reference. Referenced in prompt using <img><|image_1|></img>, <img><|image_2|></img>, etc.",
+    )
+    height: int = Field(
+        default=1024, 
+        description="Height of the generated image.",
+        ge=64, 
+        le=2048
+    )
+    width: int = Field(
+        default=1024, 
+        description="Width of the generated image.",
+        ge=64, 
+        le=2048
+    )
+    guidance_scale: float = Field(
+        default=2.5, 
+        description="Guidance scale for generation. Higher values follow the prompt more closely.",
+        ge=1.0, 
+        le=20.0
+    )
+    img_guidance_scale: float = Field(
+        default=1.6, 
+        description="Image guidance scale when using input images.",
+        ge=1.0, 
+        le=20.0
+    )
+    num_inference_steps: int = Field(
+        default=25, 
+        description="Number of denoising steps.",
+        ge=1, 
+        le=100
+    )
+    seed: int = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+        ge=-1,
+    )
+    use_input_image_size_as_output: bool = Field(
+        default=False,
+        description="If True, use the input image size as output size. Recommended for image editing.",
+    )
+    max_input_image_size: int = Field(
+        default=1024,
+        description="Maximum input image size. Smaller values reduce memory usage but may affect quality.",
+        ge=256,
+        le=2048
+    )
+    enable_model_cpu_offload: bool = Field(
+        default=False,
+        description="Enable CPU offload to reduce memory usage when using multiple images.",
+    )
 
-#     @classmethod
-#     def get_title(cls) -> str:
-#         return "Kandinsky 2.2 Image-to-Image"
+    _pipeline: Any | None = None
 
-#     prompt: str = Field(
-#         default="A photograph of the inside of a subway train. There are raccoons sitting on the seats. One of them is reading a newspaper. The window shows the city in the background.",
-#         description="A text prompt describing the desired image transformation.",
-#     )
-#     negative_prompt: str = Field(
-#         default="", description="A text prompt describing what to avoid in the image."
-#     )
-#     num_inference_steps: int = Field(
-#         default=50, description="The number of denoising steps.", ge=1, le=100
-#     )
-#     strength: float = Field(
-#         default=0.5,
-#         description="The strength of the transformation. Use a value between 0.0 and 1.0.",
-#         ge=0.0,
-#         le=1.0,
-#     )
-#     image: ImageRef = Field(
-#         default=ImageRef(),
-#         title="Input Image",
-#         description="The input image to transform",
-#     )
-#     seed: int = Field(
-#         default=-1,
-#         description="Seed for the random number generator. Use -1 for a random seed.",
-#         ge=-1,
-#     )
+    @classmethod
+    def get_basic_fields(cls):
+        return ["prompt", "input_images", "height", "width", "guidance_scale"]
 
-#     _prior_pipeline: KandinskyV22PriorPipeline | None = None
-#     _pipeline: KandinskyV22Img2ImgPipeline | None = None
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HuggingFaceModel(
+                repo_id="Shitao/OmniGen-v1-diffusers",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
+            ),
+        ]
 
-#     def required_inputs(self):
-#         return ["image"]
+    def required_inputs(self):
+        # No required inputs since it can work with text-only prompts
+        return []
 
-#     async def initialize(self, context: ProcessingContext):
-#         self._prior_pipeline = KandinskyV22PriorPipeline.from_pretrained(
-#             "kandinsky-community/kandinsky-2-2-prior", torch_dtype=torch.float16
-#         )  # type: ignore
-#         self._pipeline = KandinskyV22Img2ImgPipeline.from_pretrained(
-#             "kandinsky-community/kandinsky-2-2-decoder", torch_dtype=torch.float16
-#         )  # type: ignore
+    @classmethod
+    def get_title(cls) -> str:
+        return "OmniGen"
 
-#     async def process(self, context: ProcessingContext) -> ImageRef:
-#         if self._prior_pipeline is None or self._pipeline is None:
-#             raise ValueError("Pipelines not initialized")
+    def get_model_id(self) -> str:
+        return "Shitao/OmniGen-v1-diffusers"
 
-#         # Set up the generator for reproducibility
-#         generator = torch.Generator(device="cpu")
-#         if self.seed != -1:
-#             generator = generator.manual_seed(self.seed)
+    async def initialize(self, context: ProcessingContext):
+        self._pipeline = await self.load_model(
+            context=context,
+            model_id="Shitao/OmniGen-v1-diffusers",
+            model_class=OmniGenPipeline,
+            torch_dtype=torch.bfloat16,
+            variant=None
+        )
+        
+        if self.enable_model_cpu_offload and self._pipeline is not None:
+            self._pipeline.enable_model_cpu_offload()
 
-#         # Enable sequential CPU offload for memory efficiency
-#         self._prior_pipeline.enable_sequential_cpu_offload()
-#         self._pipeline.enable_sequential_cpu_offload()
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None:
+            self._pipeline.to(device)
 
-#         # Generate image embeddings
-#         prior_output = self._prior_pipeline(
-#             self.prompt, negative_prompt=self.negative_prompt, generator=generator
-#         )
-#         image_emb, negative_image_emb = prior_output.to_tuple()  # type: ignore
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
 
-#         input_image = await context.image_to_pil(self.image)
-#         output = self._pipeline(
-#             image=input_image,
-#             image_embeds=image_emb,
-#             negative_image_embeds=negative_image_emb,
-#             num_inference_steps=self.num_inference_steps,
-#             generator=generator,
-#             callback=progress_callback(self.id, self.num_inference_steps, context),
-#             callback_steps=1,
-#         )
+        # Set up the generator for reproducibility
+        generator = torch.Generator(device="cpu")
+        if self.seed != -1:
+            generator = generator.manual_seed(self.seed)
 
-#         image = output.images[0]  # type: ignore
+        # Convert input images to PIL if provided
+        input_images_pil = []
+        if self.input_images:
+            for img_ref in self.input_images:
+                pil_img = await context.image_to_pil(img_ref)
+                input_images_pil.append(pil_img)
 
-#         return await context.image_from_pil(image)
+        # Prepare kwargs for the pipeline
+        kwargs = {
+            "prompt": self.prompt,
+            "height": self.height,
+            "width": self.width,
+            "guidance_scale": self.guidance_scale,
+            "num_inference_steps": self.num_inference_steps,
+            "generator": generator,
+            "max_input_image_size": self.max_input_image_size,
+            "use_input_image_size_as_output": self.use_input_image_size_as_output,
+            "callback_on_step_end": pipeline_progress_callback(self.id, self.num_inference_steps, context),
+        }
 
+        # Add input images if provided
+        if input_images_pil:
+            kwargs["input_images"] = input_images_pil
+            kwargs["img_guidance_scale"] = self.img_guidance_scale
 
-# def make_hint(image: PIL.Image.Image) -> torch.Tensor:
-#     np_array = np.array(image)
-#     detected_map = torch.from_numpy(np_array).float() / 255.0
-#     hint = detected_map.permute(2, 0, 1)
-#     return hint[:3, :, :].unsqueeze(0)
+        output = self._pipeline(**kwargs)  # type: ignore
+        image = output.images[0]
 
-
-# class Kandinsky2ControlNet(BaseNode):
-#     """
-#     Transforms existing images based on text prompts and control images using the Kandinsky 2.2 model with ControlNet.
-#     image, generation, image-to-image, controlnet
-
-#     Use cases:
-#     - Transform existing images based on text prompts with precise control
-#     - Apply specific styles or concepts to existing images guided by control images
-#     - Modify photographs or artworks with AI-generated elements while maintaining specific structures
-#     - Create variations of existing visual content with controlled transformations
-#     """
-
-#     @classmethod
-#     def get_title(cls) -> str:
-#         return "Kandinsky 2.2 with ControlNet"
-
-#     prompt: str = Field(
-#         default="A photograph of the inside of a subway train. There are raccoons sitting on the seats. One of them is reading a newspaper. The window shows the city in the background.",
-#         description="The prompt to guide the image generation.",
-#     )
-#     negative_prompt: str = Field(
-#         default="", description="The prompt not to guide the image generation."
-#     )
-#     hint: ImageRef = Field(
-#         default=ImageRef(),
-#         title="Control Image",
-#         description="The controlnet condition image.",
-#     )
-#     height: int = Field(
-#         default=512,
-#         description="The height in pixels of the generated image.",
-#         ge=64,
-#         le=2048,
-#     )
-#     width: int = Field(
-#         default=512,
-#         description="The width in pixels of the generated image.",
-#         ge=64,
-#         le=2048,
-#     )
-#     num_inference_steps: int = Field(
-#         default=30, description="The number of denoising steps.", ge=1, le=100
-#     )
-#     guidance_scale: float = Field(
-#         default=4.0,
-#         description="Guidance scale as defined in Classifier-Free Diffusion Guidance.",
-#         ge=1.0,
-#         le=20.0,
-#     )
-#     seed: int = Field(
-#         default=-1,
-#         description="Seed for the random number generator. Use -1 for a random seed.",
-#         ge=-1,
-#     )
-#     output_type: str = Field(
-#         default="pil",
-#         description="The output format of the generated image.",
-#     )
-
-#     _prior_pipeline: KandinskyV22PriorPipeline | None = None
-#     _pipeline: KandinskyV22ControlnetPipeline | None = None
-
-#     def required_inputs(self):
-#         return ["hint"]
-
-#     async def initialize(self, context: ProcessingContext):
-#         self._prior_pipeline = KandinskyV22PriorPipeline.from_pretrained(
-#             "kandinsky-community/kandinsky-2-2-prior", torch_dtype=torch.float16
-#         )  # type: ignore
-#         self._pipeline = KandinskyV22ControlnetPipeline.from_pretrained(
-#             "kandinsky-community/kandinsky-2-2-controlnet-depth",
-#             torch_dtype=torch.float16,
-#         )  # type: ignore
-
-#     async def process(self, context: ProcessingContext) -> ImageRef:
-#         if self._prior_pipeline is None or self._pipeline is None:
-#             raise ValueError("Pipelines not initialized")
-
-#         # Set up the generator for reproducibility
-#         generator = torch.Generator(device="cpu")
-#         if self.seed != -1:
-#             generator = generator.manual_seed(self.seed)
-
-#         # Enable sequential CPU offload for memory efficiency
-#         self._prior_pipeline.enable_sequential_cpu_offload()
-#         self._pipeline.enable_sequential_cpu_offload()
-
-#         # Generate image embeddings
-#         prior_output = self._prior_pipeline(
-#             self.prompt, negative_prompt=self.negative_prompt, generator=generator
-#         )
-#         image_emb, negative_image_emb = prior_output.to_tuple()  # type: ignore
-
-#         # Prepare the control image (hint)
-#         hint = await context.image_to_pil(self.hint)
-#         hint = hint.resize((self.width, self.height))
-
-#         output = self._pipeline(
-#             hint=make_hint(hint),
-#             image_embeds=image_emb,
-#             negative_image_embeds=negative_image_emb,
-#             height=self.height,
-#             width=self.width,
-#             num_inference_steps=self.num_inference_steps,
-#             guidance_scale=self.guidance_scale,
-#             generator=generator,
-#             output_type="pil",
-#             callback=progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
-#             callback_steps=1,
-#         )
-
-#         return await context.image_from_pil(output.images[0])  # type: ignore
+        return await context.image_from_pil(image)

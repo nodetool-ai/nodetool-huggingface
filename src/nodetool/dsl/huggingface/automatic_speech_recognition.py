@@ -78,6 +78,7 @@ class Whisper(GraphNode):
                 type="hf.automatic_speech_recognition",
                 repo_id="",
                 path=None,
+                variant=None,
                 allow_patterns=None,
                 ignore_patterns=None,
             ),

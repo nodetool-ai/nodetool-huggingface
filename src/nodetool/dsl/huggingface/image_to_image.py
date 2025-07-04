@@ -6,6 +6,120 @@ import nodetool.metadata.types as types
 from nodetool.dsl.graph import GraphNode
 
 
+class AutoPipelineImg2Img(GraphNode):
+    """
+    Transforms existing images based on text prompts using AutoPipeline for Image-to-Image.
+    This node automatically detects the appropriate pipeline class based on the model used.
+    image, generation, image-to-image, autopipeline
+
+    Use cases:
+    - Transform existing images with any compatible model (Stable Diffusion, SDXL, Kandinsky, etc.)
+    - Apply specific styles or concepts to photographs or artwork
+    - Modify existing images based on text descriptions
+    - Create variations of existing visual content with automatic pipeline selection
+    """
+
+    model: types.HFImageToImage | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.HFImageToImage(
+            type="hf.image_to_image",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The HuggingFace model to use for image-to-image generation.",
+    )
+    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="A beautiful landscape with mountains and a lake at sunset",
+        description="Text prompt describing the desired image transformation.",
+    )
+    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="",
+        description="Text prompt describing what should not appear in the generated image.",
+    )
+    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The input image to transform",
+    )
+    strength: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=0.8,
+        description="Strength of the transformation. Higher values allow for more deviation from the original image.",
+    )
+    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=25, description="Number of denoising steps."
+    )
+    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=7.5,
+        description="Guidance scale for generation. Higher values follow the prompt more closely.",
+    )
+    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+    )
+
+    @classmethod
+    def get_node_type(cls):
+        return "huggingface.image_to_image.AutoPipelineImg2Img"
+
+
+class AutoPipelineInpaint(GraphNode):
+    """
+    Performs inpainting on images using AutoPipeline for Inpainting.
+    This node automatically detects the appropriate pipeline class based on the model used.
+    image, inpainting, autopipeline, stable-diffusion, SDXL, kandinsky
+
+    Use cases:
+    - Remove unwanted objects from images with any compatible model
+    - Fill in missing parts of images using various diffusion models
+    - Modify specific areas of images while preserving the rest
+    - Automatic pipeline selection for different model architectures
+    """
+
+    model: types.HFImageToImage | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.HFImageToImage(
+            type="hf.image_to_image",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The HuggingFace model to use for inpainting.",
+    )
+    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="",
+        description="Text prompt describing what should be generated in the masked area.",
+    )
+    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="",
+        description="Text prompt describing what should not appear in the generated content.",
+    )
+    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The input image to inpaint",
+    )
+    mask_image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The mask image indicating areas to be inpainted (white areas will be inpainted)",
+    )
+    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=25, description="Number of denoising steps."
+    )
+    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=7.5,
+        description="Guidance scale for generation. Higher values follow the prompt more closely.",
+    )
+    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+    )
+
+    @classmethod
+    def get_node_type(cls):
+        return "huggingface.image_to_image.AutoPipelineInpaint"
+
+
 class Kandinsky3Img2Img(GraphNode):
     """
     Transforms existing images using the Kandinsky-3 model based on text prompts.
@@ -43,6 +157,94 @@ class Kandinsky3Img2Img(GraphNode):
         return "huggingface.image_to_image.Kandinsky3Img2Img"
 
 
+import nodetool.nodes.huggingface.image_to_image
+
+
+class LoadImageToImageModel(GraphNode):
+    """
+    Load HuggingFace model for image-to-image generation from a repo_id.
+
+    Use cases:
+    - Loads a pipeline directly from a repo_id
+    - Used for AutoPipelineForImage2Image
+    """
+
+    ModelVariant: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.image_to_image.ModelVariant
+    )
+    repo_id: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="",
+        description="The repository ID of the model to use for image-to-image generation.",
+    )
+    variant: nodetool.nodes.huggingface.image_to_image.ModelVariant = Field(
+        default=nodetool.nodes.huggingface.image_to_image.ModelVariant.FP16,
+        description="The variant of the model to use for image-to-image generation.",
+    )
+
+    @classmethod
+    def get_node_type(cls):
+        return "huggingface.image_to_image.LoadImageToImageModel"
+
+
+class OmniGenNode(GraphNode):
+    """
+    Generates and edits images using the OmniGen model, supporting multimodal inputs.
+    image, generation, text-to-image, image-editing, multimodal, omnigen
+
+    Use cases:
+    - Generate images from text prompts
+    - Edit existing images with text instructions
+    - Controllable image generation with reference images
+    - Visual reasoning and image manipulation
+    - ID and object preserving generation
+    """
+
+    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="A realistic photo of a young woman sitting on a sofa, holding a book and facing the camera.",
+        description="The text prompt for image generation. Use <img><|image_1|></img> placeholders to reference input images.",
+    )
+    input_images: list[types.ImageRef] | GraphNode | tuple[GraphNode, str] = Field(
+        default=[],
+        description="List of input images to use for editing or as reference. Referenced in prompt using <img><|image_1|></img>, <img><|image_2|></img>, etc.",
+    )
+    height: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=1024, description="Height of the generated image."
+    )
+    width: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=1024, description="Width of the generated image."
+    )
+    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=2.5,
+        description="Guidance scale for generation. Higher values follow the prompt more closely.",
+    )
+    img_guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=1.6, description="Image guidance scale when using input images."
+    )
+    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=25, description="Number of denoising steps."
+    )
+    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+    )
+    use_input_image_size_as_output: bool | GraphNode | tuple[GraphNode, str] = Field(
+        default=False,
+        description="If True, use the input image size as output size. Recommended for image editing.",
+    )
+    max_input_image_size: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=1024,
+        description="Maximum input image size. Smaller values reduce memory usage but may affect quality.",
+    )
+    enable_model_cpu_offload: bool | GraphNode | tuple[GraphNode, str] = Field(
+        default=False,
+        description="Enable CPU offload to reduce memory usage when using multiple images.",
+    )
+
+    @classmethod
+    def get_node_type(cls):
+        return "huggingface.image_to_image.OmniGen"
+
+
 class RealESRGANNode(GraphNode):
     """
     Performs image super-resolution using the RealESRGAN model.
@@ -63,6 +265,7 @@ class RealESRGANNode(GraphNode):
             type="hf.real_esrgan",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -81,7 +284,7 @@ import nodetool.nodes.huggingface.stable_diffusion_base
 class StableDiffusionControlNetImg2ImgNode(GraphNode):
     """
     Transforms existing images using Stable Diffusion with ControlNet guidance.
-    image, generation, image-to-image, controlnet, SD
+    image, generation, image-to-image, controlnet, SD, style-transfer, ipadapter
 
     Use cases:
     - Modify existing images with precise control over composition and structure
@@ -101,6 +304,7 @@ class StableDiffusionControlNetImg2ImgNode(GraphNode):
             type="hf.stable_diffusion",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -137,6 +341,7 @@ class StableDiffusionControlNetImg2ImgNode(GraphNode):
             type="hf.ip_adapter",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -179,6 +384,7 @@ class StableDiffusionControlNetImg2ImgNode(GraphNode):
             type="hf.controlnet",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -202,7 +408,7 @@ import nodetool.nodes.huggingface.image_to_image
 class StableDiffusionControlNetInpaintNode(GraphNode):
     """
     Performs inpainting on images using Stable Diffusion with ControlNet guidance.
-    image, inpainting, controlnet, SD
+    image, inpainting, controlnet, SD, style-transfer, ipadapter
 
     Use cases:
     - Remove unwanted objects from images with precise control
@@ -224,6 +430,7 @@ class StableDiffusionControlNetInpaintNode(GraphNode):
             type="hf.stable_diffusion",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -260,6 +467,7 @@ class StableDiffusionControlNetInpaintNode(GraphNode):
             type="hf.ip_adapter",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -343,6 +551,7 @@ class StableDiffusionControlNetNode(GraphNode):
             type="hf.stable_diffusion",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -379,6 +588,7 @@ class StableDiffusionControlNetNode(GraphNode):
             type="hf.ip_adapter",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -414,6 +624,7 @@ class StableDiffusionControlNetNode(GraphNode):
             type="hf.controlnet",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -459,6 +670,7 @@ class StableDiffusionImg2ImgNode(GraphNode):
             type="hf.stable_diffusion",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -495,6 +707,7 @@ class StableDiffusionImg2ImgNode(GraphNode):
             type="hf.ip_adapter",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -546,7 +759,7 @@ import nodetool.nodes.huggingface.stable_diffusion_base
 class StableDiffusionInpaintNode(GraphNode):
     """
     Performs inpainting on images using Stable Diffusion.
-    image, inpainting, AI, SD
+    image, inpainting, SD
 
     Use cases:
     - Remove unwanted objects from images
@@ -565,6 +778,7 @@ class StableDiffusionInpaintNode(GraphNode):
             type="hf.stable_diffusion",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -601,6 +815,7 @@ class StableDiffusionInpaintNode(GraphNode):
             type="hf.ip_adapter",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -725,6 +940,7 @@ class StableDiffusionXLControlNetNode(GraphNode):
             type="hf.stable_diffusion_xl",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -769,6 +985,7 @@ class StableDiffusionXLControlNetNode(GraphNode):
             type="hf.ip_adapter",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -802,6 +1019,7 @@ class StableDiffusionXLControlNetNode(GraphNode):
             type="hf.controlnet",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -843,6 +1061,7 @@ class StableDiffusionXLImg2Img(GraphNode):
             type="hf.stable_diffusion_xl",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -887,6 +1106,7 @@ class StableDiffusionXLImg2Img(GraphNode):
             type="hf.ip_adapter",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -943,6 +1163,7 @@ class StableDiffusionXLInpainting(GraphNode):
             type="hf.stable_diffusion_xl",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -987,6 +1208,7 @@ class StableDiffusionXLInpainting(GraphNode):
             type="hf.ip_adapter",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
@@ -1049,6 +1271,7 @@ class Swin2SR(GraphNode):
             type="hf.image_to_image",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),

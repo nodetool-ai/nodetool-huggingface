@@ -28,6 +28,7 @@ class TokenClassification(GraphNode):
             type="hf.token_classification",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),

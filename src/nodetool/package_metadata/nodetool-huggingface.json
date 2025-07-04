@@ -2936,6 +2936,157 @@
       ]
     },
     {
+      "title": "OmniGen",
+      "description": "Generates and edits images using the OmniGen model, supporting multimodal inputs.\n    image, generation, text-to-image, image-editing, multimodal, omnigen\n\n    Use cases:\n    - Generate images from text prompts\n    - Edit existing images with text instructions\n    - Controllable image generation with reference images\n    - Visual reasoning and image manipulation\n    - ID and object preserving generation",
+      "namespace": "huggingface.image_to_image",
+      "node_type": "huggingface.image_to_image.OmniGen",
+      "properties": [
+        {
+          "name": "prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "A realistic photo of a young woman sitting on a sofa, holding a book and facing the camera.",
+          "title": "Prompt",
+          "description": "The text prompt for image generation. Use <img><|image_1|></img> placeholders to reference input images."
+        },
+        {
+          "name": "input_images",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "image"
+              }
+            ]
+          },
+          "default": [],
+          "title": "Input Images",
+          "description": "List of input images to use for editing or as reference. Referenced in prompt using <img><|image_1|></img>, <img><|image_2|></img>, etc."
+        },
+        {
+          "name": "height",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Height",
+          "description": "Height of the generated image.",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
+          "name": "width",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Width",
+          "description": "Width of the generated image.",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
+          "name": "guidance_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 2.5,
+          "title": "Guidance Scale",
+          "description": "Guidance scale for generation. Higher values follow the prompt more closely.",
+          "min": 1.0,
+          "max": 20.0
+        },
+        {
+          "name": "img_guidance_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 1.6,
+          "title": "Img Guidance Scale",
+          "description": "Image guidance scale when using input images.",
+          "min": 1.0,
+          "max": 20.0
+        },
+        {
+          "name": "num_inference_steps",
+          "type": {
+            "type": "int"
+          },
+          "default": 25,
+          "title": "Num Inference Steps",
+          "description": "Number of denoising steps.",
+          "min": 1.0,
+          "max": 100.0
+        },
+        {
+          "name": "seed",
+          "type": {
+            "type": "int"
+          },
+          "default": -1,
+          "title": "Seed",
+          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "min": -1.0
+        },
+        {
+          "name": "use_input_image_size_as_output",
+          "type": {
+            "type": "bool"
+          },
+          "default": false,
+          "title": "Use Input Image Size As Output",
+          "description": "If True, use the input image size as output size. Recommended for image editing."
+        },
+        {
+          "name": "max_input_image_size",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Max Input Image Size",
+          "description": "Maximum input image size. Smaller values reduce memory usage but may affect quality.",
+          "min": 256.0,
+          "max": 2048.0
+        },
+        {
+          "name": "enable_model_cpu_offload",
+          "type": {
+            "type": "bool"
+          },
+          "default": false,
+          "title": "Enable Model Cpu Offload",
+          "description": "Enable CPU offload to reduce memory usage when using multiple images."
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "image"
+          },
+          "name": "output"
+        }
+      ],
+      "recommended_models": [
+        {
+          "repo_id": "Shitao/OmniGen-v1-diffusers",
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ]
+        }
+      ],
+      "basic_fields": [
+        "prompt",
+        "input_images",
+        "height",
+        "width",
+        "guidance_scale"
+      ]
+    },
+    {
       "title": "Real ESRGAN",
       "description": "Performs image super-resolution using the RealESRGAN model.\n    image, super-resolution, enhancement, huggingface\n\n    Use cases:\n    - Enhance low-resolution images\n    - Improve image quality for printing or display\n    - Upscale images for better detail",
       "namespace": "huggingface.image_to_image",

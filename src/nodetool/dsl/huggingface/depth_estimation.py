@@ -23,6 +23,7 @@ class DepthEstimation(GraphNode):
             type="hf.depth_estimation",
             repo_id="LiheYoung/depth-anything-base-hf",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),

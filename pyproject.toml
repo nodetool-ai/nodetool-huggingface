@@ -37,10 +37,10 @@ repository = "https://github.com/nodetool-ai/nodetool-huggingface"
 [tool.poetry.dependencies]
 python = "^3.11"
 nodetool-core = { git = "https://github.com/nodetool-ai/nodetool-core.git", rev = "main" }
-torch = "2.4.1"
-torchsde = "0.2.6"
-torchvision = "0.19.1"
-torchaudio = "2.4.1"
+torch = "2.7.1"
+torchsde = "*"
+torchvision = "*"
+torchaudio = "*"
 diffusers = { extras = ["torch"], version = "*" }
 transformers = "*"
 paddleocr = "*"

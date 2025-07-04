@@ -61,6 +61,7 @@ class Segmentation(GraphNode):
             type="hf.image_segmentation",
             repo_id="nvidia/segformer-b3-finetuned-ade-512-512",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),

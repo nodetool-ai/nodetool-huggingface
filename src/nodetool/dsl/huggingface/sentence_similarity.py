@@ -22,6 +22,7 @@ class SentenceSimilarity(GraphNode):
             type="hf.sentence_similarity",
             repo_id="",
             path=None,
+            variant=None,
             allow_patterns=None,
             ignore_patterns=None,
         ),
