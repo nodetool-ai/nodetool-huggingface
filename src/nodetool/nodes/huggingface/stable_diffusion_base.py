@@ -2,9 +2,7 @@ from enum import Enum
 import os
 from random import randint
 
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import (
-    StableDiffusionImg2ImgPipeline,
-)
+from diffusers.pipelines.pag.pipeline_pag_sd_img2img import StableDiffusionPAGImg2ImgPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upscale import (
     StableDiffusionLatentUpscalePipeline,
 )
@@ -668,7 +666,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
     )
     prompt: str = Field(default="", description="The prompt for image generation.")
     negative_prompt: str = Field(
-        default="(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+        default="",
         description="The negative prompt to guide what should not appear in the generated image.",
     )
     seed: int = Field(
@@ -704,6 +702,12 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         ge=0.0,
         le=1.0,
         description="The strength of the IP adapter",
+    )
+    pag_scale: float = Field(
+        default=3.0,
+        ge=0.0,
+        le=10.0,
+        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     detail_level: float = Field(
         default=0.5,
@@ -808,22 +812,18 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
     def progress_callback(
         self,
         context: ProcessingContext,
-        offset: int | None = None,
-        total: int | None = None,
+        start: int,
+        total: int,
     ):
-        if offset is None:
-            offset = 0
-        if total is None:
-            total = self.num_inference_steps
-
-        def callback(step: int, timestep: int, latents: torch.Tensor) -> None:
+        def callback(pipeline, step: int, timestep: int, kwargs: dict[str, Any]) -> dict[str, Any]:
             context.post_message(
                 NodeProgress(
                     node_id=self.id,
-                    progress=offset + step,
+                    progress=start + step,
                     total=total,
                 )
             )
+            return kwargs
 
         return callback
 
@@ -911,9 +911,9 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                 guidance_scale=self.guidance_scale,
                 generator=generator,
                 ip_adapter_image=ip_adapter_image,
-                callback=self.progress_callback(context, 0, total),
-                callback_steps=1,
+                callback_on_step_end=self.progress_callback(context, 0, low_res_steps),
                 output_type="latent",
+                pag_scale=self.pag_scale,
                 **low_res_kwargs,
             )
             low_res_latents = low_res_result.images
@@ -934,6 +934,15 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                 )
                 self._upscaler.to(context.device)
 
+                def upscale_callback(context: ProcessingContext, step: int, total: int):
+                    context.post_message(
+                        NodeProgress(
+                            node_id=self.id,
+                            progress=low_res_steps + step,
+                            total=total,
+                        )
+                    )
+
                 upscaled_latents = self._upscaler(
                     prompt=self.prompt,
                     negative_prompt=self.negative_prompt,
@@ -942,7 +951,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                     guidance_scale=upscale_guidance_scale,
                     generator=generator,
                     output_type="latent",
-                    callback=self.progress_callback(context, low_res_steps, total),
+                    callback=upscale_callback(context, low_res_steps, total),
                     callback_steps=1,
                 ).images  # type: ignore
             elif self.upscaler == StableDiffusionUpscaler.BICUBIC:
@@ -956,7 +965,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             if "image" in kwargs:
                 img2img_pipe = self._pipeline
             else:
-                img2img_pipe = StableDiffusionImg2ImgPipeline(
+                img2img_pipe = StableDiffusionPAGImg2ImgPipeline(
                     vae=self._pipeline.vae,
                     text_encoder=self._pipeline.text_encoder,
                     image_encoder=self._pipeline.image_encoder,
@@ -987,8 +996,8 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                 generator=generator,
                 ip_adapter_image=ip_adapter_image,
                 cross_attention_kwargs={"scale": 1.0},
-                callback=self.progress_callback(context, low_res_steps + 20, total),
-                callback_steps=1,
+                pag_scale=self.pag_scale,
+                callback_on_step_end=self.progress_callback(context, low_res_steps + 20, total), # type: ignore
                 **hires_kwargs,
             ).images[  # type: ignore
                 0
@@ -1002,8 +1011,8 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                 generator=generator,
                 ip_adapter_image=ip_adapter_image,
                 cross_attention_kwargs={"scale": 1.0},
-                callback=self.progress_callback(context, 0, self.num_inference_steps),
-                callback_steps=1,
+                callback_on_step_end=self.progress_callback(context, 0, self.num_inference_steps),
+                pag_scale=self.pag_scale,
                 **kwargs,
             ).images[0]
 
@@ -1071,6 +1080,12 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         default="",
         description="The negative prompt to guide what should not appear in the generated image.",
     )
+    width: int = Field(
+        default=1024, ge=64, le=2048, description="Width of the generated image."
+    )
+    height: int = Field(
+        default=1024, ge=64, le=2048, description="Height of the generated image"
+    )
     seed: int = Field(
         default=-1,
         ge=-1,
@@ -1083,15 +1098,15 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
     guidance_scale: float = Field(
         default=7.0, ge=0.0, le=20.0, description="Guidance scale for generation."
     )
-    width: int = Field(
-        default=1024, ge=64, le=2048, description="Width of the generated image."
-    )
-    height: int = Field(
-        default=1024, ge=64, le=2048, description="Height of the generated image"
-    )
     scheduler: StableDiffusionScheduler = Field(
         default=StableDiffusionScheduler.EulerDiscreteScheduler,
         description="The scheduler to use for the diffusion process.",
+    )
+    pag_scale: float = Field(
+        default=3.0,
+        ge=0.0,
+        le=10.0,
+        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     loras: list[HFLoraSDXLConfig] = Field(
         default=[],
@@ -1195,7 +1210,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             )
 
     def progress_callback(self, context: ProcessingContext):
-        def callback(step: int, timestep: int, latents: torch.FloatTensor) -> None:
+        def callback(pipeline, step: int, timestep: int, kwargs: dict[str, Any]) -> dict[str, Any]:
             context.post_message(
                 NodeProgress(
                     node_id=self.id,
@@ -1203,7 +1218,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
                     total=self.num_inference_steps,
                 )
             )
-
+            return kwargs
         return callback
 
     async def run_pipeline(self, context: ProcessingContext, **kwargs) -> ImageRef:
@@ -1239,8 +1254,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             ip_adapter_image=ip_adapter_image,
             ip_adapter_scale=self.ip_adapter_scale,
             cross_attention_kwargs={"scale": self.lora_scale},
-            callback=self.progress_callback(context),
-            callback_steps=1,
+            callback_on_step_end=self.progress_callback(context),
             generator=generator,
             **kwargs,
         ).images[0]

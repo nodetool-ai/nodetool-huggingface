@@ -29,32 +29,19 @@ from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
 from diffusers.pipelines.auto_pipeline import AutoPipelineForInpainting
 from diffusers.models.controlnets.controlnet import ControlNetModel
+from diffusers.pipelines.pag.pipeline_pag_controlnet_sd import StableDiffusionControlNetPAGPipeline
+from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl_img2img import StableDiffusionXLControlNetPAGImg2ImgPipeline
+from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_inpaint import StableDiffusionControlNetPAGInpaintPipeline
+from diffusers.pipelines.pag.pipeline_pag_sd_img2img import StableDiffusionPAGImg2ImgPipeline
+from diffusers.pipelines.pag.pipeline_pag_sd_inpaint import StableDiffusionPAGInpaintPipeline
+from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl import StableDiffusionXLControlNetPAGPipeline
+from diffusers.pipelines.pag.pipeline_pag_sd_xl_img2img import StableDiffusionXLPAGImg2ImgPipeline
+from diffusers.pipelines.pag.pipeline_pag_sd_xl_inpaint import StableDiffusionXLPAGInpaintPipeline
 from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import (
     StableDiffusionControlNetImg2ImgPipeline,
 )
-from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint import (
-    StableDiffusionControlNetInpaintPipeline,
-)
-from diffusers.pipelines.controlnet.pipeline_controlnet import (
-    StableDiffusionControlNetPipeline,
-)
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import (
-    StableDiffusionImg2ImgPipeline,
-)
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import (
-    StableDiffusionInpaintPipeline,
-)
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_upscale import (
     StableDiffusionUpscalePipeline,
-)
-from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl import (
-    StableDiffusionXLControlNetPipeline,
-)
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
-    StableDiffusionXLImg2ImgPipeline,
-)
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_inpaint import (
-    StableDiffusionXLInpaintPipeline,
 )
 from pydantic import Field
 
@@ -649,7 +636,7 @@ class StableDiffusionControlNetNode(StableDiffusionBaseNode):
         le=2.0,
     )
 
-    _pipeline: StableDiffusionControlNetPipeline | None = None
+    _pipeline: StableDiffusionControlNetPAGPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -688,7 +675,7 @@ class StableDiffusionControlNetNode(StableDiffusionBaseNode):
         )
         self._pipeline = await self.load_model(
             context=context,
-            model_class=StableDiffusionControlNetPipeline,
+            model_class=StableDiffusionControlNetPAGPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             controlnet=controlnet,
@@ -730,7 +717,7 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
         le=1.0,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: StableDiffusionImg2ImgPipeline | None = None
+    _pipeline: StableDiffusionPAGImg2ImgPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -747,11 +734,12 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
         await super().preload_model(context)
         self._pipeline = await self.load_model(
             context=context,
-            model_class=StableDiffusionImg2ImgPipeline,
+            model_class=StableDiffusionPAGImg2ImgPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             safety_checker=None,
             config="Lykon/DreamShaper",
+            torch_dtype=torch.float16,
         )
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
@@ -762,8 +750,6 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
         return await self.run_pipeline(
             context,
             image=init_image,
-            width=init_image.width,
-            height=init_image.height,
             strength=self.strength,
         )
 
@@ -806,7 +792,7 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
         le=2.0,
     )
 
-    _pipeline: StableDiffusionControlNetInpaintPipeline | None = None
+    _pipeline: StableDiffusionControlNetPAGInpaintPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -831,13 +817,16 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
             "controlnet",
             self.controlnet.value,
             device=context.device,
+            torch_dtype=torch.float16,
         )
-        self._pipeline = await self.load_pipeline(
+        self._pipeline = await self.load_model(
             context,
-            "stable-diffusion-controlnet-inpaint",
-            self.model.repo_id,
+            model_class=StableDiffusionControlNetPAGInpaintPipeline,
+            model_id=self.model.repo_id,
+            path=self.model.path,
             controlnet=controlnet,
             device=context.device,
+            torch_dtype=torch.float16,
         )  # type: ignore
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
@@ -883,7 +872,7 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
         le=1.0,
         description="Strength for inpainting. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: StableDiffusionInpaintPipeline | None = None
+    _pipeline: StableDiffusionPAGInpaintPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -901,7 +890,7 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
         if self._pipeline is None:
             self._pipeline = await self.load_model(
                 context=context,
-                model_class=StableDiffusionInpaintPipeline,
+                model_class=StableDiffusionPAGInpaintPipeline,
                 model_id=self.model.repo_id,
                 path=self.model.path,
                 safety_checker=None,
@@ -1166,7 +1155,7 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         le=1.0,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: StableDiffusionXLImg2ImgPipeline | None = None
+    _pipeline: StableDiffusionXLPAGImg2ImgPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1182,10 +1171,11 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
     async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_model(
             context=context,
-            model_class=StableDiffusionXLImg2ImgPipeline,
+            model_class=StableDiffusionXLPAGImg2ImgPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             safety_checker=None,
+            torch_dtype=torch.float16,
         )
         assert self._pipeline is not None
         self._pipeline.enable_model_cpu_offload()
@@ -1225,7 +1215,7 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
         le=1.0,
         description="Strength for inpainting. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: StableDiffusionXLInpaintPipeline | None = None
+    _pipeline: StableDiffusionXLPAGInpaintPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1242,10 +1232,11 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
         if self._pipeline is None:
             self._pipeline = await self.load_model(
                 context=context,
-                model_class=StableDiffusionXLInpaintPipeline,
+                model_class=StableDiffusionXLPAGInpaintPipeline,
                 model_id=self.model.repo_id,
                 path=self.model.path,
                 safety_checker=None,
+                torch_dtype=torch.float16,
             )
             assert self._pipeline is not None
             self._load_ip_adapter()
@@ -1292,7 +1283,7 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
         le=2.0,
     )
 
-    _pipeline: StableDiffusionXLControlNetPipeline | None = None
+    _pipeline: StableDiffusionXLControlNetPAGPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1316,13 +1307,15 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
             model_id=self.controlnet.repo_id,
             path=self.controlnet.path,
             variant=None,
+            torch_dtype=torch.float16,
         )
         self._pipeline = await self.load_model(
             context=context,
-            model_class=StableDiffusionXLControlNetPipeline,
+            model_class=StableDiffusionXLControlNetPAGPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             controlnet=controlnet,
+            torch_dtype=torch.float16,
         )
         self._load_ip_adapter()
 
@@ -1454,7 +1447,7 @@ class OmniGenNode(HuggingFacePipelineNode):
             model_id="Shitao/OmniGen-v1-diffusers",
             model_class=OmniGenPipeline,
             torch_dtype=torch.bfloat16,
-            variant=None
+            variant=None,
         )
         
         if self.enable_model_cpu_offload and self._pipeline is not None:

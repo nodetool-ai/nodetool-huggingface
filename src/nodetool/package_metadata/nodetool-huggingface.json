@@ -970,6 +970,15 @@
           "max": 2048.0
         },
         {
+          "name": "enable_pag",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Pag",
+          "description": "Enable PAG for the pipeline."
+        },
+        {
           "name": "seed",
           "type": {
             "type": "int"
@@ -996,6 +1005,7 @@
         "guidance_scale",
         "width",
         "height",
+        "enable_pag",
         "seed"
       ]
     },
@@ -2212,6 +2222,17 @@
           "max": 1.0
         },
         {
+          "name": "pag_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 3.0,
+          "title": "Pag Scale",
+          "description": "Scale of the Perturbed-Attention Guidance applied to the image.",
+          "min": 0.0,
+          "max": 10.0
+        },
+        {
           "name": "detail_level",
           "type": {
             "type": "float"
@@ -2420,6 +2441,28 @@
           "description": "The negative prompt to guide what should not appear in the generated image."
         },
         {
+          "name": "width",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Width",
+          "description": "Width of the generated image.",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
+          "name": "height",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Height",
+          "description": "Height of the generated image",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
           "name": "seed",
           "type": {
             "type": "int"
@@ -2453,28 +2496,6 @@
           "max": 20.0
         },
         {
-          "name": "width",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Width",
-          "description": "Width of the generated image.",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
-          "name": "height",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Height",
-          "description": "Height of the generated image",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
           "name": "scheduler",
           "type": {
             "type": "enum",
@@ -2499,6 +2520,17 @@
           "default": "EulerDiscreteScheduler",
           "title": "Scheduler",
           "description": "The scheduler to use for the diffusion process."
+        },
+        {
+          "name": "pag_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 3.0,
+          "title": "Pag Scale",
+          "description": "Scale of the Perturbed-Attention Guidance applied to the image.",
+          "min": 0.0,
+          "max": 10.0
         },
         {
           "name": "loras",
@@ -4094,6 +4126,17 @@
           "max": 1.0
         },
         {
+          "name": "pag_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 3.0,
+          "title": "Pag Scale",
+          "description": "Scale of the Perturbed-Attention Guidance applied to the image.",
+          "min": 0.0,
+          "max": 10.0
+        },
+        {
           "name": "detail_level",
           "type": {
             "type": "float"
@@ -4491,6 +4534,17 @@
           "max": 1.0
         },
         {
+          "name": "pag_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 3.0,
+          "title": "Pag Scale",
+          "description": "Scale of the Perturbed-Attention Guidance applied to the image.",
+          "min": 0.0,
+          "max": 10.0
+        },
+        {
           "name": "detail_level",
           "type": {
             "type": "float"
@@ -4830,6 +4884,17 @@
           "description": "The strength of the IP adapter",
           "min": 0.0,
           "max": 1.0
+        },
+        {
+          "name": "pag_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 3.0,
+          "title": "Pag Scale",
+          "description": "Scale of the Perturbed-Attention Guidance applied to the image.",
+          "min": 0.0,
+          "max": 10.0
         },
         {
           "name": "detail_level",
@@ -5220,6 +5285,17 @@
           "max": 1.0
         },
         {
+          "name": "pag_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 3.0,
+          "title": "Pag Scale",
+          "description": "Scale of the Perturbed-Attention Guidance applied to the image.",
+          "min": 0.0,
+          "max": 10.0
+        },
+        {
           "name": "detail_level",
           "type": {
             "type": "float"
@@ -5526,6 +5602,17 @@
           "description": "The strength of the IP adapter",
           "min": 0.0,
           "max": 1.0
+        },
+        {
+          "name": "pag_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 3.0,
+          "title": "Pag Scale",
+          "description": "Scale of the Perturbed-Attention Guidance applied to the image.",
+          "min": 0.0,
+          "max": 10.0
         },
         {
           "name": "detail_level",
@@ -5873,6 +5960,28 @@
           "description": "The negative prompt to guide what should not appear in the generated image."
         },
         {
+          "name": "width",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Width",
+          "description": "Width of the generated image.",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
+          "name": "height",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Height",
+          "description": "Height of the generated image",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
           "name": "seed",
           "type": {
             "type": "int"
@@ -5906,28 +6015,6 @@
           "max": 20.0
         },
         {
-          "name": "width",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Width",
-          "description": "Width of the generated image.",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
-          "name": "height",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Height",
-          "description": "Height of the generated image",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
           "name": "scheduler",
           "type": {
             "type": "enum",
@@ -5952,6 +6039,17 @@
           "default": "EulerDiscreteScheduler",
           "title": "Scheduler",
           "description": "The scheduler to use for the diffusion process."
+        },
+        {
+          "name": "pag_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 3.0,
+          "title": "Pag Scale",
+          "description": "Scale of the Perturbed-Attention Guidance applied to the image.",
+          "min": 0.0,
+          "max": 10.0
         },
         {
           "name": "loras",
@@ -6191,6 +6289,28 @@
           "description": "The negative prompt to guide what should not appear in the generated image."
         },
         {
+          "name": "width",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Width",
+          "description": "Width of the generated image.",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
+          "name": "height",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Height",
+          "description": "Height of the generated image",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
           "name": "seed",
           "type": {
             "type": "int"
@@ -6224,28 +6344,6 @@
           "max": 20.0
         },
         {
-          "name": "width",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Width",
-          "description": "Width of the generated image.",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
-          "name": "height",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Height",
-          "description": "Height of the generated image",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
           "name": "scheduler",
           "type": {
             "type": "enum",
@@ -6270,6 +6368,17 @@
           "default": "EulerDiscreteScheduler",
           "title": "Scheduler",
           "description": "The scheduler to use for the diffusion process."
+        },
+        {
+          "name": "pag_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 3.0,
+          "title": "Pag Scale",
+          "description": "Scale of the Perturbed-Attention Guidance applied to the image.",
+          "min": 0.0,
+          "max": 10.0
         },
         {
           "name": "loras",
@@ -6477,6 +6586,28 @@
           "description": "The negative prompt to guide what should not appear in the generated image."
         },
         {
+          "name": "width",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Width",
+          "description": "Width of the generated image.",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
+          "name": "height",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Height",
+          "description": "Height of the generated image",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
           "name": "seed",
           "type": {
             "type": "int"
@@ -6510,28 +6641,6 @@
           "max": 20.0
         },
         {
-          "name": "width",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Width",
-          "description": "Width of the generated image.",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
-          "name": "height",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Height",
-          "description": "Height of the generated image",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
           "name": "scheduler",
           "type": {
             "type": "enum",
@@ -6556,6 +6665,17 @@
           "default": "EulerDiscreteScheduler",
           "title": "Scheduler",
           "description": "The scheduler to use for the diffusion process."
+        },
+        {
+          "name": "pag_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 3.0,
+          "title": "Pag Scale",
+          "description": "Scale of the Perturbed-Attention Guidance applied to the image.",
+          "min": 0.0,
+          "max": 10.0
         },
         {
           "name": "loras",
@@ -7589,6 +7709,17 @@
           "max": 1.0
         },
         {
+          "name": "pag_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 3.0,
+          "title": "Pag Scale",
+          "description": "Scale of the Perturbed-Attention Guidance applied to the image.",
+          "min": 0.0,
+          "max": 10.0
+        },
+        {
           "name": "detail_level",
           "type": {
             "type": "float"
@@ -7773,6 +7904,28 @@
           "description": "The negative prompt to guide what should not appear in the generated image."
         },
         {
+          "name": "width",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Width",
+          "description": "Width of the generated image.",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
+          "name": "height",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Height",
+          "description": "Height of the generated image",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
           "name": "seed",
           "type": {
             "type": "int"
@@ -7806,28 +7959,6 @@
           "max": 20.0
         },
         {
-          "name": "width",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Width",
-          "description": "Width of the generated image.",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
-          "name": "height",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Height",
-          "description": "Height of the generated image",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
           "name": "scheduler",
           "type": {
             "type": "enum",
@@ -7852,6 +7983,17 @@
           "default": "EulerDiscreteScheduler",
           "title": "Scheduler",
           "description": "The scheduler to use for the diffusion process."
+        },
+        {
+          "name": "pag_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 3.0,
+          "title": "Pag Scale",
+          "description": "Scale of the Perturbed-Attention Guidance applied to the image.",
+          "min": 0.0,
+          "max": 10.0
         },
         {
           "name": "loras",

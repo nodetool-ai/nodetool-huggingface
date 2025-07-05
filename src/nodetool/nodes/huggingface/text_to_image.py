@@ -1,5 +1,4 @@
 from enum import Enum
-from huggingface_hub import try_to_load_from_cache
 from nodetool.common.environment import Environment
 from nodetool.metadata.types import HFTextToImage, HFImageToImage, HFLoraSD, HuggingFaceModel, ImageRef
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
@@ -12,13 +11,9 @@ from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress, NodeUpdate
 
 import torch
+from diffusers.pipelines.pag.pipeline_pag_sd import StableDiffusionPAGPipeline
+from diffusers.pipelines.pag.pipeline_pag_sd_xl import StableDiffusionXLPAGPipeline
 from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
-    StableDiffusionPipeline,
-)
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
-    StableDiffusionXLPipeline,
-)
 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
 from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
@@ -508,7 +503,7 @@ class StableDiffusion(StableDiffusionBaseNode):
     height: int = Field(
         default=512, ge=256, le=1024, description="Height of the generated image"
     )
-    _pipeline: StableDiffusionPipeline | None = None
+    _pipeline: StableDiffusionPAGPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -522,10 +517,11 @@ class StableDiffusion(StableDiffusionBaseNode):
         await super().preload_model(context)
         self._pipeline = await self.load_model(
             context=context,
-            model_class=StableDiffusionPipeline,
+            model_class=StableDiffusionPAGPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             config="Lykon/DreamShaper",
+            pag_scale=self.pag_scale,
         )
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
@@ -547,7 +543,7 @@ class StableDiffusionXL(StableDiffusionXLBase):
     - Visualizing interior design concepts for clients
     """
 
-    _pipeline: StableDiffusionXLPipeline | None = None
+    _pipeline: StableDiffusionXLPAGPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -563,7 +559,7 @@ class StableDiffusionXL(StableDiffusionXLBase):
 
         self._pipeline = await self.load_model(
             context=context,
-            model_class=StableDiffusionXLPipeline,
+            model_class=StableDiffusionXLPAGPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             variant="fp16",
@@ -666,6 +662,10 @@ class AutoPipelineText2Image(HuggingFacePipelineNode):
         ge=64,
         le=2048,
     )
+    enable_pag: bool = Field(
+        default=True,
+        description="Enable PAG for the pipeline.",
+    )
     seed: int = Field(
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
@@ -688,6 +688,8 @@ class AutoPipelineText2Image(HuggingFacePipelineNode):
             model_class=AutoPipelineForText2Image,
             torch_dtype=torch.float16,
             variant=self.model.variant if self.model.variant != ModelVariant.DEFAULT else None,
+            enable_pag=self.enable_pag,
+            pag_applied_layers=["mid"] if self.enable_pag else None,
         )
 
     async def move_to_device(self, device: str):
