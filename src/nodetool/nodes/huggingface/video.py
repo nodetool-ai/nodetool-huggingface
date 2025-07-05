@@ -18,6 +18,7 @@ from diffusers.models.unets.unet_motion_model import MotionAdapter
 from diffusers.pipelines.stable_video_diffusion.pipeline_stable_video_diffusion import (
     StableVideoDiffusionPipeline,
 )
+from diffusers.pipelines.cogvideo.pipeline_cogvideox import CogVideoXPipeline
 from diffusers.utils.export_utils import export_to_video
 from .huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.types import NodeProgress
@@ -284,3 +285,182 @@ class StableVideoDiffusion(HuggingFacePipelineNode):
 
     def required_inputs(self):
         return ["input_image"]
+
+
+class CogVideoX(HuggingFacePipelineNode):
+    """
+    Generates videos from text prompts using CogVideoX, a large diffusion transformer model.
+    video, generation, AI, text-to-video, transformer, diffusion
+
+    Use cases:
+    - Create high-quality videos from text descriptions
+    - Generate longer and more consistent videos
+    - Produce cinematic content for creative projects
+    - Create animated scenes for storytelling
+    - Generate video content for marketing and media
+    """
+
+    prompt: str = Field(
+        default="A detailed wooden toy ship with intricately carved masts and sails is seen gliding smoothly over a plush, blue carpet that mimics the waves of the sea. The ship's hull is painted a rich brown, with tiny windows. The carpet, soft and textured, provides a perfect backdrop, resembling an oceanic expanse. Surrounding the ship are various other toys and children's items, hinting at a playful environment. The scene captures the innocence and imagination of childhood, with the toy ship's journey symbolizing endless adventures in a whimsical, indoor setting.",
+        description="A text prompt describing the desired video.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="A text prompt describing what to avoid in the video.",
+    )
+    num_frames: int = Field(
+        default=49,
+        description="The number of frames in the video. Must be divisible by 8 + 1 (e.g., 49, 81, 113).",
+        ge=49,
+        le=113,
+    )
+    guidance_scale: float = Field(
+        default=6.0,
+        description="The scale for classifier-free guidance.",
+        ge=1.0,
+        le=20.0,
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        description="The number of denoising steps.",
+        ge=1,
+        le=100,
+    )
+    height: int = Field(
+        default=480,
+        description="The height of the generated video in pixels.",
+        ge=256,
+        le=1024,
+    )
+    width: int = Field(
+        default=720,
+        description="The width of the generated video in pixels.",
+        ge=256,
+        le=1024,
+    )
+    fps: int = Field(
+        default=8,
+        description="Frames per second for the output video.",
+        ge=1,
+        le=30,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+        ge=-1,
+    )
+    max_sequence_length: int = Field(
+        default=226,
+        description="Maximum sequence length in encoded prompt.",
+        ge=1,
+        le=512,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Enable CPU offload to reduce VRAM usage.",
+    )
+    enable_vae_slicing: bool = Field(
+        default=True,
+        description="Enable VAE slicing to reduce VRAM usage.",
+    )
+    enable_vae_tiling: bool = Field(
+        default=True,
+        description="Enable VAE tiling to reduce VRAM usage for large videos.",
+    )
+
+    _pipeline: CogVideoXPipeline | None = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFTextToVideo(
+                repo_id="THUDM/CogVideoX-2b",
+                allow_patterns=[
+                    "**/*.safetensors",
+                    "**/*.json",
+                    "**/*.txt",
+                    "*.json",
+                ],
+            ),
+            HFTextToVideo(
+                repo_id="THUDM/CogVideoX-5b",
+                allow_patterns=[
+                    "**/*.safetensors",
+                    "**/*.json",
+                    "**/*.txt",
+                    "*.json",
+                ],
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "CogVideoX"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["prompt", "num_frames", "height", "width"]
+
+    def get_model_id(self) -> str:
+        return "THUDM/CogVideoX-2b"
+
+    async def preload_model(self, context: ProcessingContext):
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=CogVideoXPipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=torch.bfloat16,
+            device="cpu",
+        )
+        
+        # Apply memory optimization settings
+        if self._pipeline is not None:
+            if self.enable_cpu_offload:
+                self._pipeline.enable_model_cpu_offload()
+            
+            if self.enable_vae_slicing:
+                self._pipeline.vae.enable_slicing()
+            
+            if self.enable_vae_tiling:
+                self._pipeline.vae.enable_tiling()
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None and not self.enable_cpu_offload:
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> VideoRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        # Set up the generator for reproducibility
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        def callback_on_step_end(step: int, timestep: int, callback_kwargs: dict) -> None:
+            context.post_message(
+                NodeProgress(
+                    node_id=self.id,
+                    progress=step,
+                    total=self.num_inference_steps,
+                )
+            )
+
+        # Generate the video
+        output = self._pipeline(
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt,
+            num_frames=self.num_frames,
+            guidance_scale=self.guidance_scale,
+            num_inference_steps=self.num_inference_steps,
+            height=self.height,
+            width=self.width,
+            generator=generator,
+            max_sequence_length=self.max_sequence_length,
+            callback_on_step_end=callback_on_step_end,
+            callback_on_step_end_tensor_inputs=["latents"],
+        )
+
+        frames = output.frames[0]  # type: ignore
+
+        return await context.video_from_numpy(frames, fps=self.fps)  # type: ignore

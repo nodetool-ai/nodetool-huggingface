@@ -1000,6 +1000,174 @@
       ]
     },
     {
+      "title": "Chroma",
+      "description": "Generates images from text prompts using Chroma, a text-to-image model based on Flux.\n    image, generation, AI, text-to-image, flux, chroma, transformer\n\n    Use cases:\n    - Generate high-quality images with Flux-based architecture\n    - Create images with advanced attention masking for enhanced fidelity\n    - Produce images with IP adapter support for style control\n    - Generate images with optimized memory usage\n    - Create professional-quality images with precise color control",
+      "namespace": "huggingface.text_to_image",
+      "node_type": "huggingface.text_to_image.Chroma",
+      "properties": [
+        {
+          "name": "prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "A high-fashion close-up portrait of a blonde woman in clear sunglasses. The image uses a bold teal and red color split for dramatic lighting. The background is a simple teal-green. The photo is sharp and well-composed, and is designed for viewing with anaglyph 3D glasses for optimal effect. It looks professionally done.",
+          "title": "Prompt",
+          "description": "A text prompt describing the desired image."
+        },
+        {
+          "name": "negative_prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "low quality, ugly, unfinished, out of focus, deformed, disfigure, blurry, smudged, restricted palette, flat colors",
+          "title": "Negative Prompt",
+          "description": "A text prompt describing what to avoid in the image."
+        },
+        {
+          "name": "guidance_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 3.0,
+          "title": "Guidance Scale",
+          "description": "The scale for classifier-free guidance.",
+          "min": 0.0,
+          "max": 30.0
+        },
+        {
+          "name": "num_inference_steps",
+          "type": {
+            "type": "int"
+          },
+          "default": 40,
+          "title": "Num Inference Steps",
+          "description": "The number of denoising steps.",
+          "min": 1.0,
+          "max": 100.0
+        },
+        {
+          "name": "height",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Height",
+          "description": "The height of the generated image.",
+          "min": 256.0,
+          "max": 2048.0
+        },
+        {
+          "name": "width",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Width",
+          "description": "The width of the generated image.",
+          "min": 256.0,
+          "max": 2048.0
+        },
+        {
+          "name": "seed",
+          "type": {
+            "type": "int"
+          },
+          "default": -1,
+          "title": "Seed",
+          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "min": -1.0
+        },
+        {
+          "name": "max_sequence_length",
+          "type": {
+            "type": "int"
+          },
+          "default": 512,
+          "title": "Max Sequence Length",
+          "description": "Maximum sequence length to use with the prompt.",
+          "min": 1.0,
+          "max": 512.0
+        },
+        {
+          "name": "ip_adapter_image",
+          "type": {
+            "type": "union",
+            "type_args": [
+              {
+                "type": "image"
+              },
+              {
+                "type": "none"
+              }
+            ]
+          },
+          "title": "Ip Adapter Image",
+          "description": "Optional image input for IP Adapter style control."
+        },
+        {
+          "name": "enable_cpu_offload",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Cpu Offload",
+          "description": "Enable CPU offload to reduce VRAM usage."
+        },
+        {
+          "name": "enable_vae_slicing",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Vae Slicing",
+          "description": "Enable VAE slicing to reduce VRAM usage."
+        },
+        {
+          "name": "enable_vae_tiling",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Vae Tiling",
+          "description": "Enable VAE tiling to reduce VRAM usage for large images."
+        },
+        {
+          "name": "enable_attention_slicing",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Attention Slicing",
+          "description": "Enable attention slicing to reduce memory usage."
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "image"
+          },
+          "name": "output"
+        }
+      ],
+      "recommended_models": [
+        {
+          "repo_id": "lodestones/Chroma",
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ]
+        }
+      ],
+      "basic_fields": [
+        "prompt",
+        "negative_prompt",
+        "height",
+        "width"
+      ]
+    },
+    {
       "title": "FLUX Text2Image",
       "description": "Generates images using FLUX models with quantization support for memory efficiency.\n    image, generation, AI, text-to-image, flux, quantization\n\n    Use cases:\n    - High-quality image generation with FLUX models\n    - Memory-efficient generation using quantization\n    - Fast generation with FLUX.1-schnell\n    - High-fidelity generation with FLUX.1-dev\n    - Controlled generation with Fill, Canny, or Depth variants",
       "namespace": "huggingface.text_to_image",
@@ -1220,6 +1388,354 @@
       ]
     },
     {
+      "title": "Hunyuan-DiT",
+      "description": "Generates images from text prompts using Hunyuan-DiT, a powerful multi-resolution diffusion transformer.\n    image, generation, AI, text-to-image, chinese, english, diffusion, transformer\n\n    Use cases:\n    - Generate high-quality images from Chinese and English text descriptions\n    - Create images with fine-grained language understanding\n    - Produce multi-resolution images with optimal aspect ratios\n    - Generate images with both Chinese and English text support\n    - Create detailed images with strong semantic accuracy",
+      "namespace": "huggingface.text_to_image",
+      "node_type": "huggingface.text_to_image.HunyuanDiT",
+      "properties": [
+        {
+          "name": "prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "\u4e00\u4e2a\u5b87\u822a\u5458\u5728\u9a91\u9a6c",
+          "title": "Prompt",
+          "description": "A text prompt describing the desired image. Supports both Chinese and English."
+        },
+        {
+          "name": "negative_prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "",
+          "title": "Negative Prompt",
+          "description": "A text prompt describing what to avoid in the image."
+        },
+        {
+          "name": "guidance_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 7.5,
+          "title": "Guidance Scale",
+          "description": "The scale for classifier-free guidance.",
+          "min": 1.0,
+          "max": 20.0
+        },
+        {
+          "name": "num_inference_steps",
+          "type": {
+            "type": "int"
+          },
+          "default": 50,
+          "title": "Num Inference Steps",
+          "description": "The number of denoising steps.",
+          "min": 1.0,
+          "max": 100.0
+        },
+        {
+          "name": "width",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Width",
+          "description": "The width of the generated image.",
+          "min": 512.0,
+          "max": 2048.0
+        },
+        {
+          "name": "height",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Height",
+          "description": "The height of the generated image.",
+          "min": 512.0,
+          "max": 2048.0
+        },
+        {
+          "name": "seed",
+          "type": {
+            "type": "int"
+          },
+          "default": -1,
+          "title": "Seed",
+          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "min": -1.0
+        },
+        {
+          "name": "use_resolution_binning",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Use Resolution Binning",
+          "description": "Whether to use resolution binning. Maps input resolution to closest standard resolution."
+        },
+        {
+          "name": "original_size",
+          "type": {
+            "type": "tuple",
+            "type_args": [
+              {
+                "type": "int"
+              },
+              {
+                "type": "int"
+              }
+            ]
+          },
+          "default": [
+            1024,
+            1024
+          ],
+          "title": "Original Size",
+          "description": "The original size of the image used to calculate time IDs."
+        },
+        {
+          "name": "target_size",
+          "type": {
+            "type": "union",
+            "type_args": [
+              {
+                "type": "tuple",
+                "type_args": [
+                  {
+                    "type": "int"
+                  },
+                  {
+                    "type": "int"
+                  }
+                ]
+              },
+              {
+                "type": "none"
+              }
+            ]
+          },
+          "title": "Target Size",
+          "description": "The target size of the image used to calculate time IDs. If None, uses (width, height)."
+        },
+        {
+          "name": "crops_coords_top_left",
+          "type": {
+            "type": "tuple",
+            "type_args": [
+              {
+                "type": "int"
+              },
+              {
+                "type": "int"
+              }
+            ]
+          },
+          "default": [
+            0,
+            0
+          ],
+          "title": "Crops Coords Top Left",
+          "description": "The top-left coordinates of the crop used to calculate time IDs."
+        },
+        {
+          "name": "guidance_rescale",
+          "type": {
+            "type": "float"
+          },
+          "default": 0.0,
+          "title": "Guidance Rescale",
+          "description": "Rescale the noise according to guidance_rescale.",
+          "min": 0.0,
+          "max": 1.0
+        },
+        {
+          "name": "enable_memory_optimization",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Memory Optimization",
+          "description": "Enable memory optimization with T5 encoder quantization."
+        },
+        {
+          "name": "enable_forward_chunking",
+          "type": {
+            "type": "bool"
+          },
+          "default": false,
+          "title": "Enable Forward Chunking",
+          "description": "Enable forward chunking to reduce memory usage at the cost of inference speed."
+        },
+        {
+          "name": "forward_chunk_size",
+          "type": {
+            "type": "int"
+          },
+          "default": 1,
+          "title": "Forward Chunk Size",
+          "description": "Chunk size for forward chunking.",
+          "min": 1.0,
+          "max": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "image"
+          },
+          "name": "output"
+        }
+      ],
+      "recommended_models": [
+        {
+          "repo_id": "Tencent-Hunyuan/HunyuanDiT-Diffusers",
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ]
+        }
+      ],
+      "basic_fields": [
+        "prompt",
+        "width",
+        "height",
+        "use_resolution_binning"
+      ]
+    },
+    {
+      "title": "Kolors Text2Image",
+      "description": "Generates images from text prompts using Kolors, a large-scale text-to-image generation model.\n    image, generation, AI, text-to-image, kolors, chinese, english\n\n    Use cases:\n    - Generate high-quality photorealistic images from text descriptions\n    - Create images with Chinese text understanding and rendering\n    - Produce images with complex semantic accuracy\n    - Generate images with both Chinese and English text support\n    - Create detailed images with strong text rendering capabilities",
+      "namespace": "huggingface.text_to_image",
+      "node_type": "huggingface.text_to_image.Kolors",
+      "properties": [
+        {
+          "name": "prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "A ladybug photo, macro, zoom, high quality, film, holding a sign that says \"\u53ef\u56fe\"",
+          "title": "Prompt",
+          "description": "A text prompt describing the desired image. Supports both Chinese and English."
+        },
+        {
+          "name": "negative_prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "",
+          "title": "Negative Prompt",
+          "description": "A text prompt describing what to avoid in the image."
+        },
+        {
+          "name": "guidance_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 6.5,
+          "title": "Guidance Scale",
+          "description": "The scale for classifier-free guidance.",
+          "min": 1.0,
+          "max": 20.0
+        },
+        {
+          "name": "num_inference_steps",
+          "type": {
+            "type": "int"
+          },
+          "default": 25,
+          "title": "Num Inference Steps",
+          "description": "The number of denoising steps.",
+          "min": 1.0,
+          "max": 100.0
+        },
+        {
+          "name": "width",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Width",
+          "description": "The width of the generated image.",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
+          "name": "height",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Height",
+          "description": "The height of the generated image.",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
+          "name": "seed",
+          "type": {
+            "type": "int"
+          },
+          "default": -1,
+          "title": "Seed",
+          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "min": -1.0
+        },
+        {
+          "name": "max_sequence_length",
+          "type": {
+            "type": "int"
+          },
+          "default": 256,
+          "title": "Max Sequence Length",
+          "description": "Maximum sequence length for the prompt.",
+          "min": 1.0,
+          "max": 512.0
+        },
+        {
+          "name": "use_dpm_solver",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Use Dpm Solver",
+          "description": "Whether to use DPMSolverMultistepScheduler with Karras sigmas for better quality."
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "image"
+          },
+          "name": "output"
+        }
+      ],
+      "recommended_models": [
+        {
+          "repo_id": "Kwai-Kolors/Kolors-diffusers",
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ]
+        }
+      ],
+      "basic_fields": [
+        "prompt",
+        "negative_prompt",
+        "guidance_scale",
+        "num_inference_steps",
+        "width",
+        "height",
+        "seed",
+        "max_sequence_length",
+        "use_dpm_solver"
+      ]
+    },
+    {
       "title": "Load Text To Image Model",
       "description": "Load HuggingFace model for image-to-image generation from a repo_id.\n\n    Use cases:\n    - Loads a pipeline directly from a repo_id\n    - Used for AutoPipelineForImage2Image",
       "namespace": "huggingface.text_to_image",
@@ -1262,6 +1778,302 @@
       "basic_fields": [
         "repo_id",
         "variant"
+      ]
+    },
+    {
+      "title": "Lumina-T2X",
+      "description": "Generates images from text prompts using Lumina-T2X, a Flow-based Large Diffusion Transformer.\n    image, generation, AI, text-to-image, diffusion, transformer, flow, quantization\n\n    Use cases:\n    - Generate high-quality images with improved sampling efficiency\n    - Create images with Next-DiT architecture and 3D RoPE\n    - Produce images with better resolution extrapolation capabilities\n    - Generate images with multilingual support using decoder-based LLMs\n    - Create images with advanced frequency and time-aware scaling",
+      "namespace": "huggingface.text_to_image",
+      "node_type": "huggingface.text_to_image.LuminaT2X",
+      "properties": [
+        {
+          "name": "prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "Upper body of a young woman in a Victorian-era outfit with brass goggles and leather straps. Background shows an industrial revolution cityscape with smoky skies and tall, metal structures",
+          "title": "Prompt",
+          "description": "A text prompt describing the desired image."
+        },
+        {
+          "name": "negative_prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "",
+          "title": "Negative Prompt",
+          "description": "A text prompt describing what to avoid in the image. For Lumina-T2X, this should typically be empty."
+        },
+        {
+          "name": "guidance_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 4.0,
+          "title": "Guidance Scale",
+          "description": "The scale for classifier-free guidance.",
+          "min": 1.0,
+          "max": 20.0
+        },
+        {
+          "name": "num_inference_steps",
+          "type": {
+            "type": "int"
+          },
+          "default": 30,
+          "title": "Num Inference Steps",
+          "description": "The number of denoising steps. Lumina-T2X uses fewer steps for efficient generation.",
+          "min": 1.0,
+          "max": 100.0
+        },
+        {
+          "name": "height",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Height",
+          "description": "The height of the generated image.",
+          "min": 256.0,
+          "max": 2048.0
+        },
+        {
+          "name": "width",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Width",
+          "description": "The width of the generated image.",
+          "min": 256.0,
+          "max": 2048.0
+        },
+        {
+          "name": "seed",
+          "type": {
+            "type": "int"
+          },
+          "default": -1,
+          "title": "Seed",
+          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "min": -1.0
+        },
+        {
+          "name": "clean_caption",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Clean Caption",
+          "description": "Whether to clean the caption before creating embeddings. Requires beautifulsoup4 and ftfy."
+        },
+        {
+          "name": "max_sequence_length",
+          "type": {
+            "type": "int"
+          },
+          "default": 256,
+          "title": "Max Sequence Length",
+          "description": "Maximum sequence length to use with the prompt.",
+          "min": 1.0,
+          "max": 512.0
+        },
+        {
+          "name": "scaling_watershed",
+          "type": {
+            "type": "float"
+          },
+          "default": 1.0,
+          "title": "Scaling Watershed",
+          "description": "Scaling watershed parameter for improved generation quality.",
+          "min": 0.1,
+          "max": 2.0
+        },
+        {
+          "name": "proportional_attn",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Proportional Attn",
+          "description": "Whether to use proportional attention for better quality."
+        },
+        {
+          "name": "enable_quantization",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Quantization",
+          "description": "Enable quantization for memory efficiency."
+        },
+        {
+          "name": "enable_cpu_offload",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Cpu Offload",
+          "description": "Enable CPU offload to reduce VRAM usage."
+        },
+        {
+          "name": "enable_vae_slicing",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Vae Slicing",
+          "description": "Enable VAE slicing to reduce VRAM usage."
+        },
+        {
+          "name": "enable_vae_tiling",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Vae Tiling",
+          "description": "Enable VAE tiling to reduce VRAM usage for large images."
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "image"
+          },
+          "name": "output"
+        }
+      ],
+      "recommended_models": [
+        {
+          "repo_id": "Alpha-VLLM/Lumina-Next-SFT-diffusers",
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ]
+        }
+      ],
+      "basic_fields": [
+        "prompt",
+        "height",
+        "width",
+        "num_inference_steps"
+      ]
+    },
+    {
+      "title": "Quanto FLUX FP8",
+      "description": "Generates images using FLUX models with Optimum Quanto FP8 quantization for extreme memory efficiency.\n    image, generation, AI, text-to-image, flux, quantization, fp8, quanto\n\n    Use cases:\n    - Ultra memory-efficient FLUX image generation using FP8 quantization\n    - High-quality image generation on lower-end hardware\n    - Faster inference with reduced memory footprint\n    - Professional image generation with optimized resource usage",
+      "namespace": "huggingface.text_to_image",
+      "node_type": "huggingface.text_to_image.QuantoFlux",
+      "properties": [
+        {
+          "name": "prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "A cat holding a sign that says hello world",
+          "title": "Prompt",
+          "description": "A text prompt describing the desired image."
+        },
+        {
+          "name": "guidance_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 3.5,
+          "title": "Guidance Scale",
+          "description": "The scale for classifier-free guidance.",
+          "min": 0.0,
+          "max": 30.0
+        },
+        {
+          "name": "width",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Width",
+          "description": "The width of the generated image.",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
+          "name": "height",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Height",
+          "description": "The height of the generated image.",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
+          "name": "num_inference_steps",
+          "type": {
+            "type": "int"
+          },
+          "default": 20,
+          "title": "Num Inference Steps",
+          "description": "The number of denoising steps.",
+          "min": 1.0,
+          "max": 100.0
+        },
+        {
+          "name": "max_sequence_length",
+          "type": {
+            "type": "int"
+          },
+          "default": 512,
+          "title": "Max Sequence Length",
+          "description": "Maximum sequence length for the prompt.",
+          "min": 1.0,
+          "max": 512.0
+        },
+        {
+          "name": "seed",
+          "type": {
+            "type": "int"
+          },
+          "default": -1,
+          "title": "Seed",
+          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "min": -1.0
+        },
+        {
+          "name": "enable_cpu_offload",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Cpu Offload",
+          "description": "Enable CPU offload to reduce VRAM usage."
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "image"
+          },
+          "name": "output"
+        }
+      ],
+      "recommended_models": [
+        {
+          "repo_id": "Kijai/flux-fp8",
+          "path": "flux1-dev-fp8.safetensors"
+        }
+      ],
+      "basic_fields": [
+        "prompt",
+        "guidance_scale",
+        "width",
+        "height",
+        "num_inference_steps",
+        "max_sequence_length",
+        "seed",
+        "enable_cpu_offload"
       ]
     },
     {
@@ -8963,6 +9775,182 @@
       "basic_fields": [
         "model",
         "prompt"
+      ]
+    },
+    {
+      "title": "CogVideoX",
+      "description": "Generates videos from text prompts using CogVideoX, a large diffusion transformer model.\n    video, generation, AI, text-to-video, transformer, diffusion\n\n    Use cases:\n    - Create high-quality videos from text descriptions\n    - Generate longer and more consistent videos\n    - Produce cinematic content for creative projects\n    - Create animated scenes for storytelling\n    - Generate video content for marketing and media",
+      "namespace": "huggingface.video",
+      "node_type": "huggingface.video.CogVideoX",
+      "properties": [
+        {
+          "name": "prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "A detailed wooden toy ship with intricately carved masts and sails is seen gliding smoothly over a plush, blue carpet that mimics the waves of the sea. The ship's hull is painted a rich brown, with tiny windows. The carpet, soft and textured, provides a perfect backdrop, resembling an oceanic expanse. Surrounding the ship are various other toys and children's items, hinting at a playful environment. The scene captures the innocence and imagination of childhood, with the toy ship's journey symbolizing endless adventures in a whimsical, indoor setting.",
+          "title": "Prompt",
+          "description": "A text prompt describing the desired video."
+        },
+        {
+          "name": "negative_prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "",
+          "title": "Negative Prompt",
+          "description": "A text prompt describing what to avoid in the video."
+        },
+        {
+          "name": "num_frames",
+          "type": {
+            "type": "int"
+          },
+          "default": 49,
+          "title": "Num Frames",
+          "description": "The number of frames in the video. Must be divisible by 8 + 1 (e.g., 49, 81, 113).",
+          "min": 49.0,
+          "max": 113.0
+        },
+        {
+          "name": "guidance_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 6.0,
+          "title": "Guidance Scale",
+          "description": "The scale for classifier-free guidance.",
+          "min": 1.0,
+          "max": 20.0
+        },
+        {
+          "name": "num_inference_steps",
+          "type": {
+            "type": "int"
+          },
+          "default": 50,
+          "title": "Num Inference Steps",
+          "description": "The number of denoising steps.",
+          "min": 1.0,
+          "max": 100.0
+        },
+        {
+          "name": "height",
+          "type": {
+            "type": "int"
+          },
+          "default": 480,
+          "title": "Height",
+          "description": "The height of the generated video in pixels.",
+          "min": 256.0,
+          "max": 1024.0
+        },
+        {
+          "name": "width",
+          "type": {
+            "type": "int"
+          },
+          "default": 720,
+          "title": "Width",
+          "description": "The width of the generated video in pixels.",
+          "min": 256.0,
+          "max": 1024.0
+        },
+        {
+          "name": "fps",
+          "type": {
+            "type": "int"
+          },
+          "default": 8,
+          "title": "Fps",
+          "description": "Frames per second for the output video.",
+          "min": 1.0,
+          "max": 30.0
+        },
+        {
+          "name": "seed",
+          "type": {
+            "type": "int"
+          },
+          "default": -1,
+          "title": "Seed",
+          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "min": -1.0
+        },
+        {
+          "name": "max_sequence_length",
+          "type": {
+            "type": "int"
+          },
+          "default": 226,
+          "title": "Max Sequence Length",
+          "description": "Maximum sequence length in encoded prompt.",
+          "min": 1.0,
+          "max": 512.0
+        },
+        {
+          "name": "enable_cpu_offload",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Cpu Offload",
+          "description": "Enable CPU offload to reduce VRAM usage."
+        },
+        {
+          "name": "enable_vae_slicing",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Vae Slicing",
+          "description": "Enable VAE slicing to reduce VRAM usage."
+        },
+        {
+          "name": "enable_vae_tiling",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Vae Tiling",
+          "description": "Enable VAE tiling to reduce VRAM usage for large videos."
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "video"
+          },
+          "name": "output"
+        }
+      ],
+      "recommended_models": [
+        {
+          "type": "hf.text_to_video",
+          "repo_id": "THUDM/CogVideoX-2b",
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ]
+        },
+        {
+          "type": "hf.text_to_video",
+          "repo_id": "THUDM/CogVideoX-5b",
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ]
+        }
+      ],
+      "basic_fields": [
+        "prompt",
+        "num_frames",
+        "height",
+        "width"
       ]
     },
     {
