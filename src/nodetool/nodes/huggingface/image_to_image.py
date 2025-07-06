@@ -24,7 +24,7 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
 from nodetool.nodes.huggingface.huggingface_node import progress_callback
 from nodetool.workflows.processing_context import ProcessingContext
 
-from diffusers import OmniGenPipeline
+from diffusers.pipelines.omnigen.pipeline_omnigen import OmniGenPipeline
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
 from diffusers.pipelines.auto_pipeline import AutoPipelineForInpainting
@@ -565,12 +565,15 @@ class StableDiffusionControlNetNode(StableDiffusionBaseNode):
 
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
+        # Use float32 for MPS compatibility with controlnet models
+        controlnet_dtype = torch.float32 if context.device == "mps" else torch.float16
+        controlnet_variant = None if context.device == "mps" else "fp16"
         controlnet = await self.load_model(
             context=context,
             model_class=ControlNetModel,
             model_id=self.controlnet.repo_id,
-            torch_dtype=torch.float16,
-            variant="fp16",
+            torch_dtype=controlnet_dtype,
+            variant=controlnet_variant,
         )
         self._pipeline = await self.load_model(
             context=context,
@@ -711,12 +714,14 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
 
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
+        # Use float32 for MPS compatibility with controlnet models
+        controlnet_dtype = torch.float32 if context.device == "mps" else torch.float16
         controlnet = await self.load_pipeline(
             context,
             "controlnet",
             self.controlnet.value,
             device=context.device,
-            torch_dtype=torch.float16,
+            torch_dtype=controlnet_dtype,
         )
         self._pipeline = await self.load_model(
             context,
@@ -869,12 +874,15 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
         if not context.is_huggingface_model_cached(self.model.repo_id):
             raise ValueError(f"Model {self.model.repo_id} must be downloaded first")
 
+        # Use float32 for MPS compatibility with controlnet models
+        controlnet_dtype = torch.float32 if context.device == "mps" else torch.float16
+        controlnet_variant = None if context.device == "mps" else "fp16"
         controlnet = await self.load_model(
             context=context,
             model_class=ControlNetModel,
             model_id=self.controlnet.repo_id,
-            torch_dtype=torch.float16,
-            variant="fp16",
+            torch_dtype=controlnet_dtype,
+            variant=controlnet_variant,
         )
         self._pipeline = await self.load_model(
             context=context,
@@ -1200,13 +1208,15 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
         return "Stable Diffusion XL ControlNet"
 
     async def preload_model(self, context: ProcessingContext):
+        # Use float32 for MPS compatibility with controlnet models
+        controlnet_dtype = torch.float32 if context.device == "mps" else torch.float16
         controlnet = await self.load_model(
             context=context,
             model_class=ControlNetModel,
             model_id=self.controlnet.repo_id,
             path=self.controlnet.path,
             variant=None,
-            torch_dtype=torch.float16,
+            torch_dtype=controlnet_dtype,
         )
         self._pipeline = await self.load_model(
             context=context,
