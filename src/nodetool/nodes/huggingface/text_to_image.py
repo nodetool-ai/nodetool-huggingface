@@ -205,9 +205,11 @@ class Text2Image(HuggingFacePipelineNode):
         ge=64,
         le=2048,
     )
-    enable_pag: bool = Field(
-        default=True,
-        description="Enable PAG for the pipeline.",
+    pag_scale: float = Field(
+        default=3.0,
+        description="Scale of the Perturbed-Attention Guidance applied to the image.",
+        ge=0.0,
+        le=10.0,
     )
     seed: int = Field(
         default=-1,
@@ -231,8 +233,7 @@ class Text2Image(HuggingFacePipelineNode):
             model_class=AutoPipelineForText2Image,
             torch_dtype=torch.float16,
             variant=self.model.variant if self.model.variant != ModelVariant.DEFAULT else None,
-            enable_pag=self.enable_pag,
-            pag_applied_layers=["mid"] if self.enable_pag else None,
+            enable_pag=self.pag_scale > 0.0,
         )
 
     async def move_to_device(self, device: str):
@@ -257,6 +258,7 @@ class Text2Image(HuggingFacePipelineNode):
             width=self.width,
             height=self.height,
             generator=generator,
+            pag_scale=self.pag_scale,
             callback_on_step_end=pipeline_progress_callback(self.id, self.num_inference_steps, context),
         )  # type: ignore
 

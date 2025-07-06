@@ -2645,13 +2645,15 @@
           "max": 2048.0
         },
         {
-          "name": "enable_pag",
+          "name": "pag_scale",
           "type": {
-            "type": "bool"
+            "type": "float"
           },
-          "default": true,
-          "title": "Enable Pag",
-          "description": "Enable PAG for the pipeline."
+          "default": 3.0,
+          "title": "Pag Scale",
+          "description": "Scale of the Perturbed-Attention Guidance applied to the image.",
+          "min": 0.0,
+          "max": 10.0
         },
         {
           "name": "seed",
@@ -2680,7 +2682,7 @@
         "guidance_scale",
         "width",
         "height",
-        "enable_pag",
+        "pag_scale",
         "seed"
       ]
     },
@@ -10206,6 +10208,11 @@
     },
     {
       "package_name": "nodetool-huggingface",
+      "name": "Controlnet.jpg",
+      "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
       "name": "Upscaling.jpg",
       "path": ""
     },
@@ -10278,9 +10285,23 @@
       "package_name": "nodetool-huggingface",
       "name": "Pokemon Maker.jpg",
       "path": ""
+    },
+    {
+      "package_name": "nodetool-huggingface",
+      "name": "Image to Image.jpg",
+      "path": ""
     }
   ],
   "examples": [
+    {
+      "id": "controlnet",
+      "name": "Controlnet",
+      "description": "",
+      "tags": [
+        "start",
+        "image"
+      ]
+    },
     {
       "id": "add_subtitles_to_video",
       "name": "Add Subtitles To Video",
@@ -10299,6 +10320,15 @@
         "huggingface",
         "image",
         "start"
+      ]
+    },
+    {
+      "id": "d6d4ffd859da11f094f9000001d6cfc2",
+      "name": "Image to Image",
+      "description": "",
+      "tags": [
+        "start",
+        "image"
       ]
     },
     {

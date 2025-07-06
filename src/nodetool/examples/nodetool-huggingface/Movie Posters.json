@@ -21,7 +21,7 @@
         "data": {
           "model": {
             "type": "language_model",
-            "id": "qwen3:4b",
+            "id": "gemma3n:latest",
             "provider": "ollama"
           },
           "system": "You are a friendly assistant.",

@@ -31,6 +31,9 @@ include = [
   "src/nodetool/assets/nodetool-huggingface/Add Subtitles To Video.jpg",
   "src/nodetool/assets/nodetool-huggingface/stable_diffusion_xl.jpg",
   "src/nodetool/assets/nodetool-huggingface/Pokemon Maker.jpg",
+  "src/nodetool/assets/nodetool-huggingface/Controlnet.png",
+  "src/nodetool/assets/nodetool-huggingface/Controlnet.jpg",
+  "src/nodetool/assets/nodetool-huggingface/Image to Image.jpg",
 ]
 repository = "https://github.com/nodetool-ai/nodetool-huggingface"
 

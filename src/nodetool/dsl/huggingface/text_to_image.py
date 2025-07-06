@@ -665,8 +665,9 @@ class Text2Image(GraphNode):
     height: int | GraphNode | tuple[GraphNode, str] = Field(
         default=512, description="The height of the generated image."
     )
-    enable_pag: bool | GraphNode | tuple[GraphNode, str] = Field(
-        default=True, description="Enable PAG for the pipeline."
+    pag_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=3.0,
+        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     seed: int | GraphNode | tuple[GraphNode, str] = Field(
         default=-1,

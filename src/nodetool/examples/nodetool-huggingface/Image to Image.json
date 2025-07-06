@@ -1,0 +1,142 @@
+{
+  "id": "d6d4ffd859da11f094f9000001d6cfc2",
+  "access": "public",
+  "created_at": "2025-07-06T22:40:19.661779",
+  "updated_at": "2025-07-06T22:40:19.661800",
+  "name": "Image to Image",
+  "description": "",
+  "tags": ["start", "image"],
+  "thumbnail": null,
+  "thumbnail_url": null,
+  "graph": {
+    "nodes": [
+      {
+        "id": "0ca199b1-774f-438e-ba87-e25158275ec2",
+        "parent_id": null,
+        "type": "nodetool.workflows.base_node.Preview",
+        "data": {
+          "name": "image_output"
+        },
+        "ui_properties": {
+          "selected": false,
+          "position": {
+            "x": 525,
+            "y": 68
+          },
+          "zIndex": 0,
+          "width": 252,
+          "height": 314,
+          "selectable": true
+        },
+        "dynamic_properties": {}
+      },
+      {
+        "id": "8ff93e78-4f51-4207-af5e-03097b513ad5",
+        "parent_id": null,
+        "type": "huggingface.image_to_image.StableDiffusionImg2Img",
+        "data": {
+          "model": {
+            "type": "hf.stable_diffusion",
+            "repo_id": "Lykon/AbsoluteReality",
+            "path": "AbsoluteReality_1.8.1_pruned.safetensors"
+          },
+          "prompt": "Portrait of Lady Gaga",
+          "negative_prompt": "(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+          "seed": -1,
+          "num_inference_steps": 25,
+          "guidance_scale": 7.5,
+          "scheduler": "EulerDiscreteScheduler",
+          "loras": [],
+          "ip_adapter_model": {},
+          "ip_adapter_image": {},
+          "ip_adapter_scale": 0.5,
+          "pag_scale": 3,
+          "detail_level": 0.5,
+          "enable_tiling": false,
+          "enable_cpu_offload": false,
+          "upscaler": "None",
+          "strength": 0.5
+        },
+        "ui_properties": {
+          "selected": false,
+          "position": {
+            "x": 295,
+            "y": 64
+          },
+          "zIndex": 0,
+          "width": 200,
+          "selectable": true
+        },
+        "dynamic_properties": {}
+      },
+      {
+        "id": "10749e39-1718-4163-b3f4-abe4eb651b1f",
+        "parent_id": null,
+        "type": "nodetool.constant.Image",
+        "data": {
+          "value": {
+            "uri": "https://tse1.explicit.bing.net/th/id/OIP.Q1DqQ-xOGyfBlfFSSY4BeAAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3",
+            "type": "image"
+          }
+        },
+        "ui_properties": {
+          "selected": false,
+          "position": {
+            "x": 65,
+            "y": 76
+          },
+          "zIndex": 0,
+          "width": 200,
+          "selectable": true
+        },
+        "dynamic_properties": {}
+      },
+      {
+        "id": "a1b0b10d-042c-4519-834a-42a5581525dd",
+        "parent_id": null,
+        "type": "nodetool.workflows.base_node.Comment",
+        "data": {},
+        "ui_properties": {
+          "selected": false,
+          "position": {
+            "x": 64,
+            "y": -157
+          },
+          "zIndex": 0,
+          "width": 523,
+          "height": 142,
+          "selectable": true
+        },
+        "dynamic_properties": {}
+      }
+    ],
+    "edges": [
+      {
+        "id": "e72852c7-529b-45dc-849f-92fd9762467a",
+        "source": "8ff93e78-4f51-4207-af5e-03097b513ad5",
+        "sourceHandle": "output",
+        "target": "0ca199b1-774f-438e-ba87-e25158275ec2",
+        "targetHandle": "value",
+        "ui_properties": {
+          "className": "image"
+        }
+      },
+      {
+        "id": "4099aa24-2ce9-4404-84aa-20690327bdf8",
+        "source": "10749e39-1718-4163-b3f4-abe4eb651b1f",
+        "sourceHandle": "output",
+        "target": "8ff93e78-4f51-4207-af5e-03097b513ad5",
+        "targetHandle": "init_image",
+        "ui_properties": {
+          "className": "image"
+        }
+      }
+    ]
+  },
+  "input_schema": null,
+  "output_schema": null,
+  "settings": null,
+  "package_name": "nodetool-huggingface",
+  "path": null,
+  "run_mode": null
+}
