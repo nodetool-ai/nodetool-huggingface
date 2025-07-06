@@ -118,7 +118,7 @@ class HuggingFacePipelineNode(HuggingfaceNode):
         return model
 
     async def move_to_device(self, device: str):
-        if self._pipeline is not None:
+        if self._pipeline is not None and hasattr(self._pipeline, "to"):
             self._pipeline.to(device)  # type: ignore
 
     async def process(self, context: ProcessingContext) -> Any:

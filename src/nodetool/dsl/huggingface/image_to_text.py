@@ -34,10 +34,20 @@ class ImageToText(GraphNode):
         description="The image to generate text from",
     )
     max_new_tokens: int | GraphNode | tuple[GraphNode, str] = Field(
-        default=None,
+        default=1024,
         description="The maximum number of tokens to generate (if supported by model)",
     )
 
     @classmethod
     def get_node_type(cls):
         return "huggingface.image_to_text.ImageToText"
+
+
+class LoadImageToTextModel(GraphNode):
+    repo_id: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="", description="The model ID to use for image-to-text generation"
+    )
+
+    @classmethod
+    def get_node_type(cls):
+        return "huggingface.image_to_text.LoadImageToTextModel"

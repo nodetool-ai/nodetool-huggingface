@@ -6,7 +6,7 @@ import nodetool.metadata.types as types
 from nodetool.dsl.graph import GraphNode
 
 
-class AutoPipelineImg2Img(GraphNode):
+class ImageToImage(GraphNode):
     """
     Transforms existing images based on text prompts using AutoPipeline for Image-to-Image.
     This node automatically detects the appropriate pipeline class based on the model used.
@@ -60,10 +60,10 @@ class AutoPipelineImg2Img(GraphNode):
 
     @classmethod
     def get_node_type(cls):
-        return "huggingface.image_to_image.AutoPipelineImg2Img"
+        return "huggingface.image_to_image.ImageToImage"
 
 
-class AutoPipelineInpaint(GraphNode):
+class Inpaint(GraphNode):
     """
     Performs inpainting on images using AutoPipeline for Inpainting.
     This node automatically detects the appropriate pipeline class based on the model used.
@@ -117,44 +117,7 @@ class AutoPipelineInpaint(GraphNode):
 
     @classmethod
     def get_node_type(cls):
-        return "huggingface.image_to_image.AutoPipelineInpaint"
-
-
-class Kandinsky3Img2Img(GraphNode):
-    """
-    Transforms existing images using the Kandinsky-3 model based on text prompts.
-    image, generation, image-to-image
-
-    Use cases:
-    - Modify existing images based on text descriptions
-    - Apply specific styles or concepts to photographs or artwork
-    - Create variations of existing visual content
-    - Blend AI-generated elements with existing images
-    """
-
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
-        default="A photograph of the inside of a subway train. There are raccoons sitting on the seats. One of them is reading a newspaper. The window shows the city in the background.",
-        description="A text prompt describing the desired image transformation.",
-    )
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
-        default=25, description="The number of denoising steps."
-    )
-    strength: float | GraphNode | tuple[GraphNode, str] = Field(
-        default=0.5,
-        description="The strength of the transformation. Use a value between 0.0 and 1.0.",
-    )
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The input image to transform",
-    )
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(
-        default=0,
-        description="Seed for the random number generator. Use -1 for a random seed.",
-    )
-
-    @classmethod
-    def get_node_type(cls):
-        return "huggingface.image_to_image.Kandinsky3Img2Img"
+        return "huggingface.image_to_image.Inpaint"
 
 
 import nodetool.nodes.huggingface.image_to_image
@@ -166,7 +129,7 @@ class LoadImageToImageModel(GraphNode):
 
     Use cases:
     - Loads a pipeline directly from a repo_id
-    - Used for AutoPipelineForImage2Image
+    - Used for ImageToImage node
     """
 
     ModelVariant: typing.ClassVar[type] = (
@@ -314,7 +277,7 @@ class StableDiffusionControlNetImg2ImgNode(GraphNode):
         default="", description="The prompt for image generation."
     )
     negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
-        default="(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+        default="",
         description="The negative prompt to guide what should not appear in the generated image.",
     )
     seed: int | GraphNode | tuple[GraphNode, str] = Field(
@@ -353,6 +316,10 @@ class StableDiffusionControlNetImg2ImgNode(GraphNode):
     )
     ip_adapter_scale: float | GraphNode | tuple[GraphNode, str] = Field(
         default=0.5, description="The strength of the IP adapter"
+    )
+    pag_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=3.0,
+        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     detail_level: float | GraphNode | tuple[GraphNode, str] = Field(
         default=0.5,
@@ -440,7 +407,7 @@ class StableDiffusionControlNetInpaintNode(GraphNode):
         default="", description="The prompt for image generation."
     )
     negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
-        default="(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+        default="",
         description="The negative prompt to guide what should not appear in the generated image.",
     )
     seed: int | GraphNode | tuple[GraphNode, str] = Field(
@@ -479,6 +446,10 @@ class StableDiffusionControlNetInpaintNode(GraphNode):
     )
     ip_adapter_scale: float | GraphNode | tuple[GraphNode, str] = Field(
         default=0.5, description="The strength of the IP adapter"
+    )
+    pag_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=3.0,
+        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     detail_level: float | GraphNode | tuple[GraphNode, str] = Field(
         default=0.5,
@@ -561,7 +532,7 @@ class StableDiffusionControlNetNode(GraphNode):
         default="", description="The prompt for image generation."
     )
     negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
-        default="(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+        default="",
         description="The negative prompt to guide what should not appear in the generated image.",
     )
     seed: int | GraphNode | tuple[GraphNode, str] = Field(
@@ -600,6 +571,10 @@ class StableDiffusionControlNetNode(GraphNode):
     )
     ip_adapter_scale: float | GraphNode | tuple[GraphNode, str] = Field(
         default=0.5, description="The strength of the IP adapter"
+    )
+    pag_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=3.0,
+        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     detail_level: float | GraphNode | tuple[GraphNode, str] = Field(
         default=0.5,
@@ -680,7 +655,7 @@ class StableDiffusionImg2ImgNode(GraphNode):
         default="", description="The prompt for image generation."
     )
     negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
-        default="(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+        default="",
         description="The negative prompt to guide what should not appear in the generated image.",
     )
     seed: int | GraphNode | tuple[GraphNode, str] = Field(
@@ -719,6 +694,10 @@ class StableDiffusionImg2ImgNode(GraphNode):
     )
     ip_adapter_scale: float | GraphNode | tuple[GraphNode, str] = Field(
         default=0.5, description="The strength of the IP adapter"
+    )
+    pag_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=3.0,
+        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     detail_level: float | GraphNode | tuple[GraphNode, str] = Field(
         default=0.5,
@@ -788,7 +767,7 @@ class StableDiffusionInpaintNode(GraphNode):
         default="", description="The prompt for image generation."
     )
     negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
-        default="(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+        default="",
         description="The negative prompt to guide what should not appear in the generated image.",
     )
     seed: int | GraphNode | tuple[GraphNode, str] = Field(
@@ -827,6 +806,10 @@ class StableDiffusionInpaintNode(GraphNode):
     )
     ip_adapter_scale: float | GraphNode | tuple[GraphNode, str] = Field(
         default=0.5, description="The strength of the IP adapter"
+    )
+    pag_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=3.0,
+        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     detail_level: float | GraphNode | tuple[GraphNode, str] = Field(
         default=0.5,
@@ -953,6 +936,12 @@ class StableDiffusionXLControlNetNode(GraphNode):
         default="",
         description="The negative prompt to guide what should not appear in the generated image.",
     )
+    width: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=1024, description="Width of the generated image."
+    )
+    height: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=1024, description="Height of the generated image"
+    )
     seed: int | GraphNode | tuple[GraphNode, str] = Field(
         default=-1, description="Seed for the random number generator."
     )
@@ -962,17 +951,15 @@ class StableDiffusionXLControlNetNode(GraphNode):
     guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
         default=7.0, description="Guidance scale for generation."
     )
-    width: int | GraphNode | tuple[GraphNode, str] = Field(
-        default=1024, description="Width of the generated image."
-    )
-    height: int | GraphNode | tuple[GraphNode, str] = Field(
-        default=1024, description="Height of the generated image"
-    )
     scheduler: (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
     ) = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler.EulerDiscreteScheduler,
         description="The scheduler to use for the diffusion process.",
+    )
+    pag_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=3.0,
+        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     loras: list[types.HFLoraSDXLConfig] | GraphNode | tuple[GraphNode, str] = Field(
         default=[], description="The LoRA models to use for image processing"
@@ -1074,6 +1061,12 @@ class StableDiffusionXLImg2Img(GraphNode):
         default="",
         description="The negative prompt to guide what should not appear in the generated image.",
     )
+    width: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=1024, description="Width of the generated image."
+    )
+    height: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=1024, description="Height of the generated image"
+    )
     seed: int | GraphNode | tuple[GraphNode, str] = Field(
         default=-1, description="Seed for the random number generator."
     )
@@ -1083,17 +1076,15 @@ class StableDiffusionXLImg2Img(GraphNode):
     guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
         default=7.0, description="Guidance scale for generation."
     )
-    width: int | GraphNode | tuple[GraphNode, str] = Field(
-        default=1024, description="Width of the generated image."
-    )
-    height: int | GraphNode | tuple[GraphNode, str] = Field(
-        default=1024, description="Height of the generated image"
-    )
     scheduler: (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
     ) = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler.EulerDiscreteScheduler,
         description="The scheduler to use for the diffusion process.",
+    )
+    pag_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=3.0,
+        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     loras: list[types.HFLoraSDXLConfig] | GraphNode | tuple[GraphNode, str] = Field(
         default=[], description="The LoRA models to use for image processing"
@@ -1176,6 +1167,12 @@ class StableDiffusionXLInpainting(GraphNode):
         default="",
         description="The negative prompt to guide what should not appear in the generated image.",
     )
+    width: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=1024, description="Width of the generated image."
+    )
+    height: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=1024, description="Height of the generated image"
+    )
     seed: int | GraphNode | tuple[GraphNode, str] = Field(
         default=-1, description="Seed for the random number generator."
     )
@@ -1185,17 +1182,15 @@ class StableDiffusionXLInpainting(GraphNode):
     guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
         default=7.0, description="Guidance scale for generation."
     )
-    width: int | GraphNode | tuple[GraphNode, str] = Field(
-        default=1024, description="Width of the generated image."
-    )
-    height: int | GraphNode | tuple[GraphNode, str] = Field(
-        default=1024, description="Height of the generated image"
-    )
     scheduler: (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
     ) = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler.EulerDiscreteScheduler,
         description="The scheduler to use for the diffusion process.",
+    )
+    pag_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=3.0,
+        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     loras: list[types.HFLoraSDXLConfig] | GraphNode | tuple[GraphNode, str] = Field(
         default=[], description="The LoRA models to use for image processing"

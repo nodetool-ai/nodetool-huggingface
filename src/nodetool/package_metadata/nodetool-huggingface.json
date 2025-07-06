@@ -893,123 +893,6 @@
       ]
     },
     {
-      "title": "Auto Pipeline Text2Image",
-      "description": "Generates images from text prompts using AutoPipeline for automatic pipeline selection.\n    image, generation, AI, text-to-image, auto\n\n    Use cases:\n    - Automatic selection of the best pipeline for a given model\n    - Flexible image generation without pipeline-specific knowledge\n    - Quick prototyping with various text-to-image models\n    - Streamlined workflow for different model architectures",
-      "namespace": "huggingface.text_to_image",
-      "node_type": "huggingface.text_to_image.AutoPipelineText2Image",
-      "properties": [
-        {
-          "name": "model",
-          "type": {
-            "type": "hf.text_to_image"
-          },
-          "default": {},
-          "title": "Model",
-          "description": "The model to use for text-to-image generation."
-        },
-        {
-          "name": "prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "A cat holding a sign that says hello world",
-          "title": "Prompt",
-          "description": "A text prompt describing the desired image."
-        },
-        {
-          "name": "negative_prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "",
-          "title": "Negative Prompt",
-          "description": "A text prompt describing what to avoid in the image."
-        },
-        {
-          "name": "num_inference_steps",
-          "type": {
-            "type": "int"
-          },
-          "default": 50,
-          "title": "Num Inference Steps",
-          "description": "The number of denoising steps.",
-          "min": 1.0,
-          "max": 100.0
-        },
-        {
-          "name": "guidance_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 7.5,
-          "title": "Guidance Scale",
-          "description": "The scale for classifier-free guidance.",
-          "min": 1.0,
-          "max": 20.0
-        },
-        {
-          "name": "width",
-          "type": {
-            "type": "int"
-          },
-          "default": 512,
-          "title": "Width",
-          "description": "The width of the generated image.",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
-          "name": "height",
-          "type": {
-            "type": "int"
-          },
-          "default": 512,
-          "title": "Height",
-          "description": "The height of the generated image.",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
-          "name": "enable_pag",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Pag",
-          "description": "Enable PAG for the pipeline."
-        },
-        {
-          "name": "seed",
-          "type": {
-            "type": "int"
-          },
-          "default": -1,
-          "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
-          "min": -1.0
-        }
-      ],
-      "outputs": [
-        {
-          "type": {
-            "type": "image"
-          },
-          "name": "output"
-        }
-      ],
-      "basic_fields": [
-        "model",
-        "prompt",
-        "negative_prompt",
-        "num_inference_steps",
-        "guidance_scale",
-        "width",
-        "height",
-        "enable_pag",
-        "seed"
-      ]
-    },
-    {
       "title": "Chroma",
       "description": "Generates images from text prompts using Chroma, a text-to-image model based on Flux.\n    image, generation, AI, text-to-image, flux, chroma, transformer\n\n    Use cases:\n    - Generate high-quality images with Flux-based architecture\n    - Create images with advanced attention masking for enhanced fidelity\n    - Produce images with IP adapter support for style control\n    - Generate images with optimized memory usage\n    - Create professional-quality images with precise color control",
       "namespace": "huggingface.text_to_image",
@@ -2115,7 +1998,7 @@
           "type": {
             "type": "str"
           },
-          "default": "(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+          "default": "",
           "title": "Negative Prompt",
           "description": "The negative prompt to guide what should not appear in the generated image."
         },
@@ -2685,6 +2568,123 @@
       ]
     },
     {
+      "title": "Text to Image",
+      "description": "Generates images from text prompts using AutoPipeline for automatic pipeline selection.\n    image, generation, AI, text-to-image, auto\n\n    Use cases:\n    - Automatic selection of the best pipeline for a given model\n    - Flexible image generation without pipeline-specific knowledge\n    - Quick prototyping with various text-to-image models\n    - Streamlined workflow for different model architectures",
+      "namespace": "huggingface.text_to_image",
+      "node_type": "huggingface.text_to_image.Text2Image",
+      "properties": [
+        {
+          "name": "model",
+          "type": {
+            "type": "hf.text_to_image"
+          },
+          "default": {},
+          "title": "Model",
+          "description": "The model to use for text-to-image generation."
+        },
+        {
+          "name": "prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "A cat holding a sign that says hello world",
+          "title": "Prompt",
+          "description": "A text prompt describing the desired image."
+        },
+        {
+          "name": "negative_prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "",
+          "title": "Negative Prompt",
+          "description": "A text prompt describing what to avoid in the image."
+        },
+        {
+          "name": "num_inference_steps",
+          "type": {
+            "type": "int"
+          },
+          "default": 50,
+          "title": "Num Inference Steps",
+          "description": "The number of denoising steps.",
+          "min": 1.0,
+          "max": 100.0
+        },
+        {
+          "name": "guidance_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 7.5,
+          "title": "Guidance Scale",
+          "description": "The scale for classifier-free guidance.",
+          "min": 1.0,
+          "max": 20.0
+        },
+        {
+          "name": "width",
+          "type": {
+            "type": "int"
+          },
+          "default": 512,
+          "title": "Width",
+          "description": "The width of the generated image.",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
+          "name": "height",
+          "type": {
+            "type": "int"
+          },
+          "default": 512,
+          "title": "Height",
+          "description": "The height of the generated image.",
+          "min": 64.0,
+          "max": 2048.0
+        },
+        {
+          "name": "enable_pag",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Pag",
+          "description": "Enable PAG for the pipeline."
+        },
+        {
+          "name": "seed",
+          "type": {
+            "type": "int"
+          },
+          "default": -1,
+          "title": "Seed",
+          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "min": -1.0
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "image"
+          },
+          "name": "output"
+        }
+      ],
+      "basic_fields": [
+        "model",
+        "prompt",
+        "negative_prompt",
+        "num_inference_steps",
+        "guidance_scale",
+        "width",
+        "height",
+        "enable_pag",
+        "seed"
+      ]
+    },
+    {
       "title": "Image Classifier",
       "description": "Classifies images into predefined categories.\n    image, classification, labeling, categorization\n\n    Use cases:\n    - Content moderation by detecting inappropriate images\n    - Organizing photo libraries by automatically tagging images",
       "namespace": "huggingface.image_classification",
@@ -3067,6 +3067,7 @@
           "type": {
             "type": "int"
           },
+          "default": 1024,
           "title": "Max New Tokens",
           "description": "The maximum number of tokens to generate (if supported by model)"
         }
@@ -3124,6 +3125,34 @@
       "basic_fields": [
         "model",
         "image"
+      ]
+    },
+    {
+      "title": "Load Image To Text Model",
+      "description": "",
+      "namespace": "huggingface.image_to_text",
+      "node_type": "huggingface.image_to_text.LoadImageToTextModel",
+      "properties": [
+        {
+          "name": "repo_id",
+          "type": {
+            "type": "str"
+          },
+          "default": "",
+          "title": "Model ID on Huggingface",
+          "description": "The model ID to use for image-to-text generation"
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "hf.image_to_text"
+          },
+          "name": "output"
+        }
+      ],
+      "basic_fields": [
+        "repo_id"
       ]
     },
     {
@@ -3413,10 +3442,48 @@
       ]
     },
     {
-      "title": "AutoPipeline Image-to-Image",
+      "title": "Base Image To Image",
+      "description": "Base class for image-to-image transformation tasks.\n    image, transformation, generation, huggingface",
+      "namespace": "huggingface.image_to_image",
+      "node_type": "huggingface.image_to_image.BaseImageToImage",
+      "properties": [
+        {
+          "name": "image",
+          "type": {
+            "type": "image"
+          },
+          "default": {},
+          "title": "Input Image",
+          "description": "The input image to transform"
+        },
+        {
+          "name": "prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "",
+          "title": "Prompt",
+          "description": "The text prompt to guide the image transformation (if applicable)"
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "image"
+          },
+          "name": "output"
+        }
+      ],
+      "basic_fields": [
+        "image",
+        "prompt"
+      ]
+    },
+    {
+      "title": "Image to Image",
       "description": "Transforms existing images based on text prompts using AutoPipeline for Image-to-Image.\n    This node automatically detects the appropriate pipeline class based on the model used.\n    image, generation, image-to-image, autopipeline\n\n    Use cases:\n    - Transform existing images with any compatible model (Stable Diffusion, SDXL, Kandinsky, etc.)\n    - Apply specific styles or concepts to photographs or artwork\n    - Modify existing images based on text descriptions\n    - Create variations of existing visual content with automatic pipeline selection",
       "namespace": "huggingface.image_to_image",
-      "node_type": "huggingface.image_to_image.AutoPipelineImg2Img",
+      "node_type": "huggingface.image_to_image.ImageToImage",
       "properties": [
         {
           "name": "model",
@@ -3518,7 +3585,7 @@
       "title": "AutoPipeline Inpainting",
       "description": "Performs inpainting on images using AutoPipeline for Inpainting.\n    This node automatically detects the appropriate pipeline class based on the model used.\n    image, inpainting, autopipeline, stable-diffusion, SDXL, kandinsky\n\n    Use cases:\n    - Remove unwanted objects from images with any compatible model\n    - Fill in missing parts of images using various diffusion models\n    - Modify specific areas of images while preserving the rest\n    - Automatic pipeline selection for different model architectures",
       "namespace": "huggingface.image_to_image",
-      "node_type": "huggingface.image_to_image.AutoPipelineInpaint",
+      "node_type": "huggingface.image_to_image.Inpaint",
       "properties": [
         {
           "name": "model",
@@ -3615,128 +3682,8 @@
       ]
     },
     {
-      "title": "Base Image To Image",
-      "description": "Base class for image-to-image transformation tasks.\n    image, transformation, generation, huggingface",
-      "namespace": "huggingface.image_to_image",
-      "node_type": "huggingface.image_to_image.BaseImageToImage",
-      "properties": [
-        {
-          "name": "image",
-          "type": {
-            "type": "image"
-          },
-          "default": {},
-          "title": "Input Image",
-          "description": "The input image to transform"
-        },
-        {
-          "name": "prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "",
-          "title": "Prompt",
-          "description": "The text prompt to guide the image transformation (if applicable)"
-        }
-      ],
-      "outputs": [
-        {
-          "type": {
-            "type": "image"
-          },
-          "name": "output"
-        }
-      ],
-      "basic_fields": [
-        "image",
-        "prompt"
-      ]
-    },
-    {
-      "title": "Kandinsky 3 Image-to-Image",
-      "description": "Transforms existing images using the Kandinsky-3 model based on text prompts.\n    image, generation, image-to-image\n\n    Use cases:\n    - Modify existing images based on text descriptions\n    - Apply specific styles or concepts to photographs or artwork\n    - Create variations of existing visual content\n    - Blend AI-generated elements with existing images",
-      "namespace": "huggingface.image_to_image",
-      "node_type": "huggingface.image_to_image.Kandinsky3Img2Img",
-      "properties": [
-        {
-          "name": "prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "A photograph of the inside of a subway train. There are raccoons sitting on the seats. One of them is reading a newspaper. The window shows the city in the background.",
-          "title": "Prompt",
-          "description": "A text prompt describing the desired image transformation."
-        },
-        {
-          "name": "num_inference_steps",
-          "type": {
-            "type": "int"
-          },
-          "default": 25,
-          "title": "Num Inference Steps",
-          "description": "The number of denoising steps.",
-          "min": 1.0,
-          "max": 100.0
-        },
-        {
-          "name": "strength",
-          "type": {
-            "type": "float"
-          },
-          "default": 0.5,
-          "title": "Strength",
-          "description": "The strength of the transformation. Use a value between 0.0 and 1.0.",
-          "min": 0.0,
-          "max": 1.0
-        },
-        {
-          "name": "image",
-          "type": {
-            "type": "image"
-          },
-          "default": {},
-          "title": "Input Image",
-          "description": "The input image to transform"
-        },
-        {
-          "name": "seed",
-          "type": {
-            "type": "int"
-          },
-          "default": 0,
-          "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
-          "min": -1.0
-        }
-      ],
-      "outputs": [
-        {
-          "type": {
-            "type": "image"
-          },
-          "name": "output"
-        }
-      ],
-      "recommended_models": [
-        {
-          "repo_id": "kandinsky-community/kandinsky-3"
-        }
-      ],
-      "basic_fields": [
-        "prompt",
-        "num_inference_steps",
-        "strength",
-        "image",
-        "seed",
-        "image",
-        "prompt",
-        "num_inference_steps",
-        "strength"
-      ]
-    },
-    {
       "title": "Load Image To Image Model",
-      "description": "Load HuggingFace model for image-to-image generation from a repo_id.\n\n    Use cases:\n    - Loads a pipeline directly from a repo_id\n    - Used for AutoPipelineForImage2Image",
+      "description": "Load HuggingFace model for image-to-image generation from a repo_id.\n\n    Use cases:\n    - Loads a pipeline directly from a repo_id\n    - Used for ImageToImage node",
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.LoadImageToImageModel",
       "properties": [
@@ -4019,7 +3966,7 @@
           "type": {
             "type": "str"
           },
-          "default": "(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+          "default": "",
           "title": "Negative Prompt",
           "description": "The negative prompt to guide what should not appear in the generated image."
         },
@@ -4427,7 +4374,7 @@
           "type": {
             "type": "str"
           },
-          "default": "(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+          "default": "",
           "title": "Negative Prompt",
           "description": "The negative prompt to guide what should not appear in the generated image."
         },
@@ -4779,7 +4726,7 @@
           "type": {
             "type": "str"
           },
-          "default": "(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+          "default": "",
           "title": "Negative Prompt",
           "description": "The negative prompt to guide what should not appear in the generated image."
         },
@@ -5178,7 +5125,7 @@
           "type": {
             "type": "str"
           },
-          "default": "(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+          "default": "",
           "title": "Negative Prompt",
           "description": "The negative prompt to guide what should not appear in the generated image."
         },
@@ -5497,7 +5444,7 @@
           "type": {
             "type": "str"
           },
-          "default": "(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+          "default": "",
           "title": "Negative Prompt",
           "description": "The negative prompt to guide what should not appear in the generated image."
         },
@@ -7602,7 +7549,7 @@
           "type": {
             "type": "str"
           },
-          "default": "(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+          "default": "",
           "title": "Negative Prompt",
           "description": "The negative prompt to guide what should not appear in the generated image."
         },

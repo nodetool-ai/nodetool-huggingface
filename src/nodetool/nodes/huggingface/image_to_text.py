@@ -5,6 +5,26 @@ from nodetool.workflows.processing_context import ProcessingContext
 from pydantic import Field
 
 
+class LoadImageToTextModel(HuggingFacePipelineNode):
+    repo_id: str = Field(
+        default="",
+        title="Model ID on Huggingface",
+        description="The model ID to use for image-to-text generation",
+    )
+    async def preload_model(self, context: ProcessingContext):
+        if not self.repo_id:
+            raise ValueError("Model ID is required")
+        self._pipeline = await self.load_pipeline(
+            context, "image-to-text", self.repo_id
+        )
+
+    async def process(self, context: ProcessingContext) -> HFImageToText:
+        return HFImageToText(
+            repo_id=self.repo_id,
+            allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
+        )
+
+
 class ImageToText(HuggingFacePipelineNode):
     """
     Generates textual descriptions from images.
@@ -28,7 +48,7 @@ class ImageToText(HuggingFacePipelineNode):
         description="The image to generate text from",
     )
     max_new_tokens: int = Field(
-        default=None,
+        default=1024,
         title="Max New Tokens",
         description="The maximum number of tokens to generate (if supported by model)",
     )

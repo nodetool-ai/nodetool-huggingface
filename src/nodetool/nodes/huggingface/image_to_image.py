@@ -219,107 +219,6 @@ class Swin2SR(BaseImageToImage):
     def get_model_id(self):
         return self.model.repo_id
 
-
-class Kandinsky3Img2Img(HuggingFacePipelineNode):
-    """
-    Transforms existing images using the Kandinsky-3 model based on text prompts.
-    image, generation, image-to-image
-
-    Use cases:
-    - Modify existing images based on text descriptions
-    - Apply specific styles or concepts to photographs or artwork
-    - Create variations of existing visual content
-    - Blend AI-generated elements with existing images
-    """
-
-    prompt: str = Field(
-        default="A photograph of the inside of a subway train. There are raccoons sitting on the seats. One of them is reading a newspaper. The window shows the city in the background.",
-        description="A text prompt describing the desired image transformation.",
-    )
-    num_inference_steps: int = Field(
-        default=25, description="The number of denoising steps.", ge=1, le=100
-    )
-    strength: float = Field(
-        default=0.5,
-        description="The strength of the transformation. Use a value between 0.0 and 1.0.",
-        ge=0.0,
-        le=1.0,
-    )
-    image: ImageRef = Field(
-        default=ImageRef(),
-        title="Input Image",
-        description="The input image to transform",
-    )
-    seed: int = Field(
-        default=0,
-        description="Seed for the random number generator. Use -1 for a random seed.",
-        ge=-1,
-    )
-
-    _pipeline: AutoPipelineForImage2Image | None = None
-
-    @classmethod
-    def get_basic_fields(cls):
-        return super().get_basic_fields() + [
-            "image",
-            "prompt",
-            "num_inference_steps",
-            "strength",
-        ]
-
-    @classmethod
-    def get_recommended_models(cls) -> list[HuggingFaceModel]:
-        return [
-            HuggingFaceModel(
-                repo_id="kandinsky-community/kandinsky-3",
-            ),
-        ]
-
-    def required_inputs(self):
-        return ["image"]
-
-    @classmethod
-    def get_title(cls) -> str:
-        return "Kandinsky 3 Image-to-Image"
-
-    def get_model_id(self) -> str:
-        return "kandinsky-community/kandinsky-3"
-
-    async def preload_model(self, context: ProcessingContext):
-        self._pipeline = await self.load_model(
-            context=context,
-            model_id="kandinsky-community/kandinsky-3",
-            model_class=AutoPipelineForImage2Image,
-        )
-
-    async def move_to_device(self, device: str):
-        pass
-
-    async def process(self, context: ProcessingContext) -> ImageRef:
-        if self._pipeline is None:
-            raise ValueError("Pipeline not initialized")
-
-        # Set up the generator for reproducibility
-        generator = torch.Generator(device="cpu")
-        if self.seed != -1:
-            generator = generator.manual_seed(self.seed)
-
-        self._pipeline.enable_sequential_cpu_offload()
-
-        input_image = await context.image_to_pil(self.image)
-        output = self._pipeline(
-            prompt=self.prompt,
-            num_inference_steps=self.num_inference_steps,
-            generator=generator,
-            image=input_image,
-            callback=progress_callback(self.id, self.num_inference_steps, context),
-            callback_steps=1,
-        )  # type: ignore
-
-        image = output.images[0]
-
-        return await context.image_from_pil(image)
-
 class ModelVariant(Enum):
     DEFAULT = "default"
     FP16 = "fp16"
@@ -332,7 +231,7 @@ class LoadImageToImageModel(HuggingFacePipelineNode):
 
     Use cases:
     - Loads a pipeline directly from a repo_id
-    - Used for AutoPipelineForImage2Image
+    - Used for ImageToImage node
     """
 
     repo_id: str = Field(
@@ -375,7 +274,7 @@ def pipeline_progress_callback(node_id: str, total_steps: int, context: Processi
 
     return callback
 
-class AutoPipelineImg2Img(HuggingFacePipelineNode):
+class ImageToImage(HuggingFacePipelineNode):
     """
     Transforms existing images based on text prompts using AutoPipeline for Image-to-Image.
     This node automatically detects the appropriate pipeline class based on the model used.
@@ -440,7 +339,7 @@ class AutoPipelineImg2Img(HuggingFacePipelineNode):
 
     @classmethod
     def get_title(cls) -> str:
-        return "AutoPipeline Image-to-Image"
+        return "Image to Image"
 
     def get_model_id(self) -> str:
         return self.model.repo_id
@@ -492,7 +391,7 @@ class AutoPipelineImg2Img(HuggingFacePipelineNode):
         return await context.image_from_pil(image)
 
 
-class AutoPipelineInpaint(HuggingFacePipelineNode):
+class Inpaint(HuggingFacePipelineNode):
     """
     Performs inpainting on images using AutoPipeline for Inpainting.
     This node automatically detects the appropriate pipeline class based on the model used.

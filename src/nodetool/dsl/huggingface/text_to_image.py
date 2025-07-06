@@ -6,58 +6,6 @@ import nodetool.metadata.types as types
 from nodetool.dsl.graph import GraphNode
 
 
-class AutoPipelineText2Image(GraphNode):
-    """
-    Generates images from text prompts using AutoPipeline for automatic pipeline selection.
-    image, generation, AI, text-to-image, auto
-
-    Use cases:
-    - Automatic selection of the best pipeline for a given model
-    - Flexible image generation without pipeline-specific knowledge
-    - Quick prototyping with various text-to-image models
-    - Streamlined workflow for different model architectures
-    """
-
-    model: types.HFTextToImage | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFTextToImage(
-            type="hf.text_to_image",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model to use for text-to-image generation.",
-    )
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
-        default="A cat holding a sign that says hello world",
-        description="A text prompt describing the desired image.",
-    )
-    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
-        default="", description="A text prompt describing what to avoid in the image."
-    )
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
-        default=50, description="The number of denoising steps."
-    )
-    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
-        default=7.5, description="The scale for classifier-free guidance."
-    )
-    width: int | GraphNode | tuple[GraphNode, str] = Field(
-        default=512, description="The width of the generated image."
-    )
-    height: int | GraphNode | tuple[GraphNode, str] = Field(
-        default=512, description="The height of the generated image."
-    )
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(
-        default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
-    )
-
-    @classmethod
-    def get_node_type(cls):
-        return "huggingface.text_to_image.AutoPipelineText2Image"
-
-
 class Chroma(GraphNode):
     """
     Generates images from text prompts using Chroma, a text-to-image model based on Flux.
@@ -502,7 +450,7 @@ class StableDiffusion(GraphNode):
         default="", description="The prompt for image generation."
     )
     negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
-        default="(blurry, low quality, deformed, mutated, bad anatomy, extra limbs, bad proportions, text, watermark, grainy, pixelated, disfigured face, missing fingers, cropped image, bad lighting",
+        default="",
         description="The negative prompt to guide what should not appear in the generated image.",
     )
     seed: int | GraphNode | tuple[GraphNode, str] = Field(
@@ -541,6 +489,10 @@ class StableDiffusion(GraphNode):
     )
     ip_adapter_scale: float | GraphNode | tuple[GraphNode, str] = Field(
         default=0.5, description="The strength of the IP adapter"
+    )
+    pag_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=3.0,
+        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     detail_level: float | GraphNode | tuple[GraphNode, str] = Field(
         default=0.5,
@@ -608,6 +560,12 @@ class StableDiffusionXL(GraphNode):
         default="",
         description="The negative prompt to guide what should not appear in the generated image.",
     )
+    width: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=1024, description="Width of the generated image."
+    )
+    height: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=1024, description="Height of the generated image"
+    )
     seed: int | GraphNode | tuple[GraphNode, str] = Field(
         default=-1, description="Seed for the random number generator."
     )
@@ -617,17 +575,15 @@ class StableDiffusionXL(GraphNode):
     guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
         default=7.0, description="Guidance scale for generation."
     )
-    width: int | GraphNode | tuple[GraphNode, str] = Field(
-        default=1024, description="Width of the generated image."
-    )
-    height: int | GraphNode | tuple[GraphNode, str] = Field(
-        default=1024, description="Height of the generated image"
-    )
     scheduler: (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
     ) = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler.EulerDiscreteScheduler,
         description="The scheduler to use for the diffusion process.",
+    )
+    pag_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=3.0,
+        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     loras: list[types.HFLoraSDXLConfig] | GraphNode | tuple[GraphNode, str] = Field(
         default=[], description="The LoRA models to use for image processing"
@@ -665,3 +621,58 @@ class StableDiffusionXL(GraphNode):
     @classmethod
     def get_node_type(cls):
         return "huggingface.text_to_image.StableDiffusionXL"
+
+
+class Text2Image(GraphNode):
+    """
+    Generates images from text prompts using AutoPipeline for automatic pipeline selection.
+    image, generation, AI, text-to-image, auto
+
+    Use cases:
+    - Automatic selection of the best pipeline for a given model
+    - Flexible image generation without pipeline-specific knowledge
+    - Quick prototyping with various text-to-image models
+    - Streamlined workflow for different model architectures
+    """
+
+    model: types.HFTextToImage | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.HFTextToImage(
+            type="hf.text_to_image",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model to use for text-to-image generation.",
+    )
+    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="A cat holding a sign that says hello world",
+        description="A text prompt describing the desired image.",
+    )
+    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="", description="A text prompt describing what to avoid in the image."
+    )
+    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=50, description="The number of denoising steps."
+    )
+    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=7.5, description="The scale for classifier-free guidance."
+    )
+    width: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=512, description="The width of the generated image."
+    )
+    height: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=512, description="The height of the generated image."
+    )
+    enable_pag: bool | GraphNode | tuple[GraphNode, str] = Field(
+        default=True, description="Enable PAG for the pipeline."
+    )
+    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+    )
+
+    @classmethod
+    def get_node_type(cls):
+        return "huggingface.text_to_image.Text2Image"
