@@ -1,8 +1,8 @@
 {
   "id": "style_transfer",
   "access": "public",
-  "created_at": "2025-01-26T18:32:54.146022",
-  "updated_at": "2025-01-26T18:32:54.146030",
+  "created_at": "2025-07-06T18:41:04.869459",
+  "updated_at": "2025-07-06T18:41:04.869522",
   "name": "Style Transfer",
   "description": "Transform your images by applying artistic styles from reference images. This workflow uses IP-Adapter to transfer visual styles while ControlNet preserves the original structure. Perfect for creating artistic variations of portraits or other images.",
   "tags": [
@@ -85,16 +85,46 @@
                 }
               ]
             }
-          ]
+          ],
+          "comment_lexical": {
+            "root": {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "detail": 0,
+                      "format": 0,
+                      "mode": "normal",
+                      "style": "",
+                      "text": "* IP Adapter applies the style of an image to the generated image\n* Controlnet preserves the structure of the input image\n* Experiment with different models\n* Experiment with different IP Adapter images\n* Experiment with parameters for \n  * IP Adapter Scale\n  * Strength\n  * Controlnet Conditioning Scale ",
+                      "type": "text",
+                      "version": 1
+                    }
+                  ],
+                  "direction": "ltr",
+                  "format": "",
+                  "indent": 0,
+                  "type": "paragraph",
+                  "version": 1,
+                  "textFormat": 0,
+                  "textStyle": ""
+                }
+              ],
+              "direction": "ltr",
+              "format": "",
+              "indent": 0,
+              "type": "root",
+              "version": 1
+            }
+          }
         },
         "ui_properties": {
-          "selected": false,
           "position": {
-            "x": 56,
-            "y": -159
+            "x": 39,
+            "y": -193
           },
           "zIndex": 0,
-          "width": 450,
+          "width": 508,
           "height": 184,
           "selectable": true
         },
@@ -122,7 +152,7 @@
             "repo_id": "h94/IP-Adapter",
             "path": "models/ip-adapter_sd15.bin"
           },
-          "ip_adapter_scale": 0.5,
+          "ip_adapter_scale": 0.86,
           "hires": false,
           "enable_tiling": true,
           "controlnet": {
@@ -132,46 +162,16 @@
           },
           "detail_level": 0.8,
           "strength": 0.7,
-          "upscaler": "None"
+          "upscaler": "None",
+          "pag_scale": 3
         },
         "ui_properties": {
-          "selected": false,
           "position": {
-            "x": 492,
-            "y": 131
+            "x": 779,
+            "y": 105
           },
           "zIndex": 0,
           "width": 200,
-          "selectable": true
-        },
-        "dynamic_properties": {}
-      },
-      {
-        "id": "16",
-        "parent_id": null,
-        "type": "nodetool.llms.LLM",
-        "data": {
-          "model": {
-            "type": "llama_model",
-            "repo_id": "llama3.2-vision:11b"
-          },
-          "system_prompt": "You are an artist.",
-          "prompt": "Describe the image",
-          "messages": [],
-          "context_window": 4096,
-          "temperature": 0.7,
-          "top_k": 50,
-          "top_p": 0.95,
-          "keep_alive": 300
-        },
-        "ui_properties": {
-          "selected": false,
-          "position": {
-            "x": 271,
-            "y": 50
-          },
-          "zIndex": 0,
-          "width": 159,
           "selectable": true
         },
         "dynamic_properties": {}
@@ -184,20 +184,18 @@
           "name": "image",
           "description": "Upload a portrait",
           "value": {
-            "type": "image",
             "uri": "",
-            "asset_id": null,
-            "data": null
+            "type": "image"
           }
         },
         "ui_properties": {
-          "selected": false,
           "position": {
             "x": 50,
-            "y": 303
+            "y": 50
           },
           "zIndex": 0,
           "width": 159,
+          "title": "Drop a portrait photo above",
           "selectable": true
         },
         "dynamic_properties": {}
@@ -210,20 +208,18 @@
           "name": "style",
           "description": "Upload the style image",
           "value": {
-            "type": "image",
             "uri": "",
-            "asset_id": null,
-            "data": null
+            "type": "image"
           }
         },
         "ui_properties": {
-          "selected": false,
           "position": {
-            "x": 59,
-            "y": 136
+            "x": 550,
+            "y": 654
           },
           "zIndex": 0,
           "width": 159,
+          "title": "Drop an image as style reference above",
           "selectable": true
         },
         "dynamic_properties": {}
@@ -237,10 +233,9 @@
           "description": ""
         },
         "ui_properties": {
-          "selected": false,
           "position": {
-            "x": 722,
-            "y": 239
+            "x": 1009,
+            "y": 237
           },
           "zIndex": 0,
           "width": 159,
@@ -257,13 +252,72 @@
           "high_threshold": 200
         },
         "ui_properties": {
-          "selected": false,
           "position": {
-            "x": 269,
-            "y": 347
+            "x": 527.5,
+            "y": 166
           },
           "zIndex": 0,
           "width": 163,
+          "selectable": true
+        },
+        "dynamic_properties": {}
+      },
+      {
+        "id": "737d7244-9a11-4631-89d3-16145f8d7ce9",
+        "parent_id": null,
+        "type": "huggingface.image_to_text.ImageToText",
+        "data": {
+          "model": {
+            "type": "hf.image_to_text",
+            "repo_id": "nlpconnect/vit-gpt2-image-captioning"
+          },
+          "max_new_tokens": 1024
+        },
+        "ui_properties": {
+          "position": {
+            "x": 509,
+            "y": 387
+          },
+          "zIndex": 0,
+          "width": 200,
+          "selectable": true
+        },
+        "dynamic_properties": {}
+      },
+      {
+        "id": "1d7087fb-d599-4141-9258-18b0d5a77182",
+        "parent_id": null,
+        "type": "nodetool.image.Fit",
+        "data": {
+          "width": 512,
+          "height": 512
+        },
+        "ui_properties": {
+          "position": {
+            "x": 779,
+            "y": 734
+          },
+          "zIndex": 0,
+          "width": 200,
+          "selectable": true
+        },
+        "dynamic_properties": {}
+      },
+      {
+        "id": "bda63ee9-e930-4dcf-9dfa-52eb22608b98",
+        "parent_id": null,
+        "type": "nodetool.image.Fit",
+        "data": {
+          "width": 512,
+          "height": 512
+        },
+        "ui_properties": {
+          "position": {
+            "x": 239,
+            "y": 112
+          },
+          "zIndex": 0,
+          "width": 200,
           "selectable": true
         },
         "dynamic_properties": {}
@@ -271,31 +325,11 @@
     ],
     "edges": [
       {
-        "id": "913a7aee-71de-40f3-920e-e01ef9d20240",
-        "source": "16",
-        "sourceHandle": "output",
-        "target": "14",
-        "targetHandle": "prompt",
-        "ui_properties": {
-          "className": "str"
-        }
-      },
-      {
         "id": "852831",
         "source": "14",
         "sourceHandle": "output",
         "target": "19",
         "targetHandle": "value",
-        "ui_properties": {
-          "className": "image"
-        }
-      },
-      {
-        "id": "3381275f-a05f-4978-9bdf-e8b8649fe58d",
-        "source": "18",
-        "sourceHandle": "output",
-        "target": "16",
-        "targetHandle": "image",
         "ui_properties": {
           "className": "image"
         }
@@ -311,18 +345,38 @@
         }
       },
       {
-        "id": "982cefbd-2397-485b-9aa7-46eb0f5d4e35",
-        "source": "17",
+        "id": "79a06eb6-a7ad-4c18-86f3-80a9eeeba686",
+        "source": "737d7244-9a11-4631-89d3-16145f8d7ce9",
         "sourceHandle": "output",
         "target": "14",
+        "targetHandle": "prompt",
+        "ui_properties": {
+          "className": "str"
+        }
+      },
+      {
+        "id": "96d54cd1-3821-4744-83d0-dba3cd4feb49",
+        "source": "18",
+        "sourceHandle": "output",
+        "target": "1d7087fb-d599-4141-9258-18b0d5a77182",
         "targetHandle": "image",
         "ui_properties": {
           "className": "image"
         }
       },
       {
-        "id": "11b7b2ca-1f87-4bb5-a8ba-a2f099c468d3",
+        "id": "162ef297-fb0b-4a5c-aee1-0934829e0e4d",
         "source": "17",
+        "sourceHandle": "output",
+        "target": "bda63ee9-e930-4dcf-9dfa-52eb22608b98",
+        "targetHandle": "image",
+        "ui_properties": {
+          "className": "image"
+        }
+      },
+      {
+        "id": "ed639aae-ff00-423c-869a-ab1fbc6dc3a8",
+        "source": "bda63ee9-e930-4dcf-9dfa-52eb22608b98",
         "sourceHandle": "output",
         "target": "20",
         "targetHandle": "image",
@@ -331,7 +385,17 @@
         }
       },
       {
-        "id": "852830",
+        "id": "d3f32595-a5fe-4803-926d-72e412058eb8",
+        "source": "bda63ee9-e930-4dcf-9dfa-52eb22608b98",
+        "sourceHandle": "output",
+        "target": "737d7244-9a11-4631-89d3-16145f8d7ce9",
+        "targetHandle": "image",
+        "ui_properties": {
+          "className": "image"
+        }
+      },
+      {
+        "id": "eafe71ec-ba0b-4dfe-8aaf-85e622322091",
         "source": "18",
         "sourceHandle": "output",
         "target": "14",
@@ -339,9 +403,23 @@
         "ui_properties": {
           "className": "image"
         }
+      },
+      {
+        "id": "5937e03a-8c88-40e9-a57a-4f3829f2b6d6",
+        "source": "bda63ee9-e930-4dcf-9dfa-52eb22608b98",
+        "sourceHandle": "output",
+        "target": "14",
+        "targetHandle": "image",
+        "ui_properties": {
+          "className": "image"
+        }
       }
     ]
   },
   "input_schema": null,
-  "output_schema": null
+  "output_schema": null,
+  "settings": null,
+  "package_name": "nodetool-huggingface",
+  "path": null,
+  "run_mode": null
 }
