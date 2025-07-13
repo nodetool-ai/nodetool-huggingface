@@ -44,9 +44,10 @@ torch = "2.7.1"
 torchsde = "*"
 torchvision = "*"
 torchaudio = "*"
-diffusers = { extras = ["torch"], version = "*" }
-transformers = "*"
+diffusers = { extras = ["torch"], version = "0.34.0" }
+transformers = "4.53.2"
 paddleocr = "*"
 paddlepaddle = "*"
 quanto = "*"
 bitsandbytes = "*"
+peft = ">=0.15.0"
