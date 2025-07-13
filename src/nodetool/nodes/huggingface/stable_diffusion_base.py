@@ -2,7 +2,9 @@ from enum import Enum
 import os
 from random import randint
 
-from diffusers.pipelines.pag.pipeline_pag_sd_img2img import StableDiffusionPAGImg2ImgPipeline
+from diffusers.pipelines.pag.pipeline_pag_sd_img2img import (
+    StableDiffusionPAGImg2ImgPipeline,
+)
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upscale import (
     StableDiffusionLatentUpscalePipeline,
 )
@@ -815,7 +817,9 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         start: int,
         total: int,
     ):
-        def callback(pipeline, step: int, timestep: int, kwargs: dict[str, Any]) -> dict[str, Any]:
+        def callback(
+            pipeline, step: int, timestep: int, kwargs: dict[str, Any]
+        ) -> dict[str, Any]:
             context.post_message(
                 NodeProgress(
                     node_id=self.id,
@@ -867,6 +871,9 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         hires = self.upscaler != StableDiffusionUpscaler.NONE
 
         if hires:
+            assert (
+                width is not None and height is not None
+            ), "Width and height must be set for hires generation"
             # Calculate ratio on a continuous scale
             if self.num_inference_steps <= 50:
                 low_res_ratio = 1 / 3 + (self.num_inference_steps - 25) / 75
@@ -919,13 +926,6 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             low_res_latents = low_res_result.images
 
             if self.upscaler == StableDiffusionUpscaler.LATENT:
-                if not await context.is_huggingface_model_cached(
-                    "stabilityai/sd-x2-latent-upscaler"
-                ):
-                    raise ValueError(
-                        "Latent upscaler stabilityai/sd-x2-latent-upscaler is required. Please install it from RECOMMENDED_MODELS"
-                    )
-
                 self._upscaler = await self.load_model(
                     context=context,
                     model_class=StableDiffusionLatentUpscalePipeline,
@@ -982,9 +982,9 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                 hires_kwargs["strength"] = denoising_strength
             if "image" in hires_kwargs:
                 del hires_kwargs["image"]
-            # Add width and height to ensure correct output dimensions
-            hires_kwargs["width"] = width
-            hires_kwargs["height"] = height
+
+            del hires_kwargs["width"]
+            del hires_kwargs["height"]
 
             img2img_pipe.vae.enable_tiling()
             image = img2img_pipe(
@@ -997,7 +997,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                 ip_adapter_image=ip_adapter_image,
                 cross_attention_kwargs={"scale": 1.0},
                 pag_scale=self.pag_scale,
-                callback_on_step_end=self.progress_callback(context, low_res_steps + 20, total), # type: ignore
+                callback_on_step_end=self.progress_callback(context, low_res_steps + 20, total),  # type: ignore
                 **hires_kwargs,
             ).images[  # type: ignore
                 0
@@ -1011,7 +1011,9 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                 generator=generator,
                 ip_adapter_image=ip_adapter_image,
                 cross_attention_kwargs={"scale": 1.0},
-                callback_on_step_end=self.progress_callback(context, 0, self.num_inference_steps),
+                callback_on_step_end=self.progress_callback(
+                    context, 0, self.num_inference_steps
+                ),
                 pag_scale=self.pag_scale,
                 **kwargs,
             ).images[0]
@@ -1210,7 +1212,9 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             )
 
     def progress_callback(self, context: ProcessingContext):
-        def callback(pipeline, step: int, timestep: int, kwargs: dict[str, Any]) -> dict[str, Any]:
+        def callback(
+            pipeline, step: int, timestep: int, kwargs: dict[str, Any]
+        ) -> dict[str, Any]:
             context.post_message(
                 NodeProgress(
                     node_id=self.id,
@@ -1219,6 +1223,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
                 )
             )
             return kwargs
+
         return callback
 
     async def run_pipeline(self, context: ProcessingContext, **kwargs) -> ImageRef:

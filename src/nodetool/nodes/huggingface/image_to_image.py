@@ -29,14 +29,30 @@ from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
 from diffusers.pipelines.auto_pipeline import AutoPipelineForInpainting
 from diffusers.models.controlnets.controlnet import ControlNetModel
-from diffusers.pipelines.pag.pipeline_pag_controlnet_sd import StableDiffusionControlNetPAGPipeline
-from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl_img2img import StableDiffusionXLControlNetPAGImg2ImgPipeline
-from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_inpaint import StableDiffusionControlNetPAGInpaintPipeline
-from diffusers.pipelines.pag.pipeline_pag_sd_img2img import StableDiffusionPAGImg2ImgPipeline
-from diffusers.pipelines.pag.pipeline_pag_sd_inpaint import StableDiffusionPAGInpaintPipeline
-from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl import StableDiffusionXLControlNetPAGPipeline
-from diffusers.pipelines.pag.pipeline_pag_sd_xl_img2img import StableDiffusionXLPAGImg2ImgPipeline
-from diffusers.pipelines.pag.pipeline_pag_sd_xl_inpaint import StableDiffusionXLPAGInpaintPipeline
+from diffusers.pipelines.pag.pipeline_pag_controlnet_sd import (
+    StableDiffusionControlNetPAGPipeline,
+)
+from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl_img2img import (
+    StableDiffusionXLControlNetPAGImg2ImgPipeline,
+)
+from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_inpaint import (
+    StableDiffusionControlNetPAGInpaintPipeline,
+)
+from diffusers.pipelines.pag.pipeline_pag_sd_img2img import (
+    StableDiffusionPAGImg2ImgPipeline,
+)
+from diffusers.pipelines.pag.pipeline_pag_sd_inpaint import (
+    StableDiffusionPAGInpaintPipeline,
+)
+from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl import (
+    StableDiffusionXLControlNetPAGPipeline,
+)
+from diffusers.pipelines.pag.pipeline_pag_sd_xl_img2img import (
+    StableDiffusionXLPAGImg2ImgPipeline,
+)
+from diffusers.pipelines.pag.pipeline_pag_sd_xl_inpaint import (
+    StableDiffusionXLPAGInpaintPipeline,
+)
 from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import (
     StableDiffusionControlNetImg2ImgPipeline,
 )
@@ -142,9 +158,6 @@ class RealESRGANNode(BaseNode):
             ),
         ]
 
-    def required_inputs(self):
-        return ["image"]
-
     async def preload_model(self, context: ProcessingContext):
         assert self.model.path is not None, "Model is not set"
 
@@ -169,6 +182,7 @@ class RealESRGANNode(BaseNode):
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         assert self._model is not None, "Model not initialized"
+        assert self.image is not None, "Image not set"
         image = await context.image_to_pil(self.image)
         sr_image = self._model.predict(image)
         return await context.image_from_pil(sr_image)
@@ -219,11 +233,13 @@ class Swin2SR(BaseImageToImage):
     def get_model_id(self):
         return self.model.repo_id
 
+
 class ModelVariant(Enum):
     DEFAULT = "default"
     FP16 = "fp16"
     FP32 = "fp32"
     BF16 = "bf16"
+
 
 class LoadImageToImageModel(HuggingFacePipelineNode):
     """
@@ -251,18 +267,26 @@ class LoadImageToImageModel(HuggingFacePipelineNode):
             model_class=AutoPipelineForImage2Image,
             torch_dtype=torch.float16,
             use_safetensors=True,
-            variant=self.variant.value if self.variant != ModelVariant.DEFAULT else None,
-        ) 
+            variant=(
+                self.variant.value if self.variant != ModelVariant.DEFAULT else None
+            ),
+        )
 
     async def process(self, context: ProcessingContext) -> HFImageToImage:
         return HFImageToImage(
             repo_id=self.repo_id,
-            variant=self.variant.value if self.variant != ModelVariant.DEFAULT else None,
+            variant=(
+                self.variant.value if self.variant != ModelVariant.DEFAULT else None
+            ),
         )
 
 
-def pipeline_progress_callback(node_id: str, total_steps: int, context: ProcessingContext):
-    def callback(pipeline: DiffusionPipeline, step: int, timestep: int, kwargs: dict[str, Any]) -> dict[str, Any]:
+def pipeline_progress_callback(
+    node_id: str, total_steps: int, context: ProcessingContext
+):
+    def callback(
+        pipeline: DiffusionPipeline, step: int, timestep: int, kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         context.post_message(
             NodeProgress(
                 node_id=node_id,
@@ -273,6 +297,7 @@ def pipeline_progress_callback(node_id: str, total_steps: int, context: Processi
         return kwargs
 
     return callback
+
 
 class ImageToImage(HuggingFacePipelineNode):
     """
@@ -369,7 +394,7 @@ class ImageToImage(HuggingFacePipelineNode):
             generator = generator.manual_seed(self.seed)
 
         input_image = await context.image_to_pil(self.image)
-        
+
         # Prepare kwargs for the pipeline
         kwargs = {
             "prompt": self.prompt,
@@ -378,9 +403,11 @@ class ImageToImage(HuggingFacePipelineNode):
             "num_inference_steps": self.num_inference_steps,
             "guidance_scale": self.guidance_scale,
             "generator": generator,
-            "callback_on_step_end": pipeline_progress_callback(self.id, self.num_inference_steps, context),
+            "callback_on_step_end": pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            ),
         }
-        
+
         # Add negative prompt if provided
         if self.negative_prompt:
             kwargs["negative_prompt"] = self.negative_prompt
@@ -466,7 +493,15 @@ class Inpaint(HuggingFacePipelineNode):
             model_id=self.model.repo_id,
             path=self.model.path,
             model_class=AutoPipelineForInpainting,
-            torch_dtype=torch.float16 if self.model.variant == ModelVariant.FP16 else torch.bfloat16 if self.model.variant == ModelVariant.BF16 else torch.float32,
+            torch_dtype=(
+                torch.float16
+                if self.model.variant == ModelVariant.FP16
+                else (
+                    torch.bfloat16
+                    if self.model.variant == ModelVariant.BF16
+                    else torch.float32
+                )
+            ),
             use_safetensors=True,
             variant=self.model.variant,
         )
@@ -486,7 +521,7 @@ class Inpaint(HuggingFacePipelineNode):
 
         input_image = await context.image_to_pil(self.image)
         mask_image = await context.image_to_pil(self.mask_image)
-        
+
         # Prepare kwargs for the pipeline
         kwargs = {
             "prompt": self.prompt,
@@ -495,14 +530,16 @@ class Inpaint(HuggingFacePipelineNode):
             "num_inference_steps": self.num_inference_steps,
             "guidance_scale": self.guidance_scale,
             "generator": generator,
-            "callback_on_step_end": pipeline_progress_callback(self.id, self.num_inference_steps, context),
+            "callback_on_step_end": pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            ),
         }
-        
+
         # Add negative prompt if provided
         if self.negative_prompt:
             kwargs["negative_prompt"] = self.negative_prompt
 
-        output = self._pipeline(**kwargs) # type: ignore
+        output = self._pipeline(**kwargs)  # type: ignore
 
         image = output.images[0]
 
@@ -1275,34 +1312,25 @@ class OmniGenNode(HuggingFacePipelineNode):
         description="List of input images to use for editing or as reference. Referenced in prompt using <img><|image_1|></img>, <img><|image_2|></img>, etc.",
     )
     height: int = Field(
-        default=1024, 
-        description="Height of the generated image.",
-        ge=64, 
-        le=2048
+        default=1024, description="Height of the generated image.", ge=64, le=2048
     )
     width: int = Field(
-        default=1024, 
-        description="Width of the generated image.",
-        ge=64, 
-        le=2048
+        default=1024, description="Width of the generated image.", ge=64, le=2048
     )
     guidance_scale: float = Field(
-        default=2.5, 
+        default=2.5,
         description="Guidance scale for generation. Higher values follow the prompt more closely.",
-        ge=1.0, 
-        le=20.0
+        ge=1.0,
+        le=20.0,
     )
     img_guidance_scale: float = Field(
-        default=1.6, 
+        default=1.6,
         description="Image guidance scale when using input images.",
-        ge=1.0, 
-        le=20.0
+        ge=1.0,
+        le=20.0,
     )
     num_inference_steps: int = Field(
-        default=25, 
-        description="Number of denoising steps.",
-        ge=1, 
-        le=100
+        default=25, description="Number of denoising steps.", ge=1, le=100
     )
     seed: int = Field(
         default=-1,
@@ -1317,7 +1345,7 @@ class OmniGenNode(HuggingFacePipelineNode):
         default=1024,
         description="Maximum input image size. Smaller values reduce memory usage but may affect quality.",
         ge=256,
-        le=2048
+        le=2048,
     )
     enable_model_cpu_offload: bool = Field(
         default=False,
@@ -1358,7 +1386,7 @@ class OmniGenNode(HuggingFacePipelineNode):
             torch_dtype=torch.bfloat16,
             variant=None,
         )
-        
+
         if self.enable_model_cpu_offload and self._pipeline is not None:
             self._pipeline.enable_model_cpu_offload()
 
@@ -1392,7 +1420,9 @@ class OmniGenNode(HuggingFacePipelineNode):
             "generator": generator,
             "max_input_image_size": self.max_input_image_size,
             "use_input_image_size_as_output": self.use_input_image_size_as_output,
-            "callback_on_step_end": pipeline_progress_callback(self.id, self.num_inference_steps, context),
+            "callback_on_step_end": pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            ),
         }
 
         # Add input images if provided
