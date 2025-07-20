@@ -51,6 +51,4 @@ paddlepaddle = "*"
 quanto = "*"
 bitsandbytes = "*"
 peft = ">=0.15.0"
-
-[tool.uv]
-extra-index-urls = ["https://download.pytorch.org/whl/cu118"]
+sentencepiece = "*"
