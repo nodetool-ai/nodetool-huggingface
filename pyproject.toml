@@ -34,6 +34,7 @@ include = [
   "src/nodetool/assets/nodetool-huggingface/Controlnet.png",
   "src/nodetool/assets/nodetool-huggingface/Controlnet.jpg",
   "src/nodetool/assets/nodetool-huggingface/Image to Image.jpg",
+  "src/nodetool/assets/nodetool-huggingface/Re-Imagine.jpg",
 ]
 repository = "https://github.com/nodetool-ai/nodetool-huggingface"
 
