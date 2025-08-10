@@ -158,7 +158,7 @@
       {
         "id": "ccab60dc-c552-488c-a34a-0394c74f1040",
         "parent_id": null,
-        "type": "nodetool.llms.LLM",
+        "type": "nodetool.agents.Agent",
         "data": {
           "model": "gemma3:4b",
           "system": "Summarize the following text:",

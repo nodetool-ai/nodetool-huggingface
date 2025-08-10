@@ -17,7 +17,7 @@
       {
         "id": "19246f0f-d23a-42dd-aa10-cf5d4f0f7a5f",
         "parent_id": null,
-        "type": "nodetool.llms.LLM",
+        "type": "nodetool.agents.Agent",
         "data": {
           "model": {
             "type": "language_model",
