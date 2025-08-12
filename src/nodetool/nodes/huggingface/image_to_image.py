@@ -265,7 +265,7 @@ class LoadImageToImageModel(HuggingFacePipelineNode):
             context=context,
             model_id=self.repo_id,
             model_class=AutoPipelineForImage2Image,
-            torch_dtype=torch.float16,
+            torch_dtype=torch.float16 if self.variant == ModelVariant.FP16 else torch.float32,
             use_safetensors=True,
             variant=(
                 self.variant.value if self.variant != ModelVariant.DEFAULT else None
@@ -375,7 +375,7 @@ class ImageToImage(HuggingFacePipelineNode):
             model_id=self.model.repo_id,
             path=self.model.path,
             model_class=AutoPipelineForImage2Image,
-            torch_dtype=torch.float16,
+            torch_dtype=torch.float16 if self.model.variant == ModelVariant.FP16 else torch.float32,
             use_safetensors=True,
             variant=self.model.variant,
         )
@@ -612,6 +612,7 @@ class StableDiffusionControlNetNode(StableDiffusionBaseNode):
             torch_dtype=controlnet_dtype,
             variant=controlnet_variant,
         )
+        # Align pipeline dtype with controlnet dtype to avoid mismatches
         self._pipeline = await self.load_model(
             context=context,
             model_class=StableDiffusionControlNetPAGPipeline,
@@ -619,6 +620,7 @@ class StableDiffusionControlNetNode(StableDiffusionBaseNode):
             path=self.model.path,
             controlnet=controlnet,
             config="Lykon/DreamShaper",  # workaround for missing SD15 repo
+            torch_dtype=controlnet_dtype,
         )
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
@@ -656,6 +658,10 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
         le=1.0,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
     )
+    variant: ModelVariant = Field(
+        default=ModelVariant.FP16,
+        description="The variant of the model to use for Image-to-Image generation.",
+    )
     _pipeline: StableDiffusionPAGImg2ImgPipeline | None = None
 
     @classmethod
@@ -678,7 +684,7 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
             path=self.model.path,
             safety_checker=None,
             config="Lykon/DreamShaper",
-            torch_dtype=torch.float16,
+            torch_dtype=torch.float16 if self.variant == ModelVariant.FP16 else torch.float32,
         )
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
@@ -760,6 +766,7 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
             device=context.device,
             torch_dtype=controlnet_dtype,
         )
+        # Align pipeline dtype with controlnet dtype to avoid mismatches
         self._pipeline = await self.load_model(
             context,
             model_class=StableDiffusionControlNetPAGInpaintPipeline,
@@ -767,7 +774,7 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
             path=self.model.path,
             controlnet=controlnet,
             device=context.device,
-            torch_dtype=torch.float16,
+            torch_dtype=controlnet_dtype,
         )  # type: ignore
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
@@ -813,6 +820,10 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
         le=1.0,
         description="Strength for inpainting. Higher values allow for more deviation from the original image.",
     )
+    variant: ModelVariant = Field(
+        default=ModelVariant.FP16,
+        description="The variant of the model to use for Image-to-Image generation.",
+    )
     _pipeline: StableDiffusionPAGInpaintPipeline | None = None
 
     @classmethod
@@ -836,6 +847,8 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
                 path=self.model.path,
                 safety_checker=None,
                 config="Lykon/DreamShaper",
+                torch_dtype=torch.float16 if self.variant == ModelVariant.FP16 else torch.float32,
+                variant=self.variant.value,
             )
             assert self._pipeline is not None
             self._load_ip_adapter()
@@ -921,12 +934,14 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
             torch_dtype=controlnet_dtype,
             variant=controlnet_variant,
         )
+        # Align pipeline dtype with controlnet dtype to avoid mismatches
         self._pipeline = await self.load_model(
             context=context,
             model_class=StableDiffusionControlNetImg2ImgPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             controlnet=controlnet,
+            torch_dtype=controlnet_dtype,
             config="Lykon/DreamShaper",  # workaround for missing SD15 repo
         )
         self._set_scheduler(self.scheduler)
@@ -1099,6 +1114,10 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         le=1.0,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
     )
+    variant: ModelVariant = Field(
+        default=ModelVariant.FP16,
+        description="The variant of the model to use for Image-to-Image generation.",
+    )
     _pipeline: StableDiffusionXLPAGImg2ImgPipeline | None = None
 
     @classmethod
@@ -1119,7 +1138,8 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
             model_id=self.model.repo_id,
             path=self.model.path,
             safety_checker=None,
-            torch_dtype=torch.float16,
+            torch_dtype=torch.float16 if self.variant == ModelVariant.FP16 else torch.float32,
+            variant=self.variant.value,
         )
         assert self._pipeline is not None
         self._pipeline.enable_model_cpu_offload()
@@ -1159,6 +1179,10 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
         le=1.0,
         description="Strength for inpainting. Higher values allow for more deviation from the original image.",
     )
+    variant: ModelVariant = Field(
+        default=ModelVariant.FP16,
+        description="The variant of the model to use for Image-to-Image generation.",
+    )
     _pipeline: StableDiffusionXLPAGInpaintPipeline | None = None
 
     @classmethod
@@ -1180,7 +1204,8 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
                 model_id=self.model.repo_id,
                 path=self.model.path,
                 safety_checker=None,
-                torch_dtype=torch.float16,
+                torch_dtype=torch.float16 if self.variant == ModelVariant.FP16 else torch.float32,
+                variant=self.variant.value,
             )
             assert self._pipeline is not None
             self._load_ip_adapter()
@@ -1255,13 +1280,14 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
             variant=None,
             torch_dtype=controlnet_dtype,
         )
+        # Align pipeline dtype with controlnet dtype to avoid mismatches
         self._pipeline = await self.load_model(
             context=context,
             model_class=StableDiffusionXLControlNetPAGPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             controlnet=controlnet,
-            torch_dtype=torch.float16,
+            torch_dtype=controlnet_dtype,
         )
         self._load_ip_adapter()
 

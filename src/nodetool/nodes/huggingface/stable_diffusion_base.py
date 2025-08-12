@@ -931,6 +931,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                     model_class=StableDiffusionLatentUpscalePipeline,
                     model_id="stabilityai/sd-x2-latent-upscaler",
                     variant=None,
+                    torch_dtype=torch.float16,
                 )
                 self._upscaler.to(context.device)
 
