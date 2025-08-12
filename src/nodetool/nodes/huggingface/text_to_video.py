@@ -1,4 +1,7 @@
+from io import BytesIO
+import tempfile
 from typing import Any
+from diffusers.utils.export_utils import export_to_video
 import numpy as np
 from pydantic import Field
 from nodetool.nodes.huggingface.huggingface_node import progress_callback
@@ -18,8 +21,9 @@ from diffusers.models.unets.unet_motion_model import MotionAdapter
 from diffusers.pipelines.stable_video_diffusion.pipeline_stable_video_diffusion import (
     StableVideoDiffusionPipeline,
 )
+from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
 from diffusers.pipelines.cogvideo.pipeline_cogvideox import CogVideoXPipeline
-from diffusers.utils.export_utils import export_to_video
+from diffusers.pipelines.wan.pipeline_wan import WanPipeline
 from .huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.types import NodeProgress
 
@@ -412,15 +416,15 @@ class CogVideoX(HuggingFacePipelineNode):
             torch_dtype=torch.bfloat16,
             device="cpu",
         )
-        
+
         # Apply memory optimization settings
         if self._pipeline is not None:
             if self.enable_cpu_offload:
                 self._pipeline.enable_model_cpu_offload()
-            
+
             if self.enable_vae_slicing:
                 self._pipeline.vae.enable_slicing()
-            
+
             if self.enable_vae_tiling:
                 self._pipeline.vae.enable_tiling()
 
@@ -437,7 +441,9 @@ class CogVideoX(HuggingFacePipelineNode):
         if self.seed != -1:
             generator = torch.Generator(device="cpu").manual_seed(self.seed)
 
-        def callback_on_step_end(step: int, timestep: int, callback_kwargs: dict) -> None:
+        def callback_on_step_end(
+            step: int, timestep: int, callback_kwargs: dict
+        ) -> None:
             context.post_message(
                 NodeProgress(
                     node_id=self.id,
@@ -464,3 +470,182 @@ class CogVideoX(HuggingFacePipelineNode):
         frames = output.frames[0]  # type: ignore
 
         return await context.video_from_numpy(frames, fps=self.fps)  # type: ignore
+
+
+class Wan2_1_T2V(HuggingFacePipelineNode):
+    """
+    Generates videos from text prompts using Wan 2.1 text-to-video pipeline.
+    video, generation, AI, text-to-video, diffusion, Wan
+
+    Use cases:
+    - Create high-quality videos from text descriptions
+    - Efficient 1.3B model for consumer GPUs or 14B for maximum quality
+    """
+
+    prompt: str = Field(
+        default="A robot standing on a mountain top at sunset, cinematic lighting, high detail",
+        description="A text prompt describing the desired video.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="A text prompt describing what to avoid in the video.",
+    )
+    num_frames: int = Field(
+        default=49,
+        description="The number of frames in the video.",
+        ge=16,
+        le=129,
+    )
+    guidance_scale: float = Field(
+        default=5.0,
+        description="The scale for classifier-free guidance.",
+        ge=1.0,
+        le=20.0,
+    )
+    num_inference_steps: int = Field(
+        default=30,
+        description="The number of denoising steps.",
+        ge=1,
+        le=100,
+    )
+    height: int = Field(
+        default=480,
+        description="The height of the generated video in pixels.",
+        ge=256,
+        le=1080,
+    )
+    width: int = Field(
+        default=720,
+        description="The width of the generated video in pixels.",
+        ge=256,
+        le=1920,
+    )
+    fps: int = Field(
+        default=16,
+        description="Frames per second for the output video.",
+        ge=1,
+        le=60,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+        ge=-1,
+    )
+    max_sequence_length: int = Field(
+        default=512,
+        description="Maximum sequence length in encoded prompt.",
+        ge=64,
+        le=1024,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Enable CPU offload to reduce VRAM usage.",
+    )
+    enable_vae_slicing: bool = Field(
+        default=True,
+        description="Enable VAE slicing to reduce VRAM usage.",
+    )
+    enable_vae_tiling: bool = Field(
+        default=False,
+        description="Enable VAE tiling to reduce VRAM usage for large videos.",
+    )
+
+    _pipeline: WanPipeline | None = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFTextToVideo(
+                repo_id="Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
+                allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
+            ),
+            HFTextToVideo(
+                repo_id="Wan-AI/Wan2.1-T2V-14B-Diffusers",
+                allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Wan 2.1 (Text-to-Video)"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["prompt", "num_frames", "height", "width"]
+
+    def get_model_id(self) -> str:
+        # Default to 1.3B for consumer-grade efficiency
+        return "Wan-AI/Wan2.1-T2V-1.3B-Diffusers"
+
+    async def preload_model(self, context: ProcessingContext):
+        vae = await self.load_model(
+            context=context,
+            model_class=AutoencoderKLWan,
+            model_id=self.get_model_id(),
+            subfolder="vae",
+            torch_dtype=torch.float32,
+        )
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=WanPipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=torch.bfloat16,
+            device="cpu",
+            vae=vae,
+        )
+
+        if self._pipeline is not None:
+            if self.enable_cpu_offload and hasattr(
+                self._pipeline, "enable_model_cpu_offload"
+            ):
+                self._pipeline.enable_model_cpu_offload()  # type: ignore
+            # VAE memory helpers
+            if self.enable_vae_slicing and hasattr(self._pipeline, "vae"):
+                try:
+                    self._pipeline.vae.enable_slicing()  # type: ignore
+                except Exception:
+                    pass
+            if self.enable_vae_tiling and hasattr(self._pipeline, "vae"):
+                try:
+                    self._pipeline.vae.enable_tiling()  # type: ignore
+                except Exception:
+                    pass
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None and not self.enable_cpu_offload:
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> VideoRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        def callback_on_step_end(
+            pipeline: Any, step_index: int, timesteps: int, callback_kwargs: dict
+        ) -> dict:
+            context.post_message(
+                NodeProgress(
+                    node_id=self.id,
+                    progress=step_index,
+                    total=self.num_inference_steps,
+                )
+            )
+            return callback_kwargs
+
+        output = self._pipeline(
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt,
+            num_frames=self.num_frames,
+            guidance_scale=self.guidance_scale,
+            num_inference_steps=self.num_inference_steps,
+            height=self.height,
+            width=self.width,
+            generator=generator,
+            max_sequence_length=self.max_sequence_length,
+            callback_on_step_end=callback_on_step_end,  # type: ignore
+        )
+
+        return await context.video_from_frames(output.frames[0], fps=self.fps)  # type: ignore
