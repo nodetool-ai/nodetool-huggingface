@@ -1752,10 +1752,10 @@
       ]
     },
     {
-      "title": "Wan 2.1 (Text-to-Video)",
-      "description": "Generates videos from text prompts using Wan 2.1 text-to-video pipeline.\n    video, generation, AI, text-to-video, diffusion, Wan\n\n    Use cases:\n    - Create high-quality videos from text descriptions\n    - Efficient 1.3B model for consumer GPUs or 14B for maximum quality",
+      "title": "Wan (Text-to-Video)",
+      "description": "Generates videos from text prompts using Wan text-to-video pipeline.\n    video, generation, AI, text-to-video, diffusion, Wan\n\n    Use cases:\n    - Create high-quality videos from text descriptions\n    - Efficient 1.3B model for consumer GPUs or 14B for maximum quality",
       "namespace": "huggingface.text_to_video",
-      "node_type": "huggingface.text_to_video.Wan2_1_T2V",
+      "node_type": "huggingface.text_to_video.Wan_T2V",
       "properties": [
         {
           "name": "prompt",
@@ -1765,6 +1765,21 @@
           "default": "A robot standing on a mountain top at sunset, cinematic lighting, high detail",
           "title": "Prompt",
           "description": "A text prompt describing the desired video."
+        },
+        {
+          "name": "model_variant",
+          "type": {
+            "type": "enum",
+            "values": [
+              "Wan-AI/Wan2.2-T2V-A14B-Diffusers",
+              "Wan-AI/Wan2.1-T2V-14B-Diffusers",
+              "Wan-AI/Wan2.2-TI2V-5B-Diffusers"
+            ],
+            "type_name": "nodetool.nodes.huggingface.text_to_video.WanModel"
+          },
+          "default": "Wan-AI/Wan2.2-T2V-A14B-Diffusers",
+          "title": "Model Variant",
+          "description": "Select the Wan model to use."
         },
         {
           "name": "negative_prompt",
@@ -1901,7 +1916,7 @@
       "recommended_models": [
         {
           "type": "hf.text_to_video",
-          "repo_id": "Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
+          "repo_id": "Wan-AI/Wan2.2-T2V-A14B-Diffusers",
           "allow_patterns": [
             "**/*.safetensors",
             "**/*.json",
@@ -1918,13 +1933,24 @@
             "**/*.txt",
             "*.json"
           ]
+        },
+        {
+          "type": "hf.text_to_video",
+          "repo_id": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ]
         }
       ],
       "basic_fields": [
         "prompt",
         "num_frames",
         "height",
-        "width"
+        "width",
+        "model_variant"
       ]
     },
     {

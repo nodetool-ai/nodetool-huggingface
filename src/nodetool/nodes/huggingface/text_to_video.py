@@ -1,6 +1,5 @@
-from io import BytesIO
-import tempfile
 from typing import Any
+from enum import Enum
 from diffusers.utils.export_utils import export_to_video
 import numpy as np
 from pydantic import Field
@@ -472,9 +471,9 @@ class CogVideoX(HuggingFacePipelineNode):
         return await context.video_from_numpy(frames, fps=self.fps)  # type: ignore
 
 
-class Wan2_1_T2V(HuggingFacePipelineNode):
+class Wan_T2V(HuggingFacePipelineNode):
     """
-    Generates videos from text prompts using Wan 2.1 text-to-video pipeline.
+    Generates videos from text prompts using Wan text-to-video pipeline.
     video, generation, AI, text-to-video, diffusion, Wan
 
     Use cases:
@@ -482,9 +481,18 @@ class Wan2_1_T2V(HuggingFacePipelineNode):
     - Efficient 1.3B model for consumer GPUs or 14B for maximum quality
     """
 
+    class WanModel(str, Enum):
+        WAN_2_2_T2V_A14B = "Wan-AI/Wan2.2-T2V-A14B-Diffusers"
+        WAN_2_1_T2V_14B = "Wan-AI/Wan2.1-T2V-14B-Diffusers"
+        WAN_2_2_TI2V_5B = "Wan-AI/Wan2.2-TI2V-5B-Diffusers"
+
     prompt: str = Field(
         default="A robot standing on a mountain top at sunset, cinematic lighting, high detail",
         description="A text prompt describing the desired video.",
+    )
+    model_variant: WanModel = Field(
+        default=WanModel.WAN_2_2_T2V_A14B,
+        description="Select the Wan model to use.",
     )
     negative_prompt: str = Field(
         default="",
@@ -556,26 +564,29 @@ class Wan2_1_T2V(HuggingFacePipelineNode):
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
         return [
             HFTextToVideo(
-                repo_id="Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
+                repo_id="Wan-AI/Wan2.2-T2V-A14B-Diffusers",
                 allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
             ),
             HFTextToVideo(
                 repo_id="Wan-AI/Wan2.1-T2V-14B-Diffusers",
                 allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
             ),
+            HFTextToVideo(
+                repo_id="Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
+            ),
         ]
 
     @classmethod
     def get_title(cls) -> str:
-        return "Wan 2.1 (Text-to-Video)"
+        return "Wan (Text-to-Video)"
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
-        return ["prompt", "num_frames", "height", "width"]
+        return ["prompt", "num_frames", "height", "width", "model_variant"]
 
     def get_model_id(self) -> str:
-        # Default to 1.3B for consumer-grade efficiency
-        return "Wan-AI/Wan2.1-T2V-1.3B-Diffusers"
+        return self.model_variant.value
 
     async def preload_model(self, context: ProcessingContext):
         vae = await self.load_model(

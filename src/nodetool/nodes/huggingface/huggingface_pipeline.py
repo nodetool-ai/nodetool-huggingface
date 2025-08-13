@@ -55,12 +55,12 @@ class HuggingFacePipelineNode(HuggingfaceNode):
             )
         )
         model = pipeline(
-            pipeline_task,
+            pipeline_task,  # type: ignore
             model=model_id,
             torch_dtype=torch_dtype,
             device=device,
             **kwargs,
-        ) # type: ignore
+        )  # type: ignore
         ModelManager.set_model(self.id, model_id, pipeline_task, model)
         return model  # type: ignore
 
