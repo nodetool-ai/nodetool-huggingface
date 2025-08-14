@@ -2624,6 +2624,218 @@
       ]
     },
     {
+      "title": "Wan (Image-to-Video)",
+      "description": "Generates a video from an input image using Wan image-to-video pipelines.\n    video, generation, AI, image-to-video, diffusion, Wan\n\n    Use cases:\n    - Turn a single image into a dynamic clip with prompt guidance\n    - Choose between Wan 2.2 A14B, Wan 2.1 14B 480P, and Wan 2.1 14B 720P models",
+      "namespace": "huggingface.image_to_video",
+      "node_type": "huggingface.image_to_video.Wan_I2V",
+      "properties": [
+        {
+          "name": "input_image",
+          "type": {
+            "type": "image"
+          },
+          "default": {},
+          "title": "Input Image",
+          "description": "The input image to generate the video from."
+        },
+        {
+          "name": "prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "An astronaut walking on the moon, cinematic lighting, high detail",
+          "title": "Prompt",
+          "description": "A text prompt describing the desired video."
+        },
+        {
+          "name": "model_variant",
+          "type": {
+            "type": "enum",
+            "values": [
+              "Wan-AI/Wan2.2-I2V-A14B-Diffusers",
+              "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers",
+              "Wan-AI/Wan2.1-I2V-14B-720P-Diffusers"
+            ],
+            "type_name": "nodetool.nodes.huggingface.image_to_video.WanI2VModel"
+          },
+          "default": "Wan-AI/Wan2.2-I2V-A14B-Diffusers",
+          "title": "Model Variant",
+          "description": "Select the Wan I2V model to use."
+        },
+        {
+          "name": "negative_prompt",
+          "type": {
+            "type": "str"
+          },
+          "default": "",
+          "title": "Negative Prompt",
+          "description": "A text prompt describing what to avoid in the video."
+        },
+        {
+          "name": "num_frames",
+          "type": {
+            "type": "int"
+          },
+          "default": 81,
+          "title": "Num Frames",
+          "description": "The number of frames in the video.",
+          "min": 16.0,
+          "max": 129.0
+        },
+        {
+          "name": "guidance_scale",
+          "type": {
+            "type": "float"
+          },
+          "default": 5.0,
+          "title": "Guidance Scale",
+          "description": "The scale for classifier-free guidance.",
+          "min": 1.0,
+          "max": 20.0
+        },
+        {
+          "name": "num_inference_steps",
+          "type": {
+            "type": "int"
+          },
+          "default": 50,
+          "title": "Num Inference Steps",
+          "description": "The number of denoising steps.",
+          "min": 1.0,
+          "max": 100.0
+        },
+        {
+          "name": "height",
+          "type": {
+            "type": "int"
+          },
+          "default": 480,
+          "title": "Height",
+          "description": "The height of the generated video in pixels.",
+          "min": 256.0,
+          "max": 1080.0
+        },
+        {
+          "name": "width",
+          "type": {
+            "type": "int"
+          },
+          "default": 832,
+          "title": "Width",
+          "description": "The width of the generated video in pixels.",
+          "min": 256.0,
+          "max": 1920.0
+        },
+        {
+          "name": "fps",
+          "type": {
+            "type": "int"
+          },
+          "default": 16,
+          "title": "Fps",
+          "description": "Frames per second for the output video.",
+          "min": 1.0,
+          "max": 60.0
+        },
+        {
+          "name": "seed",
+          "type": {
+            "type": "int"
+          },
+          "default": -1,
+          "title": "Seed",
+          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "min": -1.0
+        },
+        {
+          "name": "max_sequence_length",
+          "type": {
+            "type": "int"
+          },
+          "default": 512,
+          "title": "Max Sequence Length",
+          "description": "Maximum sequence length in encoded prompt.",
+          "min": 64.0,
+          "max": 1024.0
+        },
+        {
+          "name": "enable_cpu_offload",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Cpu Offload",
+          "description": "Enable CPU offload to reduce VRAM usage."
+        },
+        {
+          "name": "enable_vae_slicing",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Vae Slicing",
+          "description": "Enable VAE slicing to reduce VRAM usage."
+        },
+        {
+          "name": "enable_vae_tiling",
+          "type": {
+            "type": "bool"
+          },
+          "default": false,
+          "title": "Enable Vae Tiling",
+          "description": "Enable VAE tiling to reduce VRAM usage for large videos."
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "video"
+          },
+          "name": "output"
+        }
+      ],
+      "recommended_models": [
+        {
+          "type": "hf.text_to_video",
+          "repo_id": "Wan-AI/Wan2.2-I2V-A14B-Diffusers",
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ]
+        },
+        {
+          "type": "hf.text_to_video",
+          "repo_id": "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers",
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ]
+        },
+        {
+          "type": "hf.text_to_video",
+          "repo_id": "Wan-AI/Wan2.1-I2V-14B-720P-Diffusers",
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ]
+        }
+      ],
+      "basic_fields": [
+        "input_image",
+        "prompt",
+        "num_frames",
+        "height",
+        "width",
+        "model_variant"
+      ]
+    },
+    {
       "title": "Reranker",
       "description": "Reranks pairs of text based on their semantic similarity.\n    text, ranking, reranking, natural language processing\n\n    Use cases:\n    - Improve search results ranking\n    - Question-answer pair scoring\n    - Document relevance ranking",
       "namespace": "huggingface.ranking",
