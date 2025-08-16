@@ -1,8 +1,8 @@
 {
-  "id": "01ddcf16e35711ef80af000038478aae",
+  "id": "3ae8a1cd7aa511f08640000015d0df1b",
   "access": "public",
-  "created_at": "2025-02-05T15:50:13.803221",
-  "updated_at": "2025-02-05T15:50:13.803234",
+  "created_at": "2025-08-16T13:33:46.610049",
+  "updated_at": "2025-08-16T13:33:46.610069",
   "name": "Audio To Image",
   "description": "Transform spoken descriptions into images with this workflow. Record or upload audio, which is transcribed by Whisper and then visualized by Stable Diffusion. Perfect for quickly generating images from verbal ideas without typing.",
   "tags": [
@@ -11,7 +11,7 @@
     "start"
   ],
   "thumbnail": null,
-  "thumbnail_url": "/examples/audio_to_image.jpg",
+  "thumbnail_url": null,
   "graph": {
     "nodes": [
       {
@@ -201,12 +201,12 @@
         },
         "ui_properties": {
           "position": {
-            "x": 42,
-            "y": -135
+            "x": 18,
+            "y": -198
           },
           "zIndex": 0,
-          "width": 697,
-          "height": 151,
+          "width": 580,
+          "height": 184,
           "selectable": true
         },
         "dynamic_properties": {}
@@ -359,5 +359,9 @@
     ]
   },
   "input_schema": null,
-  "output_schema": null
+  "output_schema": null,
+  "settings": null,
+  "package_name": "nodetool-huggingface",
+  "path": null,
+  "run_mode": null
 }

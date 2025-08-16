@@ -191,7 +191,7 @@
       {
         "id": "31",
         "parent_id": null,
-        "type": "lib.audio.librosa.analysis.MelSpectrogram",
+        "type": "lib.librosa.analysis.MelSpectrogram",
         "data": {
           "n_fft": 2048,
           "hop_length": 512,
