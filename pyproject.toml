@@ -45,6 +45,7 @@ torch = "2.7.1"
 torchsde = "*"
 torchvision = "*"
 torchaudio = "*"
+hf_xet = "*"
 diffusers = { extras = ["torch"], version = "0.34.0" }
 transformers = "4.53.2"
 paddleocr = "*"

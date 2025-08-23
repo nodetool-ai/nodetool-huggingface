@@ -2,12 +2,6 @@ from enum import Enum
 import os
 from random import randint
 
-from diffusers.pipelines.pag.pipeline_pag_sd_img2img import (
-    StableDiffusionPAGImg2ImgPipeline,
-)
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upscale import (
-    StableDiffusionLatentUpscalePipeline,
-)
 from huggingface_hub import try_to_load_from_cache
 from pydantic import Field
 from typing import Any
@@ -29,6 +23,7 @@ from nodetool.metadata.types import (
     HFStableDiffusionXL,
     HFUnet,
     ImageRef,
+    TorchTensor,
 )
 from diffusers.schedulers.scheduling_dpmsolver_sde import DPMSolverSDEScheduler
 from diffusers.schedulers.scheduling_euler_discrete import EulerDiscreteScheduler
@@ -607,12 +602,6 @@ def upscale_latents(latents: torch.Tensor, scale_factor: int = 2) -> torch.Tenso
     return upscaled
 
 
-class StableDiffusionUpscaler(str, Enum):
-    NONE = "None"
-    LATENT = "Latent"
-    BICUBIC = "Bicubic"
-
-
 class StableDiffusionBaseNode(HuggingFacePipelineNode):
 
     class StableDiffusionScheduler(str, Enum):
@@ -630,6 +619,10 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         KDPM2DiscreteScheduler = "KDPM2DiscreteScheduler"
         DPMSolverSinglestepScheduler = "DPMSolverSinglestepScheduler"
         KDPM2AncestralDiscreteScheduler = "KDPM2AncestralDiscreteScheduler"
+
+    class StableDiffusionOutputType(str, Enum):
+        IMAGE = "Image"
+        LATENT = "Latent"
 
     @classmethod
     def get_scheduler_class(cls, scheduler: StableDiffusionScheduler):
@@ -711,12 +704,6 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         le=10.0,
         description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
-    detail_level: float = Field(
-        default=0.5,
-        ge=0.0,
-        le=1.0,
-        description="Level of detail for the hi-res pass. 0.0 is low detail, 1.0 is high detail.",
-    )
     enable_tiling: bool = Field(
         default=False,
         description="Enable tiling for the VAE. This can reduce VRAM usage.",
@@ -725,13 +712,12 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         default=False,
         description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
     )
-    upscaler: StableDiffusionUpscaler = Field(
-        default=StableDiffusionUpscaler.NONE,
-        description="The upscaler to use for 2-pass generation.",
+    output_type: StableDiffusionOutputType = Field(
+        default=StableDiffusionOutputType.IMAGE,
+        description="The type of output to generate.",
     )
     _loaded_adapters: set[str] = set()
     _pipeline: Any = None
-    _upscaler: StableDiffusionLatentUpscalePipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -739,23 +725,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
 
     @classmethod
     def get_recommended_models(cls):
-        return (
-            HF_IP_ADAPTER_MODELS
-            + HF_STABLE_DIFFUSION_MODELS
-            + HF_IP_ADAPTER_MODELS
-            + [
-                HFStableDiffusion(
-                    repo_id="stabilityai/sd-x2-latent-upscaler",
-                    allow_patterns=[
-                        "README.md",
-                        "**/*.safetensors",
-                        "**/*.json",
-                        "**/*.txt",
-                        "*.json",
-                    ],
-                ),
-            ]
-        )
+        return HF_IP_ADAPTER_MODELS + HF_STABLE_DIFFUSION_MODELS + HF_IP_ADAPTER_MODELS
 
     @classmethod
     def is_visible(cls) -> bool:
@@ -802,8 +772,6 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
             self._pipeline.to(device)
-        if self._upscaler is not None:
-            self._upscaler.to(device)
 
     def _setup_generator(self):
         generator = torch.Generator(device="cpu")
@@ -831,7 +799,9 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
 
         return callback
 
-    async def run_pipeline(self, context: ProcessingContext, **kwargs) -> ImageRef:
+    async def run_pipeline(
+        self, context: ProcessingContext, **kwargs
+    ) -> ImageRef | TorchTensor:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
@@ -868,158 +838,26 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             height = quantize_to_multiple_of_64(height)
             kwargs["height"] = height
 
-        hires = self.upscaler != StableDiffusionUpscaler.NONE
+        image = self._pipeline(
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            generator=generator,
+            ip_adapter_image=ip_adapter_image,
+            cross_attention_kwargs={"scale": 1.0},
+            callback_on_step_end=self.progress_callback(
+                context, 0, self.num_inference_steps
+            ),
+            pag_scale=self.pag_scale,
+            output_type=self.output_type.value,
+            **kwargs,
+        ).images[0]
 
-        if hires:
-            assert (
-                width is not None and height is not None
-            ), "Width and height must be set for hires generation"
-            # Calculate ratio on a continuous scale
-            if self.num_inference_steps <= 50:
-                low_res_ratio = 1 / 3 + (self.num_inference_steps - 25) / 75
-            else:
-                low_res_ratio = (
-                    1 / 3 + (50 - 25) / 75 + (self.num_inference_steps - 50) / 300
-                )
-
-            low_res_ratio = min(1 / 3, max(1 / 5, low_res_ratio))
-            low_res_steps = max(int(self.num_inference_steps * low_res_ratio), 10)
-            hi_res_steps = max(self.num_inference_steps - low_res_steps, 10)
-
-            total = self.num_inference_steps + 20  # Include upscaler steps
-
-            # Calculate denoising strength and guidance scale based on detail_level
-            denoising_strength = 0.3 + (self.detail_level * 0.4)  # Range: 0.3 to 0.7
-            hi_res_guidance_scale = self.guidance_scale + (
-                self.detail_level * self.guidance_scale
-            )
-
-            # Ensure values are within valid ranges
-            denoising_strength = max(0.0, min(1.0, denoising_strength))
-            hi_res_guidance_scale = max(0.0, hi_res_guidance_scale)
-
-            low_res_kwargs = kwargs.copy()
-            low_res_kwargs["width"] = int(width / 2)
-            low_res_kwargs["height"] = int(height / 2)
-
-            upscale_steps = 20
-
-            # Adjust upscale guidance scale based on detail level
-            upscale_guidance_scale = 1.0 + (
-                self.detail_level * 0.5
-            )  # Range: 1.0 to 1.5
-            upscale_guidance_scale = max(1.0, min(2.0, upscale_guidance_scale))
-
-            # Generate low-res latents
-            low_res_result = self._pipeline(
-                prompt=self.prompt,
-                negative_prompt=self.negative_prompt,
-                num_inference_steps=low_res_steps,
-                guidance_scale=self.guidance_scale,
-                generator=generator,
-                ip_adapter_image=ip_adapter_image,
-                callback_on_step_end=self.progress_callback(context, 0, low_res_steps),
-                output_type="latent",
-                pag_scale=self.pag_scale,
-                **low_res_kwargs,
-            )
-            low_res_latents = low_res_result.images
-
-            if self.upscaler == StableDiffusionUpscaler.LATENT:
-                self._upscaler = await self.load_model(
-                    context=context,
-                    model_class=StableDiffusionLatentUpscalePipeline,
-                    model_id="stabilityai/sd-x2-latent-upscaler",
-                    variant=None,
-                    torch_dtype=torch.float16,
-                )
-                self._upscaler.to(context.device)
-
-                def upscale_callback(context: ProcessingContext, step: int, total: int):
-                    context.post_message(
-                        NodeProgress(
-                            node_id=self.id,
-                            progress=low_res_steps + step,
-                            total=total,
-                        )
-                    )
-
-                upscaled_latents = self._upscaler(
-                    prompt=self.prompt,
-                    negative_prompt=self.negative_prompt,
-                    image=low_res_latents,
-                    num_inference_steps=upscale_steps,
-                    guidance_scale=upscale_guidance_scale,
-                    generator=generator,
-                    output_type="latent",
-                    callback=upscale_callback(context, low_res_steps, total),
-                    callback_steps=1,
-                ).images  # type: ignore
-            elif self.upscaler == StableDiffusionUpscaler.BICUBIC:
-                log.info("Using torch interpolation upscaling")
-                # Fallback to torch interpolation upscaling
-                upscaled_latents = upscale_latents(low_res_latents.cpu())
-            else:
-                raise ValueError("Invalid upscaler")
-
-            # Prepare img2img pipeline for hi-res pass
-            if "image" in kwargs:
-                img2img_pipe = self._pipeline
-            else:
-                img2img_pipe = StableDiffusionPAGImg2ImgPipeline(
-                    vae=self._pipeline.vae,
-                    text_encoder=self._pipeline.text_encoder,
-                    image_encoder=self._pipeline.image_encoder,
-                    tokenizer=self._pipeline.tokenizer,
-                    unet=self._pipeline.unet,
-                    scheduler=self._pipeline.scheduler,
-                    safety_checker=self._pipeline.safety_checker,
-                    feature_extractor=self._pipeline.feature_extractor,
-                )
-
-            # Generate final high-res image
-            hires_kwargs = kwargs.copy()
-            if "strength" not in hires_kwargs:
-                hires_kwargs["strength"] = denoising_strength
-            if "image" in hires_kwargs:
-                del hires_kwargs["image"]
-
-            del hires_kwargs["width"]
-            del hires_kwargs["height"]
-
-            img2img_pipe.vae.enable_tiling()
-            image = img2img_pipe(
-                image=upscaled_latents,
-                prompt=self.prompt + ", hires",
-                negative_prompt=self.negative_prompt,
-                num_inference_steps=hi_res_steps,
-                guidance_scale=hi_res_guidance_scale,
-                generator=generator,
-                ip_adapter_image=ip_adapter_image,
-                cross_attention_kwargs={"scale": 1.0},
-                pag_scale=self.pag_scale,
-                callback_on_step_end=self.progress_callback(context, low_res_steps + 20, total),  # type: ignore
-                **hires_kwargs,
-            ).images[  # type: ignore
-                0
-            ]
+        if self.output_type == self.StableDiffusionOutputType.IMAGE:
+            return await context.image_from_pil(image)
         else:
-            image = self._pipeline(
-                prompt=self.prompt,
-                negative_prompt=self.negative_prompt,
-                num_inference_steps=self.num_inference_steps,
-                guidance_scale=self.guidance_scale,
-                generator=generator,
-                ip_adapter_image=ip_adapter_image,
-                cross_attention_kwargs={"scale": 1.0},
-                callback_on_step_end=self.progress_callback(
-                    context, 0, self.num_inference_steps
-                ),
-                pag_scale=self.pag_scale,
-                **kwargs,
-            ).images[0]
-
-        return await context.image_from_pil(image)
+            return TorchTensor.from_tensor(image)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         raise NotImplementedError("Subclasses must implement this method")

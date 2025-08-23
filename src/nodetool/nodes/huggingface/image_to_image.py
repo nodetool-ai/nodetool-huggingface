@@ -1,6 +1,7 @@
 from enum import Enum
 import re
 from typing import Any
+from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 from nodetool.workflows.types import NodeProgress
 import numpy as np
 import torch
@@ -11,6 +12,8 @@ from nodetool.metadata.types import (
     HFImageToImage,
     HFRealESRGAN,
     HFStableDiffusionUpscale,
+    HFVAE,
+    TorchTensor,
     HuggingFaceModel,
     ImageRef,
 )
@@ -58,6 +61,9 @@ from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import (
 )
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_upscale import (
     StableDiffusionUpscalePipeline,
+)
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upscale import (
+    StableDiffusionLatentUpscalePipeline,
 )
 from pydantic import Field
 
@@ -265,7 +271,9 @@ class LoadImageToImageModel(HuggingFacePipelineNode):
             context=context,
             model_id=self.repo_id,
             model_class=AutoPipelineForImage2Image,
-            torch_dtype=torch.float16 if self.variant == ModelVariant.FP16 else torch.float32,
+            torch_dtype=(
+                torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
+            ),
             use_safetensors=True,
             variant=(
                 self.variant.value if self.variant != ModelVariant.DEFAULT else None
@@ -375,7 +383,11 @@ class ImageToImage(HuggingFacePipelineNode):
             model_id=self.model.repo_id,
             path=self.model.path,
             model_class=AutoPipelineForImage2Image,
-            torch_dtype=torch.float16 if self.model.variant == ModelVariant.FP16 else torch.float32,
+            torch_dtype=(
+                torch.float16
+                if self.model.variant == ModelVariant.FP16
+                else torch.float32
+            ),
             use_safetensors=True,
             variant=self.model.variant,
         )
@@ -684,7 +696,9 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
             path=self.model.path,
             safety_checker=None,
             config="Lykon/DreamShaper",
-            torch_dtype=torch.float16 if self.variant == ModelVariant.FP16 else torch.float32,
+            torch_dtype=(
+                torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
+            ),
         )
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
@@ -847,7 +861,11 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
                 path=self.model.path,
                 safety_checker=None,
                 config="Lykon/DreamShaper",
-                torch_dtype=torch.float16 if self.variant == ModelVariant.FP16 else torch.float32,
+                torch_dtype=(
+                    torch.float16
+                    if self.variant == ModelVariant.FP16
+                    else torch.float32
+                ),
                 variant=self.variant.value,
             )
             assert self._pipeline is not None
@@ -1084,12 +1102,267 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
             image=input_image,
             num_inference_steps=self.num_inference_steps,
             guidance_scale=self.guidance_scale,
-            callback_on_step_end=progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
+            callback=progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
         ).images[  # type: ignore
             0
         ]
 
         return await context.image_from_pil(upscaled_image)
+
+
+class StableDiffusionLatentUpscaler(HuggingFacePipelineNode):
+    """
+    Upscales Stable Diffusion latents (x2) using the SD Latent Upscaler pipeline.
+    tensor, upscaling, stable-diffusion, latent, SD
+
+    Input and output are tensors for chaining with latent-based workflows.
+    """
+
+    prompt: str = Field(
+        default="",
+        description="The prompt for upscaling guidance.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="The negative prompt to guide what should not appear in the result.",
+    )
+    num_inference_steps: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Number of upscaling denoising steps.",
+    )
+    guidance_scale: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=20.0,
+        description="Guidance scale for upscaling. 0 preserves content strongly.",
+    )
+    seed: int = Field(
+        default=-1,
+        ge=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+    )
+    latents: TorchTensor = Field(
+        default=TorchTensor(),
+        description="Low-resolution latents tensor to upscale.",
+    )
+
+    _pipeline: StableDiffusionLatentUpscalePipeline | None = None
+
+    @classmethod
+    def get_basic_fields(cls):
+        return [
+            "latents",
+            "prompt",
+            "negative_prompt",
+            "num_inference_steps",
+            "guidance_scale",
+        ]
+
+    def required_inputs(self):
+        return ["latents"]
+
+    @classmethod
+    def get_title(cls):
+        return "Stable Diffusion Latent Upscaler"
+
+    async def preload_model(self, context: ProcessingContext):
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=StableDiffusionLatentUpscalePipeline,
+            model_id="stabilityai/sd-x2-latent-upscaler",
+            variant=None,
+            torch_dtype=torch.float16,
+        )
+        assert self._pipeline is not None
+        self._pipeline.to(context.device)
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None:
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> TorchTensor:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        # Prepare generator
+        generator = torch.Generator(device="cpu")
+        if self.seed != -1:
+            generator = generator.manual_seed(self.seed)
+
+        # Convert TorchTensor to torch.Tensor and ensure device
+        low_res_latents = self.latents.to_tensor()
+        low_res_latents = low_res_latents.to(context.device)
+
+        # Run latent upscaler with progress callback
+        upscaled = self._pipeline(
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt,
+            image=low_res_latents,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            generator=generator,
+            output_type="latent",
+            callback=progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
+            callback_steps=1,
+        ).images  # type: ignore
+
+        # Convert back to TorchTensor
+        return TorchTensor.from_tensor(upscaled)
+
+
+class VAEEncode(HuggingFacePipelineNode):
+    """
+    Encodes an image into latents using a VAE.
+    image -> tensor (TorchTensor)
+    """
+
+    model: HFVAE = Field(default=HFVAE(), description="The VAE model to use.")
+    image: ImageRef = Field(default=ImageRef(), description="Input image to encode.")
+    scale_factor: float = Field(
+        default=0.18215,
+        ge=0.0,
+        le=10.0,
+        description="Scaling factor applied to latents (e.g., 0.18215 for SD15)",
+    )
+
+    _vae: AutoencoderKL | None = None
+
+    @classmethod
+    def get_basic_fields(cls):
+        return ["model", "image", "scale_factor"]
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HFVAE]:
+        return [
+            HFVAE(repo_id="stabilityai/sd-vae-ft-mse"),
+            HFVAE(repo_id="stabilityai/sd-vae-ft-ema"),
+            HFVAE(repo_id="stabilityai/sdxl-vae"),
+            HFVAE(repo_id="madebyollin/sdxl-vae-fp16-fix"),
+        ]
+
+    def required_inputs(self):
+        return ["image"]
+
+    @classmethod
+    def get_title(cls):
+        return "VAE Encode"
+
+    async def preload_model(self, context: ProcessingContext):
+        dtype = torch.float32 if context.device == "mps" else torch.float16
+        self._vae = await self.load_model(
+            context=context,
+            model_class=AutoencoderKL,
+            model_id=self.model.repo_id,
+            path=self.model.path,
+            torch_dtype=dtype,
+            subfolder=self.model.variant if self.model.variant else None,
+        )
+        assert self._vae is not None
+        self._vae.to(context.device)
+
+    async def move_to_device(self, device: str):
+        if self._vae is not None:
+            self._vae.to(device)
+
+    async def process(self, context: ProcessingContext) -> TorchTensor:
+        if self._vae is None:
+            raise ValueError("VAE not initialized")
+
+        # Convert to tensor HWC in [0,1]
+        img = await context.image_to_tensor(self.image)
+        # To NCHW, batch, and model dtype on correct device
+        img = img.permute(2, 0, 1).unsqueeze(0)
+        vae_dtype = next(self._vae.parameters()).dtype
+        img = img.to(dtype=vae_dtype, device=context.device)
+        # Normalize to [-1, 1]
+        img = img * 2.0 - 1.0
+
+        with torch.no_grad():
+            posterior = self._vae.encode(img)
+            latents = posterior.latent_dist.sample()
+            if self.scale_factor > 0:
+                latents = latents * self.scale_factor
+
+        return TorchTensor.from_tensor(latents.cpu())
+
+
+class VAEDecode(HuggingFacePipelineNode):
+    """
+    Decodes latents into an image using a VAE.
+    tensor (TorchTensor) -> image
+    """
+
+    model: HFVAE = Field(default=HFVAE(), description="The VAE model to use.")
+    latents: TorchTensor = Field(
+        default=TorchTensor(), description="Latent tensor to decode."
+    )
+    scale_factor: float = Field(
+        default=0.18215,
+        ge=0.0,
+        le=10.0,
+        description="Scaling factor used for encoding (inverse is applied before decode)",
+    )
+
+    _vae: AutoencoderKL | None = None
+
+    @classmethod
+    def get_basic_fields(cls):
+        return ["model", "latents", "scale_factor"]
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HFVAE]:
+        return [
+            HFVAE(repo_id="stabilityai/sd-vae-ft-mse"),
+            HFVAE(repo_id="stabilityai/sd-vae-ft-ema"),
+            HFVAE(repo_id="stabilityai/sdxl-vae"),
+            HFVAE(repo_id="madebyollin/sdxl-vae-fp16-fix"),
+        ]
+
+    def required_inputs(self):
+        return ["latents"]
+
+    @classmethod
+    def get_title(cls):
+        return "VAE Decode"
+
+    async def preload_model(self, context: ProcessingContext):
+        dtype = torch.float32 if context.device == "mps" else torch.float16
+        self._vae = await self.load_model(
+            context=context,
+            model_class=AutoencoderKL,
+            model_id=self.model.repo_id,
+            path=self.model.path,
+            torch_dtype=dtype,
+            subfolder=self.model.variant if self.model.variant else None,
+        )
+        assert self._vae is not None
+        self._vae.to(context.device)
+
+    async def move_to_device(self, device: str):
+        if self._vae is not None:
+            self._vae.to(device)
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._vae is None:
+            raise ValueError("VAE not initialized")
+
+        latents = self.latents.to_tensor().to(context.device)
+        vae_dtype = next(self._vae.parameters()).dtype
+        latents = latents.to(dtype=vae_dtype)
+
+        if self.scale_factor > 0:
+            latents = latents / self.scale_factor
+
+        with torch.no_grad():
+            decoded = self._vae.decode(latents).sample
+            # Map from [-1, 1] to [0, 1]
+            decoded = (decoded + 1.0) / 2.0
+            # NCHW -> NHWC for image_from_tensor
+            decoded = decoded.permute(0, 2, 3, 1).contiguous()
+
+        return await context.image_from_tensor(decoded.cpu())
 
 
 class StableDiffusionXLImg2Img(StableDiffusionXLBase):
@@ -1138,7 +1411,9 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
             model_id=self.model.repo_id,
             path=self.model.path,
             safety_checker=None,
-            torch_dtype=torch.float16 if self.variant == ModelVariant.FP16 else torch.float32,
+            torch_dtype=(
+                torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
+            ),
             variant=self.variant.value,
         )
         assert self._pipeline is not None
@@ -1204,7 +1479,11 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
                 model_id=self.model.repo_id,
                 path=self.model.path,
                 safety_checker=None,
-                torch_dtype=torch.float16 if self.variant == ModelVariant.FP16 else torch.float32,
+                torch_dtype=(
+                    torch.float16
+                    if self.variant == ModelVariant.FP16
+                    else torch.float32
+                ),
                 variant=self.variant.value,
             )
             assert self._pipeline is not None

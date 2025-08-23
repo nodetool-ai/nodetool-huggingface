@@ -1,6 +1,6 @@
 from enum import Enum
 from nodetool.common.environment import Environment
-from nodetool.metadata.types import HFTextToImage, HFImageToImage, HFLoraSD, HuggingFaceModel, ImageRef
+from nodetool.metadata.types import HFTextToImage, HFImageToImage, HFLoraSD, HuggingFaceModel, ImageRef, TorchTensor
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.image_to_image import pipeline_progress_callback
 from nodetool.nodes.huggingface.stable_diffusion_base import (
@@ -56,6 +56,13 @@ class StableDiffusion(StableDiffusionBaseNode):
     def get_title(cls):
         return "Stable Diffusion"
 
+    @classmethod
+    def return_type(cls):
+        return {
+            "image": ImageRef,
+            "latent": TorchTensor,
+        }
+
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
         self._pipeline = await self.load_model(
@@ -70,8 +77,18 @@ class StableDiffusion(StableDiffusionBaseNode):
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
 
-    async def process(self, context: ProcessingContext) -> ImageRef:
-        return await self.run_pipeline(context, width=self.width, height=self.height)
+    async def process(self, context: ProcessingContext):
+        result = await self.run_pipeline(context, width=self.width, height=self.height)
+        if self.output_type == self.StableDiffusionOutputType.IMAGE:
+            return {
+                "image": result,
+                "latent": TorchTensor(),
+            }
+        else:
+            return {
+                "image": ImageRef(),
+                "latent": result,
+            }
 
 
 class StableDiffusionXL(StableDiffusionXLBase):
