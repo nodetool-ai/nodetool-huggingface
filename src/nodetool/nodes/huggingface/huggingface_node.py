@@ -138,6 +138,7 @@ class HuggingfaceNode(BaseNode):
             NodeUpdate(
                 node_id=self.id,
                 node_name=model_id,
+                node_type=self.get_node_type(),
                 status="starting",
             )
         )
