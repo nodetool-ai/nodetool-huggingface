@@ -8,7 +8,8 @@ from typing import Any
 
 import torch
 
-from nodetool.common.environment import Environment
+from nodetool.config.environment import Environment
+import logging
 from nodetool.metadata.types import (
     HFCLIP,
     HFLTXV,
@@ -53,7 +54,7 @@ from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress
 
 
-log = Environment.get_logger()
+log = logging.getLogger(__name__)
 
 
 class IPAdapter_SDXL_Model(str, Enum):

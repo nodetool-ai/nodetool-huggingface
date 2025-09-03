@@ -1,5 +1,6 @@
 from enum import Enum
-from nodetool.common.environment import Environment
+from nodetool.config.environment import Environment
+import logging
 from nodetool.metadata.types import HFTextToImage, HFImageToImage, HFLoraSD, HuggingFaceModel, ImageRef, TorchTensor
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.image_to_image import pipeline_progress_callback
@@ -26,7 +27,7 @@ from transformers.utils.quantization_config import BitsAndBytesConfig
 from pydantic import Field
 from nodetool.workflows.base_node import BaseNode
 
-log = Environment.get_logger()
+log = logging.getLogger(__name__)
 
 class StableDiffusion(StableDiffusionBaseNode):
     """
@@ -1518,4 +1519,3 @@ class QuantoFlux(HuggingFacePipelineNode):
         image = output.images[0]  # type: ignore
 
         return await context.image_from_pil(image)
-

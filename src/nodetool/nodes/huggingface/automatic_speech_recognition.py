@@ -1,6 +1,7 @@
 import datetime
 import torch
 import logging
+from nodetool.config.logging_config import configure_logging, get_logger
 from nodetool.metadata.types import (
     AudioRef,
     AudioChunk,
@@ -19,8 +20,8 @@ from transformers import (
 )
 from enum import Enum
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+configure_logging()
+logger = get_logger(__name__)
 
 
 class WhisperLanguage(str, Enum):

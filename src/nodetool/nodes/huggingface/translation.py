@@ -6,12 +6,13 @@ from pydantic import Field
 from enum import Enum
 from transformers import PreTrainedModel, Pipeline
 import logging
+from nodetool.config.logging_config import configure_logging, get_logger
 from typing import List, Optional, Union, Iterable
 from collections.abc import Generator
 
-# Configure logging
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+# Configure standardized logging
+configure_logging()
+logger = get_logger(__name__)
 
 
 class Translation(HuggingFacePipelineNode):
@@ -207,4 +208,3 @@ class Translation(HuggingFacePipelineNode):
         except Exception as e:
             logger.error(f"Error moving pipeline to device {target_device_str}: {e}")
             raise RuntimeError(f"Failed to move pipeline to device {target_device_str}: {e}") from e
-

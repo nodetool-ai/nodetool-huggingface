@@ -1,5 +1,6 @@
 import torch
-from nodetool.common.environment import Environment
+from nodetool.config.environment import Environment
+import logging
 from nodetool.nodes.huggingface.huggingface_node import HuggingfaceNode
 from nodetool.types.job import JobUpdate
 from nodetool.workflows.processing_context import ProcessingContext
@@ -7,13 +8,13 @@ from pydantic import Field
 from transformers.pipelines.base import Pipeline
 from transformers.pipelines import pipeline
 from typing import Any
-from nodetool.common.model_manager import ModelManager
+from nodetool.ml.core.model_manager import ModelManager
 from huggingface_hub.file_download import try_to_load_from_cache
 from typing import Any, TypeVar
 
 T = TypeVar("T")
 
-log = Environment.get_logger()
+log = logging.getLogger(__name__)
 
 
 class HuggingFacePipelineNode(HuggingfaceNode):

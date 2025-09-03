@@ -1,5 +1,6 @@
 import base64
-from nodetool.common.environment import Environment
+from nodetool.config.environment import Environment
+import logging
 import httpx
 import asyncio
 from datetime import datetime
@@ -29,7 +30,7 @@ Note:
     This module requires a valid Hugging Face API token to be set in the environment.
 """
 
-log = Environment.get_logger()
+log = logging.getLogger(__name__)
 API_URL = "https://api-inference.huggingface.co/models"
 MAX_RETRY_COUNT = 10
 
