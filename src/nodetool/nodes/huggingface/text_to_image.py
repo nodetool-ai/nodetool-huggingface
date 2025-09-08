@@ -1,7 +1,14 @@
 from enum import Enum
 from nodetool.config.environment import Environment
-import logging
-from nodetool.metadata.types import HFTextToImage, HFImageToImage, HFLoraSD, HuggingFaceModel, ImageRef, TorchTensor
+from nodetool.config.logging_config import get_logger
+from nodetool.metadata.types import (
+    HFTextToImage,
+    HFImageToImage,
+    HFLoraSD,
+    HuggingFaceModel,
+    ImageRef,
+    TorchTensor,
+)
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.image_to_image import pipeline_progress_callback
 from nodetool.nodes.huggingface.stable_diffusion_base import (
@@ -21,13 +28,16 @@ from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
 from diffusers.pipelines.hunyuandit.pipeline_hunyuandit import HunyuanDiTPipeline
 from diffusers.pipelines.lumina.pipeline_lumina import LuminaPipeline
 from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
-from diffusers.schedulers.scheduling_dpmsolver_multistep import DPMSolverMultistepScheduler
+from diffusers.schedulers.scheduling_dpmsolver_multistep import (
+    DPMSolverMultistepScheduler,
+)
 from transformers import T5EncoderModel
 from transformers.utils.quantization_config import BitsAndBytesConfig
 from pydantic import Field
 from nodetool.workflows.base_node import BaseNode
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
+
 
 class StableDiffusion(StableDiffusionBaseNode):
     """
@@ -158,7 +168,7 @@ class LoadTextToImageModel(HuggingFacePipelineNode):
         default=ModelVariant.DEFAULT,
         description="The variant of the model to use for text-to-image generation.",
     )
-    
+
     async def preload_model(self, context: ProcessingContext):
         await self.load_model(
             context=context,
@@ -166,14 +176,19 @@ class LoadTextToImageModel(HuggingFacePipelineNode):
             model_class=AutoPipelineForText2Image,
             torch_dtype=torch.float16,
             use_safetensors=True,
-            variant=self.variant.value if self.variant != ModelVariant.DEFAULT else None,
-        ) 
+            variant=(
+                self.variant.value if self.variant != ModelVariant.DEFAULT else None
+            ),
+        )
 
     async def process(self, context: ProcessingContext) -> HFTextToImage:
         return HFTextToImage(
             repo_id=self.repo_id,
-            variant=self.variant.value if self.variant != ModelVariant.DEFAULT else None,
+            variant=(
+                self.variant.value if self.variant != ModelVariant.DEFAULT else None
+            ),
         )
+
 
 class Text2Image(HuggingFacePipelineNode):
     """
@@ -186,6 +201,7 @@ class Text2Image(HuggingFacePipelineNode):
     - Quick prototyping with various text-to-image models
     - Streamlined workflow for different model architectures
     """
+
     model: HFTextToImage = Field(
         default=HFTextToImage(),
         description="The model to use for text-to-image generation.",
@@ -250,7 +266,11 @@ class Text2Image(HuggingFacePipelineNode):
             model_id=self.get_model_id(),
             model_class=AutoPipelineForText2Image,
             torch_dtype=torch.float16,
-            variant=self.model.variant if self.model.variant != ModelVariant.DEFAULT else None,
+            variant=(
+                self.model.variant
+                if self.model.variant != ModelVariant.DEFAULT
+                else None
+            ),
             enable_pag=self.pag_scale > 0.0,
         )
 
@@ -277,7 +297,9 @@ class Text2Image(HuggingFacePipelineNode):
             height=self.height,
             generator=generator,
             pag_scale=self.pag_scale,
-            callback_on_step_end=pipeline_progress_callback(self.id, self.num_inference_steps, context),
+            callback_on_step_end=pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            ),
         )  # type: ignore
 
         image = output.images[0]  # type: ignore
@@ -331,22 +353,16 @@ class FluxText2Image(HuggingFacePipelineNode):
         le=30.0,
     )
     width: int = Field(
-        default=1360, 
-        description="The width of the generated image.", 
-        ge=64, 
-        le=2048
+        default=1360, description="The width of the generated image.", ge=64, le=2048
     )
     height: int = Field(
-        default=768, 
-        description="The height of the generated image.", 
-        ge=64, 
-        le=2048
+        default=768, description="The height of the generated image.", ge=64, le=2048
     )
     num_inference_steps: int = Field(
-        default=4, 
-        description="The number of denoising steps. Use 4 for schnell, 50 for dev.", 
-        ge=1, 
-        le=100
+        default=4,
+        description="The number of denoising steps. Use 4 for schnell, 50 for dev.",
+        ge=1,
+        le=100,
     )
     max_sequence_length: int = Field(
         default=512,
@@ -448,16 +464,20 @@ class FluxText2Image(HuggingFacePipelineNode):
             try:
                 return BitsAndBytesConfig(load_in_8bit=True)
             except ImportError:
-                raise ImportError("bitsandbytes is required for quantization. Install with: pip install bitsandbytes")
-        
+                raise ImportError(
+                    "bitsandbytes is required for quantization. Install with: pip install bitsandbytes"
+                )
+
         elif self.quantization == QuantizationMethod.BITSANDBYTES_4BIT:
             try:
                 return BitsAndBytesConfig(load_in_4bit=True)
             except ImportError:
-                raise ImportError("bitsandbytes is required for quantization. Install with: pip install bitsandbytes")
-        
+                raise ImportError(
+                    "bitsandbytes is required for quantization. Install with: pip install bitsandbytes"
+                )
+
         return None
-    
+
     def _get_transformer_quantization_config(self):
         """Get quantization config for transformer (uses diffusers quantization)."""
         if self.quantization == QuantizationMethod.BITSANDBYTES_8BIT:
@@ -465,20 +485,28 @@ class FluxText2Image(HuggingFacePipelineNode):
                 # For diffusers transformer, we'll use the same config but it may need to be handled differently
                 return BitsAndBytesConfig(load_in_8bit=True)
             except ImportError:
-                raise ImportError("bitsandbytes is required for quantization. Install with: pip install bitsandbytes")
-        
+                raise ImportError(
+                    "bitsandbytes is required for quantization. Install with: pip install bitsandbytes"
+                )
+
         elif self.quantization == QuantizationMethod.BITSANDBYTES_4BIT:
             try:
                 return BitsAndBytesConfig(load_in_4bit=True)
             except ImportError:
-                raise ImportError("bitsandbytes is required for quantization. Install with: pip install bitsandbytes")
-        
+                raise ImportError(
+                    "bitsandbytes is required for quantization. Install with: pip install bitsandbytes"
+                )
+
         return None
 
     async def preload_model(self, context: ProcessingContext):
         # Determine torch dtype based on variant
-        torch_dtype = torch.bfloat16 if self.variant in [FluxVariant.SCHNELL, FluxVariant.DEV] else torch.float16
-        
+        torch_dtype = (
+            torch.bfloat16
+            if self.variant in [FluxVariant.SCHNELL, FluxVariant.DEV]
+            else torch.float16
+        )
+
         # Load components separately if quantization is enabled
         if self.quantization != QuantizationMethod.NONE:
             await self._load_quantized_components(context, torch_dtype)
@@ -492,11 +520,11 @@ class FluxText2Image(HuggingFacePipelineNode):
                 variant=None,
                 device="cpu",
             )
-    
+
     async def _load_quantized_components(self, context: ProcessingContext, torch_dtype):
         """Load text encoder and transformer separately with quantization."""
         model_id = self.get_model_id()
-        
+
         # Load text encoder with quantization
         text_encoder_quant_config = self._get_text_encoder_quantization_config()
         text_encoder = None
@@ -507,8 +535,8 @@ class FluxText2Image(HuggingFacePipelineNode):
                 quantization_config=text_encoder_quant_config,
                 torch_dtype=torch_dtype,
             )
-        
-        # Load transformer with quantization  
+
+        # Load transformer with quantization
         transformer_quant_config = self._get_transformer_quantization_config()
         transformer = None
         if transformer_quant_config:
@@ -518,7 +546,7 @@ class FluxText2Image(HuggingFacePipelineNode):
                 quantization_config=transformer_quant_config,
                 torch_dtype=torch_dtype,
             )
-        
+
         # Load the full pipeline with quantized components
         self._pipeline = FluxPipeline.from_pretrained(
             model_id,
@@ -526,23 +554,23 @@ class FluxText2Image(HuggingFacePipelineNode):
             transformer=transformer,
             torch_dtype=torch_dtype,
             device_map="balanced",
-        ) # type: ignore
+        )  # type: ignore
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
             if not self.enable_cpu_offload:
                 self._pipeline.to(device)
-            
+
             # Apply memory optimization settings
             if self.enable_cpu_offload:
                 self._pipeline.enable_sequential_cpu_offload()
-            
+
             if self.enable_vae_slicing:
                 self._pipeline.vae.enable_slicing()
-            
+
             if self.enable_vae_tiling:
                 self._pipeline.vae.enable_tiling()
-            
+
             if self.enable_memory_efficient_attention:
                 self._pipeline.enable_attention_slicing()
 
@@ -559,17 +587,23 @@ class FluxText2Image(HuggingFacePipelineNode):
         guidance_scale = self.guidance_scale
         num_inference_steps = self.num_inference_steps
         max_sequence_length = self.max_sequence_length
-        
+
         if self.variant == FluxVariant.SCHNELL:
             # For schnell, guidance_scale should be 0 and max_sequence_length <= 256
             if guidance_scale != 0.0:
-                log.warning("For FLUX.1-schnell, guidance_scale should be 0.0. Adjusting automatically.")
+                log.warning(
+                    "For FLUX.1-schnell, guidance_scale should be 0.0. Adjusting automatically."
+                )
                 guidance_scale = 0.0
             if max_sequence_length > 256:
-                log.warning("For FLUX.1-schnell, max_sequence_length should be <= 256. Adjusting to 256.")
+                log.warning(
+                    "For FLUX.1-schnell, max_sequence_length should be <= 256. Adjusting to 256."
+                )
                 max_sequence_length = 256
             if num_inference_steps > 10:
-                log.warning("For FLUX.1-schnell, fewer inference steps (4-8) are recommended for optimal performance.")
+                log.warning(
+                    "For FLUX.1-schnell, fewer inference steps (4-8) are recommended for optimal performance."
+                )
 
         def progress_callback(step: int, timestep: int, callback_kwargs: dict) -> None:
             context.post_message(
@@ -690,7 +724,7 @@ class Kolors(HuggingFacePipelineNode):
             torch_dtype=torch.float16,
             variant="fp16",
         )
-        
+
         # Set up the scheduler as recommended in the docs
         if self._pipeline is not None and self.use_dpm_solver:
             self._pipeline.scheduler = DPMSolverMultistepScheduler.from_config(
@@ -720,7 +754,7 @@ class Kolors(HuggingFacePipelineNode):
             width=self.width,
             generator=generator,
             max_sequence_length=self.max_sequence_length,
-            callback_on_step_end=pipeline_progress_callback(self.id, self.num_inference_steps, context), # type: ignore
+            callback_on_step_end=pipeline_progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
             callback_on_step_end_tensor_inputs=["latents"],
         )
 
@@ -846,26 +880,34 @@ class HunyuanDiT(HuggingFacePipelineNode):
     def _get_supported_resolutions(self) -> list[tuple[int, int]]:
         """Get list of supported resolutions for resolution binning."""
         return [
-            (1024, 1024), (1280, 1280), (1024, 768), (1152, 864), (1280, 960),
-            (768, 1024), (864, 1152), (960, 1280), (1280, 768), (768, 1280)
+            (1024, 1024),
+            (1280, 1280),
+            (1024, 768),
+            (1152, 864),
+            (1280, 960),
+            (768, 1024),
+            (864, 1152),
+            (960, 1280),
+            (1280, 768),
+            (768, 1280),
         ]
 
     def _find_closest_resolution(self, width: int, height: int) -> tuple[int, int]:
         """Find the closest supported resolution."""
         if not self.use_resolution_binning:
             return (width, height)
-        
+
         target_ratio = width / height
         best_resolution = (1024, 1024)
-        best_ratio_diff = float('inf')
-        
+        best_ratio_diff = float("inf")
+
         for res_width, res_height in self._get_supported_resolutions():
             ratio = res_width / res_height
             ratio_diff = abs(ratio - target_ratio)
             if ratio_diff < best_ratio_diff:
                 best_ratio_diff = ratio_diff
                 best_resolution = (res_width, res_height)
-        
+
         return best_resolution
 
     async def preload_model(self, context: ProcessingContext):
@@ -874,7 +916,7 @@ class HunyuanDiT(HuggingFacePipelineNode):
             # Load T5 encoder in 8-bit for memory efficiency
             try:
                 quantization_config = BitsAndBytesConfig(load_in_8bit=True)
-                
+
                 self._pipeline = await self.load_model(
                     context=context,
                     model_id=self.get_model_id(),
@@ -901,8 +943,7 @@ class HunyuanDiT(HuggingFacePipelineNode):
         # Apply forward chunking if enabled
         if self._pipeline is not None and self.enable_forward_chunking:
             self._pipeline.transformer.enable_forward_chunking(
-                chunk_size=self.forward_chunk_size, 
-                dim=1
+                chunk_size=self.forward_chunk_size, dim=1
             )
 
     async def move_to_device(self, device: str):
@@ -919,10 +960,16 @@ class HunyuanDiT(HuggingFacePipelineNode):
             generator = torch.Generator(device="cpu").manual_seed(self.seed)
 
         # Determine final resolution
-        final_width, final_height = self._find_closest_resolution(self.width, self.height)
-        
-        if self.use_resolution_binning and (final_width != self.width or final_height != self.height):
-            log.info(f"Resolution binning: {self.width}x{self.height} -> {final_width}x{final_height}")
+        final_width, final_height = self._find_closest_resolution(
+            self.width, self.height
+        )
+
+        if self.use_resolution_binning and (
+            final_width != self.width or final_height != self.height
+        ):
+            log.info(
+                f"Resolution binning: {self.width}x{self.height} -> {final_width}x{final_height}"
+            )
 
         # Set target size if not specified
         target_size = self.target_size or (final_width, final_height)
@@ -1077,7 +1124,7 @@ class LuminaT2X(HuggingFacePipelineNode):
         """Get quantization config for memory efficiency."""
         if not self.enable_quantization:
             return None
-        
+
         try:
             # Use 8-bit quantization for memory efficiency
             return BitsAndBytesConfig(load_in_8bit=True)
@@ -1088,10 +1135,10 @@ class LuminaT2X(HuggingFacePipelineNode):
     async def preload_model(self, context: ProcessingContext):
         # Determine dtype - Lumina-T2X works best with bfloat16
         torch_dtype = torch.bfloat16
-        
+
         # Load with quantization if enabled
         quantization_config = self._get_quantization_config()
-        
+
         if quantization_config:
             try:
                 self._pipeline = await self.load_model(
@@ -1102,7 +1149,9 @@ class LuminaT2X(HuggingFacePipelineNode):
                     quantization_config=quantization_config,
                 )
             except Exception as e:
-                log.warning(f"Failed to load with quantization: {e}. Loading without quantization.")
+                log.warning(
+                    f"Failed to load with quantization: {e}. Loading without quantization."
+                )
                 self._pipeline = await self.load_model(
                     context=context,
                     model_id=self.get_model_id(),
@@ -1121,14 +1170,14 @@ class LuminaT2X(HuggingFacePipelineNode):
         if self._pipeline is not None:
             if not self.enable_cpu_offload:
                 self._pipeline.to(device)
-            
+
             # Apply memory optimization settings
             if self.enable_cpu_offload:
                 self._pipeline.enable_model_cpu_offload()
-            
+
             if self.enable_vae_slicing:
                 self._pipeline.vae.enable_slicing()
-            
+
             if self.enable_vae_tiling:
                 self._pipeline.vae.enable_tiling()
 
@@ -1170,7 +1219,9 @@ class LuminaT2X(HuggingFacePipelineNode):
         except Exception as e:
             # Handle cases where clean_caption dependencies might be missing
             if "beautifulsoup4" in str(e) or "ftfy" in str(e):
-                log.warning("Missing dependencies for clean_caption. Retrying with clean_caption=False")
+                log.warning(
+                    "Missing dependencies for clean_caption. Retrying with clean_caption=False"
+                )
                 output = self._pipeline(
                     prompt=self.prompt,
                     negative_prompt=self.negative_prompt,
@@ -1311,17 +1362,17 @@ class Chroma(HuggingFacePipelineNode):
         if self._pipeline is not None:
             if not self.enable_cpu_offload:
                 self._pipeline.to(device)
-            
+
             # Apply memory optimization settings
             if self.enable_cpu_offload:
                 self._pipeline.enable_model_cpu_offload()
-            
+
             if self.enable_vae_slicing:
                 self._pipeline.enable_vae_slicing()
-            
+
             if self.enable_vae_tiling:
                 self._pipeline.enable_vae_tiling()
-            
+
             if self.enable_attention_slicing:
                 self._pipeline.enable_attention_slicing()
 
@@ -1349,7 +1400,7 @@ class Chroma(HuggingFacePipelineNode):
             "width": self.width,
             "generator": generator,
             "max_sequence_length": self.max_sequence_length,
-            "callback_on_step_end": pipeline_progress_callback(self.id, self.num_inference_steps, context), # type: ignore
+            "callback_on_step_end": pipeline_progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
             "callback_on_step_end_tensor_inputs": ["latents"],
         }
 
@@ -1391,22 +1442,13 @@ class QuantoFlux(HuggingFacePipelineNode):
         le=30.0,
     )
     width: int = Field(
-        default=1024, 
-        description="The width of the generated image.", 
-        ge=64, 
-        le=2048
+        default=1024, description="The width of the generated image.", ge=64, le=2048
     )
     height: int = Field(
-        default=1024, 
-        description="The height of the generated image.", 
-        ge=64, 
-        le=2048
+        default=1024, description="The height of the generated image.", ge=64, le=2048
     )
     num_inference_steps: int = Field(
-        default=20, 
-        description="The number of denoising steps.", 
-        ge=1, 
-        le=100
+        default=20, description="The number of denoising steps.", ge=1, le=100
     )
     max_sequence_length: int = Field(
         default=512,
@@ -1442,12 +1484,11 @@ class QuantoFlux(HuggingFacePipelineNode):
     def get_model_id(self) -> str:
         return "black-forest-labs/FLUX.1-dev"
 
-
     async def preload_model(self, context: ProcessingContext):
         from optimum.quanto import freeze, qfloat8, quantize
-        
+
         dtype = torch.bfloat16
-        
+
         # Load and quantize the transformer from single file
         transformer = await self.load_model(
             context,
@@ -1458,7 +1499,7 @@ class QuantoFlux(HuggingFacePipelineNode):
         )
         quantize(transformer, weights=qfloat8)
         freeze(transformer)
-        
+
         # Load and quantize the text encoder
         log.info("Loading and quantizing text encoder with FP8...")
         context.post_message(
@@ -1477,10 +1518,15 @@ class QuantoFlux(HuggingFacePipelineNode):
         )
         quantize(text_encoder_2, weights=qfloat8)
         freeze(text_encoder_2)
-        
+
         # Load the base pipeline without transformer and text_encoder_2
         log.info("Loading base pipeline...")
-        pipe = FluxPipeline.from_pretrained(self.get_model_id(), transformer=None, text_encoder_2=None, torch_dtype=dtype)
+        pipe = FluxPipeline.from_pretrained(
+            self.get_model_id(),
+            transformer=None,
+            text_encoder_2=None,
+            torch_dtype=dtype,
+        )
         pipe.transformer = transformer
         pipe.text_encoder_2 = text_encoder_2
 
@@ -1512,7 +1558,7 @@ class QuantoFlux(HuggingFacePipelineNode):
             num_inference_steps=self.num_inference_steps,
             max_sequence_length=self.max_sequence_length,
             generator=generator,
-            callback_on_step_end=pipeline_progress_callback(self.id, self.num_inference_steps, context), # type: ignore
+            callback_on_step_end=pipeline_progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
             callback_on_step_end_tensor_inputs=["latents"],
         )
 

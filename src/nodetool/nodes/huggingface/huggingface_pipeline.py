@@ -1,6 +1,6 @@
 import torch
 from nodetool.config.environment import Environment
-import logging
+from nodetool.config.logging_config import get_logger
 from nodetool.nodes.huggingface.huggingface_node import HuggingfaceNode
 from nodetool.types.job import JobUpdate
 from nodetool.workflows.processing_context import ProcessingContext
@@ -14,7 +14,7 @@ from typing import Any, TypeVar
 
 T = TypeVar("T")
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class HuggingFacePipelineNode(HuggingfaceNode):

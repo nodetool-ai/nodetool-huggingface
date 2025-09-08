@@ -14,9 +14,11 @@ from nodetool.workflows.processing_context import ProcessingContext
 
 from pydantic import Field
 from transformers import (
-    AutomaticSpeechRecognitionPipeline,
     AutoModelForSpeechSeq2Seq,
     AutoProcessor,
+)
+from transformers.pipelines.automatic_speech_recognition import (
+    AutomaticSpeechRecognitionPipeline,
 )
 from enum import Enum
 
