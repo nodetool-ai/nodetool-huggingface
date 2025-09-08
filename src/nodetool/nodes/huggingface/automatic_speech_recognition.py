@@ -1,7 +1,7 @@
 import datetime
 import torch
 import logging
-from nodetool.config.logging_config import configure_logging, get_logger
+from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
     AudioRef,
     AudioChunk,
@@ -22,7 +22,6 @@ from transformers.pipelines.automatic_speech_recognition import (
 )
 from enum import Enum
 
-configure_logging()
 logger = get_logger(__name__)
 
 

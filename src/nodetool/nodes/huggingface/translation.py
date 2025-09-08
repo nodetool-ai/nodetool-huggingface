@@ -6,13 +6,11 @@ from pydantic import Field
 from enum import Enum
 from transformers import PreTrainedModel, Pipeline
 import logging
-from nodetool.config.logging_config import configure_logging, get_logger
+from nodetool.config.logging_config import get_logger
 from typing import List, Optional, Union, Iterable
 from collections.abc import Generator
 
-# Configure standardized logging
-configure_logging()
-logger = get_logger(__name__)
+# Configure standardized logger = get_logger(__name__)
 
 
 class Translation(HuggingFacePipelineNode):
@@ -147,7 +145,9 @@ class Translation(HuggingFacePipelineNode):
             # Handle different types of result
             if isinstance(result, dict):
                 result = [result]
-            elif isinstance(result, (Generator, Iterable)) and not isinstance(result, list):
+            elif isinstance(result, (Generator, Iterable)) and not isinstance(
+                result, list
+            ):
                 result = list(result)
             elif not isinstance(result, list):
                 result = [result]
@@ -191,20 +191,28 @@ class Translation(HuggingFacePipelineNode):
             logger.info(f"Pipeline device set to {target_device}")
 
             # Rename local variable to avoid conflict with self.model
-            pipeline_model = getattr(self._pipeline, 'model', None)
+            pipeline_model = getattr(self._pipeline, "model", None)
             if isinstance(pipeline_model, PreTrainedModel):
-                pipeline_model.to(target_device) # type: ignore
+                pipeline_model.to(target_device)  # type: ignore
                 logger.info(f"Model moved to {target_device}")
             else:
-                logger.warning(f"Pipeline model is not a PreTrainedModel, got {type(pipeline_model)}")
+                logger.warning(
+                    f"Pipeline model is not a PreTrainedModel, got {type(pipeline_model)}"
+                )
 
             # Move other components if they support the .to() method
-            for attr_name in ['tokenizer', 'feature_extractor']:
+            for attr_name in ["tokenizer", "feature_extractor"]:
                 component = getattr(self._pipeline, attr_name, None)
-                if component and hasattr(component, 'to') and callable(getattr(component, 'to')):
+                if (
+                    component
+                    and hasattr(component, "to")
+                    and callable(getattr(component, "to"))
+                ):
                     component.to(target_device)
                     logger.info(f"{attr_name.capitalize()} moved to {target_device}")
 
         except Exception as e:
             logger.error(f"Error moving pipeline to device {target_device_str}: {e}")
-            raise RuntimeError(f"Failed to move pipeline to device {target_device_str}: {e}") from e
+            raise RuntimeError(
+                f"Failed to move pipeline to device {target_device_str}: {e}"
+            ) from e
