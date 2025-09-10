@@ -7,9 +7,7 @@ name = "nodetool-huggingface"
 version = "0.6.0"
 description = "HuggingFace nodes for Nodetool"
 readme = "README.md"
-authors = [
-    {name = "Matthias Georgi", email = "matti.georgi@gmail.com"}
-]
+authors = [{ name = "Matthias Georgi", email = "matti.georgi@gmail.com" }]
 requires-python = ">=3.11"
 
 dependencies = [
@@ -32,17 +30,10 @@ dependencies = [
 
 
 [project.optional-dependencies]
-# For development with local nodetool-core
-dev = [
-    "nodetool-core @ file:///../nodetool-core",
-]
 # For exact version pinning in production
-stable = [
-    "nodetool-core==0.6.0",
-]
+stable = ["nodetool-core==0.6.0"]
 
 [tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nodetool", "src/RealESRGAN"]
