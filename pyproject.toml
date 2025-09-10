@@ -1,57 +1,71 @@
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.poetry]
+[project]
 name = "nodetool-huggingface"
 version = "0.6.0"
 description = "HuggingFace nodes for Nodetool"
 readme = "README.md"
-authors = ["Matthias Georgi <matti.georgi@gmail.com>"]
-packages = [
-  { include = "nodetool", from = "src" },
-  { include = "RealESRGAN", from = "src" },
+authors = [
+    {name = "Matthias Georgi", email = "matti.georgi@gmail.com"}
 ]
-package-mode = true
-include = [
-  "src/nodetool/package_metadata/nodetool-huggingface.json",
-  "src/nodetool/assets/nodetool-huggingface/Summarize Audio.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Upscaling.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Object Detection.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Image Enhance.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Stable Diffusion.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Piano Track.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Segmentation.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Audio To Image.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Style Transfer.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Transcribe Audio.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Movie Posters.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Audio To Spectrogram.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Depth Estimation.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Add Subtitles To Video.jpg",
-  "src/nodetool/assets/nodetool-huggingface/stable_diffusion_xl.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Pokemon Maker.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Controlnet.png",
-  "src/nodetool/assets/nodetool-huggingface/Controlnet.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Image to Image.jpg",
-  "src/nodetool/assets/nodetool-huggingface/Re-Imagine.jpg",
-]
-repository = "https://github.com/nodetool-ai/nodetool-huggingface"
+requires-python = ">=3.11"
 
-[tool.poetry.dependencies]
-python = "^3.11"
-nodetool-core = { git = "https://github.com/nodetool-ai/nodetool-core.git", rev = "main" }
-torch = "2.7.1"
-torchsde = "*"
-torchvision = "*"
-torchaudio = "*"
-hf_xet = "*"
-diffusers = { extras = ["torch"], version = "0.34.0" }
-transformers = "4.53.2"
-paddleocr = "*"
-paddlepaddle = "*"
-quanto = "*"
-bitsandbytes = "*"
-peft = ">=0.15.0"
-sentencepiece = "*"
-sam2 = "*"
+dependencies = [
+    "nodetool-core>=0.6.0,<0.7.0",
+    "torch==2.7.1",
+    "torchsde",
+    "torchvision",
+    "torchaudio",
+    "hf_xet",
+    "diffusers[torch]==0.34.0",
+    "transformers==4.53.2",
+    "paddleocr",
+    "paddlepaddle",
+    "quanto",
+    "bitsandbytes",
+    "peft>=0.15.0",
+    "sentencepiece",
+    "sam2",
+]
+
+
+[project.optional-dependencies]
+# For development with local nodetool-core
+dev = [
+    "nodetool-core @ file:///../nodetool-core",
+]
+# For exact version pinning in production
+stable = [
+    "nodetool-core==0.6.0",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nodetool", "src/RealESRGAN"]
+artifacts = [
+    "src/nodetool/package_metadata/nodetool-huggingface.json",
+    "src/nodetool/assets/nodetool-huggingface/Summarize Audio.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Upscaling.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Object Detection.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Image Enhance.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Stable Diffusion.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Piano Track.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Segmentation.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Audio To Image.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Style Transfer.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Transcribe Audio.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Movie Posters.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Audio To Spectrogram.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Depth Estimation.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Add Subtitles To Video.jpg",
+    "src/nodetool/assets/nodetool-huggingface/stable_diffusion_xl.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Pokemon Maker.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Controlnet.png",
+    "src/nodetool/assets/nodetool-huggingface/Controlnet.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Image to Image.jpg",
+    "src/nodetool/assets/nodetool-huggingface/Re-Imagine.jpg",
+]
