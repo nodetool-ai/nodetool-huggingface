@@ -208,6 +208,48 @@ class OmniGenNode(GraphNode):
         return "huggingface.image_to_image.OmniGen"
 
 
+class QwenImageEdit(GraphNode):
+    """
+    Performs image editing using the Qwen Image Edit model.
+    image, editing, semantic, appearance, qwen, multimodal
+
+    Use cases:
+    - Semantic editing (object rotation, style transfer)
+    - Appearance editing (adding/removing elements)
+    - Precise text modifications in images
+    - Background and clothing changes
+    - Complex image transformations guided by text
+    """
+
+    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The input image to edit",
+    )
+    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="Change the object's color to blue",
+        description="Text description of the desired edit to apply to the image",
+    )
+    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="",
+        description="Text describing what should not appear in the edited image",
+    )
+    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=50, description="Number of denoising steps for the editing process"
+    )
+    true_cfg_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=4.0,
+        description="Guidance scale for editing. Higher values follow the prompt more closely",
+    )
+    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed",
+    )
+
+    @classmethod
+    def get_node_type(cls):
+        return "huggingface.image_to_image.QwenImageEdit"
+
+
 class RealESRGANNode(GraphNode):
     """
     Performs image super-resolution using the RealESRGAN model.
@@ -259,8 +301,8 @@ class StableDiffusionControlNetImg2ImgNode(GraphNode):
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionScheduler
     )
-    StableDiffusionUpscaler: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler
+    StableDiffusionOutputType: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     )
     model: types.HFStableDiffusion | GraphNode | tuple[GraphNode, str] = Field(
         default=types.HFStableDiffusion(
@@ -321,10 +363,6 @@ class StableDiffusionControlNetImg2ImgNode(GraphNode):
         default=3.0,
         description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
-    detail_level: float | GraphNode | tuple[GraphNode, str] = Field(
-        default=0.5,
-        description="Level of detail for the hi-res pass. 0.0 is low detail, 1.0 is high detail.",
-    )
     enable_tiling: bool | GraphNode | tuple[GraphNode, str] = Field(
         default=False,
         description="Enable tiling for the VAE. This can reduce VRAM usage.",
@@ -333,11 +371,11 @@ class StableDiffusionControlNetImg2ImgNode(GraphNode):
         default=False,
         description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
     )
-    upscaler: (
-        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler
+    output_type: (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     ) = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler.NONE,
-        description="The upscaler to use for 2-pass generation.",
+        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType.IMAGE,
+        description="The type of output to generate.",
     )
     image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
@@ -386,8 +424,8 @@ class StableDiffusionControlNetInpaintNode(GraphNode):
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionScheduler
     )
-    StableDiffusionUpscaler: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler
+    StableDiffusionOutputType: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     )
     StableDiffusionControlNetModel: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.image_to_image.StableDiffusionControlNetModel
@@ -451,10 +489,6 @@ class StableDiffusionControlNetInpaintNode(GraphNode):
         default=3.0,
         description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
-    detail_level: float | GraphNode | tuple[GraphNode, str] = Field(
-        default=0.5,
-        description="Level of detail for the hi-res pass. 0.0 is low detail, 1.0 is high detail.",
-    )
     enable_tiling: bool | GraphNode | tuple[GraphNode, str] = Field(
         default=False,
         description="Enable tiling for the VAE. This can reduce VRAM usage.",
@@ -463,11 +497,11 @@ class StableDiffusionControlNetInpaintNode(GraphNode):
         default=False,
         description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
     )
-    upscaler: (
-        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler
+    output_type: (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     ) = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler.NONE,
-        description="The upscaler to use for 2-pass generation.",
+        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType.IMAGE,
+        description="The type of output to generate.",
     )
     controlnet: (
         nodetool.nodes.huggingface.image_to_image.StableDiffusionControlNetModel
@@ -514,8 +548,8 @@ class StableDiffusionControlNetNode(GraphNode):
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionScheduler
     )
-    StableDiffusionUpscaler: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler
+    StableDiffusionOutputType: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     )
     model: types.HFStableDiffusion | GraphNode | tuple[GraphNode, str] = Field(
         default=types.HFStableDiffusion(
@@ -576,10 +610,6 @@ class StableDiffusionControlNetNode(GraphNode):
         default=3.0,
         description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
-    detail_level: float | GraphNode | tuple[GraphNode, str] = Field(
-        default=0.5,
-        description="Level of detail for the hi-res pass. 0.0 is low detail, 1.0 is high detail.",
-    )
     enable_tiling: bool | GraphNode | tuple[GraphNode, str] = Field(
         default=False,
         description="Enable tiling for the VAE. This can reduce VRAM usage.",
@@ -588,11 +618,11 @@ class StableDiffusionControlNetNode(GraphNode):
         default=False,
         description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
     )
-    upscaler: (
-        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler
+    output_type: (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     ) = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler.NONE,
-        description="The upscaler to use for 2-pass generation.",
+        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType.IMAGE,
+        description="The type of output to generate.",
     )
     controlnet: types.HFControlNet | GraphNode | tuple[GraphNode, str] = Field(
         default=types.HFControlNet(
@@ -620,6 +650,7 @@ class StableDiffusionControlNetNode(GraphNode):
 
 import nodetool.nodes.huggingface.stable_diffusion_base
 import nodetool.nodes.huggingface.stable_diffusion_base
+import nodetool.nodes.huggingface.image_to_image
 
 
 class StableDiffusionImg2ImgNode(GraphNode):
@@ -637,8 +668,11 @@ class StableDiffusionImg2ImgNode(GraphNode):
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionScheduler
     )
-    StableDiffusionUpscaler: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler
+    StableDiffusionOutputType: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
+    )
+    ModelVariant: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.image_to_image.ModelVariant
     )
     model: types.HFStableDiffusion | GraphNode | tuple[GraphNode, str] = Field(
         default=types.HFStableDiffusion(
@@ -699,10 +733,6 @@ class StableDiffusionImg2ImgNode(GraphNode):
         default=3.0,
         description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
-    detail_level: float | GraphNode | tuple[GraphNode, str] = Field(
-        default=0.5,
-        description="Level of detail for the hi-res pass. 0.0 is low detail, 1.0 is high detail.",
-    )
     enable_tiling: bool | GraphNode | tuple[GraphNode, str] = Field(
         default=False,
         description="Enable tiling for the VAE. This can reduce VRAM usage.",
@@ -711,11 +741,11 @@ class StableDiffusionImg2ImgNode(GraphNode):
         default=False,
         description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
     )
-    upscaler: (
-        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler
+    output_type: (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     ) = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler.NONE,
-        description="The upscaler to use for 2-pass generation.",
+        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType.IMAGE,
+        description="The type of output to generate.",
     )
     init_image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
@@ -725,6 +755,10 @@ class StableDiffusionImg2ImgNode(GraphNode):
         default=0.8,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
     )
+    variant: nodetool.nodes.huggingface.image_to_image.ModelVariant = Field(
+        default=nodetool.nodes.huggingface.image_to_image.ModelVariant.FP16,
+        description="The variant of the model to use for Image-to-Image generation.",
+    )
 
     @classmethod
     def get_node_type(cls):
@@ -733,6 +767,7 @@ class StableDiffusionImg2ImgNode(GraphNode):
 
 import nodetool.nodes.huggingface.stable_diffusion_base
 import nodetool.nodes.huggingface.stable_diffusion_base
+import nodetool.nodes.huggingface.image_to_image
 
 
 class StableDiffusionInpaintNode(GraphNode):
@@ -749,8 +784,11 @@ class StableDiffusionInpaintNode(GraphNode):
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionScheduler
     )
-    StableDiffusionUpscaler: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler
+    StableDiffusionOutputType: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
+    )
+    ModelVariant: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.image_to_image.ModelVariant
     )
     model: types.HFStableDiffusion | GraphNode | tuple[GraphNode, str] = Field(
         default=types.HFStableDiffusion(
@@ -811,10 +849,6 @@ class StableDiffusionInpaintNode(GraphNode):
         default=3.0,
         description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
-    detail_level: float | GraphNode | tuple[GraphNode, str] = Field(
-        default=0.5,
-        description="Level of detail for the hi-res pass. 0.0 is low detail, 1.0 is high detail.",
-    )
     enable_tiling: bool | GraphNode | tuple[GraphNode, str] = Field(
         default=False,
         description="Enable tiling for the VAE. This can reduce VRAM usage.",
@@ -823,11 +857,11 @@ class StableDiffusionInpaintNode(GraphNode):
         default=False,
         description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
     )
-    upscaler: (
-        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler
+    output_type: (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     ) = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler.NONE,
-        description="The upscaler to use for 2-pass generation.",
+        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType.IMAGE,
+        description="The type of output to generate.",
     )
     init_image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
@@ -841,10 +875,52 @@ class StableDiffusionInpaintNode(GraphNode):
         default=0.8,
         description="Strength for inpainting. Higher values allow for more deviation from the original image.",
     )
+    variant: nodetool.nodes.huggingface.image_to_image.ModelVariant = Field(
+        default=nodetool.nodes.huggingface.image_to_image.ModelVariant.FP16,
+        description="The variant of the model to use for Image-to-Image generation.",
+    )
 
     @classmethod
     def get_node_type(cls):
         return "huggingface.image_to_image.StableDiffusionInpaint"
+
+
+class StableDiffusionLatentUpscaler(GraphNode):
+    """
+    Upscales Stable Diffusion latents (x2) using the SD Latent Upscaler pipeline.
+    tensor, upscaling, stable-diffusion, latent, SD
+
+    Input and output are tensors for chaining with latent-based workflows.
+    """
+
+    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="", description="The prompt for upscaling guidance."
+    )
+    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="",
+        description="The negative prompt to guide what should not appear in the result.",
+    )
+    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=10, description="Number of upscaling denoising steps."
+    )
+    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=0.0,
+        description="Guidance scale for upscaling. 0 preserves content strongly.",
+    )
+    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+    )
+    latents: types.TorchTensor | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.TorchTensor(
+            type="torch_tensor", value=None, dtype="<i8", shape=(1,)
+        ),
+        description="Low-resolution latents tensor to upscale.",
+    )
+
+    @classmethod
+    def get_node_type(cls):
+        return "huggingface.image_to_image.StableDiffusionLatentUpscaler"
 
 
 import nodetool.nodes.huggingface.stable_diffusion_base
@@ -901,6 +977,7 @@ class StableDiffusionUpscale(GraphNode):
 
 
 import nodetool.nodes.huggingface.stable_diffusion_base
+import nodetool.nodes.huggingface.image_to_image
 
 
 class StableDiffusionXLControlNetNode(GraphNode):
@@ -917,6 +994,9 @@ class StableDiffusionXLControlNetNode(GraphNode):
 
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
+    )
+    ModelVariant: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.image_to_image.ModelVariant
     )
     model: types.HFStableDiffusionXL | GraphNode | tuple[GraphNode, str] = Field(
         default=types.HFStableDiffusionXL(
@@ -1000,6 +1080,10 @@ class StableDiffusionXLControlNetNode(GraphNode):
     strength: float | GraphNode | tuple[GraphNode, str] = Field(
         default=0.8,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
+    )
+    variant: nodetool.nodes.huggingface.image_to_image.ModelVariant = Field(
+        default=nodetool.nodes.huggingface.image_to_image.ModelVariant.FP16,
+        description="The variant of the model to use for Image-to-Image generation.",
     )
     controlnet: types.HFControlNet | GraphNode | tuple[GraphNode, str] = Field(
         default=types.HFControlNet(
@@ -1026,6 +1110,7 @@ class StableDiffusionXLControlNetNode(GraphNode):
 
 
 import nodetool.nodes.huggingface.stable_diffusion_base
+import nodetool.nodes.huggingface.image_to_image
 
 
 class StableDiffusionXLImg2Img(GraphNode):
@@ -1042,6 +1127,9 @@ class StableDiffusionXLImg2Img(GraphNode):
 
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
+    )
+    ModelVariant: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.image_to_image.ModelVariant
     )
     model: types.HFStableDiffusionXL | GraphNode | tuple[GraphNode, str] = Field(
         default=types.HFStableDiffusionXL(
@@ -1126,6 +1214,10 @@ class StableDiffusionXLImg2Img(GraphNode):
         default=0.8,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
     )
+    variant: nodetool.nodes.huggingface.image_to_image.ModelVariant = Field(
+        default=nodetool.nodes.huggingface.image_to_image.ModelVariant.FP16,
+        description="The variant of the model to use for Image-to-Image generation.",
+    )
 
     @classmethod
     def get_node_type(cls):
@@ -1133,6 +1225,7 @@ class StableDiffusionXLImg2Img(GraphNode):
 
 
 import nodetool.nodes.huggingface.stable_diffusion_base
+import nodetool.nodes.huggingface.image_to_image
 
 
 class StableDiffusionXLInpainting(GraphNode):
@@ -1148,6 +1241,9 @@ class StableDiffusionXLInpainting(GraphNode):
 
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
+    )
+    ModelVariant: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.image_to_image.ModelVariant
     )
     model: types.HFStableDiffusionXL | GraphNode | tuple[GraphNode, str] = Field(
         default=types.HFStableDiffusionXL(
@@ -1236,6 +1332,10 @@ class StableDiffusionXLInpainting(GraphNode):
         default=0.8,
         description="Strength for inpainting. Higher values allow for more deviation from the original image.",
     )
+    variant: nodetool.nodes.huggingface.image_to_image.ModelVariant = Field(
+        default=nodetool.nodes.huggingface.image_to_image.ModelVariant.FP16,
+        description="The variant of the model to use for Image-to-Image generation.",
+    )
 
     @classmethod
     def get_node_type(cls):
@@ -1276,3 +1376,67 @@ class Swin2SR(GraphNode):
     @classmethod
     def get_node_type(cls):
         return "huggingface.image_to_image.Swin2SR"
+
+
+class VAEDecode(GraphNode):
+    """
+    Decodes latents into an image using a VAE.
+    tensor (TorchTensor) -> image
+    """
+
+    model: types.HFVAE | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.HFVAE(
+            type="hf.vae",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The VAE model to use.",
+    )
+    latents: types.TorchTensor | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.TorchTensor(
+            type="torch_tensor", value=None, dtype="<i8", shape=(1,)
+        ),
+        description="Latent tensor to decode.",
+    )
+    scale_factor: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=0.18215,
+        description="Scaling factor used for encoding (inverse is applied before decode)",
+    )
+
+    @classmethod
+    def get_node_type(cls):
+        return "huggingface.image_to_image.VAEDecode"
+
+
+class VAEEncode(GraphNode):
+    """
+    Encodes an image into latents using a VAE.
+    image -> tensor (TorchTensor)
+    """
+
+    model: types.HFVAE | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.HFVAE(
+            type="hf.vae",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The VAE model to use.",
+    )
+    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="Input image to encode.",
+    )
+    scale_factor: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=0.18215,
+        description="Scaling factor applied to latents (e.g., 0.18215 for SD15)",
+    )
+
+    @classmethod
+    def get_node_type(cls):
+        return "huggingface.image_to_image.VAEEncode"

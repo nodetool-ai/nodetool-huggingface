@@ -51,7 +51,7 @@ class AnimateDiffNode(GraphNode):
 
     @classmethod
     def get_node_type(cls):
-        return "huggingface.video.AnimateDiff"
+        return "huggingface.text_to_video.AnimateDiff"
 
 
 class CogVideoX(GraphNode):
@@ -113,7 +113,7 @@ class CogVideoX(GraphNode):
 
     @classmethod
     def get_node_type(cls):
-        return "huggingface.video.CogVideoX"
+        return "huggingface.text_to_video.CogVideoX"
 
 
 class StableVideoDiffusion(GraphNode):
@@ -149,4 +149,72 @@ class StableVideoDiffusion(GraphNode):
 
     @classmethod
     def get_node_type(cls):
-        return "huggingface.video.StableVideoDiffusion"
+        return "huggingface.text_to_video.StableVideoDiffusion"
+
+
+import nodetool.nodes.huggingface.text_to_video
+
+
+class Wan_T2V(GraphNode):
+    """
+    Generates videos from text prompts using Wan text-to-video pipeline.
+    video, generation, AI, text-to-video, diffusion, Wan
+
+    Use cases:
+    - Create high-quality videos from text descriptions
+    - Efficient 1.3B model for consumer GPUs or 14B for maximum quality
+    """
+
+    WanModel: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.text_to_video.Wan_T2V.WanModel
+    )
+    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="A robot standing on a mountain top at sunset, cinematic lighting, high detail",
+        description="A text prompt describing the desired video.",
+    )
+    model_variant: nodetool.nodes.huggingface.text_to_video.Wan_T2V.WanModel = Field(
+        default=nodetool.nodes.huggingface.text_to_video.Wan_T2V.WanModel.WAN_2_2_T2V_A14B,
+        description="Select the Wan model to use.",
+    )
+    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="", description="A text prompt describing what to avoid in the video."
+    )
+    num_frames: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=49, description="The number of frames in the video."
+    )
+    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=5.0, description="The scale for classifier-free guidance."
+    )
+    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=30, description="The number of denoising steps."
+    )
+    height: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=480, description="The height of the generated video in pixels."
+    )
+    width: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=720, description="The width of the generated video in pixels."
+    )
+    fps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=16, description="Frames per second for the output video."
+    )
+    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+    )
+    max_sequence_length: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=512, description="Maximum sequence length in encoded prompt."
+    )
+    enable_cpu_offload: bool | GraphNode | tuple[GraphNode, str] = Field(
+        default=True, description="Enable CPU offload to reduce VRAM usage."
+    )
+    enable_vae_slicing: bool | GraphNode | tuple[GraphNode, str] = Field(
+        default=True, description="Enable VAE slicing to reduce VRAM usage."
+    )
+    enable_vae_tiling: bool | GraphNode | tuple[GraphNode, str] = Field(
+        default=False,
+        description="Enable VAE tiling to reduce VRAM usage for large videos.",
+    )
+
+    @classmethod
+    def get_node_type(cls):
+        return "huggingface.text_to_video.Wan_T2V"

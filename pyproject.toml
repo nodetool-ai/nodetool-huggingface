@@ -17,13 +17,13 @@ dependencies = [
     "torchvision",
     "torchaudio",
     "hf_xet",
-    "diffusers[torch]==0.34.0",
+    "diffusers[torch]>=0.36.0",
     "transformers==4.53.2",
     "paddleocr",
     "paddlepaddle",
     "quanto",
     "bitsandbytes",
-    "peft>=0.15.0",
+    "peft>=0.17.0",
     "sentencepiece",
     "sam2",
 ]
@@ -56,3 +56,9 @@ artifacts = [
     "src/nodetool/assets/nodetool-huggingface/Image to Image.jpg",
     "src/nodetool/assets/nodetool-huggingface/Re-Imagine.jpg",
 ]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+nodetool = ["package_metadata/nodetool-huggingface.json", "assets/nodetool-huggingface/Image to Image.jpg", "assets/nodetool-huggingface/Stable Diffusion.jpg", "assets/nodetool-huggingface/Image Enhance.jpg", "assets/nodetool-huggingface/Segmentation.jpg", "assets/nodetool-huggingface/Pokemon Maker.jpg", "assets/nodetool-huggingface/stable_diffusion_xl.jpg", "assets/nodetool-huggingface/Audio To Image.jpg", "assets/nodetool-huggingface/Re-Imagine.jpg", "assets/nodetool-huggingface/Audio To Spectrogram.jpg", "assets/nodetool-huggingface/Object Detection.jpg", "assets/nodetool-huggingface/Add Subtitles To Video.jpg", "assets/nodetool-huggingface/Upscaling.jpg", "assets/nodetool-huggingface/Depth Estimation.jpg", "assets/nodetool-huggingface/Movie Posters.jpg", "assets/nodetool-huggingface/Piano Track.jpg", "assets/nodetool-huggingface/Controlnet.jpg", "assets/nodetool-huggingface/Summarize Audio.jpg", "assets/nodetool-huggingface/Transcribe Audio.jpg", "assets/nodetool-huggingface/Style Transfer.jpg"]

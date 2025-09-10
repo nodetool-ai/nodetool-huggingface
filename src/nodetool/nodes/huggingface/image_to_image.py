@@ -32,6 +32,7 @@ from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
 from diffusers.pipelines.auto_pipeline import AutoPipelineForInpainting
 from diffusers.models.controlnets.controlnet import ControlNetModel
+from diffusers import QwenImageEditPipeline
 from diffusers.pipelines.pag.pipeline_pag_controlnet_sd import (
     StableDiffusionControlNetPAGPipeline,
 )
@@ -1738,4 +1739,121 @@ class OmniGenNode(HuggingFacePipelineNode):
         output = self._pipeline(**kwargs)  # type: ignore
         image = output.images[0]
 
+        return await context.image_from_pil(image)
+
+
+class QwenImageEdit(HuggingFacePipelineNode):
+    """
+    Performs image editing using the Qwen Image Edit model.
+    image, editing, semantic, appearance, qwen, multimodal
+    
+    Use cases:
+    - Semantic editing (object rotation, style transfer)
+    - Appearance editing (adding/removing elements) 
+    - Precise text modifications in images
+    - Background and clothing changes
+    - Complex image transformations guided by text
+    """
+    
+    image: ImageRef = Field(
+        default=ImageRef(),
+        title="Input Image",
+        description="The input image to edit"
+    )
+    prompt: str = Field(
+        default="Change the object's color to blue",
+        description="Text description of the desired edit to apply to the image"
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Text describing what should not appear in the edited image"
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        description="Number of denoising steps for the editing process",
+        ge=1,
+        le=100
+    )
+    true_cfg_scale: float = Field(
+        default=4.0,
+        description="Guidance scale for editing. Higher values follow the prompt more closely",
+        ge=1.0,
+        le=20.0
+    )
+    seed: int = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed",
+        ge=-1
+    )
+    
+    _pipeline: QwenImageEditPipeline | None = None
+    
+    @classmethod
+    def get_basic_fields(cls):
+        return ["image", "prompt", "negative_prompt", "true_cfg_scale"]
+    
+    def required_inputs(self):
+        return ["image"]
+    
+    @classmethod
+    def get_title(cls) -> str:
+        return "Qwen Image Edit"
+    
+    def get_model_id(self) -> str:
+        return "Qwen/Qwen-Image-Edit"
+    
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HuggingFaceModel(
+                repo_id="Qwen/Qwen-Image-Edit",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"]
+            )
+        ]
+    
+    async def preload_model(self, context: ProcessingContext):
+        self._pipeline = await self.load_model(
+            context=context,
+            model_id="Qwen/Qwen-Image-Edit",
+            model_class=QwenImageEditPipeline,
+            torch_dtype=torch.bfloat16,
+            variant=None
+        )
+    
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None:
+            self._pipeline.to(device)
+    
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+        
+        # Set up the generator for reproducibility
+        generator = torch.Generator(device="cpu")
+        if self.seed != -1:
+            generator = generator.manual_seed(self.seed)
+        
+        input_image = await context.image_to_pil(self.image)
+        
+        # Prepare kwargs for the pipeline
+        kwargs = {
+            "image": input_image,
+            "prompt": self.prompt,
+            "generator": generator,
+            "true_cfg_scale": self.true_cfg_scale,
+            "num_inference_steps": self.num_inference_steps,
+            "callback_on_step_end": pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            )
+        }
+        
+        # Add negative prompt if provided
+        if self.negative_prompt:
+            kwargs["negative_prompt"] = self.negative_prompt
+        else:
+            kwargs["negative_prompt"] = " "  # Default as shown in Qwen example
+        
+        output = self._pipeline(**kwargs)  # type: ignore
+        image = output.images[0]
+        
         return await context.image_from_pil(image)

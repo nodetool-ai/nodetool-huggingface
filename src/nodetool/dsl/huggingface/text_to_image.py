@@ -413,6 +413,46 @@ class QuantoFlux(GraphNode):
         return "huggingface.text_to_image.QuantoFlux"
 
 
+class QwenImage(GraphNode):
+    """
+    Generates images from text prompts using Qwen-Image via AutoPipelineForText2Image.
+    image, generation, AI, text-to-image, qwen
+
+    Use cases:
+    - High-quality, general-purpose text-to-image generation
+    - Quick prototyping leveraging AutoPipeline
+    - Works out-of-the-box with the official Qwen model
+    """
+
+    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="A cat holding a sign that says hello world",
+        description="A text prompt describing the desired image.",
+    )
+    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+        default="", description="A text prompt describing what to avoid in the image."
+    )
+    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+        default=3.5, description="The scale for classifier-free guidance."
+    )
+    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=20, description="The number of denoising steps."
+    )
+    height: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=1024, description="The height of the generated image."
+    )
+    width: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=1024, description="The width of the generated image."
+    )
+    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+    )
+
+    @classmethod
+    def get_node_type(cls):
+        return "huggingface.text_to_image.QwenImage"
+
+
 import nodetool.nodes.huggingface.stable_diffusion_base
 import nodetool.nodes.huggingface.stable_diffusion_base
 
@@ -432,8 +472,8 @@ class StableDiffusion(GraphNode):
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionScheduler
     )
-    StableDiffusionUpscaler: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler
+    StableDiffusionOutputType: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     )
     model: types.HFStableDiffusion | GraphNode | tuple[GraphNode, str] = Field(
         default=types.HFStableDiffusion(
@@ -494,10 +534,6 @@ class StableDiffusion(GraphNode):
         default=3.0,
         description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
-    detail_level: float | GraphNode | tuple[GraphNode, str] = Field(
-        default=0.5,
-        description="Level of detail for the hi-res pass. 0.0 is low detail, 1.0 is high detail.",
-    )
     enable_tiling: bool | GraphNode | tuple[GraphNode, str] = Field(
         default=False,
         description="Enable tiling for the VAE. This can reduce VRAM usage.",
@@ -506,11 +542,11 @@ class StableDiffusion(GraphNode):
         default=False,
         description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
     )
-    upscaler: (
-        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler
+    output_type: (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     ) = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionUpscaler.NONE,
-        description="The upscaler to use for 2-pass generation.",
+        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType.IMAGE,
+        description="The type of output to generate.",
     )
     width: int | GraphNode | tuple[GraphNode, str] = Field(
         default=512, description="Width of the generated image."

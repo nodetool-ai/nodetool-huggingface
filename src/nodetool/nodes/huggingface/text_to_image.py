@@ -1414,6 +1414,121 @@ class Chroma(HuggingFacePipelineNode):
 
         return await context.image_from_pil(image)
 
+
+class QwenImage(HuggingFacePipelineNode):
+    """
+    Generates images from text prompts using Qwen-Image via AutoPipelineForText2Image.
+    image, generation, AI, text-to-image, qwen
+
+    Use cases:
+    - High-quality, general-purpose text-to-image generation
+    - Quick prototyping leveraging AutoPipeline
+    - Works out-of-the-box with the official Qwen model
+    """
+
+    prompt: str = Field(
+        default="A cat holding a sign that says hello world",
+        description="A text prompt describing the desired image.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="A text prompt describing what to avoid in the image.",
+    )
+    guidance_scale: float = Field(
+        default=3.5,
+        description="The scale for classifier-free guidance.",
+        ge=0.0,
+        le=30.0,
+    )
+    num_inference_steps: int = Field(
+        default=20,
+        description="The number of denoising steps.",
+        ge=1,
+        le=100,
+    )
+    height: int = Field(
+        default=1024,
+        description="The height of the generated image.",
+        ge=256,
+        le=2048,
+    )
+    width: int = Field(
+        default=1024,
+        description="The width of the generated image.",
+        ge=256,
+        le=2048,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+        ge=-1,
+    )
+
+    _pipeline: AutoPipelineForText2Image | None = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HuggingFaceModel(
+                repo_id="Qwen/Qwen-Image",
+                allow_patterns=[
+                    "**/*.safetensors",
+                    "**/*.json",
+                    "**/*.txt",
+                    "*.json",
+                ],
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Qwen-Image"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["prompt", "negative_prompt", "height", "width", "num_inference_steps"]
+
+    def get_model_id(self) -> str:
+        return "Qwen/Qwen-Image"
+
+    async def preload_model(self, context: ProcessingContext):
+        # Qwen-Image commonly uses bfloat16; fall back is handled by torch.
+        self._pipeline = await self.load_model(
+            context=context,
+            model_id=self.get_model_id(),
+            model_class=AutoPipelineForText2Image,
+            torch_dtype=torch.bfloat16,
+        )
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None:
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        # Set up the generator for reproducibility
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        # Generate the image
+        output = self._pipeline(
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt,
+            guidance_scale=self.guidance_scale,
+            num_inference_steps=self.num_inference_steps,
+            height=self.height,
+            width=self.width,
+            generator=generator,
+            callback_on_step_end=pipeline_progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
+            callback_on_step_end_tensor_inputs=["latents"],
+        )  # type: ignore
+
+        image = output.images[0]  # type: ignore
+
+        return await context.image_from_pil(image)
     def required_inputs(self):
         """Return list of required inputs that must be connected."""
         return []  # No required inputs - IP adapter image is optional
