@@ -17,8 +17,12 @@ dependencies = [
     "torchvision",
     "torchaudio",
     "hf_xet",
-    "diffusers[torch]>=0.36.0",
-    "transformers==4.53.2",
+    # Use dev branches to keep logging API compatible across packages
+    "diffusers[torch] @ git+https://github.com/huggingface/diffusers.git@main",
+    "transformers @ git+https://github.com/huggingface/transformers.git@main",
+    "huggingface_hub>=0.25.2",
+    "accelerate>=0.34.0",
+    "safetensors>=0.4.2",
     "paddleocr",
     "paddlepaddle",
     "quanto",
@@ -30,6 +34,7 @@ dependencies = [
 
 
 [tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nodetool", "src/RealESRGAN"]
@@ -61,4 +66,25 @@ artifacts = [
 include-package-data = true
 
 [tool.setuptools.package-data]
-nodetool = ["package_metadata/nodetool-huggingface.json", "assets/nodetool-huggingface/Image to Image.jpg", "assets/nodetool-huggingface/Stable Diffusion.jpg", "assets/nodetool-huggingface/Image Enhance.jpg", "assets/nodetool-huggingface/Segmentation.jpg", "assets/nodetool-huggingface/Pokemon Maker.jpg", "assets/nodetool-huggingface/stable_diffusion_xl.jpg", "assets/nodetool-huggingface/Audio To Image.jpg", "assets/nodetool-huggingface/Re-Imagine.jpg", "assets/nodetool-huggingface/Audio To Spectrogram.jpg", "assets/nodetool-huggingface/Object Detection.jpg", "assets/nodetool-huggingface/Add Subtitles To Video.jpg", "assets/nodetool-huggingface/Upscaling.jpg", "assets/nodetool-huggingface/Depth Estimation.jpg", "assets/nodetool-huggingface/Movie Posters.jpg", "assets/nodetool-huggingface/Piano Track.jpg", "assets/nodetool-huggingface/Controlnet.jpg", "assets/nodetool-huggingface/Summarize Audio.jpg", "assets/nodetool-huggingface/Transcribe Audio.jpg", "assets/nodetool-huggingface/Style Transfer.jpg"]
+nodetool = [
+    "package_metadata/nodetool-huggingface.json",
+    "assets/nodetool-huggingface/Image to Image.jpg",
+    "assets/nodetool-huggingface/Stable Diffusion.jpg",
+    "assets/nodetool-huggingface/Image Enhance.jpg",
+    "assets/nodetool-huggingface/Segmentation.jpg",
+    "assets/nodetool-huggingface/Pokemon Maker.jpg",
+    "assets/nodetool-huggingface/stable_diffusion_xl.jpg",
+    "assets/nodetool-huggingface/Audio To Image.jpg",
+    "assets/nodetool-huggingface/Re-Imagine.jpg",
+    "assets/nodetool-huggingface/Audio To Spectrogram.jpg",
+    "assets/nodetool-huggingface/Object Detection.jpg",
+    "assets/nodetool-huggingface/Add Subtitles To Video.jpg",
+    "assets/nodetool-huggingface/Upscaling.jpg",
+    "assets/nodetool-huggingface/Depth Estimation.jpg",
+    "assets/nodetool-huggingface/Movie Posters.jpg",
+    "assets/nodetool-huggingface/Piano Track.jpg",
+    "assets/nodetool-huggingface/Controlnet.jpg",
+    "assets/nodetool-huggingface/Summarize Audio.jpg",
+    "assets/nodetool-huggingface/Transcribe Audio.jpg",
+    "assets/nodetool-huggingface/Style Transfer.jpg",
+]
