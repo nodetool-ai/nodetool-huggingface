@@ -606,6 +606,13 @@ class StableDiffusionControlNetNode(StableDiffusionBaseNode):
     def get_title(cls):
         return "Stable Diffusion ControlNet"
 
+    @classmethod
+    def return_type(cls):
+        return {
+            "image": ImageRef,
+            "latent": TorchTensor,
+        }
+
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
             self._pipeline.controlnet.to(device)
@@ -687,6 +694,13 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
     @classmethod
     def get_title(cls):
         return "Stable Diffusion (Img2Img)"
+
+    @classmethod
+    def return_type(cls):
+        return {
+            "image": ImageRef,
+            "latent": TorchTensor,
+        }
 
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
@@ -770,6 +784,13 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
     def get_title(cls):
         return "Stable Diffusion ControlNet Inpaint"
 
+    @classmethod
+    def return_type(cls):
+        return {
+            "image": ImageRef,
+            "latent": TorchTensor,
+        }
+
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
         # Use float32 for MPS compatibility with controlnet models
@@ -852,6 +873,13 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
     def get_title(cls):
         return "Stable Diffusion (Inpaint)"
 
+    @classmethod
+    def return_type(cls):
+        return {
+            "image": ImageRef,
+            "latent": TorchTensor,
+        }
+
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
         if self._pipeline is None:
@@ -933,6 +961,13 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
     @classmethod
     def get_title(cls):
         return "Stable Diffusion ControlNet (Img2Img)"
+
+    @classmethod
+    def return_type(cls):
+        return {
+            "image": ImageRef,
+            "latent": TorchTensor,
+        }
 
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)

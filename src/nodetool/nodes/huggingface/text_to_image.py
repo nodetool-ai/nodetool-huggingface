@@ -1529,6 +1529,7 @@ class QwenImage(HuggingFacePipelineNode):
         image = output.images[0]  # type: ignore
 
         return await context.image_from_pil(image)
+
     def required_inputs(self):
         """Return list of required inputs that must be connected."""
         return []  # No required inputs - IP adapter image is optional

@@ -595,6 +595,11 @@ class Wan_T2V(HuggingFacePipelineNode):
             model_id=self.get_model_id(),
             subfolder="vae",
             torch_dtype=torch.float32,
+            # Some Wan releases have VAE weight shapes that differ from the
+            # default config; allow loading by ignoring mismatches as suggested
+            # by diffusers docs/errors.
+            low_cpu_mem_usage=False,
+            ignore_mismatched_sizes=True,
         )
         self._pipeline = await self.load_model(
             context=context,
