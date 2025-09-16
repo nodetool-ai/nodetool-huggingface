@@ -117,6 +117,10 @@ jobs:
         with:
           ref: ${{ needs.validate.outputs.tag-name }}
 
+      - name: Download build helper
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/nodetool-ai/nodetool-core/main/build.py -o build.py
+
       - name: Download wheel artifact
         uses: actions/download-artifact@v4
         with:
