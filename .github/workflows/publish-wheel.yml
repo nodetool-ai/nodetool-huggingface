@@ -75,7 +75,6 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install build hatchling twine
-          pip install -e nodetool-core --extra-index-url https://nodetool-ai.github.io/nodetool-registry/simple/
 
       - name: Download build helper
         run: |
