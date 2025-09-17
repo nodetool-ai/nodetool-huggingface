@@ -1,11 +1,13 @@
 from enum import Enum
+from typing import Any
 from nodetool.config.environment import Environment
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
     HFTextToImage,
     HFImageToImage,
     HFLoraSD,
-    HuggingFaceModel,
+    HFFlux,
+    HFQwenImage,
     ImageRef,
     TorchTensor,
 )
@@ -16,23 +18,24 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
     StableDiffusionXLBase,
 )
 from nodetool.workflows.processing_context import ProcessingContext
-from nodetool.workflows.types import NodeProgress, NodeUpdate
+from nodetool.workflows.types import NodeProgress, Notification, LogUpdate
 
 import torch
+import logging
+from transformers.utils import logging as hf_logging
+from diffusers.utils import logging as diffusers_logging
 from diffusers.pipelines.pag.pipeline_pag_sd import StableDiffusionPAGPipeline
 from diffusers.pipelines.pag.pipeline_pag_sd_xl import StableDiffusionXLPAGPipeline
 from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
 from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
-from diffusers.pipelines.hunyuandit.pipeline_hunyuandit import HunyuanDiTPipeline
-from diffusers.pipelines.lumina.pipeline_lumina import LuminaPipeline
 from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
+from diffusers import DiffusionPipeline
 from diffusers.schedulers.scheduling_dpmsolver_multistep import (
     DPMSolverMultistepScheduler,
 )
-from transformers import T5EncoderModel
-from transformers.utils.quantization_config import BitsAndBytesConfig
+from diffusers import GGUFQuantizationConfig
 from pydantic import Field
 from nodetool.workflows.base_node import BaseNode
 
@@ -116,9 +119,6 @@ class StableDiffusionXL(StableDiffusionXLBase):
 
     _pipeline: StableDiffusionXLPAGPipeline | None = None
 
-    @classmethod
-    def get_basic_fields(cls):
-        return super().get_basic_fields() + ["width", "height"]
 
     @classmethod
     def get_title(cls):
@@ -180,6 +180,12 @@ class LoadTextToImageModel(HuggingFacePipelineNode):
                 self.variant.value if self.variant != ModelVariant.DEFAULT else None
             ),
         )
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return [
+            "repo_id",
+        ]
 
     async def process(self, context: ProcessingContext) -> HFTextToImage:
         return HFTextToImage(
@@ -306,6 +312,16 @@ class Text2Image(HuggingFacePipelineNode):
 
         return await context.image_from_pil(image)
 
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return [
+            "model",
+            "prompt",
+            "height",
+            "width",
+            "seed",
+        ]
+
 
 class FluxVariant(Enum):
     SCHNELL = "schnell"
@@ -315,52 +331,42 @@ class FluxVariant(Enum):
     DEPTH_DEV = "depth-dev"
 
 
-class QuantizationMethod(Enum):
-    NONE = "none"
-    BITSANDBYTES_8BIT = "bitsandbytes-8bit"
-    BITSANDBYTES_4BIT = "bitsandbytes-4bit"
-
-
-class FluxText2Image(HuggingFacePipelineNode):
+class Flux(HuggingFacePipelineNode):
     """
-    Generates images using FLUX models with quantization support for memory efficiency.
+    Generates images using FLUX models with support for GGUF quantization for memory efficiency.
     image, generation, AI, text-to-image, flux, quantization
 
     Use cases:
     - High-quality image generation with FLUX models
-    - Memory-efficient generation using quantization
+    - Memory-efficient generation using GGUF quantization
     - Fast generation with FLUX.1-schnell
     - High-fidelity generation with FLUX.1-dev
     - Controlled generation with Fill, Canny, or Depth variants
     """
 
-    variant: FluxVariant = Field(
-        default=FluxVariant.SCHNELL,
-        description="The FLUX model variant to use.",
-    )
-    quantization: QuantizationMethod = Field(
-        default=QuantizationMethod.NONE,
-        description="Quantization method to reduce memory usage.",
+    model: HFFlux = Field(
+        default=HFFlux(),
+        description="The FLUX model to use for text-to-image generation.",
     )
     prompt: str = Field(
         default="A cat holding a sign that says hello world",
         description="A text prompt describing the desired image.",
     )
     guidance_scale: float = Field(
-        default=0.0,
+        default=3.5,
         description="The scale for classifier-free guidance. Use 0.0 for schnell, 3.5 for dev.",
         ge=0.0,
         le=30.0,
     )
     width: int = Field(
-        default=1360, description="The width of the generated image.", ge=64, le=2048
+        default=1024, description="The width of the generated image.", ge=64, le=2048
     )
     height: int = Field(
-        default=768, description="The height of the generated image.", ge=64, le=2048
+        default=1024, description="The height of the generated image.", ge=64, le=2048
     )
     num_inference_steps: int = Field(
-        default=4,
-        description="The number of denoising steps. Use 4 for schnell, 50 for dev.",
+        default=20,
+        description="The number of denoising steps. Use 4 for schnell, 20-50 for dev.",
         ge=1,
         le=100,
     )
@@ -395,9 +401,9 @@ class FluxText2Image(HuggingFacePipelineNode):
     _pipeline: FluxPipeline | None = None
 
     @classmethod
-    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+    def get_recommended_models(cls) -> list[HFFlux]:
         return [
-            HuggingFaceModel(
+            HFFlux(
                 repo_id="black-forest-labs/FLUX.1-schnell",
                 allow_patterns=[
                     "**/*.safetensors",
@@ -406,7 +412,7 @@ class FluxText2Image(HuggingFacePipelineNode):
                     "*.json",
                 ],
             ),
-            HuggingFaceModel(
+            HFFlux(
                 repo_id="black-forest-labs/FLUX.1-dev",
                 allow_patterns=[
                     "**/*.safetensors",
@@ -415,7 +421,7 @@ class FluxText2Image(HuggingFacePipelineNode):
                     "*.json",
                 ],
             ),
-            HuggingFaceModel(
+            HFFlux(
                 repo_id="black-forest-labs/FLUX.1-Fill-dev",
                 allow_patterns=[
                     "**/*.safetensors",
@@ -424,7 +430,7 @@ class FluxText2Image(HuggingFacePipelineNode):
                     "*.json",
                 ],
             ),
-            HuggingFaceModel(
+            HFFlux(
                 repo_id="black-forest-labs/FLUX.1-Canny-dev",
                 allow_patterns=[
                     "**/*.safetensors",
@@ -433,7 +439,7 @@ class FluxText2Image(HuggingFacePipelineNode):
                     "*.json",
                 ],
             ),
-            HuggingFaceModel(
+            HFFlux(
                 repo_id="black-forest-labs/FLUX.1-Depth-dev",
                 allow_patterns=[
                     "**/*.safetensors",
@@ -442,13 +448,61 @@ class FluxText2Image(HuggingFacePipelineNode):
                     "*.json",
                 ],
             ),
+            # GGUF quantized models
+            HFFlux(
+                repo_id="city96/FLUX.1-dev-gguf",
+                path="flux1-dev-Q2_K.gguf",
+            ),
+            HFFlux(
+                repo_id="city96/FLUX.1-dev-gguf",
+                path="flux1-dev-Q3_K_S.gguf",
+            ),
+            HFFlux(
+                repo_id="city96/FLUX.1-dev-gguf",
+                path="flux1-dev-Q4_K_S.gguf",
+            ),
+            HFFlux(
+                repo_id="city96/FLUX.1-dev-gguf",
+                path="flux1-dev-Q5_K_S.gguf",
+            ),
+            # FLUX.1-schnell GGUF models
+            HFFlux(
+                repo_id="city96/FLUX.1-schnell-gguf",
+                path="flux1-schnell-Q2_K.gguf",
+            ),
+            HFFlux(
+                repo_id="city96/FLUX.1-schnell-gguf",
+                path="flux1-schnell-Q3_K_S.gguf",
+            ),
+            HFFlux(
+                repo_id="city96/FLUX.1-schnell-gguf",
+                path="flux1-schnell-Q4_K_S.gguf",
+            ),
+            HFFlux(
+                repo_id="city96/FLUX.1-schnell-gguf",
+                path="flux1-schnell-Q5_K_S.gguf",
+            ),
         ]
 
     @classmethod
     def get_title(cls) -> str:
-        return "FLUX Text2Image"
+        return "Flux"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return [
+            "model",
+            "prompt",
+            "height",
+            "width",
+            "seed",
+        ]
 
     def get_model_id(self) -> str:
+        if self.model.repo_id:
+            return self.model.repo_id
+        # Fallback to detected variant
+        detected_variant = self._detect_variant_from_repo_id()
         model_mapping = {
             FluxVariant.SCHNELL: "black-forest-labs/FLUX.1-schnell",
             FluxVariant.DEV: "black-forest-labs/FLUX.1-dev",
@@ -456,123 +510,153 @@ class FluxText2Image(HuggingFacePipelineNode):
             FluxVariant.CANNY_DEV: "black-forest-labs/FLUX.1-Canny-dev",
             FluxVariant.DEPTH_DEV: "black-forest-labs/FLUX.1-Depth-dev",
         }
-        return model_mapping[self.variant]
+        return model_mapping[detected_variant]
 
-    def _get_text_encoder_quantization_config(self):
-        """Get quantization config for text encoder (uses transformers BitsAndBytesConfig)."""
-        if self.quantization == QuantizationMethod.BITSANDBYTES_8BIT:
-            try:
-                return BitsAndBytesConfig(load_in_8bit=True)
-            except ImportError:
-                raise ImportError(
-                    "bitsandbytes is required for quantization. Install with: pip install bitsandbytes"
-                )
+    def _detect_variant_from_repo_id(self) -> FluxVariant:
+        """Detect FLUX variant from the selected repo_id or path."""
+        # Check repo_id first
+        if self.model.repo_id:
+            repo_id_lower = self.model.repo_id.lower()
+            if "schnell" in repo_id_lower:
+                return FluxVariant.SCHNELL
+            elif "fill" in repo_id_lower:
+                return FluxVariant.FILL_DEV
+            elif "canny" in repo_id_lower:
+                return FluxVariant.CANNY_DEV
+            elif "depth" in repo_id_lower:
+                return FluxVariant.DEPTH_DEV
+            elif "dev" in repo_id_lower:
+                return FluxVariant.DEV
+        
+        # Check path for GGUF models
+        if self.model.path:
+            path_lower = self.model.path.lower()
+            if "schnell" in path_lower:
+                return FluxVariant.SCHNELL
+            elif "dev" in path_lower:
+                return FluxVariant.DEV
+        
+        # Default fallback
+        return FluxVariant.DEV
 
-        elif self.quantization == QuantizationMethod.BITSANDBYTES_4BIT:
-            try:
-                return BitsAndBytesConfig(load_in_4bit=True)
-            except ImportError:
-                raise ImportError(
-                    "bitsandbytes is required for quantization. Install with: pip install bitsandbytes"
-                )
 
-        return None
+    def _detect_gguf_quantization_type(self) -> str | None:
+        """Detect GGUF quantization type from model path."""
+        if not self.model.path:
+            return None
+        
+        # Extract quantization type from filename patterns like "flux1-dev-Q2_K.gguf"
+        import re
+        pattern = r'-(Q\d+_[A-Z]+|Q\d+)\.gguf$'
+        match = re.search(pattern, self.model.path, re.IGNORECASE)
+        return match.group(1) if match else None
 
-    def _get_transformer_quantization_config(self):
-        """Get quantization config for transformer (uses diffusers quantization)."""
-        if self.quantization == QuantizationMethod.BITSANDBYTES_8BIT:
-            try:
-                # For diffusers transformer, we'll use the same config but it may need to be handled differently
-                return BitsAndBytesConfig(load_in_8bit=True)
-            except ImportError:
-                raise ImportError(
-                    "bitsandbytes is required for quantization. Install with: pip install bitsandbytes"
-                )
-
-        elif self.quantization == QuantizationMethod.BITSANDBYTES_4BIT:
-            try:
-                return BitsAndBytesConfig(load_in_4bit=True)
-            except ImportError:
-                raise ImportError(
-                    "bitsandbytes is required for quantization. Install with: pip install bitsandbytes"
-                )
-
-        return None
+    def _is_gguf_model(self) -> bool:
+        """Check if the model is a GGUF model based on file extension."""
+        return self.model.path and self.model.path.lower().endswith('.gguf')
 
     async def preload_model(self, context: ProcessingContext):
         # Determine torch dtype based on variant
+        # Auto-detect variant from model selection
+        detected_variant = self._detect_variant_from_repo_id()
+        
         torch_dtype = (
             torch.bfloat16
-            if self.variant in [FluxVariant.SCHNELL, FluxVariant.DEV]
+            if detected_variant in [FluxVariant.SCHNELL, FluxVariant.DEV]
             else torch.float16
         )
 
-        # Load components separately if quantization is enabled
-        if self.quantization != QuantizationMethod.NONE:
-            await self._load_quantized_components(context, torch_dtype)
+        # Check if this is a GGUF model based on file extension
+        if self._is_gguf_model():
+            await self._load_gguf_model(context, torch_dtype)
         else:
             # Load the full pipeline normally
+            log.info(f"Loading FLUX pipeline from {self.get_model_id()}...")
             self._pipeline = await self.load_model(
                 context=context,
                 model_id=self.get_model_id(),
+                path=self.model.path,
                 model_class=FluxPipeline,
                 torch_dtype=torch_dtype,
                 variant=None,
                 device="cpu",
             )
 
-    async def _load_quantized_components(self, context: ProcessingContext, torch_dtype):
-        """Load text encoder and transformer separately with quantization."""
-        model_id = self.get_model_id()
+        # Apply CPU offload if enabled
+        if self._pipeline is not None and self.enable_cpu_offload:
+            self._pipeline.enable_sequential_cpu_offload()
 
-        # Load text encoder with quantization
-        text_encoder_quant_config = self._get_text_encoder_quantization_config()
-        text_encoder = None
-        if text_encoder_quant_config:
-            text_encoder = T5EncoderModel.from_pretrained(
-                model_id,
-                subfolder="text_encoder_2",
-                quantization_config=text_encoder_quant_config,
-                torch_dtype=torch_dtype,
-            )
 
-        # Load transformer with quantization
-        transformer_quant_config = self._get_transformer_quantization_config()
-        transformer = None
-        if transformer_quant_config:
-            transformer = FluxTransformer2DModel.from_pretrained(
-                model_id,
-                subfolder="transformer",
-                quantization_config=transformer_quant_config,
-                torch_dtype=torch_dtype,
-            )
+    async def _load_gguf_model(self, context: ProcessingContext, torch_dtype):
+        """Load FLUX model with GGUF quantization."""
+        from huggingface_hub.file_download import try_to_load_from_cache
+        
+        quantization_type = self._detect_gguf_quantization_type()
+        
+        if quantization_type:
+            log.info(f"Loading FLUX transformer with GGUF {quantization_type} quantization...")
+        else:
+            log.info("Loading GGUF model (quantization type not detected from filename)...")
 
-        # Load the full pipeline with quantized components
+        # Get the cached file path
+        cache_path = try_to_load_from_cache(self.get_model_id(), self.model.path)
+        if not cache_path:
+            raise ValueError(f"Model {self.get_model_id()}/{self.model.path} must be downloaded first")
+
+        # Load the transformer with GGUF quantization
+        transformer = FluxTransformer2DModel.from_single_file(
+            cache_path,
+            quantization_config=GGUFQuantizationConfig(compute_dtype=torch_dtype),
+            torch_dtype=torch_dtype,
+        )
+
+        # Create the pipeline with the quantized transformer
+        log.info("Creating FLUX pipeline...")
+        
+        # For GGUF models, always use the standard repos for the pipeline
+        # Detect schnell vs dev model from the filename
+        if "schnell" in self.model.path.lower():
+            base_model_id = "black-forest-labs/FLUX.1-schnell"
+        else:
+            base_model_id = "black-forest-labs/FLUX.1-dev"
+            
+        log.info(f"Loading FLUX pipeline from {base_model_id} with quantized transformer...")
         self._pipeline = FluxPipeline.from_pretrained(
-            model_id,
-            text_encoder_2=text_encoder,
+            base_model_id,
             transformer=transformer,
             torch_dtype=torch_dtype,
-            device_map="balanced",
-        )  # type: ignore
+        )
+
+        # Apply CPU offload if enabled
+        if self.enable_cpu_offload:
+            self._pipeline.enable_sequential_cpu_offload()
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
-            if not self.enable_cpu_offload:
+            # If CPU offload is enabled, we need to handle device movement differently
+            if self.enable_cpu_offload:
+                # With CPU offload, components are automatically managed
+                # When moving to CPU, we should disable CPU offload and move everything to CPU
+                if device == "cpu":
+                    # Disable CPU offload and move all components to CPU
+                    self._pipeline.to(device)
+                # When moving to GPU with CPU offload, re-enable CPU offload
+                elif device in ["cuda", "mps"]:
+                    self._pipeline.enable_sequential_cpu_offload()
+            else:
+                # Normal device movement without CPU offload
                 self._pipeline.to(device)
 
-            # Apply memory optimization settings
-            if self.enable_cpu_offload:
-                self._pipeline.enable_sequential_cpu_offload()
+            # Apply memory optimizations only when on GPU
+            if device != "cpu":
+                if self.enable_vae_slicing:
+                    self._pipeline.vae.enable_slicing()
 
-            if self.enable_vae_slicing:
-                self._pipeline.vae.enable_slicing()
+                if self.enable_vae_tiling:
+                    self._pipeline.vae.enable_tiling()
 
-            if self.enable_vae_tiling:
-                self._pipeline.vae.enable_tiling()
-
-            if self.enable_memory_efficient_attention:
-                self._pipeline.enable_attention_slicing()
+                if self.enable_memory_efficient_attention:
+                    self._pipeline.enable_attention_slicing()
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
@@ -583,12 +667,13 @@ class FluxText2Image(HuggingFacePipelineNode):
         if self.seed != -1:
             generator = torch.Generator(device="cpu").manual_seed(self.seed)
 
-        # Adjust parameters based on variant
+        # Adjust parameters based on detected variant
+        detected_variant = self._detect_variant_from_repo_id()
         guidance_scale = self.guidance_scale
         num_inference_steps = self.num_inference_steps
         max_sequence_length = self.max_sequence_length
 
-        if self.variant == FluxVariant.SCHNELL:
+        if detected_variant == FluxVariant.SCHNELL:
             # For schnell, guidance_scale should be 0 and max_sequence_length <= 256
             if guidance_scale != 0.0:
                 log.warning(
@@ -605,7 +690,7 @@ class FluxText2Image(HuggingFacePipelineNode):
                     "For FLUX.1-schnell, fewer inference steps (4-8) are recommended for optimal performance."
                 )
 
-        def progress_callback(step: int, timestep: int, callback_kwargs: dict) -> None:
+        def progress_callback(pipeline: Any, step: int, timestep: int, callback_kwargs: dict) -> dict:
             context.post_message(
                 NodeProgress(
                     node_id=self.id,
@@ -613,6 +698,7 @@ class FluxText2Image(HuggingFacePipelineNode):
                     total=num_inference_steps,
                 )
             )
+            return callback_kwargs
 
         # Generate the image
         output = self._pipeline(
@@ -696,9 +782,9 @@ class Kolors(HuggingFacePipelineNode):
     _pipeline: KolorsPipeline | None = None
 
     @classmethod
-    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+    def get_recommended_models(cls) -> list[HFFlux]:
         return [
-            HuggingFaceModel(
+            HFFlux(
                 repo_id="Kwai-Kolors/Kolors-diffusers",
                 allow_patterns=[
                     "**/*.safetensors",
@@ -762,487 +848,15 @@ class Kolors(HuggingFacePipelineNode):
 
         return await context.image_from_pil(image)
 
-
-class HunyuanDiT(HuggingFacePipelineNode):
-    """
-    Generates images from text prompts using Hunyuan-DiT, a powerful multi-resolution diffusion transformer.
-    image, generation, AI, text-to-image, chinese, english, diffusion, transformer
-
-    Use cases:
-    - Generate high-quality images from Chinese and English text descriptions
-    - Create images with fine-grained language understanding
-    - Produce multi-resolution images with optimal aspect ratios
-    - Generate images with both Chinese and English text support
-    - Create detailed images with strong semantic accuracy
-    """
-
-    prompt: str = Field(
-        default="一个宇航员在骑马",
-        description="A text prompt describing the desired image. Supports both Chinese and English.",
-    )
-    negative_prompt: str = Field(
-        default="",
-        description="A text prompt describing what to avoid in the image.",
-    )
-    guidance_scale: float = Field(
-        default=7.5,
-        description="The scale for classifier-free guidance.",
-        ge=1.0,
-        le=20.0,
-    )
-    num_inference_steps: int = Field(
-        default=50,
-        description="The number of denoising steps.",
-        ge=1,
-        le=100,
-    )
-    width: int = Field(
-        default=1024,
-        description="The width of the generated image.",
-        ge=512,
-        le=2048,
-    )
-    height: int = Field(
-        default=1024,
-        description="The height of the generated image.",
-        ge=512,
-        le=2048,
-    )
-    seed: int = Field(
-        default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
-        ge=-1,
-    )
-    use_resolution_binning: bool = Field(
-        default=True,
-        description="Whether to use resolution binning. Maps input resolution to closest standard resolution.",
-    )
-    original_size: tuple[int, int] = Field(
-        default=(1024, 1024),
-        description="The original size of the image used to calculate time IDs.",
-    )
-    target_size: tuple[int, int] | None = Field(
-        default=None,
-        description="The target size of the image used to calculate time IDs. If None, uses (width, height).",
-    )
-    crops_coords_top_left: tuple[int, int] = Field(
-        default=(0, 0),
-        description="The top-left coordinates of the crop used to calculate time IDs.",
-    )
-    guidance_rescale: float = Field(
-        default=0.0,
-        description="Rescale the noise according to guidance_rescale.",
-        ge=0.0,
-        le=1.0,
-    )
-    enable_memory_optimization: bool = Field(
-        default=True,
-        description="Enable memory optimization with T5 encoder quantization.",
-    )
-    enable_forward_chunking: bool = Field(
-        default=False,
-        description="Enable forward chunking to reduce memory usage at the cost of inference speed.",
-    )
-    forward_chunk_size: int = Field(
-        default=1,
-        description="Chunk size for forward chunking.",
-        ge=1,
-        le=4,
-    )
-
-    _pipeline: HunyuanDiTPipeline | None = None
-
-    @classmethod
-    def get_recommended_models(cls) -> list[HuggingFaceModel]:
-        return [
-            HuggingFaceModel(
-                repo_id="Tencent-Hunyuan/HunyuanDiT-Diffusers",
-                allow_patterns=[
-                    "**/*.safetensors",
-                    "**/*.json",
-                    "**/*.txt",
-                    "*.json",
-                ],
-            ),
-        ]
-
-    @classmethod
-    def get_title(cls) -> str:
-        return "Hunyuan-DiT"
-
     @classmethod
     def get_basic_fields(cls) -> list[str]:
-        return ["prompt", "width", "height", "use_resolution_binning"]
-
-    def get_model_id(self) -> str:
-        return "Tencent-Hunyuan/HunyuanDiT-Diffusers"
-
-    def _get_supported_resolutions(self) -> list[tuple[int, int]]:
-        """Get list of supported resolutions for resolution binning."""
         return [
-            (1024, 1024),
-            (1280, 1280),
-            (1024, 768),
-            (1152, 864),
-            (1280, 960),
-            (768, 1024),
-            (864, 1152),
-            (960, 1280),
-            (1280, 768),
-            (768, 1280),
+            "model",
+            "prompt",
+            "height",
+            "width",
+            "seed",
         ]
-
-    def _find_closest_resolution(self, width: int, height: int) -> tuple[int, int]:
-        """Find the closest supported resolution."""
-        if not self.use_resolution_binning:
-            return (width, height)
-
-        target_ratio = width / height
-        best_resolution = (1024, 1024)
-        best_ratio_diff = float("inf")
-
-        for res_width, res_height in self._get_supported_resolutions():
-            ratio = res_width / res_height
-            ratio_diff = abs(ratio - target_ratio)
-            if ratio_diff < best_ratio_diff:
-                best_ratio_diff = ratio_diff
-                best_resolution = (res_width, res_height)
-
-        return best_resolution
-
-    async def preload_model(self, context: ProcessingContext):
-        # Load with memory optimization if enabled
-        if self.enable_memory_optimization:
-            # Load T5 encoder in 8-bit for memory efficiency
-            try:
-                quantization_config = BitsAndBytesConfig(load_in_8bit=True)
-
-                self._pipeline = await self.load_model(
-                    context=context,
-                    model_id=self.get_model_id(),
-                    model_class=HunyuanDiTPipeline,
-                    torch_dtype=torch.float16,
-                    text_encoder_2_quantization_config=quantization_config,
-                )
-            except ImportError:
-                log.warning("bitsandbytes not available, loading without quantization")
-                self._pipeline = await self.load_model(
-                    context=context,
-                    model_id=self.get_model_id(),
-                    model_class=HunyuanDiTPipeline,
-                    torch_dtype=torch.float16,
-                )
-        else:
-            self._pipeline = await self.load_model(
-                context=context,
-                model_id=self.get_model_id(),
-                model_class=HunyuanDiTPipeline,
-                torch_dtype=torch.float16,
-            )
-
-        # Apply forward chunking if enabled
-        if self._pipeline is not None and self.enable_forward_chunking:
-            self._pipeline.transformer.enable_forward_chunking(
-                chunk_size=self.forward_chunk_size, dim=1
-            )
-
-    async def move_to_device(self, device: str):
-        if self._pipeline is not None:
-            self._pipeline.to(device)
-
-    async def process(self, context: ProcessingContext) -> ImageRef:
-        if self._pipeline is None:
-            raise ValueError("Pipeline not initialized")
-
-        # Set up the generator for reproducibility
-        generator = None
-        if self.seed != -1:
-            generator = torch.Generator(device="cpu").manual_seed(self.seed)
-
-        # Determine final resolution
-        final_width, final_height = self._find_closest_resolution(
-            self.width, self.height
-        )
-
-        if self.use_resolution_binning and (
-            final_width != self.width or final_height != self.height
-        ):
-            log.info(
-                f"Resolution binning: {self.width}x{self.height} -> {final_width}x{final_height}"
-            )
-
-        # Set target size if not specified
-        target_size = self.target_size or (final_width, final_height)
-
-        def progress_callback(step: int, timestep: int, callback_kwargs: dict) -> None:
-            context.post_message(
-                NodeProgress(
-                    node_id=self.id,
-                    progress=step,
-                    total=self.num_inference_steps,
-                )
-            )
-
-        # Generate the image
-        output = self._pipeline(
-            prompt=self.prompt,
-            negative_prompt=self.negative_prompt,
-            height=final_height,
-            width=final_width,
-            num_inference_steps=self.num_inference_steps,
-            guidance_scale=self.guidance_scale,
-            generator=generator,
-            original_size=self.original_size,
-            target_size=target_size,
-            crops_coords_top_left=self.crops_coords_top_left,
-            guidance_rescale=self.guidance_rescale,
-            use_resolution_binning=self.use_resolution_binning,
-            callback_on_step_end=progress_callback,
-            callback_on_step_end_tensor_inputs=["latents"],
-        )
-
-        image = output.images[0]  # type: ignore
-
-        return await context.image_from_pil(image)
-
-
-class LuminaT2X(HuggingFacePipelineNode):
-    """
-    Generates images from text prompts using Lumina-T2X, a Flow-based Large Diffusion Transformer.
-    image, generation, AI, text-to-image, diffusion, transformer, flow, quantization
-
-    Use cases:
-    - Generate high-quality images with improved sampling efficiency
-    - Create images with Next-DiT architecture and 3D RoPE
-    - Produce images with better resolution extrapolation capabilities
-    - Generate images with multilingual support using decoder-based LLMs
-    - Create images with advanced frequency and time-aware scaling
-    """
-
-    prompt: str = Field(
-        default="Upper body of a young woman in a Victorian-era outfit with brass goggles and leather straps. Background shows an industrial revolution cityscape with smoky skies and tall, metal structures",
-        description="A text prompt describing the desired image.",
-    )
-    negative_prompt: str = Field(
-        default="",
-        description="A text prompt describing what to avoid in the image. For Lumina-T2X, this should typically be empty.",
-    )
-    guidance_scale: float = Field(
-        default=4.0,
-        description="The scale for classifier-free guidance.",
-        ge=1.0,
-        le=20.0,
-    )
-    num_inference_steps: int = Field(
-        default=30,
-        description="The number of denoising steps. Lumina-T2X uses fewer steps for efficient generation.",
-        ge=1,
-        le=100,
-    )
-    height: int = Field(
-        default=1024,
-        description="The height of the generated image.",
-        ge=256,
-        le=2048,
-    )
-    width: int = Field(
-        default=1024,
-        description="The width of the generated image.",
-        ge=256,
-        le=2048,
-    )
-    seed: int = Field(
-        default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
-        ge=-1,
-    )
-    clean_caption: bool = Field(
-        default=True,
-        description="Whether to clean the caption before creating embeddings. Requires beautifulsoup4 and ftfy.",
-    )
-    max_sequence_length: int = Field(
-        default=256,
-        description="Maximum sequence length to use with the prompt.",
-        ge=1,
-        le=512,
-    )
-    scaling_watershed: float = Field(
-        default=1.0,
-        description="Scaling watershed parameter for improved generation quality.",
-        ge=0.1,
-        le=2.0,
-    )
-    proportional_attn: bool = Field(
-        default=True,
-        description="Whether to use proportional attention for better quality.",
-    )
-    enable_quantization: bool = Field(
-        default=True,
-        description="Enable quantization for memory efficiency.",
-    )
-    enable_cpu_offload: bool = Field(
-        default=True,
-        description="Enable CPU offload to reduce VRAM usage.",
-    )
-    enable_vae_slicing: bool = Field(
-        default=True,
-        description="Enable VAE slicing to reduce VRAM usage.",
-    )
-    enable_vae_tiling: bool = Field(
-        default=True,
-        description="Enable VAE tiling to reduce VRAM usage for large images.",
-    )
-
-    _pipeline: LuminaPipeline | None = None
-
-    @classmethod
-    def get_recommended_models(cls) -> list[HuggingFaceModel]:
-        return [
-            HuggingFaceModel(
-                repo_id="Alpha-VLLM/Lumina-Next-SFT-diffusers",
-                allow_patterns=[
-                    "**/*.safetensors",
-                    "**/*.json",
-                    "**/*.txt",
-                    "*.json",
-                ],
-            ),
-        ]
-
-    @classmethod
-    def get_title(cls) -> str:
-        return "Lumina-T2X"
-
-    @classmethod
-    def get_basic_fields(cls) -> list[str]:
-        return ["prompt", "height", "width", "num_inference_steps"]
-
-    def get_model_id(self) -> str:
-        return "Alpha-VLLM/Lumina-Next-SFT-diffusers"
-
-    def _get_quantization_config(self):
-        """Get quantization config for memory efficiency."""
-        if not self.enable_quantization:
-            return None
-
-        try:
-            # Use 8-bit quantization for memory efficiency
-            return BitsAndBytesConfig(load_in_8bit=True)
-        except ImportError:
-            log.warning("bitsandbytes not available, loading without quantization")
-            return None
-
-    async def preload_model(self, context: ProcessingContext):
-        # Determine dtype - Lumina-T2X works best with bfloat16
-        torch_dtype = torch.bfloat16
-
-        # Load with quantization if enabled
-        quantization_config = self._get_quantization_config()
-
-        if quantization_config:
-            try:
-                self._pipeline = await self.load_model(
-                    context=context,
-                    model_id=self.get_model_id(),
-                    model_class=LuminaPipeline,
-                    torch_dtype=torch_dtype,
-                    quantization_config=quantization_config,
-                )
-            except Exception as e:
-                log.warning(
-                    f"Failed to load with quantization: {e}. Loading without quantization."
-                )
-                self._pipeline = await self.load_model(
-                    context=context,
-                    model_id=self.get_model_id(),
-                    model_class=LuminaPipeline,
-                    torch_dtype=torch_dtype,
-                )
-        else:
-            self._pipeline = await self.load_model(
-                context=context,
-                model_id=self.get_model_id(),
-                model_class=LuminaPipeline,
-                torch_dtype=torch_dtype,
-            )
-
-    async def move_to_device(self, device: str):
-        if self._pipeline is not None:
-            if not self.enable_cpu_offload:
-                self._pipeline.to(device)
-
-            # Apply memory optimization settings
-            if self.enable_cpu_offload:
-                self._pipeline.enable_model_cpu_offload()
-
-            if self.enable_vae_slicing:
-                self._pipeline.vae.enable_slicing()
-
-            if self.enable_vae_tiling:
-                self._pipeline.vae.enable_tiling()
-
-    async def process(self, context: ProcessingContext) -> ImageRef:
-        if self._pipeline is None:
-            raise ValueError("Pipeline not initialized")
-
-        # Set up the generator for reproducibility
-        generator = None
-        if self.seed != -1:
-            generator = torch.Generator(device="cpu").manual_seed(self.seed)
-
-        def progress_callback(step: int, timestep: int, callback_kwargs: dict) -> None:
-            context.post_message(
-                NodeProgress(
-                    node_id=self.id,
-                    progress=step,
-                    total=self.num_inference_steps,
-                )
-            )
-
-        # Generate the image
-        try:
-            output = self._pipeline(
-                prompt=self.prompt,
-                negative_prompt=self.negative_prompt,
-                guidance_scale=self.guidance_scale,
-                num_inference_steps=self.num_inference_steps,
-                height=self.height,
-                width=self.width,
-                generator=generator,
-                clean_caption=self.clean_caption,
-                max_sequence_length=self.max_sequence_length,
-                scaling_watershed=self.scaling_watershed,
-                proportional_attn=self.proportional_attn,
-                callback_on_step_end=progress_callback,
-                callback_on_step_end_tensor_inputs=["latents"],
-            )
-        except Exception as e:
-            # Handle cases where clean_caption dependencies might be missing
-            if "beautifulsoup4" in str(e) or "ftfy" in str(e):
-                log.warning(
-                    "Missing dependencies for clean_caption. Retrying with clean_caption=False"
-                )
-                output = self._pipeline(
-                    prompt=self.prompt,
-                    negative_prompt=self.negative_prompt,
-                    guidance_scale=self.guidance_scale,
-                    num_inference_steps=self.num_inference_steps,
-                    height=self.height,
-                    width=self.width,
-                    generator=generator,
-                    clean_caption=False,
-                    max_sequence_length=self.max_sequence_length,
-                    scaling_watershed=self.scaling_watershed,
-                    proportional_attn=self.proportional_attn,
-                    callback_on_step_end=progress_callback,
-                    callback_on_step_end_tensor_inputs=["latents"],
-                )
-            else:
-                raise e
-
-        image = output.images[0]  # type: ignore
-
-        return await context.image_from_pil(image)
 
 
 class Chroma(HuggingFacePipelineNode):
@@ -1325,9 +939,9 @@ class Chroma(HuggingFacePipelineNode):
     _pipeline: ChromaPipeline | None = None
 
     @classmethod
-    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+    def get_recommended_models(cls) -> list[HFFlux]:
         return [
-            HuggingFaceModel(
+            HFFlux(
                 repo_id="lodestones/Chroma",
                 allow_patterns=[
                     "**/*.safetensors",
@@ -1360,21 +974,28 @@ class Chroma(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
-            if not self.enable_cpu_offload:
+            # Handle CPU offload case
+            if self.enable_cpu_offload:
+                # When moving to CPU, disable CPU offload and move all components to CPU
+                if device == "cpu":
+                    self._pipeline.to(device)
+                # When moving to GPU with CPU offload, re-enable CPU offload
+                elif device in ["cuda", "mps"]:
+                    self._pipeline.enable_model_cpu_offload()
+            else:
+                # Normal device movement without CPU offload
                 self._pipeline.to(device)
 
-            # Apply memory optimization settings
-            if self.enable_cpu_offload:
-                self._pipeline.enable_model_cpu_offload()
+            # Apply memory optimizations only when on GPU
+            if device != "cpu":
+                if self.enable_vae_slicing:
+                    self._pipeline.enable_vae_slicing()
 
-            if self.enable_vae_slicing:
-                self._pipeline.enable_vae_slicing()
+                if self.enable_vae_tiling:
+                    self._pipeline.enable_vae_tiling()
 
-            if self.enable_vae_tiling:
-                self._pipeline.enable_vae_tiling()
-
-            if self.enable_attention_slicing:
-                self._pipeline.enable_attention_slicing()
+                if self.enable_attention_slicing:
+                    self._pipeline.enable_attention_slicing()
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
@@ -1414,18 +1035,37 @@ class Chroma(HuggingFacePipelineNode):
 
         return await context.image_from_pil(image)
 
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return [
+            "prompt",
+            "height",
+            "width",
+            "seed",
+        ]
+
+
+# Constants for FP8 text encoder
+FP8_TEXT_ENCODER_REPO = "Comfy-Org/Qwen-Image_ComfyUI"
+FP8_TEXT_ENCODER_PATH = "split_files/text_encoders/qwen_image_text_encoder_fp8.safetensors"
+
 
 class QwenImage(HuggingFacePipelineNode):
     """
-    Generates images from text prompts using Qwen-Image via AutoPipelineForText2Image.
-    image, generation, AI, text-to-image, qwen
+    Generates images from text prompts using Qwen-Image with support for GGUF quantization.
+    image, generation, AI, text-to-image, qwen, quantization
 
     Use cases:
     - High-quality, general-purpose text-to-image generation
+    - Memory-efficient generation using GGUF quantization
     - Quick prototyping leveraging AutoPipeline
     - Works out-of-the-box with the official Qwen model
     """
-
+    
+    model: HFQwenImage = Field(
+        default=HFQwenImage(),
+        description="The Qwen-Image model to use for text-to-image generation.",
+    )
     prompt: str = Field(
         default="A cat holding a sign that says hello world",
         description="A text prompt describing the desired image.",
@@ -1434,11 +1074,11 @@ class QwenImage(HuggingFacePipelineNode):
         default="",
         description="A text prompt describing what to avoid in the image.",
     )
-    guidance_scale: float = Field(
-        default=3.5,
-        description="The scale for classifier-free guidance.",
+    true_cfg_scale: float = Field(
+        default=1.0,
+        description="True CFG scale for Qwen-Image models.",
         ge=0.0,
-        le=30.0,
+        le=10.0,
     )
     num_inference_steps: int = Field(
         default=20,
@@ -1463,13 +1103,29 @@ class QwenImage(HuggingFacePipelineNode):
         description="Seed for the random number generator. Use -1 for a random seed.",
         ge=-1,
     )
+    enable_memory_efficient_attention: bool = Field(
+        default=True,
+        description="Enable memory efficient attention to reduce VRAM usage.",
+    )
+    enable_vae_tiling: bool = Field(
+        default=False,
+        description="Enable VAE tiling to reduce VRAM usage for large images.",
+    )
+    enable_vae_slicing: bool = Field(
+        default=False,
+        description="Enable VAE slicing to reduce VRAM usage.",
+    )
+    enable_cpu_offload: bool = Field(
+        default=False,
+        description="Enable CPU offload to reduce VRAM usage.",
+    )
 
-    _pipeline: AutoPipelineForText2Image | None = None
+    _pipeline: AutoPipelineForText2Image | DiffusionPipeline | None = None
 
     @classmethod
-    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+    def get_recommended_models(cls) -> list[HFQwenImage]:
         return [
-            HuggingFaceModel(
+            HFQwenImage(
                 repo_id="Qwen/Qwen-Image",
                 allow_patterns=[
                     "**/*.safetensors",
@@ -1477,6 +1133,40 @@ class QwenImage(HuggingFacePipelineNode):
                     "**/*.txt",
                     "*.json",
                 ],
+            ),
+            # GGUF quantized models
+            HFQwenImage(
+                repo_id="city96/Qwen-Image-gguf",
+                path="qwen-image-Q2_K.gguf",
+            ),
+            HFQwenImage(
+                repo_id="city96/Qwen-Image-gguf",
+                path="qwen-image-Q3_K_S.gguf",
+            ),
+            HFQwenImage(
+                repo_id="city96/Qwen-Image-gguf",
+                path="qwen-image-Q4_K_S.gguf",
+            ),
+            HFQwenImage(
+                repo_id="city96/Qwen-Image-gguf",
+                path="qwen-image-Q5_K_S.gguf",
+            ),
+            HFQwenImage(
+                repo_id="city96/Qwen-Image-gguf",
+                path="qwen-image-Q6_K.gguf",
+            ),
+            HFQwenImage(
+                repo_id="city96/Qwen-Image-gguf",
+                path="qwen-image-Q8_0.gguf",
+            ),
+            HFQwenImage(
+                repo_id="city96/Qwen-Image-gguf",
+                path="qwen-image-BF16.gguf",
+            ),
+            # FP8 Text Encoder for optimized performance
+            HFQwenImage(
+                repo_id="Comfy-Org/Qwen-Image_ComfyUI",
+                path="split_files/text_encoders/qwen_image_text_encoder_fp8.safetensors",
             ),
         ]
 
@@ -1486,174 +1176,160 @@ class QwenImage(HuggingFacePipelineNode):
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
-        return ["prompt", "negative_prompt", "height", "width", "num_inference_steps"]
+        return ["model", "prompt", "negative_prompt", "height", "width", "num_inference_steps"]
 
     def get_model_id(self) -> str:
+        if self.model.repo_id:
+            return self.model.repo_id
         return "Qwen/Qwen-Image"
+    
+    def _detect_gguf_quantization_type(self) -> str | None:
+        """Detect GGUF quantization type from model path."""
+        if not self.model.path:
+            return None
+        
+        # Extract quantization type from filename patterns like "qwen-image-Q2_K.gguf"
+        import re
+        pattern = r'-(Q\\d+_[A-Z]+|Q\\d+|BF16)\\.gguf$'
+        match = re.search(pattern, self.model.path, re.IGNORECASE)
+        return match.group(1) if match else None
 
-    async def preload_model(self, context: ProcessingContext):
-        # Qwen-Image commonly uses bfloat16; fall back is handled by torch.
-        self._pipeline = await self.load_model(
-            context=context,
-            model_id=self.get_model_id(),
-            model_class=AutoPipelineForText2Image,
-            torch_dtype=torch.bfloat16,
-        )
-
-    async def move_to_device(self, device: str):
-        if self._pipeline is not None:
-            self._pipeline.to(device)
-
-    async def process(self, context: ProcessingContext) -> ImageRef:
-        if self._pipeline is None:
-            raise ValueError("Pipeline not initialized")
-
-        # Set up the generator for reproducibility
-        generator = None
-        if self.seed != -1:
-            generator = torch.Generator(device="cpu").manual_seed(self.seed)
-
-        # Generate the image
-        output = self._pipeline(
-            prompt=self.prompt,
-            negative_prompt=self.negative_prompt,
-            guidance_scale=self.guidance_scale,
-            num_inference_steps=self.num_inference_steps,
-            height=self.height,
-            width=self.width,
-            generator=generator,
-            callback_on_step_end=pipeline_progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
-            callback_on_step_end_tensor_inputs=["latents"],
-        )  # type: ignore
-
-        image = output.images[0]  # type: ignore
-
-        return await context.image_from_pil(image)
-
-    def required_inputs(self):
-        """Return list of required inputs that must be connected."""
-        return []  # No required inputs - IP adapter image is optional
-
-
-class QuantoFlux(HuggingFacePipelineNode):
-    """
-    Generates images using FLUX models with Optimum Quanto FP8 quantization for extreme memory efficiency.
-    image, generation, AI, text-to-image, flux, quantization, fp8, quanto
-
-    Use cases:
-    - Ultra memory-efficient FLUX image generation using FP8 quantization
-    - High-quality image generation on lower-end hardware
-    - Faster inference with reduced memory footprint
-    - Professional image generation with optimized resource usage
-    """
-
-    prompt: str = Field(
-        default="A cat holding a sign that says hello world",
-        description="A text prompt describing the desired image.",
-    )
-    guidance_scale: float = Field(
-        default=3.5,
-        description="The scale for classifier-free guidance.",
-        ge=0.0,
-        le=30.0,
-    )
-    width: int = Field(
-        default=1024, description="The width of the generated image.", ge=64, le=2048
-    )
-    height: int = Field(
-        default=1024, description="The height of the generated image.", ge=64, le=2048
-    )
-    num_inference_steps: int = Field(
-        default=20, description="The number of denoising steps.", ge=1, le=100
-    )
-    max_sequence_length: int = Field(
-        default=512,
-        description="Maximum sequence length for the prompt.",
-        ge=1,
-        le=512,
-    )
-    seed: int = Field(
-        default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
-        ge=-1,
-    )
-    enable_cpu_offload: bool = Field(
-        default=True,
-        description="Enable CPU offload to reduce VRAM usage.",
-    )
-
-    _pipeline: FluxPipeline | None = None
-
-    @classmethod
-    def get_recommended_models(cls) -> list[HuggingFaceModel]:
-        return [
-            HuggingFaceModel(
-                repo_id="Kijai/flux-fp8",
-                path="flux1-dev-fp8.safetensors",
-            ),
-        ]
-
-    @classmethod
-    def get_title(cls) -> str:
-        return "Quanto FLUX FP8"
-
-    def get_model_id(self) -> str:
-        return "black-forest-labs/FLUX.1-dev"
-
-    async def preload_model(self, context: ProcessingContext):
-        from optimum.quanto import freeze, qfloat8, quantize
-
-        dtype = torch.bfloat16
-
-        # Load and quantize the transformer from single file
-        transformer = await self.load_model(
-            context,
-            FluxTransformer2DModel,
-            model_id="Kijai/flux-fp8",
-            path="flux1-dev-fp8.safetensors",
-            torch_dtype=dtype,
-        )
-        quantize(transformer, weights=qfloat8)
-        freeze(transformer)
-
-        # Load and quantize the text encoder
-        log.info("Loading and quantizing text encoder with FP8...")
-        context.post_message(
-            NodeUpdate(
-                node_id=self.id,
-                node_name=self.get_title(),
-                status="Loading and quantizing text encoder with FP8...",
+    def _is_gguf_model(self) -> bool:
+        """Check if the model is a GGUF model based on file extension."""
+        return self.model.path and self.model.path.lower().endswith('.gguf')
+    
+    async def _load_fp8_text_encoder(self, context: ProcessingContext):
+        """Load FP8 text encoder using the base class's load_model method."""
+        try:
+            from transformers import T5EncoderModel
+            
+            log.info(f"Loading FP8 text encoder from {FP8_TEXT_ENCODER_REPO}/{FP8_TEXT_ENCODER_PATH}")
+            
+            # Use the base class's load_model method
+            text_encoder = await self.load_model(
+                context=context,
+                model_class=T5EncoderModel,
+                model_id=FP8_TEXT_ENCODER_REPO,
+                path=FP8_TEXT_ENCODER_PATH,
+                torch_dtype=torch.float8_e4m3fn if hasattr(torch, 'float8_e4m3fn') else torch.bfloat16,
+                skip_cache=False,
             )
-        )
-        text_encoder_2 = await self.load_model(
-            context,
-            T5EncoderModel,
-            model_id=self.get_model_id(),
-            subfolder="text_encoder_2",
-            torch_dtype=dtype,
-        )
-        quantize(text_encoder_2, weights=qfloat8)
-        freeze(text_encoder_2)
+            
+            log.info("Successfully loaded FP8 text encoder")
+            return text_encoder
+            
+        except Exception as e:
+            log.warning(f"Failed to load FP8 text encoder: {e}. Falling back to default.")
+            return None
 
-        # Load the base pipeline without transformer and text_encoder_2
-        log.info("Loading base pipeline...")
-        pipe = FluxPipeline.from_pretrained(
-            self.get_model_id(),
-            transformer=None,
-            text_encoder_2=None,
-            torch_dtype=dtype,
-        )
-        pipe.transformer = transformer
-        pipe.text_encoder_2 = text_encoder_2
-
-        pipe.enable_model_cpu_offload()
-        log.info("QuantoFlux pipeline loaded successfully with FP8 quantization")
-
-    async def move_to_device(self, device: str):
-        if self._pipeline is not None:
+    async def preload_model(self, context: ProcessingContext):
+        # Load FP8 text encoder
+        fp8_text_encoder = await self._load_fp8_text_encoder(context)
+        
+        # Check if this is a GGUF model based on file extension
+        if self._is_gguf_model():
+            await self._load_gguf_model(context, torch.bfloat16, fp8_text_encoder)
+        else:
+            # Load the full pipeline normally
+            log.info(f"Loading Qwen-Image pipeline from {self.get_model_id()}...")
+            
+            # Prepare additional arguments for custom text encoder
+            load_kwargs = {
+                "context": context,
+                "model_id": self.get_model_id(),
+                "model_class": AutoPipelineForText2Image,
+                "torch_dtype": torch.bfloat16,
+                "device": "cpu",  # Load on CPU first, then move to GPU in workflow runner
+            }
+            
+            # Add FP8 text encoder if available
+            if fp8_text_encoder is not None:
+                load_kwargs["text_encoder"] = fp8_text_encoder
+            
+            self._pipeline = await self.load_model(**load_kwargs)
+            
+            # Apply memory optimizations after loading
             if self.enable_cpu_offload:
                 self._pipeline.enable_model_cpu_offload()
+            
+            if self.enable_vae_slicing:
+                self._pipeline.vae.enable_slicing()
+
+            if self.enable_vae_tiling:
+                self._pipeline.vae.enable_tiling()
+
+            if self.enable_memory_efficient_attention:
+                self._pipeline.enable_attention_slicing()
+
+    async def _load_gguf_model(self, context: ProcessingContext, torch_dtype, fp8_text_encoder=None):
+        """Load Qwen-Image model with GGUF quantization."""
+        from huggingface_hub.file_download import try_to_load_from_cache
+        from diffusers import QwenImageTransformer2DModel
+        
+        quantization_type = self._detect_gguf_quantization_type()
+        
+        if quantization_type:
+            log.info(f"Loading Qwen-Image transformer with GGUF {quantization_type} quantization...")
+        else:
+            log.info("Loading GGUF model (quantization type not detected from filename)...")
+
+        # Get the cached file path
+        cache_path = try_to_load_from_cache(self.get_model_id(), self.model.path)
+        if not cache_path:
+            raise ValueError(f"Model {self.get_model_id()}/{self.model.path} must be downloaded first")
+
+        # Load the transformer with GGUF quantization
+        transformer = QwenImageTransformer2DModel.from_single_file(
+            cache_path,
+            quantization_config=GGUFQuantizationConfig(compute_dtype=torch_dtype),
+            torch_dtype=torch_dtype,
+            config="Qwen/Qwen-Image",
+            subfolder="transformer",
+        )
+
+        # Create the pipeline with the quantized transformer
+        log.info("Creating Qwen-Image pipeline with quantized transformer...")
+        
+        # Use DiffusionPipeline for GGUF models
+        pipeline_kwargs = {
+            "transformer": transformer,
+            "torch_dtype": torch_dtype,
+        }
+        
+        # Add FP8 text encoder if provided
+        if fp8_text_encoder is not None:
+            pipeline_kwargs["text_encoder"] = fp8_text_encoder
+        
+        self._pipeline = DiffusionPipeline.from_pretrained(
+            "Qwen/Qwen-Image",
+            **pipeline_kwargs
+        )
+        
+        # Apply memory optimizations after loading
+        if self.enable_cpu_offload:
+            self._pipeline.enable_model_cpu_offload()
+        
+        if self.enable_vae_slicing:
+            self._pipeline.vae.enable_slicing()
+
+        if self.enable_vae_tiling:
+            self._pipeline.vae.enable_tiling()
+
+        if self.enable_memory_efficient_attention:
+            self._pipeline.enable_attention_slicing()
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None:
+            # Handle CPU offload case
+            if self.enable_cpu_offload:
+                # When moving to CPU, disable CPU offload and move all components to CPU
+                if device == "cpu":
+                    self._pipeline.to(device)
+                # When moving to GPU with CPU offload, re-enable CPU offload
+                elif device in ["cuda", "mps"]:
+                    self._pipeline.enable_model_cpu_offload()
             else:
+                # Normal device movement without CPU offload
                 self._pipeline.to(device)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
@@ -1663,21 +1339,26 @@ class QuantoFlux(HuggingFacePipelineNode):
         # Set up the generator for reproducibility
         generator = None
         if self.seed != -1:
-            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+            generator = torch.Generator(device=context.device).manual_seed(self.seed)
 
         # Generate the image
-        output = self._pipeline(
-            prompt=self.prompt,
-            guidance_scale=self.guidance_scale,
-            height=self.height,
-            width=self.width,
-            num_inference_steps=self.num_inference_steps,
-            max_sequence_length=self.max_sequence_length,
-            generator=generator,
-            callback_on_step_end=pipeline_progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
-            callback_on_step_end_tensor_inputs=["latents"],
-        )
+        pipeline_kwargs = {
+            "prompt": self.prompt,
+            "negative_prompt": self.negative_prompt,
+            "true_cfg_scale": self.true_cfg_scale,
+            "num_inference_steps": self.num_inference_steps,
+            "height": self.height,
+            "width": self.width,
+            "generator": generator,
+            "callback_on_step_end": pipeline_progress_callback(self.id, self.num_inference_steps, context),
+            "callback_on_step_end_tensor_inputs": ["latents"],
+        }
+        
+        output = self._pipeline(**pipeline_kwargs)  # type: ignore
 
         image = output.images[0]  # type: ignore
 
         return await context.image_from_pil(image)
+    def required_inputs(self):
+        """Return list of required inputs that must be connected."""
+        return []  # No required inputs - IP adapter image is optional

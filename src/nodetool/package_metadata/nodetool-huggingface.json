@@ -7442,7 +7442,7 @@
           },
           "default": {},
           "title": "Model ID on Huggingface",
-          "description": "The model ID to use for the text generation"
+          "description": "The model ID to use for the text generation. Supports both regular models and GGUF quantized models (detected by .gguf file extension)."
         },
         {
           "name": "prompt",
@@ -7499,7 +7499,13 @@
           "type": {
             "type": "str"
           },
-          "name": "output"
+          "name": "text"
+        },
+        {
+          "type": {
+            "type": "chunk"
+          },
+          "name": "chunk"
         }
       ],
       "recommended_models": [
@@ -7538,12 +7544,213 @@
             "*.txt",
             "*.safetensors"
           ]
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/Qwen3-4B-v0.4-deepresearch-no-think-4-GGUF",
+          "path": "Qwen3-4B-v0.4-deepresearch-no-think-4.Q4_0.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/Qwen3-4B-v0.4-deepresearch-no-think-4-GGUF",
+          "path": "Qwen3-4B-v0.4-deepresearch-no-think-4.Q4_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/Qwen3-4B-v0.4-deepresearch-no-think-4-GGUF",
+          "path": "Qwen3-4B-v0.4-deepresearch-no-think-4.Q5_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/Qwen3-4B-v0.4-deepresearch-no-think-4-GGUF",
+          "path": "Qwen3-4B-v0.4-deepresearch-no-think-4.Q8_0.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/SmolLM-135M-GGUF",
+          "path": "SmolLM-135M.Q4_0.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/SmolLM-135M-GGUF",
+          "path": "SmolLM-135M.Q4_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/SmolLM2-135M-GGUF",
+          "path": "SmolLM2-135M.Q4_0.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/SmolLM2-135M-GGUF",
+          "path": "SmolLM2-135M.Q4_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/SmolLM2-360M-GGUF",
+          "path": "SmolLM2-360M.Q4_0.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/SmolLM2-360M-GGUF",
+          "path": "SmolLM2-360M.Q4_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/Meta-Llama-3.1-8B-Instruct-GGUF",
+          "path": "Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/Meta-Llama-3.1-8B-Instruct-GGUF",
+          "path": "Meta-Llama-3.1-8B-Instruct.Q5_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/Art-0-8B-GGUF",
+          "path": "Art-0-8B.Q4_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/Art-0-8B-GGUF",
+          "path": "Art-0-8B.Q5_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/MN-Violet-Lotus-12B-GGUF",
+          "path": "MN-Violet-Lotus-12B.Q4_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/MN-Violet-Lotus-12B-GGUF",
+          "path": "MN-Violet-Lotus-12B.Q5_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/NeuralDaredevil-8B-abliterated-GGUF",
+          "path": "NeuralDaredevil-8B-abliterated.Q4_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "QuantFactory/NeuralDaredevil-8B-abliterated-GGUF",
+          "path": "NeuralDaredevil-8B-abliterated.Q5_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "janhq/Jan-v1-4B-GGUF",
+          "path": "Jan-v1-4B-Q4_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "janhq/Jan-v1-4B-GGUF",
+          "path": "Jan-v1-4B-Q5_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "janhq/Jan-v1-4B-GGUF",
+          "path": "Jan-v1-4B-Q6_K.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "janhq/Jan-v1-4B-GGUF",
+          "path": "Jan-v1-4B-Q8_0.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "DavidAU/OpenAi-GPT-oss-20b-abliterated-uncensored-NEO-Imatrix-gguf",
+          "path": "OpenAI-20B-NEO-Uncensored2-IQ4_NL.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "DavidAU/OpenAi-GPT-oss-20b-abliterated-uncensored-NEO-Imatrix-gguf",
+          "path": "OpenAI-20B-NEO-Uncensored2-Q5_1.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "DavidAU/OpenAi-GPT-oss-20b-abliterated-uncensored-NEO-Imatrix-gguf",
+          "path": "OpenAI-20B-NEO-CODE-DI-Uncensored-Q8_0.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "DavidAU/OpenAi-GPT-oss-20b-abliterated-uncensored-NEO-Imatrix-gguf",
+          "path": "OpenAI-20B-NEO-HRR-CODE-TRI-Uncensored-IQ4_NL.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "DavidAU/OpenAi-GPT-oss-20b-abliterated-uncensored-NEO-Imatrix-gguf",
+          "path": "OpenAI-20B-NEO-HRR-CODE-TRI-Uncensored-Q5_1.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
+          "path": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
+          "path": "Qwen3-Coder-30B-A3B-Instruct-Q5_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
+          "path": "Qwen3-Coder-30B-A3B-Instruct-Q8_0.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "gabriellarson/ERNIE-4.5-21B-A3B-Thinking-GGUF",
+          "path": "ERNIE-4.5-21B-A3B-Thinking-Q4_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "gabriellarson/ERNIE-4.5-21B-A3B-Thinking-GGUF",
+          "path": "ERNIE-4.5-21B-A3B-Thinking-Q5_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "gabriellarson/ERNIE-4.5-21B-A3B-Thinking-GGUF",
+          "path": "ERNIE-4.5-21B-A3B-Thinking-Q8_0.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "unsloth/gpt-oss-20b-GGUF",
+          "path": "gpt-oss-20b-Q4_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "unsloth/gpt-oss-20b-GGUF",
+          "path": "gpt-oss-20b-Q5_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "unsloth/gpt-oss-20b-GGUF",
+          "path": "gpt-oss-20b-Q8_0.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "gabriellarson/WEBGEN-4B-Preview-GGUF",
+          "path": "WEBGEN-4B-Preview-Q4_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "gabriellarson/WEBGEN-4B-Preview-GGUF",
+          "path": "WEBGEN-4B-Preview-Q5_K_M.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "gabriellarson/WEBGEN-4B-Preview-GGUF",
+          "path": "WEBGEN-4B-Preview-Q8_0.gguf"
+        },
+        {
+          "type": "hf.text_generation",
+          "repo_id": "openbmb/MiniCPM4.1-8B-GGUF",
+          "path": "MiniCPM4.1-8B-Q4_K_M.gguf"
         }
       ],
       "basic_fields": [
         "model",
         "prompt"
-      ]
+      ],
+      "is_streaming": true
     },
     {
       "title": "Audio LDM",
@@ -8175,6 +8382,7 @@
       ],
       "recommended_models": [
         {
+          "type": "hf.flux",
           "repo_id": "lodestones/Chroma",
           "allow_patterns": [
             "**/*.safetensors",
@@ -8186,48 +8394,25 @@
       ],
       "basic_fields": [
         "prompt",
-        "negative_prompt",
         "height",
-        "width"
+        "width",
+        "seed"
       ]
     },
     {
-      "title": "FLUX Text2Image",
-      "description": "Generates images using FLUX models with quantization support for memory efficiency.\n    image, generation, AI, text-to-image, flux, quantization\n\n    Use cases:\n    - High-quality image generation with FLUX models\n    - Memory-efficient generation using quantization\n    - Fast generation with FLUX.1-schnell\n    - High-fidelity generation with FLUX.1-dev\n    - Controlled generation with Fill, Canny, or Depth variants",
+      "title": "Flux",
+      "description": "Generates images using FLUX models with support for GGUF quantization for memory efficiency.\n    image, generation, AI, text-to-image, flux, quantization\n\n    Use cases:\n    - High-quality image generation with FLUX models\n    - Memory-efficient generation using GGUF quantization\n    - Fast generation with FLUX.1-schnell\n    - High-fidelity generation with FLUX.1-dev\n    - Controlled generation with Fill, Canny, or Depth variants",
       "namespace": "huggingface.text_to_image",
-      "node_type": "huggingface.text_to_image.FluxText2Image",
+      "node_type": "huggingface.text_to_image.Flux",
       "properties": [
         {
-          "name": "variant",
+          "name": "model",
           "type": {
-            "type": "enum",
-            "values": [
-              "schnell",
-              "dev",
-              "fill-dev",
-              "canny-dev",
-              "depth-dev"
-            ],
-            "type_name": "nodetool.nodes.huggingface.text_to_image.FluxVariant"
+            "type": "hf.flux"
           },
-          "default": "schnell",
-          "title": "Variant",
-          "description": "The FLUX model variant to use."
-        },
-        {
-          "name": "quantization",
-          "type": {
-            "type": "enum",
-            "values": [
-              "none",
-              "bitsandbytes-8bit",
-              "bitsandbytes-4bit"
-            ],
-            "type_name": "nodetool.nodes.huggingface.text_to_image.QuantizationMethod"
-          },
-          "default": "none",
-          "title": "Quantization",
-          "description": "Quantization method to reduce memory usage."
+          "default": {},
+          "title": "Model",
+          "description": "The FLUX model to use for text-to-image generation."
         },
         {
           "name": "prompt",
@@ -8243,7 +8428,7 @@
           "type": {
             "type": "float"
           },
-          "default": 0.0,
+          "default": 3.5,
           "title": "Guidance Scale",
           "description": "The scale for classifier-free guidance. Use 0.0 for schnell, 3.5 for dev.",
           "min": 0.0,
@@ -8254,7 +8439,7 @@
           "type": {
             "type": "int"
           },
-          "default": 1360,
+          "default": 1024,
           "title": "Width",
           "description": "The width of the generated image.",
           "min": 64.0,
@@ -8265,7 +8450,7 @@
           "type": {
             "type": "int"
           },
-          "default": 768,
+          "default": 1024,
           "title": "Height",
           "description": "The height of the generated image.",
           "min": 64.0,
@@ -8276,9 +8461,9 @@
           "type": {
             "type": "int"
           },
-          "default": 4,
+          "default": 20,
           "title": "Num Inference Steps",
-          "description": "The number of denoising steps. Use 4 for schnell, 50 for dev.",
+          "description": "The number of denoising steps. Use 4 for schnell, 20-50 for dev.",
           "min": 1.0,
           "max": 100.0
         },
@@ -8350,6 +8535,7 @@
       ],
       "recommended_models": [
         {
+          "type": "hf.flux",
           "repo_id": "black-forest-labs/FLUX.1-schnell",
           "allow_patterns": [
             "**/*.safetensors",
@@ -8359,6 +8545,7 @@
           ]
         },
         {
+          "type": "hf.flux",
           "repo_id": "black-forest-labs/FLUX.1-dev",
           "allow_patterns": [
             "**/*.safetensors",
@@ -8368,6 +8555,7 @@
           ]
         },
         {
+          "type": "hf.flux",
           "repo_id": "black-forest-labs/FLUX.1-Fill-dev",
           "allow_patterns": [
             "**/*.safetensors",
@@ -8377,6 +8565,7 @@
           ]
         },
         {
+          "type": "hf.flux",
           "repo_id": "black-forest-labs/FLUX.1-Canny-dev",
           "allow_patterns": [
             "**/*.safetensors",
@@ -8386,6 +8575,7 @@
           ]
         },
         {
+          "type": "hf.flux",
           "repo_id": "black-forest-labs/FLUX.1-Depth-dev",
           "allow_patterns": [
             "**/*.safetensors",
@@ -8393,240 +8583,54 @@
             "**/*.txt",
             "*.json"
           ]
+        },
+        {
+          "type": "hf.flux",
+          "repo_id": "city96/FLUX.1-dev-gguf",
+          "path": "flux1-dev-Q2_K.gguf"
+        },
+        {
+          "type": "hf.flux",
+          "repo_id": "city96/FLUX.1-dev-gguf",
+          "path": "flux1-dev-Q3_K_S.gguf"
+        },
+        {
+          "type": "hf.flux",
+          "repo_id": "city96/FLUX.1-dev-gguf",
+          "path": "flux1-dev-Q4_K_S.gguf"
+        },
+        {
+          "type": "hf.flux",
+          "repo_id": "city96/FLUX.1-dev-gguf",
+          "path": "flux1-dev-Q5_K_S.gguf"
+        },
+        {
+          "type": "hf.flux",
+          "repo_id": "city96/FLUX.1-schnell-gguf",
+          "path": "flux1-schnell-Q2_K.gguf"
+        },
+        {
+          "type": "hf.flux",
+          "repo_id": "city96/FLUX.1-schnell-gguf",
+          "path": "flux1-schnell-Q3_K_S.gguf"
+        },
+        {
+          "type": "hf.flux",
+          "repo_id": "city96/FLUX.1-schnell-gguf",
+          "path": "flux1-schnell-Q4_K_S.gguf"
+        },
+        {
+          "type": "hf.flux",
+          "repo_id": "city96/FLUX.1-schnell-gguf",
+          "path": "flux1-schnell-Q5_K_S.gguf"
         }
       ],
       "basic_fields": [
-        "variant",
-        "quantization",
+        "model",
         "prompt",
-        "guidance_scale",
-        "width",
         "height",
-        "num_inference_steps",
-        "max_sequence_length",
-        "seed",
-        "enable_memory_efficient_attention",
-        "enable_vae_tiling",
-        "enable_vae_slicing",
-        "enable_cpu_offload"
-      ]
-    },
-    {
-      "title": "Hunyuan-DiT",
-      "description": "Generates images from text prompts using Hunyuan-DiT, a powerful multi-resolution diffusion transformer.\n    image, generation, AI, text-to-image, chinese, english, diffusion, transformer\n\n    Use cases:\n    - Generate high-quality images from Chinese and English text descriptions\n    - Create images with fine-grained language understanding\n    - Produce multi-resolution images with optimal aspect ratios\n    - Generate images with both Chinese and English text support\n    - Create detailed images with strong semantic accuracy",
-      "namespace": "huggingface.text_to_image",
-      "node_type": "huggingface.text_to_image.HunyuanDiT",
-      "properties": [
-        {
-          "name": "prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "\u4e00\u4e2a\u5b87\u822a\u5458\u5728\u9a91\u9a6c",
-          "title": "Prompt",
-          "description": "A text prompt describing the desired image. Supports both Chinese and English."
-        },
-        {
-          "name": "negative_prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "",
-          "title": "Negative Prompt",
-          "description": "A text prompt describing what to avoid in the image."
-        },
-        {
-          "name": "guidance_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 7.5,
-          "title": "Guidance Scale",
-          "description": "The scale for classifier-free guidance.",
-          "min": 1.0,
-          "max": 20.0
-        },
-        {
-          "name": "num_inference_steps",
-          "type": {
-            "type": "int"
-          },
-          "default": 50,
-          "title": "Num Inference Steps",
-          "description": "The number of denoising steps.",
-          "min": 1.0,
-          "max": 100.0
-        },
-        {
-          "name": "width",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Width",
-          "description": "The width of the generated image.",
-          "min": 512.0,
-          "max": 2048.0
-        },
-        {
-          "name": "height",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Height",
-          "description": "The height of the generated image.",
-          "min": 512.0,
-          "max": 2048.0
-        },
-        {
-          "name": "seed",
-          "type": {
-            "type": "int"
-          },
-          "default": -1,
-          "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
-          "min": -1.0
-        },
-        {
-          "name": "use_resolution_binning",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Use Resolution Binning",
-          "description": "Whether to use resolution binning. Maps input resolution to closest standard resolution."
-        },
-        {
-          "name": "original_size",
-          "type": {
-            "type": "tuple",
-            "type_args": [
-              {
-                "type": "int"
-              },
-              {
-                "type": "int"
-              }
-            ]
-          },
-          "default": [
-            1024,
-            1024
-          ],
-          "title": "Original Size",
-          "description": "The original size of the image used to calculate time IDs."
-        },
-        {
-          "name": "target_size",
-          "type": {
-            "type": "union",
-            "type_args": [
-              {
-                "type": "tuple",
-                "type_args": [
-                  {
-                    "type": "int"
-                  },
-                  {
-                    "type": "int"
-                  }
-                ]
-              },
-              {
-                "type": "none"
-              }
-            ]
-          },
-          "title": "Target Size",
-          "description": "The target size of the image used to calculate time IDs. If None, uses (width, height)."
-        },
-        {
-          "name": "crops_coords_top_left",
-          "type": {
-            "type": "tuple",
-            "type_args": [
-              {
-                "type": "int"
-              },
-              {
-                "type": "int"
-              }
-            ]
-          },
-          "default": [
-            0,
-            0
-          ],
-          "title": "Crops Coords Top Left",
-          "description": "The top-left coordinates of the crop used to calculate time IDs."
-        },
-        {
-          "name": "guidance_rescale",
-          "type": {
-            "type": "float"
-          },
-          "default": 0.0,
-          "title": "Guidance Rescale",
-          "description": "Rescale the noise according to guidance_rescale.",
-          "min": 0.0,
-          "max": 1.0
-        },
-        {
-          "name": "enable_memory_optimization",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Memory Optimization",
-          "description": "Enable memory optimization with T5 encoder quantization."
-        },
-        {
-          "name": "enable_forward_chunking",
-          "type": {
-            "type": "bool"
-          },
-          "default": false,
-          "title": "Enable Forward Chunking",
-          "description": "Enable forward chunking to reduce memory usage at the cost of inference speed."
-        },
-        {
-          "name": "forward_chunk_size",
-          "type": {
-            "type": "int"
-          },
-          "default": 1,
-          "title": "Forward Chunk Size",
-          "description": "Chunk size for forward chunking.",
-          "min": 1.0,
-          "max": 4.0
-        }
-      ],
-      "outputs": [
-        {
-          "type": {
-            "type": "image"
-          },
-          "name": "output"
-        }
-      ],
-      "recommended_models": [
-        {
-          "repo_id": "Tencent-Hunyuan/HunyuanDiT-Diffusers",
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ]
-        }
-      ],
-      "basic_fields": [
-        "prompt",
         "width",
-        "height",
-        "use_resolution_binning"
+        "seed"
       ]
     },
     {
@@ -8738,6 +8742,7 @@
       ],
       "recommended_models": [
         {
+          "type": "hf.flux",
           "repo_id": "Kwai-Kolors/Kolors-diffusers",
           "allow_patterns": [
             "**/*.safetensors",
@@ -8748,15 +8753,11 @@
         }
       ],
       "basic_fields": [
+        "model",
         "prompt",
-        "negative_prompt",
-        "guidance_scale",
-        "num_inference_steps",
-        "width",
         "height",
-        "seed",
-        "max_sequence_length",
-        "use_dpm_solver"
+        "width",
+        "seed"
       ]
     },
     {
@@ -8800,312 +8801,24 @@
         }
       ],
       "basic_fields": [
-        "repo_id",
-        "variant"
-      ]
-    },
-    {
-      "title": "Lumina-T2X",
-      "description": "Generates images from text prompts using Lumina-T2X, a Flow-based Large Diffusion Transformer.\n    image, generation, AI, text-to-image, diffusion, transformer, flow, quantization\n\n    Use cases:\n    - Generate high-quality images with improved sampling efficiency\n    - Create images with Next-DiT architecture and 3D RoPE\n    - Produce images with better resolution extrapolation capabilities\n    - Generate images with multilingual support using decoder-based LLMs\n    - Create images with advanced frequency and time-aware scaling",
-      "namespace": "huggingface.text_to_image",
-      "node_type": "huggingface.text_to_image.LuminaT2X",
-      "properties": [
-        {
-          "name": "prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "Upper body of a young woman in a Victorian-era outfit with brass goggles and leather straps. Background shows an industrial revolution cityscape with smoky skies and tall, metal structures",
-          "title": "Prompt",
-          "description": "A text prompt describing the desired image."
-        },
-        {
-          "name": "negative_prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "",
-          "title": "Negative Prompt",
-          "description": "A text prompt describing what to avoid in the image. For Lumina-T2X, this should typically be empty."
-        },
-        {
-          "name": "guidance_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 4.0,
-          "title": "Guidance Scale",
-          "description": "The scale for classifier-free guidance.",
-          "min": 1.0,
-          "max": 20.0
-        },
-        {
-          "name": "num_inference_steps",
-          "type": {
-            "type": "int"
-          },
-          "default": 30,
-          "title": "Num Inference Steps",
-          "description": "The number of denoising steps. Lumina-T2X uses fewer steps for efficient generation.",
-          "min": 1.0,
-          "max": 100.0
-        },
-        {
-          "name": "height",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Height",
-          "description": "The height of the generated image.",
-          "min": 256.0,
-          "max": 2048.0
-        },
-        {
-          "name": "width",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Width",
-          "description": "The width of the generated image.",
-          "min": 256.0,
-          "max": 2048.0
-        },
-        {
-          "name": "seed",
-          "type": {
-            "type": "int"
-          },
-          "default": -1,
-          "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
-          "min": -1.0
-        },
-        {
-          "name": "clean_caption",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Clean Caption",
-          "description": "Whether to clean the caption before creating embeddings. Requires beautifulsoup4 and ftfy."
-        },
-        {
-          "name": "max_sequence_length",
-          "type": {
-            "type": "int"
-          },
-          "default": 256,
-          "title": "Max Sequence Length",
-          "description": "Maximum sequence length to use with the prompt.",
-          "min": 1.0,
-          "max": 512.0
-        },
-        {
-          "name": "scaling_watershed",
-          "type": {
-            "type": "float"
-          },
-          "default": 1.0,
-          "title": "Scaling Watershed",
-          "description": "Scaling watershed parameter for improved generation quality.",
-          "min": 0.1,
-          "max": 2.0
-        },
-        {
-          "name": "proportional_attn",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Proportional Attn",
-          "description": "Whether to use proportional attention for better quality."
-        },
-        {
-          "name": "enable_quantization",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Quantization",
-          "description": "Enable quantization for memory efficiency."
-        },
-        {
-          "name": "enable_cpu_offload",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Cpu Offload",
-          "description": "Enable CPU offload to reduce VRAM usage."
-        },
-        {
-          "name": "enable_vae_slicing",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Vae Slicing",
-          "description": "Enable VAE slicing to reduce VRAM usage."
-        },
-        {
-          "name": "enable_vae_tiling",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Vae Tiling",
-          "description": "Enable VAE tiling to reduce VRAM usage for large images."
-        }
-      ],
-      "outputs": [
-        {
-          "type": {
-            "type": "image"
-          },
-          "name": "output"
-        }
-      ],
-      "recommended_models": [
-        {
-          "repo_id": "Alpha-VLLM/Lumina-Next-SFT-diffusers",
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ]
-        }
-      ],
-      "basic_fields": [
-        "prompt",
-        "height",
-        "width",
-        "num_inference_steps"
-      ]
-    },
-    {
-      "title": "Quanto FLUX FP8",
-      "description": "Generates images using FLUX models with Optimum Quanto FP8 quantization for extreme memory efficiency.\n    image, generation, AI, text-to-image, flux, quantization, fp8, quanto\n\n    Use cases:\n    - Ultra memory-efficient FLUX image generation using FP8 quantization\n    - High-quality image generation on lower-end hardware\n    - Faster inference with reduced memory footprint\n    - Professional image generation with optimized resource usage",
-      "namespace": "huggingface.text_to_image",
-      "node_type": "huggingface.text_to_image.QuantoFlux",
-      "properties": [
-        {
-          "name": "prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "A cat holding a sign that says hello world",
-          "title": "Prompt",
-          "description": "A text prompt describing the desired image."
-        },
-        {
-          "name": "guidance_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 3.5,
-          "title": "Guidance Scale",
-          "description": "The scale for classifier-free guidance.",
-          "min": 0.0,
-          "max": 30.0
-        },
-        {
-          "name": "width",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Width",
-          "description": "The width of the generated image.",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
-          "name": "height",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Height",
-          "description": "The height of the generated image.",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
-          "name": "num_inference_steps",
-          "type": {
-            "type": "int"
-          },
-          "default": 20,
-          "title": "Num Inference Steps",
-          "description": "The number of denoising steps.",
-          "min": 1.0,
-          "max": 100.0
-        },
-        {
-          "name": "max_sequence_length",
-          "type": {
-            "type": "int"
-          },
-          "default": 512,
-          "title": "Max Sequence Length",
-          "description": "Maximum sequence length for the prompt.",
-          "min": 1.0,
-          "max": 512.0
-        },
-        {
-          "name": "seed",
-          "type": {
-            "type": "int"
-          },
-          "default": -1,
-          "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
-          "min": -1.0
-        },
-        {
-          "name": "enable_cpu_offload",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Cpu Offload",
-          "description": "Enable CPU offload to reduce VRAM usage."
-        }
-      ],
-      "outputs": [
-        {
-          "type": {
-            "type": "image"
-          },
-          "name": "output"
-        }
-      ],
-      "recommended_models": [
-        {
-          "repo_id": "Kijai/flux-fp8",
-          "path": "flux1-dev-fp8.safetensors"
-        }
-      ],
-      "basic_fields": [
-        "prompt",
-        "guidance_scale",
-        "width",
-        "height",
-        "num_inference_steps",
-        "max_sequence_length",
-        "seed",
-        "enable_cpu_offload"
+        "repo_id"
       ]
     },
     {
       "title": "Qwen-Image",
-      "description": "Generates images from text prompts using Qwen-Image via AutoPipelineForText2Image.\n    image, generation, AI, text-to-image, qwen\n\n    Use cases:\n    - High-quality, general-purpose text-to-image generation\n    - Quick prototyping leveraging AutoPipeline\n    - Works out-of-the-box with the official Qwen model",
+      "description": "Generates images from text prompts using Qwen-Image with support for GGUF quantization.\n    image, generation, AI, text-to-image, qwen, quantization\n\n    Use cases:\n    - High-quality, general-purpose text-to-image generation\n    - Memory-efficient generation using GGUF quantization\n    - Quick prototyping leveraging AutoPipeline\n    - Works out-of-the-box with the official Qwen model",
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.QwenImage",
       "properties": [
+        {
+          "name": "model",
+          "type": {
+            "type": "hf.qwen_image"
+          },
+          "default": {},
+          "title": "Model",
+          "description": "The Qwen-Image model to use for text-to-image generation."
+        },
         {
           "name": "prompt",
           "type": {
@@ -9125,15 +8838,15 @@
           "description": "A text prompt describing what to avoid in the image."
         },
         {
-          "name": "guidance_scale",
+          "name": "true_cfg_scale",
           "type": {
             "type": "float"
           },
-          "default": 3.5,
-          "title": "Guidance Scale",
-          "description": "The scale for classifier-free guidance.",
+          "default": 1.0,
+          "title": "True Cfg Scale",
+          "description": "True CFG scale for Qwen-Image models.",
           "min": 0.0,
-          "max": 30.0
+          "max": 10.0
         },
         {
           "name": "num_inference_steps",
@@ -9177,6 +8890,42 @@
           "title": "Seed",
           "description": "Seed for the random number generator. Use -1 for a random seed.",
           "min": -1.0
+        },
+        {
+          "name": "enable_memory_efficient_attention",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Memory Efficient Attention",
+          "description": "Enable memory efficient attention to reduce VRAM usage."
+        },
+        {
+          "name": "enable_vae_tiling",
+          "type": {
+            "type": "bool"
+          },
+          "default": false,
+          "title": "Enable Vae Tiling",
+          "description": "Enable VAE tiling to reduce VRAM usage for large images."
+        },
+        {
+          "name": "enable_vae_slicing",
+          "type": {
+            "type": "bool"
+          },
+          "default": false,
+          "title": "Enable Vae Slicing",
+          "description": "Enable VAE slicing to reduce VRAM usage."
+        },
+        {
+          "name": "enable_cpu_offload",
+          "type": {
+            "type": "bool"
+          },
+          "default": false,
+          "title": "Enable Cpu Offload",
+          "description": "Enable CPU offload to reduce VRAM usage."
         }
       ],
       "outputs": [
@@ -9189,6 +8938,7 @@
       ],
       "recommended_models": [
         {
+          "type": "hf.qwen_image",
           "repo_id": "Qwen/Qwen-Image",
           "allow_patterns": [
             "**/*.safetensors",
@@ -9196,9 +8946,50 @@
             "**/*.txt",
             "*.json"
           ]
+        },
+        {
+          "type": "hf.qwen_image",
+          "repo_id": "city96/Qwen-Image-gguf",
+          "path": "qwen-image-Q2_K.gguf"
+        },
+        {
+          "type": "hf.qwen_image",
+          "repo_id": "city96/Qwen-Image-gguf",
+          "path": "qwen-image-Q3_K_S.gguf"
+        },
+        {
+          "type": "hf.qwen_image",
+          "repo_id": "city96/Qwen-Image-gguf",
+          "path": "qwen-image-Q4_K_S.gguf"
+        },
+        {
+          "type": "hf.qwen_image",
+          "repo_id": "city96/Qwen-Image-gguf",
+          "path": "qwen-image-Q5_K_S.gguf"
+        },
+        {
+          "type": "hf.qwen_image",
+          "repo_id": "city96/Qwen-Image-gguf",
+          "path": "qwen-image-Q6_K.gguf"
+        },
+        {
+          "type": "hf.qwen_image",
+          "repo_id": "city96/Qwen-Image-gguf",
+          "path": "qwen-image-Q8_0.gguf"
+        },
+        {
+          "type": "hf.qwen_image",
+          "repo_id": "city96/Qwen-Image-gguf",
+          "path": "qwen-image-BF16.gguf"
+        },
+        {
+          "type": "hf.qwen_image",
+          "repo_id": "Comfy-Org/Qwen-Image_ComfyUI",
+          "path": "split_files/text_encoders/qwen_image_text_encoder_fp8.safetensors"
         }
       ],
       "basic_fields": [
+        "model",
         "prompt",
         "negative_prompt",
         "height",
@@ -9782,8 +9573,6 @@
         "model",
         "prompt",
         "width",
-        "height",
-        "width",
         "height"
       ]
     },
@@ -9897,12 +9686,8 @@
       "basic_fields": [
         "model",
         "prompt",
-        "negative_prompt",
-        "num_inference_steps",
-        "guidance_scale",
-        "width",
         "height",
-        "pag_scale",
+        "width",
         "seed"
       ]
     },

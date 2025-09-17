@@ -84,6 +84,9 @@ class HuggingFacePipelineNode(HuggingfaceNode):
             if cached_model:
                 return cached_model
 
+        # Check if this is a GGUF file loading request
+        gguf_file = kwargs.get("gguf_file")
+        
         if path:
             cache_path = try_to_load_from_cache(model_id, path)
             if not cache_path:
@@ -95,12 +98,33 @@ class HuggingFacePipelineNode(HuggingfaceNode):
                     message=f"Loading model {model_id} from {cache_path}",
                 )
             )
-            model = model_class.from_single_file(  # type: ignore
-                cache_path,
-                torch_dtype=torch_dtype,
-                variant=variant,
-                **kwargs,
-            )
+            
+            if gguf_file:
+                # For GGUF files, use from_pretrained with gguf_file parameter
+                model = model_class.from_pretrained(  # type: ignore
+                    model_id,
+                    gguf_file=gguf_file,
+                    torch_dtype=torch_dtype,
+                    variant=variant,
+                    **{k: v for k, v in kwargs.items() if k != "gguf_file"}
+                )
+            else:
+                # For other files with path, use from_single_file if available
+                if hasattr(model_class, 'from_single_file'):
+                    model = model_class.from_single_file(  # type: ignore
+                        cache_path,
+                        torch_dtype=torch_dtype,
+                        variant=variant,
+                        **kwargs,
+                    )
+                else:
+                    # Fallback to from_pretrained for classes without from_single_file
+                    model = model_class.from_pretrained(  # type: ignore
+                        model_id,
+                        torch_dtype=torch_dtype,
+                        variant=variant,
+                        **kwargs,
+                    )
         else:
             log.info(f"Loading model {model_id} from HuggingFace")
             context.post_message(
