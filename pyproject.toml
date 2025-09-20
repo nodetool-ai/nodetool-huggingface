@@ -17,6 +17,7 @@ dependencies = [
     "torchvision",
     "torchaudio",
     "hf_xet",
+    "mlx_lm>=0.27.1",
     # Use dev branches to keep logging API compatible across packages
     "diffusers[torch] @ git+https://github.com/huggingface/diffusers.git@main",
     "transformers @ git+https://github.com/huggingface/transformers.git@main",
