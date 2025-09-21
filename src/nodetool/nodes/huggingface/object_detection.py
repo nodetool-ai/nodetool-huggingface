@@ -192,7 +192,7 @@ class VisualizeObjectDetection(BaseNode):
         ax.axis("off")
 
         # Remove padding around the image
-        plt.tight_layout(pad=0)
+        plt.tight_layout: ClassVar[str](pad=0)
 
         if fig is None:
             raise ValueError("Invalid plot")
