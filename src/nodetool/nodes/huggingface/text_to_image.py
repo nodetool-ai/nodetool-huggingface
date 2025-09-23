@@ -1324,18 +1324,13 @@ class QwenImage(HuggingFacePipelineNode):
 
         # Get the cached file path
         assert self.model.path is not None
-        cache_path = try_to_load_from_cache(self.get_model_id(), self.model.path)
-        if not cache_path:
-            raise ValueError(
-                f"Model {self.get_model_id()}/{self.model.path} must be downloaded first"
-            )
 
         # Load the transformer with GGUF quantization
-        transformer = self.load_model(
+        transformer = await self.load_model(
             context=context,
             model_class=QwenImageTransformer2DModel,
             model_id=self.get_model_id(),
-            path=cache_path,
+            path=self.model.path,
             torch_dtype=torch_dtype,
             quantization_config=GGUFQuantizationConfig(compute_dtype=torch_dtype),
             config="Qwen/Qwen-Image",
