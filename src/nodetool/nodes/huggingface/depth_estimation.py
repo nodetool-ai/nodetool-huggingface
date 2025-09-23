@@ -75,6 +75,6 @@ class DepthEstimation(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> ImageRef:
         assert self._pipeline is not None
         image = await context.image_to_pil(self.image)
-        result = self._pipeline(image)
+        result = await self.run_pipeline_in_thread(image)
         depth_map = result["depth"]  # type: ignore
         return await context.image_from_pil(depth_map)  # type: ignore

@@ -91,7 +91,7 @@ class Segmentation(HuggingFacePipelineNode):
         assert self._pipeline is not None
 
         image = await context.image_to_pil(self.image)
-        result = self._pipeline(image)
+        result = await self.run_pipeline_in_thread(image)
 
         async def convert_output(item: dict[str, Any]):
             mask = await context.image_from_pil(item["mask"])
@@ -180,7 +180,7 @@ class FindSegment(BaseNode):
     """
 
     segments: list[ImageSegmentationResult] = Field(
-        default={},
+        default=[],
         title="Segmentation Masks",
         description="The segmentation masks to search",
     )

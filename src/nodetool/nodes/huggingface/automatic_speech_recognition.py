@@ -258,7 +258,7 @@ class Whisper(HuggingFacePipelineNode):
             },
         }
 
-        result = self._pipeline(samples, **pipeline_kwargs)
+        result = await self.run_pipeline_in_thread(samples, **pipeline_kwargs)
 
         assert isinstance(result, dict)
 

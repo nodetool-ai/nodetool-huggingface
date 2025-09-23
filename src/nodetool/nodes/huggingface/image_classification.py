@@ -94,7 +94,7 @@ class ImageClassifier(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> dict[str, float]:
         image = await context.image_to_pil(self.image)
-        result = self._pipeline(image)  # type: ignore
+        result = await self.run_pipeline_in_thread(image)  # type: ignore
         return {str(item["label"]): float(item["score"]) for item in result}  # type: ignore
 
 
@@ -166,7 +166,7 @@ class ZeroShotImageClassifier(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> dict[str, float]:
         image = await context.image_to_pil(self.image)
-        result = self._pipeline(
+        result = await self.run_pipeline_in_thread(
             image, candidate_labels=self.candidate_labels.split(",")
         )  # type: ignore
         return {str(item["label"]): float(item["score"]) for item in result}  # type: ignore

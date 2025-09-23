@@ -11,6 +11,7 @@ class LoadImageToTextModel(HuggingFacePipelineNode):
         title="Model ID on Huggingface",
         description="The model ID to use for image-to-text generation",
     )
+
     async def preload_model(self, context: ProcessingContext):
         if not self.repo_id:
             raise ValueError("Model ID is required")
@@ -65,7 +66,7 @@ class ImageToText(HuggingFacePipelineNode):
                 allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
             ),
             HFImageToText(
-                repo_id="Salesforce/blip2-opt-2.7b", 
+                repo_id="Salesforce/blip2-opt-2.7b",
                 allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
             ),
             HFImageToText(
@@ -77,7 +78,7 @@ class ImageToText(HuggingFacePipelineNode):
                 allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
             ),
         ]
-    
+
     def required_inputs(self):
         return ["image"]
 
@@ -101,19 +102,19 @@ class ImageToText(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> str:
         assert self._pipeline is not None
         image = await context.image_to_pil(self.image)
-        
+
         kwargs = {}
         if self.max_new_tokens is not None:
             kwargs["max_new_tokens"] = self.max_new_tokens
-            
-        result = self._pipeline(image, **kwargs)  # type: ignore
-        
+
+        result = await self.run_pipeline_in_thread(image, **kwargs)  # type: ignore
+
         # Handle different output formats from different models
         if isinstance(result, list) and len(result) > 0:
             if isinstance(result[0], dict) and "generated_text" in result[0]:
                 return result[0]["generated_text"]  # type: ignore
             elif isinstance(result[0], str):
                 return result[0]  # type: ignore
-            
+
         # Fallback for other formats
         return str(result)  # type: ignore

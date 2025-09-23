@@ -50,7 +50,7 @@ class TokenClassification(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> DataframeRef:
         assert self._pipeline is not None
-        result = self._pipeline(
+        result = await self.run_pipeline_in_thread(
             self.inputs, aggregation_strategy=self.aggregation_strategy.value
         )
         data = [

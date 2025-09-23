@@ -2,15 +2,15 @@ import torch
 from nodetool.metadata.types import HFTranslation
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
+from nodetool.config.logging_config import get_logger
 from pydantic import Field
 from enum import Enum
 from transformers import PreTrainedModel, Pipeline
 import logging
-from nodetool.config.logging_config import get_logger
 from typing import List, Optional, Union, Iterable
 from collections.abc import Generator
 
-# Configure standardized logger = get_logger(__name__)
+logger = get_logger(__name__)
 
 
 class Translation(HuggingFacePipelineNode):
@@ -133,7 +133,7 @@ class Translation(HuggingFacePipelineNode):
 
         try:
             # Invoke the pipeline
-            result = self._pipeline(
+            result = await self.run_pipeline_in_thread(
                 self.inputs,
                 src_lang=self.source_lang.value,
                 tgt_lang=self.target_lang.value,

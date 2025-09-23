@@ -77,7 +77,7 @@ class QuestionAnswering(HuggingFacePipelineNode):
             "context": self.context,
         }
 
-        result = self._pipeline(inputs)
+        result = await self.run_pipeline_in_thread(inputs)
         assert result is not None
         return {
             "answer": result["answer"],  # type: ignore
@@ -157,7 +157,7 @@ class TableQuestionAnswering(HuggingFacePipelineNode):
             "query": self.question,
         }
 
-        result = self._pipeline(inputs)
+        result = await self.run_pipeline_in_thread(inputs)
         assert result is not None
         return {
             "answer": result["answer"],  # type: ignore

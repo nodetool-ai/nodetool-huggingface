@@ -70,6 +70,6 @@ class Summarize(HuggingFacePipelineNode):
             "do_sample": self.do_sample,
         }
 
-        result = self._pipeline(inputs, **params)
+        result = await self.run_pipeline_in_thread(inputs, **params)
         assert result is not None
         return result[0]["summary_text"]  # type: ignore

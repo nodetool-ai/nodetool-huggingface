@@ -68,7 +68,7 @@ class FillMask(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> dict[str, Any]:
         assert self._pipeline is not None
-        result = self._pipeline(self.inputs, top_k=self.top_k)
+        result = await self.run_pipeline_in_thread(self.inputs, top_k=self.top_k)
         assert result is not None
         data = [[item["token_str"], item["score"]] for item in result]  # type: ignore
         columns = [

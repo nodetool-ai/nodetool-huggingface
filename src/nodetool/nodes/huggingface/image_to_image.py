@@ -425,7 +425,7 @@ class ImageToImage(HuggingFacePipelineNode):
         if self.negative_prompt:
             kwargs["negative_prompt"] = self.negative_prompt
 
-        output = self._pipeline(**kwargs)  # type: ignore
+        output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
         image = output.images[0]
 
         return await context.image_from_pil(image)
@@ -552,7 +552,7 @@ class Inpaint(HuggingFacePipelineNode):
         if self.negative_prompt:
             kwargs["negative_prompt"] = self.negative_prompt
 
-        output = self._pipeline(**kwargs)  # type: ignore
+        output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
 
         image = output.images[0]
 
@@ -1771,7 +1771,7 @@ class OmniGenNode(HuggingFacePipelineNode):
             kwargs["input_images"] = input_images_pil
             kwargs["img_guidance_scale"] = self.img_guidance_scale
 
-        output = self._pipeline(**kwargs)  # type: ignore
+        output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
         image = output.images[0]
 
         return await context.image_from_pil(image)
@@ -1886,7 +1886,7 @@ class QwenImageEdit(HuggingFacePipelineNode):
         else:
             kwargs["negative_prompt"] = " "  # Default as shown in Qwen example
 
-        output = self._pipeline(**kwargs)  # type: ignore
+        output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
         image = output.images[0]
 
         return await context.image_from_pil(image)

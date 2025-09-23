@@ -60,7 +60,7 @@ class AudioClassifier(HuggingFacePipelineNode):
                 repo_id="ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition",
                 allow_patterns=["pytorch_model.bin", "*.json"],
             ),
-    ]
+        ]
 
     def required_inputs(self):
         return ["audio"]
@@ -79,7 +79,7 @@ class AudioClassifier(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> dict[str, float]:
         samples, _, _ = await context.audio_to_numpy(self.audio)
-        result = self._pipeline(
+        result = await self.run_pipeline_in_thread(
             samples,
             top_k=self.top_k,
         )  # type: ignore
@@ -145,7 +145,7 @@ class ZeroShotAudioClassifier(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> dict[str, float]:
         assert self._pipeline is not None, "Pipeline not initialized"
         samples, _, _ = await context.audio_to_numpy(self.audio)
-        result = self._pipeline(
+        result = await self.run_pipeline_in_thread(
             samples, candidate_labels=self.candidate_labels.split(",")
         )
         return {item["label"]: item["score"] for item in result}  # type: ignore

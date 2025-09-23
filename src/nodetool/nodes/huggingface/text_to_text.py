@@ -76,7 +76,7 @@ class TextToText(HuggingFacePipelineNode):
         self._pipeline.model.to(device)  # type: ignore
 
     async def process(self, context: ProcessingContext) -> str:
-        result = self._pipeline(
+        result = await self.run_pipeline_in_thread(
             self.text,
             max_length=self.max_length,
         )  # type: ignore

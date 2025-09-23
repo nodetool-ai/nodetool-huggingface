@@ -174,7 +174,7 @@ class AnimateDiffNode(HuggingFacePipelineNode):
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
 
-        output = self._pipeline(
+        output = await self.run_pipeline_in_thread(
             prompt=self.prompt,
             negative_prompt=self.negative_prompt,
             num_frames=self.num_frames,
@@ -271,15 +271,14 @@ class StableVideoDiffusion(HuggingFacePipelineNode):
             return {}
 
         # Generate the video frames
-        frames = self._pipeline(
+        frames = await self.run_pipeline_in_thread(
             input_image,
             num_frames=self.num_frames,
             decode_chunk_size=self.decode_chunk_size,
             generator=generator,
             callback_on_step_end=callback,  # type: ignore
-        ).frames[  # type: ignore
-            0
-        ]
+        )
+        frames = frames.frames[0]  # type: ignore
         return await context.video_from_numpy(np.array(frames), fps=self.fps)  # type: ignore
 
     @classmethod
@@ -452,7 +451,7 @@ class CogVideoX(HuggingFacePipelineNode):
             )
 
         # Generate the video
-        output = self._pipeline(
+        output = await self.run_pipeline_in_thread(
             prompt=self.prompt,
             negative_prompt=self.negative_prompt,
             num_frames=self.num_frames,
@@ -651,7 +650,7 @@ class Wan_T2V(HuggingFacePipelineNode):
             )
             return callback_kwargs
 
-        output = self._pipeline(
+        output = await self.run_pipeline_in_thread(
             prompt=self.prompt,
             negative_prompt=self.negative_prompt,
             num_frames=self.num_frames,

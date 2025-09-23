@@ -105,7 +105,7 @@ class ObjectDetection(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> list[ObjectDetectionResult]:
         assert self._pipeline is not None
         image = await context.image_to_pil(self.image)
-        result = self._pipeline(image, threshold=self.threshold)
+        result = await self.run_pipeline_in_thread(image, threshold=self.threshold)
         if isinstance(result, list):
             return [
                 ObjectDetectionResult(
@@ -293,7 +293,7 @@ class ZeroShotObjectDetection(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> list[ObjectDetectionResult]:
         assert self._pipeline is not None
         image = await context.image_to_pil(self.image)
-        result = self._pipeline(
+        result = await self.run_pipeline_in_thread(
             image,
             candidate_labels=self.candidate_labels.split(","),
             threshold=self.threshold,

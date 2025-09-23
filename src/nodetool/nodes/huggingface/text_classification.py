@@ -45,7 +45,7 @@ class TextClassifier(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> dict[str, float]:
         assert self._pipeline is not None
-        result = self._pipeline(self.prompt)
+        result = await self.run_pipeline_in_thread(self.prompt)
         return {i["label"]: i["score"] for i in list(result)}  # type: ignore
 
 
@@ -133,9 +133,9 @@ class ZeroShotTextClassifier(HuggingFacePipelineNode):
             raise ValueError("Please provide candidate labels")
         if self.inputs.strip() == "":
             raise ValueError("Please provide input text")
-        
+
         labels = self.candidate_labels.split(",")
-        result = self._pipeline(
+        result = await self.run_pipeline_in_thread(
             self.inputs,
             candidate_labels=labels,
             multi_label=self.multi_label,

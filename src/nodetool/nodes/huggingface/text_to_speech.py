@@ -64,7 +64,9 @@ class Bark(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> AudioRef:
         assert self._pipeline is not None, "Pipeline not initialized"
-        result = self._pipeline(self.prompt, forward_params={"do_sample": True})
+        result = await self.run_pipeline_in_thread(
+            self.prompt, forward_params={"do_sample": True}
+        )
         audio = await context.audio_from_numpy(result["audio"], 24_000)  # type: ignore
         return audio
 
@@ -219,7 +221,9 @@ class KokoroTTS(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
-        from kokoro import KPipeline  # Local import to avoid hard dependency for non-users
+        from kokoro import (
+            KPipeline,
+        )  # Local import to avoid hard dependency for non-users
 
         # Initialize and cache the Kokoro pipeline
         device = context.device
@@ -230,7 +234,10 @@ class KokoroTTS(HuggingFacePipelineNode):
         )
 
     async def move_to_device(self, device: str):
-        if self._kpipeline is not None and getattr(self._kpipeline, "model", None) is not None:
+        if (
+            self._kpipeline is not None
+            and getattr(self._kpipeline, "model", None) is not None
+        ):
             # KPipeline holds a torch.nn.Module in .model
             self._kpipeline.model.to(device)  # type: ignore
 
@@ -263,6 +270,7 @@ class KokoroTTS(HuggingFacePipelineNode):
 
     def requires_gpu(self) -> bool:
         return True
+
 
 # class ParlerTTS(HuggingFacePipelineNode):
 #     """
@@ -410,7 +418,7 @@ class TextToSpeech(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> AudioRef:
         assert self._pipeline is not None, "Pipeline not initialized"
 
-        result = self._pipeline(self.text)
+        result = await self.run_pipeline_in_thread(self.text)
 
         if isinstance(result, dict) and "audio" in result:
             audio_array = result["audio"]

@@ -192,13 +192,12 @@ class MusicLDM(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> AudioRef:
         assert self._pipeline is not None, "Pipeline not initialized"
-        audio = self._pipeline(
+        audio = await self.run_pipeline_in_thread(
             self.prompt,
             num_inference_steps=self.num_inference_steps,
             audio_length_in_s=self.audio_length_in_s,
-        ).audios[  # type: ignore
-            0
-        ]
+        )
+        audio = audio.audios[0]  # type: ignore
 
         return await context.audio_from_numpy(audio, 16_000)
 
@@ -276,16 +275,15 @@ class AudioLDM(HuggingFacePipelineNode):
                 )
             )
 
-        audio = self._pipeline(
+        audio = await self.run_pipeline_in_thread(
             self.prompt,
             num_inference_steps=self.num_inference_steps,
             audio_length_in_s=self.audio_length_in_s,
             generator=generator,
             callback=progress_callback,  # type: ignore
             callback_steps=1,
-        ).audios[  # type: ignore
-            0
-        ]
+        )
+        audio = audio.audios[0]  # type: ignore
 
         return await context.audio_from_numpy(audio, 16000)
 
@@ -373,7 +371,7 @@ class AudioLDM2(HuggingFacePipelineNode):
                 )
             )
 
-        audio = self._pipeline(
+        audio = await self.run_pipeline_in_thread(
             self.prompt,
             negative_prompt=self.negative_prompt,
             num_inference_steps=self.num_inference_steps,
@@ -382,9 +380,8 @@ class AudioLDM2(HuggingFacePipelineNode):
             generator=generator,
             callback=progress_callback,  # type: ignore
             callback_steps=1,
-        ).audios[  # type: ignore
-            0
-        ]
+        )
+        audio = audio.audios[0]  # type: ignore
 
         return await context.audio_from_numpy(audio, 16000)
 
@@ -447,13 +444,12 @@ class DanceDiffusion(HuggingFacePipelineNode):
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
 
-        audio = self._pipeline(
+        audio = await self.run_pipeline_in_thread(
             audio_length_in_s=self.audio_length_in_s,
             num_inference_steps=self.num_inference_steps,
             generator=generator,
-        ).audios[  # type: ignore
-            0
-        ]
+        )
+        audio = audio.audios[0]  # type: ignore
 
         return await context.audio_from_numpy(audio, 16000)
 
@@ -540,7 +536,7 @@ class StableAudioNode(HuggingFacePipelineNode):
                 )
             )
 
-        audio = self._pipeline(
+        audio = await self.run_pipeline_in_thread(
             self.prompt,
             negative_prompt=self.negative_prompt,
             num_inference_steps=self.num_inference_steps,
@@ -548,9 +544,8 @@ class StableAudioNode(HuggingFacePipelineNode):
             num_waveforms_per_prompt=1,
             generator=generator,
             callback=progress_callback,  # type: ignore
-        ).audios[  # type: ignore
-            0
-        ]
+        )
+        audio = audio.audios[0]  # type: ignore
 
         output = audio.T.float().cpu().numpy()
         sampling_rate = self._pipeline.vae.sampling_rate

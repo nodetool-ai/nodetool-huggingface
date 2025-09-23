@@ -378,15 +378,26 @@ class TextGeneration(HuggingFacePipelineNode):
         def generate():
             try:
                 assert self._pipeline is not None
-                self._pipeline(
-                    self.prompt,
-                    max_new_tokens=self.max_new_tokens,
-                    temperature=self.temperature,
-                    top_p=self.top_p,
-                    do_sample=self.do_sample,
-                    streamer=streamer,
-                    return_full_text=False,
-                )
+                kwargs = {
+                    "max_new_tokens": self.max_new_tokens,
+                    "temperature": self.temperature,
+                    "top_p": self.top_p,
+                    "do_sample": self.do_sample,
+                    "streamer": streamer,
+                    "return_full_text": False,
+                }
+                if self.top_k is not None:
+                    kwargs["top_k"] = self.top_k
+                if self.repetition_penalty is not None:
+                    kwargs["repetition_penalty"] = self.repetition_penalty
+
+                loop = asyncio.new_event_loop()
+
+                async def run():
+                    await self.run_pipeline_in_thread(self.prompt, **kwargs)
+
+                loop.run_until_complete(run())
+                loop.close()
             except Exception as e:
                 token_queue.put(f"Error: {e}")
                 token_queue.put(None)

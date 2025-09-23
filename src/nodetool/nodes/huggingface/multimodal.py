@@ -77,7 +77,9 @@ class ImageToText(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> str:
         assert self._pipeline is not None
         image = await context.image_to_pil(self.image)
-        result = self._pipeline(image, max_new_tokens=self.max_new_tokens)
+        result = await self.run_pipeline_in_thread(
+            image, max_new_tokens=self.max_new_tokens
+        )
         assert isinstance(result, list)
         assert len(result) == 1
         return result[0]["generated_text"]
@@ -133,7 +135,7 @@ class VisualQuestionAnswering(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> str:
         assert self._pipeline is not None
         image = await context.image_to_pil(self.image)
-        result = self._pipeline(image, question=self.question)
+        result = await self.run_pipeline_in_thread(image, question=self.question)
         assert isinstance(result, list)
         assert len(result) == 1
         return result[0]["answer"]

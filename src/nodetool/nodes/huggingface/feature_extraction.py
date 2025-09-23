@@ -63,7 +63,7 @@ class FeatureExtraction(HuggingFacePipelineNode):
 
         assert self._pipeline is not None
 
-        result = self._pipeline(self.inputs)
+        result = await self.run_pipeline_in_thread(self.inputs)
 
         assert isinstance(result, list)
 

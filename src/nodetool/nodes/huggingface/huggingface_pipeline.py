@@ -1,4 +1,5 @@
 import torch
+import asyncio
 from nodetool.config.environment import Environment
 from nodetool.config.logging_config import get_logger
 from nodetool.nodes.huggingface.huggingface_node import HuggingfaceNode
@@ -132,6 +133,21 @@ class HuggingFacePipelineNode(HuggingfaceNode):
     async def move_to_device(self, device: str):
         if self._pipeline is not None and hasattr(self._pipeline, "to"):
             self._pipeline.to(device)  # type: ignore
+
+    async def run_pipeline_in_thread(self, *args: Any, **kwargs: Any) -> Any:
+        """
+        Execute the underlying HF pipeline in a background thread to avoid
+        blocking the asyncio event loop.
+        """
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        pipeline = self._pipeline
+
+        def _call():
+            return pipeline(*args, **kwargs)
+
+        return await asyncio.to_thread(_call)
 
     async def process(self, context: ProcessingContext) -> Any:
         raise NotImplementedError("Subclasses must implement this method")

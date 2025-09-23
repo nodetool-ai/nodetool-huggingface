@@ -213,7 +213,7 @@ class Wan_I2V(HuggingFacePipelineNode):
             )
             return callback_kwargs
 
-        output = self._pipeline(
+        output = await self.run_pipeline_in_thread(
             image=input_image,
             prompt=self.prompt,
             negative_prompt=self.negative_prompt,

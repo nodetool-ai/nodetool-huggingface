@@ -135,7 +135,7 @@ class ImageTextToText(HuggingFacePipelineNode):
         ]
 
         # Most models use `text=` for the messages payload per HF examples
-        outputs: Any = self._pipeline(  # type: ignore
+        outputs: Any = await self.run_pipeline_in_thread(  # type: ignore
             text=messages,
             max_new_tokens=self.max_new_tokens,
             return_full_text=False,
