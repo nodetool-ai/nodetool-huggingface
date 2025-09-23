@@ -114,10 +114,6 @@ class TableQuestionAnswering(HuggingFacePipelineNode):
                 repo_id="microsoft/tapex-large-finetuned-tabfact",
                 allow_patterns=["*.json", "*.txt", "*.safetensors"],
             ),
-            HFTableQuestionAnswering(
-                repo_id="google/tapas-large-finetuned-squad",
-                allow_patterns=["*.json", "*.txt", "*.safetensors"],
-            ),
         ]
 
     model: HFTableQuestionAnswering = Field(

@@ -1,6 +1,7 @@
 from enum import Enum
 import os
 from random import randint
+import asyncio
 
 from huggingface_hub import try_to_load_from_cache
 from pydantic import Field
@@ -935,21 +936,25 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         log.debug(f"PAG scale: {self.pag_scale}")
         log.debug(f"Output type: {self.output_type.value}")
 
-        image = self._pipeline(
-            prompt=self.prompt,
-            negative_prompt=self.negative_prompt,
-            num_inference_steps=self.num_inference_steps,
-            guidance_scale=self.guidance_scale,
-            generator=generator,
-            ip_adapter_image=ip_adapter_image,
-            cross_attention_kwargs={"scale": 1.0},
-            callback_on_step_end=self.progress_callback(
-                context, 0, self.num_inference_steps
-            ),
-            pag_scale=self.pag_scale,
-            output_type=self.output_type.value,
-            **kwargs,
-        ).images[0]
+        def _run_pipeline_sync():
+            return self._pipeline(
+                prompt=self.prompt,
+                negative_prompt=self.negative_prompt,
+                num_inference_steps=self.num_inference_steps,
+                guidance_scale=self.guidance_scale,
+                generator=generator,
+                ip_adapter_image=ip_adapter_image,
+                cross_attention_kwargs={"scale": 1.0},
+                callback_on_step_end=self.progress_callback(
+                    context, 0, self.num_inference_steps
+                ),
+                pag_scale=self.pag_scale,
+                output_type=self.output_type.value,
+                **kwargs,
+            )
+
+        output = await asyncio.to_thread(_run_pipeline_sync)
+        image = output.images[0]
 
         log.debug("Pipeline inference completed")
 
@@ -1263,20 +1268,24 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         log.debug(f"Dimensions: {self.width}x{self.height}")
         log.debug(f"LoRA scale: {self.lora_scale}")
 
-        image = self._pipeline(
-            prompt=self.prompt,
-            negative_prompt=self.negative_prompt,
-            num_inference_steps=self.num_inference_steps,
-            guidance_scale=self.guidance_scale,
-            width=self.width,
-            height=self.height,
-            ip_adapter_image=ip_adapter_image,
-            ip_adapter_scale=self.ip_adapter_scale,
-            cross_attention_kwargs={"scale": self.lora_scale},
-            callback_on_step_end=self.progress_callback(context),
-            generator=generator,
-            **kwargs,
-        ).images[0]
+        def _run_pipeline_sync_xl():
+            return self._pipeline(
+                prompt=self.prompt,
+                negative_prompt=self.negative_prompt,
+                num_inference_steps=self.num_inference_steps,
+                guidance_scale=self.guidance_scale,
+                width=self.width,
+                height=self.height,
+                ip_adapter_image=ip_adapter_image,
+                ip_adapter_scale=self.ip_adapter_scale,
+                cross_attention_kwargs={"scale": self.lora_scale},
+                callback_on_step_end=self.progress_callback(context),
+                generator=generator,
+                **kwargs,
+            )
+
+        output = await asyncio.to_thread(_run_pipeline_sync_xl)
+        image = output.images[0]
 
         log.debug("Pipeline inference completed (XL)")
         log.debug("Converting PIL image to ImageRef (XL)")

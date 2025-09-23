@@ -21,6 +21,7 @@ from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress, Notification, LogUpdate
 
 import torch
+import asyncio
 import logging
 from transformers.utils import logging as hf_logging
 from diffusers.utils import logging as diffusers_logging
@@ -31,11 +32,11 @@ from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
 from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
 from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
-from diffusers import DiffusionPipeline
+from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.schedulers.scheduling_dpmsolver_multistep import (
     DPMSolverMultistepScheduler,
 )
-from diffusers import GGUFQuantizationConfig
+from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
 from pydantic import Field
 from nodetool.workflows.base_node import BaseNode
 
@@ -292,20 +293,23 @@ class Text2Image(HuggingFacePipelineNode):
         if self.seed != -1:
             generator = torch.Generator(device="cpu").manual_seed(self.seed)
 
-        # Generate the image
-        output = self._pipeline(
-            prompt=self.prompt,
-            negative_prompt=self.negative_prompt,
-            num_inference_steps=self.num_inference_steps,
-            guidance_scale=self.guidance_scale,
-            width=self.width,
-            height=self.height,
-            generator=generator,
-            pag_scale=self.pag_scale,
-            callback_on_step_end=pipeline_progress_callback(
-                self.id, self.num_inference_steps, context
-            ),
-        )  # type: ignore
+        # Generate the image off the event loop
+        def _run_pipeline_sync():
+            return self._pipeline(
+                prompt=self.prompt,
+                negative_prompt=self.negative_prompt,
+                num_inference_steps=self.num_inference_steps,
+                guidance_scale=self.guidance_scale,
+                width=self.width,
+                height=self.height,
+                generator=generator,
+                pag_scale=self.pag_scale,
+                callback_on_step_end=pipeline_progress_callback(
+                    self.id, self.num_inference_steps, context
+                ),
+            )  # type: ignore
+
+        output = await asyncio.to_thread(_run_pipeline_sync)
 
         image = output.images[0]  # type: ignore
 
@@ -601,6 +605,7 @@ class Flux(HuggingFacePipelineNode):
             )
 
         # Get the cached file path
+        assert self.model.path is not None
         cache_path = try_to_load_from_cache(self.get_model_id(), self.model.path)
         if not cache_path:
             raise ValueError(
@@ -708,18 +713,21 @@ class Flux(HuggingFacePipelineNode):
             )
             return callback_kwargs
 
-        # Generate the image
-        output = self._pipeline(
-            prompt=self.prompt,
-            guidance_scale=guidance_scale,
-            height=self.height,
-            width=self.width,
-            num_inference_steps=num_inference_steps,
-            max_sequence_length=max_sequence_length,
-            generator=generator,
-            callback_on_step_end=progress_callback,
-            callback_on_step_end_tensor_inputs=["latents"],
-        )
+        # Generate the image off the event loop
+        def _run_pipeline_sync():
+            return self._pipeline(
+                prompt=self.prompt,
+                guidance_scale=guidance_scale,
+                height=self.height,
+                width=self.width,
+                num_inference_steps=num_inference_steps,
+                max_sequence_length=max_sequence_length,
+                generator=generator,
+                callback_on_step_end=progress_callback,  # type: ignore
+                callback_on_step_end_tensor_inputs=["latents"],
+            )
+
+        output = await asyncio.to_thread(_run_pipeline_sync)
 
         image = output.images[0]  # type: ignore
 
@@ -838,19 +846,22 @@ class Kolors(HuggingFacePipelineNode):
         if self.seed != -1:
             generator = torch.Generator(device="cpu").manual_seed(self.seed)
 
-        # Generate the image
-        output = self._pipeline(
-            prompt=self.prompt,
-            negative_prompt=self.negative_prompt,
-            guidance_scale=self.guidance_scale,
-            num_inference_steps=self.num_inference_steps,
-            height=self.height,
-            width=self.width,
-            generator=generator,
-            max_sequence_length=self.max_sequence_length,
-            callback_on_step_end=pipeline_progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
-            callback_on_step_end_tensor_inputs=["latents"],
-        )
+        # Generate the image off the event loop
+        def _run_pipeline_sync():
+            return self._pipeline(
+                prompt=self.prompt,
+                negative_prompt=self.negative_prompt,
+                guidance_scale=self.guidance_scale,
+                num_inference_steps=self.num_inference_steps,
+                height=self.height,
+                width=self.width,
+                generator=generator,
+                max_sequence_length=self.max_sequence_length,
+                callback_on_step_end=pipeline_progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
+                callback_on_step_end_tensor_inputs=["latents"],
+            )
+
+        output = await asyncio.to_thread(_run_pipeline_sync)
 
         image = output.images[0]  # type: ignore
 
@@ -964,10 +975,6 @@ class Chroma(HuggingFacePipelineNode):
     def get_title(cls) -> str:
         return "Chroma"
 
-    @classmethod
-    def get_basic_fields(cls) -> list[str]:
-        return ["prompt", "negative_prompt", "height", "width"]
-
     def get_model_id(self) -> str:
         return "lodestones/Chroma"
 
@@ -1037,7 +1044,14 @@ class Chroma(HuggingFacePipelineNode):
         if ip_adapter_image is not None:
             pipeline_kwargs["ip_adapter_image"] = ip_adapter_image
 
-        output = self._pipeline(**pipeline_kwargs)
+        # Generate the image off the event loop
+        pipeline = self._pipeline
+        assert pipeline is not None
+
+        def _run_pipeline_sync():
+            return pipeline(**pipeline_kwargs)
+
+        output = await asyncio.to_thread(_run_pipeline_sync)
 
         image = output.images[0]  # type: ignore
 
@@ -1130,7 +1144,7 @@ class QwenImage(HuggingFacePipelineNode):
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _pipeline: AutoPipelineForText2Image | DiffusionPipeline | None = None
+    _pipeline: Any | None = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFQwenImage]:
@@ -1273,6 +1287,7 @@ class QwenImage(HuggingFacePipelineNode):
                 load_kwargs["text_encoder"] = fp8_text_encoder
 
             self._pipeline = await self.load_model(**load_kwargs)
+            assert self._pipeline is not None
 
             # Apply memory optimizations after loading
             if self.enable_cpu_offload:
@@ -1292,7 +1307,9 @@ class QwenImage(HuggingFacePipelineNode):
     ):
         """Load Qwen-Image model with GGUF quantization."""
         from huggingface_hub.file_download import try_to_load_from_cache
-        from diffusers import QwenImageTransformer2DModel
+        from diffusers.models.transformers.transformer_qwenimage import (
+            QwenImageTransformer2DModel,
+        )
 
         quantization_type = self._detect_gguf_quantization_type()
 
@@ -1306,6 +1323,7 @@ class QwenImage(HuggingFacePipelineNode):
             )
 
         # Get the cached file path
+        assert self.model.path is not None
         cache_path = try_to_load_from_cache(self.get_model_id(), self.model.path)
         if not cache_path:
             raise ValueError(
@@ -1313,10 +1331,13 @@ class QwenImage(HuggingFacePipelineNode):
             )
 
         # Load the transformer with GGUF quantization
-        transformer = QwenImageTransformer2DModel.from_single_file(
-            cache_path,
-            quantization_config=GGUFQuantizationConfig(compute_dtype=torch_dtype),
+        transformer = self.load_model(
+            context=context,
+            model_class=QwenImageTransformer2DModel,
+            model_id=self.get_model_id(),
+            path=cache_path,
             torch_dtype=torch_dtype,
+            quantization_config=GGUFQuantizationConfig(compute_dtype=torch_dtype),
             config="Qwen/Qwen-Image",
             subfolder="transformer",
         )
@@ -1334,8 +1355,11 @@ class QwenImage(HuggingFacePipelineNode):
         if fp8_text_encoder is not None:
             pipeline_kwargs["text_encoder"] = fp8_text_encoder
 
-        self._pipeline = DiffusionPipeline.from_pretrained(
-            "Qwen/Qwen-Image", **pipeline_kwargs
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=DiffusionPipeline,
+            model_id="Qwen/Qwen-Image",
+            **pipeline_kwargs,
         )
 
         # Apply memory optimizations after loading
@@ -1389,7 +1413,11 @@ class QwenImage(HuggingFacePipelineNode):
             "callback_on_step_end_tensor_inputs": ["latents"],
         }
 
-        output = self._pipeline(**pipeline_kwargs)  # type: ignore
+        # Generate the image off the event loop
+        def _run_pipeline_sync():
+            return self._pipeline(**pipeline_kwargs)  # type: ignore
+
+        output = await asyncio.to_thread(_run_pipeline_sync)
 
         image = output.images[0]  # type: ignore
 

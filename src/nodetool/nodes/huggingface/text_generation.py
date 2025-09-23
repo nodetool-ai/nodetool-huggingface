@@ -7,6 +7,7 @@ from typing import AsyncGenerator, Any
 import torch
 
 from pydantic import Field
+from transformers import AutoTokenizer
 
 
 class TextGeneration(HuggingFacePipelineNode):
@@ -55,11 +56,11 @@ class TextGeneration(HuggingFacePipelineNode):
         title="Do Sample",
         description="Whether to use sampling or greedy decoding",
     )
-    
+
     @classmethod
     def is_streaming_output(cls) -> bool:
         return True
-    
+
     @classmethod
     def return_type(cls):
         return {
@@ -268,15 +269,15 @@ class TextGeneration(HuggingFacePipelineNode):
 
     def _is_gguf_model(self) -> bool:
         """Check if the model is a GGUF model based on filename."""
-        return self.model.path and self.model.path.lower().endswith('.gguf')
+        return self.model.path is not None and self.model.path.lower().endswith(".gguf")
 
     async def _load_gguf_model(self, context: ProcessingContext):
         """Load text generation model with GGUF quantization."""
         from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-        
+
         if not self.model.path:
             raise ValueError("GGUF model path is required")
-        
+
         # Use base class load_model method for caching with GGUF support
         model = await self.load_model(
             context,
@@ -285,24 +286,20 @@ class TextGeneration(HuggingFacePipelineNode):
             torch_dtype=torch.float32,  # GGUF models are dequantized to fp32
             path=self.model.path,
             device_map="auto",
-            gguf_file=self.model.path
+            gguf_file=self.model.path,
         )
-        
+
         # Load tokenizer separately (also use caching)
         tokenizer = await self.load_model(
             context,
             AutoTokenizer,
             self.model.repo_id,
             path=self.model.path,
-            gguf_file=self.model.path
+            gguf_file=self.model.path,
         )
-        
+
         # Create pipeline manually - don't specify device when using device_map="auto"
-        self._pipeline = pipeline(
-            "text-generation",
-            model=model,
-            tokenizer=tokenizer
-        )
+        self._pipeline = pipeline("text-generation", model=model, tokenizer=tokenizer)
 
     async def preload_model(self, context: ProcessingContext):
         if self._is_gguf_model():
@@ -315,63 +312,72 @@ class TextGeneration(HuggingFacePipelineNode):
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
             # For GGUF models, move both model and tokenizer components
-            if hasattr(self._pipeline, 'model') and hasattr(self._pipeline.model, 'to'):
+            if hasattr(self._pipeline, "model") and hasattr(self._pipeline.model, "to"):
                 self._pipeline.model.to(device)  # type: ignore
-            if hasattr(self._pipeline, 'tokenizer') and hasattr(self._pipeline.tokenizer, 'to'):
+            if hasattr(self._pipeline, "tokenizer") and hasattr(
+                self._pipeline.tokenizer, "to"
+            ):
                 try:
                     self._pipeline.tokenizer.to(device)  # type: ignore
                 except AttributeError:
                     pass  # Some tokenizers don't support .to() method
 
-    async def gen_process(self, context: ProcessingContext) -> AsyncGenerator[tuple[str, Any], None]:
+    async def gen_process(
+        self, context: ProcessingContext
+    ) -> AsyncGenerator[tuple[str, Any], None]:
         """Stream text generation with both chunk and final text outputs."""
         assert self._pipeline is not None
-        
+
         # Use TextStreamer for streaming output
         from transformers import TextStreamer
         import asyncio
         import threading
         from queue import Queue
-        
+
         # Create a queue to collect streamed tokens
         token_queue = Queue()
         full_text = ""
-        
+
         class AsyncTextStreamer(TextStreamer):
-            def __init__(self, tokenizer, skip_prompt=True, **decode_kwargs):
+            def __init__(
+                self, tokenizer: AutoTokenizer, skip_prompt=True, **decode_kwargs
+            ):
                 super().__init__(tokenizer, skip_prompt, **decode_kwargs)
                 self.token_queue = token_queue
-                
+
             def put(self, value):
                 """Override put to send tokens to queue instead of stdout"""
                 if len(value.shape) > 1 and value.shape[0] > 1:
                     raise ValueError("TextStreamer only supports batch size 1")
                 elif len(value.shape) > 1:
                     value = value[0]
-                
+
                 if self.skip_prompt and self.next_tokens_are_prompt:
                     self.next_tokens_are_prompt = False
                     return
-                
+
                 # Decode the token
                 text = self.tokenizer.decode(value, skip_special_tokens=True)
                 if text:
                     self.token_queue.put(text)
-                    
+
             def end(self):
                 """Signal end of generation"""
                 self.token_queue.put(None)  # Sentinel value
-        
+
         # Create the streaming tokenizer
+        assert self._pipeline is not None
+        assert self._pipeline.tokenizer is not None
         streamer = AsyncTextStreamer(
-            self._pipeline.tokenizer,
+            self._pipeline.tokenizer,  # type: ignore
             skip_prompt=True,
-            skip_special_tokens=True
+            skip_special_tokens=True,
         )
-        
+
         # Run generation in a separate thread
         def generate():
             try:
+                assert self._pipeline is not None
                 self._pipeline(
                     self.prompt,
                     max_new_tokens=self.max_new_tokens,
@@ -379,23 +385,23 @@ class TextGeneration(HuggingFacePipelineNode):
                     top_p=self.top_p,
                     do_sample=self.do_sample,
                     streamer=streamer,
-                    return_full_text=False
+                    return_full_text=False,
                 )
             except Exception as e:
                 token_queue.put(f"Error: {e}")
                 token_queue.put(None)
-        
+
         # Start generation in background thread
         thread = threading.Thread(target=generate)
         thread.start()
-        
+
         # Stream tokens as they become available
         try:
             while True:
                 # Check queue with timeout to avoid blocking
                 try:
                     await asyncio.sleep(0.01)  # Small delay to prevent busy waiting
-                    
+
                     # Non-blocking queue check
                     while not token_queue.empty():
                         token = token_queue.get_nowait()
@@ -403,19 +409,16 @@ class TextGeneration(HuggingFacePipelineNode):
                             # Yield final complete text
                             yield "text", full_text
                             return
-                        
+
                         # Accumulate full text
                         full_text += token
-                        
+
                         # Yield chunk for streaming
-                        yield "chunk", Chunk(
-                            content=token,
-                            done=False
-                        )
-                        
+                        yield "chunk", Chunk(content=token, done=False)
+
                 except Exception:
                     continue
-                    
+
                 # Check if thread is still alive
                 if not thread.is_alive():
                     # Drain any remaining tokens
@@ -423,19 +426,13 @@ class TextGeneration(HuggingFacePipelineNode):
                         token = token_queue.get_nowait()
                         if token is not None:
                             full_text += token
-                            yield "chunk", Chunk(
-                                content=token,
-                                done=False
-                            )
-                    
+                            yield "chunk", Chunk(content=token, done=False)
+
                     # Send final chunk and complete text
-                    yield "chunk", Chunk(
-                        content="",
-                        done=True
-                    )
+                    yield "chunk", Chunk(content="", done=True)
                     yield "text", full_text
                     break
-                    
+
         finally:
             # Ensure thread completes
             thread.join(timeout=1.0)

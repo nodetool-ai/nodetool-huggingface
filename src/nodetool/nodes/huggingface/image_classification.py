@@ -129,19 +129,7 @@ class ZeroShotImageClassifier(HuggingFacePipelineNode):
     def get_recommended_models(cls) -> list[HFZeroShotImageClassification]:
         return [
             HFZeroShotImageClassification(
-                repo_id="openai/clip-vit-base-patch16",
-                allow_patterns=["README.md", "pytorch_model.bin", "*.json", "*.txt"],
-            ),
-            HFZeroShotImageClassification(
                 repo_id="openai/clip-vit-base-patch32",
-                allow_patterns=["README.md", "pytorch_model.bin", "*.json", "*.txt"],
-            ),
-            HFZeroShotImageClassification(
-                repo_id="openai/clip-vit-base-patch14",
-                allow_patterns=["README.md", "pytorch_model.bin", "*.json", "*.txt"],
-            ),
-            HFZeroShotImageClassification(
-                repo_id="patricjohncyh/fashion-clip",
                 allow_patterns=["README.md", "pytorch_model.bin", "*.json", "*.txt"],
             ),
             HFZeroShotImageClassification(
