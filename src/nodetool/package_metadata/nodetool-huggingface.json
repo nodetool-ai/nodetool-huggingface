@@ -2251,7 +2251,7 @@
           ],
           "has_model_index": false,
           "downloads": 11979068,
-          "likes": 758,
+          "likes": 759,
           "trending_score": null
         },
         {
@@ -4756,7 +4756,7 @@
               }
             ]
           },
-          "default": {},
+          "default": [],
           "title": "Segmentation Masks",
           "description": "The segmentation masks to search"
         },
@@ -7392,7 +7392,7 @@
           ],
           "has_model_index": false,
           "downloads": 2380199,
-          "likes": 451,
+          "likes": 452,
           "trending_score": null
         },
         {
@@ -7610,7 +7610,7 @@
           ],
           "has_model_index": false,
           "downloads": 25368,
-          "likes": 1426,
+          "likes": 1427,
           "trending_score": null
         },
         {
@@ -7801,7 +7801,13 @@
           "type": {
             "type": "audio"
           },
-          "name": "output"
+          "name": "audio"
+        },
+        {
+          "type": {
+            "type": "chunk"
+          },
+          "name": "chunk"
         }
       ],
       "recommended_models": [
@@ -7836,7 +7842,7 @@
           ],
           "has_model_index": false,
           "downloads": 3518945,
-          "likes": 5058,
+          "likes": 5061,
           "trending_score": null
         }
       ],
@@ -10273,7 +10279,7 @@
           ],
           "has_model_index": false,
           "downloads": 383777,
-          "likes": 426,
+          "likes": 427,
           "trending_score": null
         },
         {
@@ -10379,7 +10385,7 @@
           ],
           "has_model_index": false,
           "downloads": 1603602,
-          "likes": 828,
+          "likes": 829,
           "trending_score": null
         },
         {
@@ -11370,7 +11376,7 @@
           ],
           "has_model_index": false,
           "downloads": 5850608,
-          "likes": 2370,
+          "likes": 2371,
           "trending_score": null
         },
         {
@@ -12035,7 +12041,7 @@
           ],
           "has_model_index": true,
           "downloads": 285334,
-          "likes": 1893,
+          "likes": 1895,
           "trending_score": null
         }
       ],
@@ -19185,7 +19191,7 @@
           ],
           "has_model_index": false,
           "downloads": 3500800,
-          "likes": 579,
+          "likes": 580,
           "trending_score": null
         }
       ],
@@ -20465,7 +20471,7 @@
           ],
           "has_model_index": false,
           "downloads": 164351,
-          "likes": 255,
+          "likes": 256,
           "trending_score": null
         },
         {
@@ -20500,7 +20506,7 @@
           ],
           "has_model_index": false,
           "downloads": 164351,
-          "likes": 255,
+          "likes": 256,
           "trending_score": null
         },
         {
@@ -20535,7 +20541,7 @@
           ],
           "has_model_index": false,
           "downloads": 164351,
-          "likes": 255,
+          "likes": 256,
           "trending_score": null
         },
         {
@@ -21292,7 +21298,7 @@
           ],
           "has_model_index": true,
           "downloads": 1719621,
-          "likes": 11469,
+          "likes": 11471,
           "trending_score": null
         },
         {

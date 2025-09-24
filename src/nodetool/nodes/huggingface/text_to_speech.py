@@ -1,4 +1,6 @@
+import base64
 from enum import Enum
+from nodetool.workflows.types import Chunk
 import torch
 from nodetool.metadata.types import AudioRef, HFTextToSpeech, HuggingFaceModel
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
@@ -7,7 +9,7 @@ from nodetool.workflows.processing_context import ProcessingContext
 
 from pydantic import Field
 import numpy as np
-from typing import Any
+from typing import Any, Mapping
 from transformers.pipelines.text_to_audio import TextToAudioPipeline
 from transformers.pipelines.base import Pipeline
 
@@ -241,7 +243,11 @@ class KokoroTTS(HuggingFacePipelineNode):
             # KPipeline holds a torch.nn.Module in .model
             self._kpipeline.model.to(device)  # type: ignore
 
-    async def process(self, context: ProcessingContext) -> AudioRef:
+    @classmethod
+    def return_type(cls) -> Mapping[str, Any]:
+        return {"audio": AudioRef, "chunk": Chunk}
+
+    async def gen_process(self, context: ProcessingContext):
         assert self._kpipeline is not None, "Kokoro pipeline not initialized"
 
         generator = self._kpipeline(
@@ -255,7 +261,29 @@ class KokoroTTS(HuggingFacePipelineNode):
             audio = result.audio
             if audio is None:
                 continue
-            audio_chunks.append(audio.detach().cpu().numpy())  # type: ignore
+            audio = audio.detach().cpu().numpy()
+            # Convert to int16 for audio output
+            if audio.dtype != np.int16:
+                # Assume audio is float32 in [-1, 1], scale to int16
+                audio_int16 = np.clip(audio, -1.0, 1.0)
+                audio_int16 = (audio_int16 * 32767.0).astype(np.int16)
+            else:
+                audio_int16 = audio
+            audio_chunks.append(audio_int16)
+            audio_base64 = base64.b64encode(audio_int16.tobytes()).decode("utf-8")
+            chunk = Chunk(
+                content=audio_base64,
+                content_type="audio",
+                content_metadata={
+                    "sample_rate": 24_000,
+                    "channels": 1,
+                    "dtype": "int16",
+                },
+                done=False,
+            )
+            yield "chunk", chunk
+
+        yield "chunk", Chunk(content="", done=True, content_type="audio")
 
         if not audio_chunks:
             raise ValueError("Kokoro did not produce any audio")
@@ -266,7 +294,7 @@ class KokoroTTS(HuggingFacePipelineNode):
             combined = np.concatenate(audio_chunks)
 
         # Kokoro outputs 24kHz mono
-        return await context.audio_from_numpy(combined, 24_000)
+        yield "audio", await context.audio_from_numpy(combined, 24_000)
 
     def requires_gpu(self) -> bool:
         return True
