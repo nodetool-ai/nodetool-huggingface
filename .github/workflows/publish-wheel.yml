@@ -82,12 +82,12 @@ jobs:
 
       - name: Verify version in pyproject.toml
         run: |
-          python build.py build-wheel --expected-version "${{ needs.validate.outputs.version }}" --skip-validate --skip-sidecar
+          python build.py build-wheel --expected-version "${{ needs.validate.outputs.version }}" --skip-sidecar
 
       - name: Build wheel
         run: |
           echo "🏗️ Building wheel for ${{ env.PACKAGE_NAME }}"
-          python build.py build-wheel --skip-validate --skip-sidecar
+          python build.py build-wheel--skip-sidecar
 
       - name: Validate wheel
         run: |
