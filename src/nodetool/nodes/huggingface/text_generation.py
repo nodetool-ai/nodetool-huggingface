@@ -3,7 +3,7 @@ from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineN
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import Chunk
 from nodetool.types.job import JobUpdate
-from typing import AsyncGenerator, Any
+from typing import AsyncGenerator, Any, TypedDict
 import torch
 
 from pydantic import Field
@@ -61,12 +61,9 @@ class TextGeneration(HuggingFacePipelineNode):
     def is_streaming_output(cls) -> bool:
         return True
 
-    @classmethod
-    def return_type(cls):
-        return {
-            "text": str,
-            "chunk": Chunk,
-        }
+    class OutputType(TypedDict):
+        text: str | None
+        chunk: Chunk
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
@@ -299,7 +296,7 @@ class TextGeneration(HuggingFacePipelineNode):
         )
 
         # Create pipeline manually - don't specify device when using device_map="auto"
-        self._pipeline = pipeline("text-generation", model=model, tokenizer=tokenizer)
+        self._pipeline = pipeline("text-generation", model=model, tokenizer=tokenizer)  # type: ignore
 
     async def preload_model(self, context: ProcessingContext):
         if self._is_gguf_model():
@@ -324,7 +321,7 @@ class TextGeneration(HuggingFacePipelineNode):
 
     async def gen_process(
         self, context: ProcessingContext
-    ) -> AsyncGenerator[tuple[str, Any], None]:
+    ) -> AsyncGenerator["OutputType", None]:
         """Stream text generation with both chunk and final text outputs."""
         assert self._pipeline is not None
 
@@ -357,7 +354,7 @@ class TextGeneration(HuggingFacePipelineNode):
                     return
 
                 # Decode the token
-                text = self.tokenizer.decode(value, skip_special_tokens=True)
+                text = self.tokenizer.decode(value, skip_special_tokens=True)  # type: ignore
                 if text:
                     self.token_queue.put(text)
 
@@ -386,10 +383,6 @@ class TextGeneration(HuggingFacePipelineNode):
                     "streamer": streamer,
                     "return_full_text": False,
                 }
-                if self.top_k is not None:
-                    kwargs["top_k"] = self.top_k
-                if self.repetition_penalty is not None:
-                    kwargs["repetition_penalty"] = self.repetition_penalty
 
                 loop = asyncio.new_event_loop()
 
@@ -418,14 +411,20 @@ class TextGeneration(HuggingFacePipelineNode):
                         token = token_queue.get_nowait()
                         if token is None:  # Sentinel value indicating end
                             # Yield final complete text
-                            yield "text", full_text
+                            yield {
+                                "text": full_text,
+                                "chunk": Chunk(content="", done=True),
+                            }
                             return
 
                         # Accumulate full text
                         full_text += token
 
                         # Yield chunk for streaming
-                        yield "chunk", Chunk(content=token, done=False)
+                        yield {
+                            "text": None,
+                            "chunk": Chunk(content=token, done=False),
+                        }
 
                 except Exception:
                     continue
@@ -437,11 +436,12 @@ class TextGeneration(HuggingFacePipelineNode):
                         token = token_queue.get_nowait()
                         if token is not None:
                             full_text += token
-                            yield "chunk", Chunk(content=token, done=False)
+                            yield {
+                                "text": None,
+                                "chunk": Chunk(content=token, done=False),
+                            }
 
-                    # Send final chunk and complete text
-                    yield "chunk", Chunk(content="", done=True)
-                    yield "text", full_text
+                    yield {"text": full_text, "chunk": Chunk(content="", done=True)}
                     break
 
         finally:

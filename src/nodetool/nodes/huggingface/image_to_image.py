@@ -1,7 +1,9 @@
 from enum import Enum
 import re
-from typing import Any
+from typing import Any, TypedDict
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
+from diffusers.models.autoencoders.vae import DecoderOutput
+from diffusers.models.modeling_outputs import AutoencoderKLOutput
 from nodetool.workflows.types import NodeProgress
 import numpy as np
 import torch
@@ -32,7 +34,7 @@ from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
 from diffusers.pipelines.auto_pipeline import AutoPipelineForInpainting
 from diffusers.models.controlnets.controlnet import ControlNetModel
-from diffusers import QwenImageEditPipeline
+from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import QwenImageEditPipeline
 from diffusers.pipelines.pag.pipeline_pag_controlnet_sd import (
     StableDiffusionControlNetPAGPipeline,
 )
@@ -606,12 +608,9 @@ class StableDiffusionControlNetNode(StableDiffusionBaseNode):
     def get_title(cls):
         return "Stable Diffusion ControlNet"
 
-    @classmethod
-    def return_type(cls):
-        return {
-            "image": ImageRef,
-            "latent": TorchTensor,
-        }
+    class OutputType(TypedDict):
+        image: ImageRef | None
+        latent: TorchTensor | None
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
@@ -645,15 +644,19 @@ class StableDiffusionControlNetNode(StableDiffusionBaseNode):
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
 
-    async def process(self, context: ProcessingContext) -> ImageRef:
+    async def process(self, context: ProcessingContext) -> OutputType:
         control_image = await context.image_to_pil(self.control_image)
-        return await self.run_pipeline(
+        output = await self.run_pipeline(
             context,
             image=control_image,
             width=control_image.width,
             height=control_image.height,
             controlnet_conditioning_scale=float(self.controlnet_conditioning_scale),
         )
+        return {
+            "image": output if isinstance(output, ImageRef) else None,
+            "latent": output if isinstance(output, TorchTensor) else None,
+        }
 
 
 class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
@@ -695,12 +698,9 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
     def get_title(cls):
         return "Stable Diffusion (Img2Img)"
 
-    @classmethod
-    def return_type(cls):
-        return {
-            "image": ImageRef,
-            "latent": TorchTensor,
-        }
+    class OutputType(TypedDict):
+        image: ImageRef | None
+        latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
@@ -719,13 +719,17 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
 
-    async def process(self, context: ProcessingContext) -> ImageRef:
+    async def process(self, context: ProcessingContext) -> OutputType:
         init_image = await context.image_to_pil(self.init_image)
-        return await self.run_pipeline(
+        result = await self.run_pipeline(
             context,
             image=init_image,
             strength=self.strength,
         )
+        return {
+            "image": result if isinstance(result, ImageRef) else None,
+            "latent": result if isinstance(result, TorchTensor) else None,
+        }
 
 
 class StableDiffusionControlNetModel(str, Enum):
@@ -784,12 +788,9 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
     def get_title(cls):
         return "Stable Diffusion ControlNet Inpaint"
 
-    @classmethod
-    def return_type(cls):
-        return {
-            "image": ImageRef,
-            "latent": TorchTensor,
-        }
+    class OutputType(TypedDict):
+        image: ImageRef | None
+        latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
@@ -816,11 +817,11 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
 
-    async def process(self, context: ProcessingContext) -> ImageRef:
+    async def process(self, context: ProcessingContext) -> OutputType:
         init_image = await context.image_to_pil(self.init_image)
         mask_image = await context.image_to_pil(self.mask_image)
         control_image = await context.image_to_pil(self.control_image)
-        return await self.run_pipeline(
+        result = await self.run_pipeline(
             context,
             image=init_image,
             mask_image=mask_image,
@@ -829,6 +830,10 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
             height=init_image.height,
             controlnet_conditioning_scale=self.controlnet_conditioning_scale,
         )
+        return {
+            "image": result if isinstance(result, ImageRef) else None,
+            "latent": result if isinstance(result, TorchTensor) else None,
+        }
 
 
 class StableDiffusionInpaintNode(StableDiffusionBaseNode):
@@ -873,12 +878,9 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
     def get_title(cls):
         return "Stable Diffusion (Inpaint)"
 
-    @classmethod
-    def return_type(cls):
-        return {
-            "image": ImageRef,
-            "latent": TorchTensor,
-        }
+    class OutputType(TypedDict):
+        image: ImageRef | None
+        latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
@@ -901,10 +903,10 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
             self._load_ip_adapter()
             self._set_scheduler(self.scheduler)
 
-    async def process(self, context: ProcessingContext) -> ImageRef:
+    async def process(self, context: ProcessingContext) -> OutputType:
         init_image = await context.image_to_pil(self.init_image)
         mask_image = await context.image_to_pil(self.mask_image)
-        return await self.run_pipeline(
+        result = await self.run_pipeline(
             context,
             image=init_image,
             mask_image=mask_image,
@@ -912,6 +914,10 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
             height=init_image.height,
             strength=self.strength,
         )
+        return {
+            "image": result if isinstance(result, ImageRef) else None,
+            "latent": result if isinstance(result, TorchTensor) else None,
+        }
 
 
 class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
@@ -962,12 +968,9 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
     def get_title(cls):
         return "Stable Diffusion ControlNet (Img2Img)"
 
-    @classmethod
-    def return_type(cls):
-        return {
-            "image": ImageRef,
-            "latent": TorchTensor,
-        }
+    class OutputType(TypedDict):
+        image: ImageRef | None
+        latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
@@ -1001,14 +1004,14 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
 
-    async def process(self, context: ProcessingContext) -> ImageRef:
+    async def process(self, context: ProcessingContext) -> OutputType:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
         input_image = await context.image_to_pil(self.image)
         control_image = await context.image_to_pil(self.control_image)
 
-        return await self.run_pipeline(
+        result = await self.run_pipeline(
             context,
             image=input_image,
             control_image=control_image,
@@ -1016,6 +1019,10 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
             height=input_image.height,
             strength=self.strength,
         )
+        return {
+            "image": result if isinstance(result, ImageRef) else None,
+            "latent": result if isinstance(result, TorchTensor) else None,
+        }
 
 
 class StableDiffusionUpscale(HuggingFacePipelineNode):
@@ -1296,11 +1303,11 @@ class VAEEncode(HuggingFacePipelineNode):
             subfolder=self.model.variant if self.model.variant else None,
         )
         assert self._vae is not None
-        self._vae.to(context.device)
+        self._vae.to(context.device)  # type: ignore
 
     async def move_to_device(self, device: str):
         if self._vae is not None:
-            self._vae.to(device)
+            self._vae.to(device)  # type: ignore
 
     async def process(self, context: ProcessingContext) -> TorchTensor:
         if self._vae is None:
@@ -1317,6 +1324,7 @@ class VAEEncode(HuggingFacePipelineNode):
 
         with torch.no_grad():
             posterior = self._vae.encode(img)
+            assert isinstance(posterior, AutoencoderKLOutput)
             latents = posterior.latent_dist.sample()
             if self.scale_factor > 0:
                 latents = latents * self.scale_factor
@@ -1374,11 +1382,11 @@ class VAEDecode(HuggingFacePipelineNode):
             subfolder=self.model.variant if self.model.variant else None,
         )
         assert self._vae is not None
-        self._vae.to(context.device)
+        self._vae.to(context.device)  # type: ignore
 
     async def move_to_device(self, device: str):
         if self._vae is not None:
-            self._vae.to(device)
+            self._vae.to(device)  # type: ignore
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._vae is None:
@@ -1392,7 +1400,9 @@ class VAEDecode(HuggingFacePipelineNode):
             latents = latents / self.scale_factor
 
         with torch.no_grad():
-            decoded = self._vae.decode(latents).sample
+            output = self._vae.decode(latents)
+            assert isinstance(output, DecoderOutput)
+            decoded = output.sample
             # Map from [-1, 1] to [0, 1]
             decoded = (decoded + 1.0) / 2.0
             # NCHW -> NHWC for image_from_tensor
@@ -1440,6 +1450,10 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
     def get_title(cls):
         return "Stable Diffusion XL (Img2Img)"
 
+    class OutputType(TypedDict):
+        image: ImageRef | None
+        latent: TorchTensor | None
+
     async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_model(
             context=context,
@@ -1457,12 +1471,16 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
 
-    async def process(self, context) -> ImageRef:
+    async def process(self, context) -> OutputType:
         init_image = await context.image_to_pil(self.init_image)
         init_image = init_image.resize((self.width, self.height))
-        return await self.run_pipeline(
+        result = await self.run_pipeline(
             context, image=init_image, strength=self.strength
         )
+        return {
+            "image": result if isinstance(result, ImageRef) else None,
+            "latent": result if isinstance(result, TorchTensor) else None,
+        }
 
 
 class StableDiffusionXLInpainting(StableDiffusionXLBase):
@@ -1507,6 +1525,10 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
     def get_title(cls):
         return "Stable Diffusion XL (Inpaint)"
 
+    class OutputType(TypedDict):
+        image: ImageRef | None
+        latent: TorchTensor | None
+
     async def preload_model(self, context: ProcessingContext):
         if self._pipeline is None:
             self._pipeline = await self.load_model(
@@ -1526,11 +1548,11 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
             self._load_ip_adapter()
             self._set_scheduler(self.scheduler)
 
-    async def process(self, context: ProcessingContext) -> ImageRef:
+    async def process(self, context: ProcessingContext) -> OutputType:
         input_image = await context.image_to_pil(self.image)
         mask_image = await context.image_to_pil(self.mask_image)
         mask_image = mask_image.resize((self.width, self.height))
-        return await self.run_pipeline(
+        result = await self.run_pipeline(
             context,
             image=input_image,
             mask_image=mask_image,
@@ -1538,6 +1560,10 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
             width=input_image.width,
             height=input_image.height,
         )
+        return {
+            "image": result if isinstance(result, ImageRef) else None,
+            "latent": result if isinstance(result, TorchTensor) else None,
+        }
 
 
 class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
@@ -1606,7 +1632,11 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
         )
         self._load_ip_adapter()
 
-    async def process(self, context: ProcessingContext) -> ImageRef:
+    class OutputType(TypedDict):
+        image: ImageRef | None
+        latent: TorchTensor | None
+
+    async def process(self, context: ProcessingContext) -> OutputType:
         control_image = await context.image_to_pil(self.control_image)
         init_image = None
         if not self.init_image.is_empty():
@@ -1618,7 +1648,7 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
 
-        return await self.run_pipeline(
+        result = await self.run_pipeline(
             context,
             init_image=init_image,
             image=control_image,
@@ -1629,6 +1659,10 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
             callback_on_step_end=self.progress_callback(context),
             callback_steps=1,
         )
+        return {
+            "image": result if isinstance(result, ImageRef) else None,
+            "latent": result if isinstance(result, TorchTensor) else None,
+        }
 
 
 class OmniGenNode(HuggingFacePipelineNode):

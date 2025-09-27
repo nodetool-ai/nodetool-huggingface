@@ -1,6 +1,7 @@
 import datetime
 import torch
 import logging
+from typing import TypedDict
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
     AudioRef,
@@ -187,12 +188,9 @@ class Whisper(HuggingFacePipelineNode):
             ),
         ]
 
-    @classmethod
-    def return_type(cls):
-        return {
-            "text": str,
-            "chunks": list[AudioChunk],
-        }
+    class OutputType(TypedDict):
+        text: str
+        chunks: list[AudioChunk]
 
     def required_inputs(self):
         return ["audio"]
@@ -237,7 +235,7 @@ class Whisper(HuggingFacePipelineNode):
         self._pipeline.model.to(device)  # type: ignore
         logger.info(f"Moved Whisper model to device: {device}")
 
-    async def process(self, context: ProcessingContext):
+    async def process(self, context: ProcessingContext) -> OutputType:
         assert self._pipeline
 
         logger.info("Starting audio processing...")

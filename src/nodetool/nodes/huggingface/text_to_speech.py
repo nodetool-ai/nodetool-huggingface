@@ -1,5 +1,6 @@
 import base64
 from enum import Enum
+from kokoro.pipeline import KPipeline
 from nodetool.workflows.types import Chunk
 import torch
 from nodetool.metadata.types import AudioRef, HFTextToSpeech, HuggingFaceModel
@@ -9,7 +10,7 @@ from nodetool.workflows.processing_context import ProcessingContext
 
 from pydantic import Field
 import numpy as np
-from typing import Any, Mapping
+from typing import Any, AsyncGenerator, Mapping, TypedDict
 from transformers.pipelines.text_to_audio import TextToAudioPipeline
 from transformers.pipelines.base import Pipeline
 
@@ -208,7 +209,7 @@ class KokoroTTS(HuggingFacePipelineNode):
         description="Speech speed multiplier (0.5–2.0)",
     )
 
-    _kpipeline: Any | None = None
+    _kpipeline: KPipeline | None = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
@@ -223,10 +224,6 @@ class KokoroTTS(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
-        from kokoro import (
-            KPipeline,
-        )  # Local import to avoid hard dependency for non-users
-
         # Initialize and cache the Kokoro pipeline
         device = context.device
         self._kpipeline = KPipeline(
@@ -243,15 +240,19 @@ class KokoroTTS(HuggingFacePipelineNode):
             # KPipeline holds a torch.nn.Module in .model
             self._kpipeline.model.to(device)  # type: ignore
 
-    @classmethod
-    def return_type(cls) -> Mapping[str, Any]:
-        return {"audio": AudioRef, "chunk": Chunk}
+    class OutputType(TypedDict):
+        audio: AudioRef | None
+        chunk: Chunk
 
-    async def gen_process(self, context: ProcessingContext):
+    async def gen_process(
+        self, context: ProcessingContext
+    ) -> AsyncGenerator[OutputType, None]:
         assert self._kpipeline is not None, "Kokoro pipeline not initialized"
 
+        text = self.text.replace("\n", " ")
+
         generator = self._kpipeline(
-            self.text,
+            text,
             voice=self.voice.value,
             speed=self.speed,
         )
@@ -281,9 +282,7 @@ class KokoroTTS(HuggingFacePipelineNode):
                 },
                 done=False,
             )
-            yield "chunk", chunk
-
-        yield "chunk", Chunk(content="", done=True, content_type="audio")
+            yield {"chunk": chunk, "audio": None}
 
         if not audio_chunks:
             raise ValueError("Kokoro did not produce any audio")
@@ -294,7 +293,10 @@ class KokoroTTS(HuggingFacePipelineNode):
             combined = np.concatenate(audio_chunks)
 
         # Kokoro outputs 24kHz mono
-        yield "audio", await context.audio_from_numpy(combined, 24_000)
+        yield {
+            "audio": await context.audio_from_numpy(combined, 24_000),
+            "chunk": Chunk(content="", done=True, content_type="audio"),
+        }
 
     def requires_gpu(self) -> bool:
         return True

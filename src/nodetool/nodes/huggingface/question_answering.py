@@ -10,7 +10,7 @@ from nodetool.workflows.processing_context import ProcessingContext
 from pydantic import Field
 
 
-from typing import Any
+from typing import Any, TypedDict
 
 
 class QuestionAnswering(HuggingFacePipelineNode):
@@ -70,7 +70,13 @@ class QuestionAnswering(HuggingFacePipelineNode):
     async def move_to_device(self, device: str):
         self._pipeline.model.to(device)  # type: ignore
 
-    async def process(self, context: ProcessingContext) -> dict[str, Any]:
+    class OutputType(TypedDict):
+        answer: str
+        score: float
+        start: int
+        end: int
+
+    async def process(self, context: ProcessingContext) -> OutputType:
         assert self._pipeline is not None
         inputs = {
             "question": self.question,
@@ -80,10 +86,10 @@ class QuestionAnswering(HuggingFacePipelineNode):
         result = await self.run_pipeline_in_thread(inputs)
         assert result is not None
         return {
-            "answer": result["answer"],  # type: ignore
-            "score": result["score"],  # type: ignore
-            "start": result["start"],  # type: ignore
-            "end": result["end"],  # type: ignore
+            "answer": result["answer"],
+            "score": result["score"],
+            "start": result["start"],
+            "end": result["end"],
         }
 
 
@@ -140,16 +146,13 @@ class TableQuestionAnswering(HuggingFacePipelineNode):
     async def move_to_device(self, device: str):
         self._pipeline.model.to(device)  # type: ignore
 
-    @classmethod
-    def return_type(cls):
-        return {
-            "answer": str,
-            "coordinates": list[tuple[int, int]],
-            "cells": list[str],
-            "aggregator": str,
-        }
+    class OutputType(TypedDict):
+        answer: str
+        coordinates: list[tuple[int, int]]
+        cells: list[str]
+        aggregator: str
 
-    async def process(self, context: ProcessingContext):
+    async def process(self, context: ProcessingContext) -> OutputType:
         assert self._pipeline is not None
         table = await context.dataframe_to_pandas(self.dataframe)
         inputs = {
@@ -160,8 +163,8 @@ class TableQuestionAnswering(HuggingFacePipelineNode):
         result = await self.run_pipeline_in_thread(inputs)
         assert result is not None
         return {
-            "answer": result["answer"],  # type: ignore
-            "coordinates": result["coordinates"],  # type: ignore
-            "cells": result["cells"],  # type: ignore
-            "aggregator": result["aggregator"],  # type: ignore
+            "answer": result["answer"],
+            "coordinates": result["coordinates"],
+            "cells": result["cells"],
+            "aggregator": result["aggregator"],
         }

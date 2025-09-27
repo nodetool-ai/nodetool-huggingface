@@ -736,6 +736,10 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         le=10.0,
         description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
+    latents: TorchTensor = Field(
+        default=TorchTensor(),
+        description="Optional initial latents to start generation from.",
+    )
     enable_tiling: bool = Field(
         default=False,
         description="Enable tiling for the VAE. This can reduce VRAM usage.",
@@ -937,12 +941,20 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         log.debug(f"Output type: {self.output_type.value}")
 
         def _run_pipeline_sync():
+            latents = None
+            if self.latents.is_set():
+                latents = self.latents.to_tensor().to(device=context.device)
+                unet = getattr(self._pipeline, "unet", None)
+                if unet is not None and hasattr(unet, "dtype"):
+                    latents = latents.to(dtype=unet.dtype)
+
             return self._pipeline(
                 prompt=self.prompt,
                 negative_prompt=self.negative_prompt,
                 num_inference_steps=self.num_inference_steps,
                 guidance_scale=self.guidance_scale,
                 generator=generator,
+                latents=latents,
                 ip_adapter_image=ip_adapter_image,
                 cross_attention_kwargs={"scale": 1.0},
                 callback_on_step_end=self.progress_callback(
@@ -1099,6 +1111,15 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         default=False,
         description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
     )
+
+    class StableDiffusionOutputType(str, Enum):
+        IMAGE = "Image"
+        LATENT = "Latent"
+
+    output_type: StableDiffusionOutputType = Field(
+        default=StableDiffusionOutputType.IMAGE,
+        description="The type of output to generate.",
+    )
     _loaded_adapters: set[str] = set()
     _pipeline: Any = None
 
@@ -1222,7 +1243,9 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
 
         return callback
 
-    async def run_pipeline(self, context: ProcessingContext, **kwargs) -> ImageRef:
+    async def run_pipeline(
+        self, context: ProcessingContext, **kwargs
+    ) -> ImageRef | TorchTensor:
         log.debug("Starting pipeline execution (XL)")
         if self._pipeline is None:
             log.error("Pipeline not initialized")
@@ -1281,6 +1304,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
                 cross_attention_kwargs={"scale": self.lora_scale},
                 callback_on_step_end=self.progress_callback(context),
                 generator=generator,
+                output_type=self.output_type.value,
                 **kwargs,
             )
 
@@ -1288,8 +1312,15 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         image = output.images[0]
 
         log.debug("Pipeline inference completed (XL)")
-        log.debug("Converting PIL image to ImageRef (XL)")
-        result = await context.image_from_pil(image)
+
+        if self.output_type == self.StableDiffusionOutputType.IMAGE:
+            log.debug("Converting PIL image to ImageRef (XL)")
+            result = await context.image_from_pil(image)
+            log.debug("Pipeline execution completed successfully (XL)")
+            return result
+
+        log.debug("Returning tensor output (XL)")
+        result = TorchTensor.from_tensor(image)
         log.debug("Pipeline execution completed successfully (XL)")
         return result
 

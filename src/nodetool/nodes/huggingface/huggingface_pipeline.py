@@ -1,8 +1,11 @@
+from nodetool.workflows.graph import BaseNode
 import torch
 import asyncio
 from nodetool.config.environment import Environment
 from nodetool.config.logging_config import get_logger
-from nodetool.nodes.huggingface.huggingface_node import HuggingfaceNode
+from nodetool.nodes.huggingface.huggingface_node import (
+    setup_hf_logging,
+)
 from nodetool.types.job import JobUpdate
 from nodetool.workflows.processing_context import ProcessingContext
 from pydantic import Field
@@ -18,10 +21,16 @@ T = TypeVar("T")
 log = get_logger(__name__)
 
 
-class HuggingFacePipelineNode(HuggingfaceNode):
+class HuggingFacePipelineNode(BaseNode):
     @classmethod
     def is_visible(cls) -> bool:
         return cls is not HuggingFacePipelineNode
+
+    async def pre_process(self, context: ProcessingContext):
+        """Base pre_process that sets up HuggingFace logging for all HF nodes."""
+        # Set up HuggingFace logging redirection automatically
+        setup_hf_logging(context, self.id, self.get_title())
+        # Call parent implementation
 
     _pipeline: Pipeline | None = None
 

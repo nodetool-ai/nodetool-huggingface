@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any
+from typing import Any, TypedDict
 from nodetool.config.environment import Environment
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
@@ -8,8 +8,10 @@ from nodetool.metadata.types import (
     HFLoraSD,
     HFFlux,
     HFQwenImage,
+    HFLoraQwenImage,
     ImageRef,
     TorchTensor,
+    HuggingFaceModel,
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.image_to_image import pipeline_progress_callback
@@ -23,22 +25,32 @@ from nodetool.workflows.types import NodeProgress, Notification, LogUpdate
 import torch
 import asyncio
 import logging
-from transformers.utils import logging as hf_logging
-from diffusers.utils import logging as diffusers_logging
+
+# The QwenImage import requires optional dependencies. Keep it near top-level to surface missing deps early.
+from diffusers.quantizers.quantization_config import (
+    BitsAndBytesConfig as DiffusersBitsAndBytesConfig,
+)
+from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
+from diffusers.models.transformers.transformer_qwenimage import (
+    QwenImageTransformer2DModel,
+)
+from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
+from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
+from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
 from diffusers.pipelines.pag.pipeline_pag_sd import StableDiffusionPAGPipeline
 from diffusers.pipelines.pag.pipeline_pag_sd_xl import StableDiffusionXLPAGPipeline
-from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
-from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
-from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
-from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
-from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
+from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
 from diffusers.schedulers.scheduling_dpmsolver_multistep import (
     DPMSolverMultistepScheduler,
 )
-from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
 from pydantic import Field
-from nodetool.workflows.base_node import BaseNode
+from transformers import (
+    BitsAndBytesConfig as TransformersBitsAndBytesConfig,
+    Qwen2_5_VLForConditionalGeneration,
+)
 
 log = get_logger(__name__)
 
@@ -71,12 +83,9 @@ class StableDiffusion(StableDiffusionBaseNode):
     def get_title(cls):
         return "Stable Diffusion"
 
-    @classmethod
-    def return_type(cls):
-        return {
-            "image": ImageRef,
-            "latent": TorchTensor,
-        }
+    class OutputType(TypedDict):
+        image: ImageRef | None
+        latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
@@ -94,16 +103,10 @@ class StableDiffusion(StableDiffusionBaseNode):
 
     async def process(self, context: ProcessingContext):
         result = await self.run_pipeline(context, width=self.width, height=self.height)
-        if self.output_type == self.StableDiffusionOutputType.IMAGE:
-            return {
-                "image": result,
-                "latent": TorchTensor(),
-            }
-        else:
-            return {
-                "image": ImageRef(),
-                "latent": result,
-            }
+        return {
+            "image": result if isinstance(result, ImageRef) else None,
+            "latent": result if isinstance(result, TorchTensor) else None,
+        }
 
 
 class StableDiffusionXL(StableDiffusionXLBase):
@@ -139,8 +142,16 @@ class StableDiffusionXL(StableDiffusionXLBase):
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
 
-    async def process(self, context) -> ImageRef:
-        return await self.run_pipeline(context)
+    class OutputType(TypedDict):
+        image: ImageRef | None
+        latent: TorchTensor | None
+
+    async def process(self, context) -> OutputType:
+        result = await self.run_pipeline(context)
+        return {
+            "image": result if isinstance(result, ImageRef) else None,
+            "latent": result if isinstance(result, TorchTensor) else None,
+        }
 
 
 class ModelVariant(Enum):
@@ -284,7 +295,11 @@ class Text2Image(HuggingFacePipelineNode):
         if self._pipeline is not None:
             self._pipeline.to(device)
 
-    async def process(self, context: ProcessingContext) -> ImageRef:
+    class OutputType(TypedDict):
+        image: ImageRef | None
+        latent: TorchTensor | None
+
+    async def process(self, context: ProcessingContext) -> OutputType:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
@@ -312,8 +327,12 @@ class Text2Image(HuggingFacePipelineNode):
         output = await asyncio.to_thread(_run_pipeline_sync)
 
         image = output.images[0]  # type: ignore
+        result = await context.image_from_pil(image)
 
-        return await context.image_from_pil(image)
+        return {
+            "image": result,
+            "latent": None,
+        }
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
@@ -1068,357 +1087,447 @@ class Chroma(HuggingFacePipelineNode):
 
 
 # Constants for FP8 text encoder
-# FP8_TEXT_ENCODER_REPO = "Comfy-Org/Qwen-Image_ComfyUI"
-# FP8_TEXT_ENCODER_PATH = (
-#     "split_files/text_encoders/qwen_image_text_encoder_fp8.safetensors"
-# )
+FP8_TEXT_ENCODER_REPO = "Comfy-Org/Qwen-Image_ComfyUI"
+FP8_TEXT_ENCODER_PATH = (
+    "split_files/text_encoders/qwen_image_text_encoder_fp8.safetensors"
+)
 
 
 # TODO: Wait for diffusers release
-# class QwenImage(HuggingFacePipelineNode):
-#     """
-#     Generates images from text prompts using Qwen-Image with support for GGUF quantization.
-#     image, generation, AI, text-to-image, qwen, quantization
+class QwenImage(HuggingFacePipelineNode):
+    """
+    Generates images from text prompts using Qwen-Image with support for GGUF quantization.
+    image, generation, AI, text-to-image, qwen, quantization
 
-#     Use cases:
-#     - High-quality, general-purpose text-to-image generation
-#     - Memory-efficient generation using GGUF quantization
-#     - Quick prototyping leveraging AutoPipeline
-#     - Works out-of-the-box with the official Qwen model
-#     """
+    Use cases:
+    - High-quality, general-purpose text-to-image generation
+    - Memory-efficient generation using GGUF quantization
+    - Quick prototyping leveraging AutoPipeline
+    - Works out-of-the-box with the official Qwen model
+    """
 
-#     model: HFQwenImage = Field(
-#         default=HFQwenImage(),
-#         description="The Qwen-Image model to use for text-to-image generation.",
-#     )
-#     prompt: str = Field(
-#         default="A cat holding a sign that says hello world",
-#         description="A text prompt describing the desired image.",
-#     )
-#     negative_prompt: str = Field(
-#         default="",
-#         description="A text prompt describing what to avoid in the image.",
-#     )
-#     true_cfg_scale: float = Field(
-#         default=1.0,
-#         description="True CFG scale for Qwen-Image models.",
-#         ge=0.0,
-#         le=10.0,
-#     )
-#     num_inference_steps: int = Field(
-#         default=20,
-#         description="The number of denoising steps.",
-#         ge=1,
-#         le=100,
-#     )
-#     height: int = Field(
-#         default=1024,
-#         description="The height of the generated image.",
-#         ge=256,
-#         le=2048,
-#     )
-#     width: int = Field(
-#         default=1024,
-#         description="The width of the generated image.",
-#         ge=256,
-#         le=2048,
-#     )
-#     seed: int = Field(
-#         default=-1,
-#         description="Seed for the random number generator. Use -1 for a random seed.",
-#         ge=-1,
-#     )
-#     enable_memory_efficient_attention: bool = Field(
-#         default=True,
-#         description="Enable memory efficient attention to reduce VRAM usage.",
-#     )
-#     enable_vae_tiling: bool = Field(
-#         default=False,
-#         description="Enable VAE tiling to reduce VRAM usage for large images.",
-#     )
-#     enable_vae_slicing: bool = Field(
-#         default=False,
-#         description="Enable VAE slicing to reduce VRAM usage.",
-#     )
-#     enable_cpu_offload: bool = Field(
-#         default=False,
-#         description="Enable CPU offload to reduce VRAM usage.",
-#     )
+    model: HFQwenImage = Field(
+        default=HFQwenImage(),
+        description="The Qwen-Image model to use for text-to-image generation.",
+    )
+    prompt: str = Field(
+        default="A cat holding a sign that says hello world",
+        description="A text prompt describing the desired image.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="A text prompt describing what to avoid in the image.",
+    )
+    true_cfg_scale: float = Field(
+        default=1.0,
+        description="True CFG scale for Qwen-Image models.",
+        ge=0.0,
+        le=10.0,
+    )
+    num_inference_steps: int = Field(
+        default=20,
+        description="The number of denoising steps.",
+        ge=1,
+        le=100,
+    )
+    height: int = Field(
+        default=1024,
+        description="The height of the generated image.",
+        ge=256,
+        le=2048,
+    )
+    width: int = Field(
+        default=1024,
+        description="The width of the generated image.",
+        ge=256,
+        le=2048,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+        ge=-1,
+    )
+    enable_memory_efficient_attention: bool = Field(
+        default=True,
+        description="Enable memory efficient attention to reduce VRAM usage.",
+    )
+    enable_vae_tiling: bool = Field(
+        default=False,
+        description="Enable VAE tiling to reduce VRAM usage for large images.",
+    )
+    enable_vae_slicing: bool = Field(
+        default=False,
+        description="Enable VAE slicing to reduce VRAM usage.",
+    )
+    enable_cpu_offload: bool = Field(
+        default=False,
+        description="Enable CPU offload to reduce VRAM usage.",
+    )
 
-#     _pipeline: Any | None = None
+    _pipeline: Any | None = None
 
-#     @classmethod
-#     def get_recommended_models(cls) -> list[HFQwenImage]:
-#         return [
-#             HFQwenImage(
-#                 repo_id="Qwen/Qwen-Image",
-#                 allow_patterns=[
-#                     "**/*.safetensors",
-#                     "**/*.json",
-#                     "**/*.txt",
-#                     "*.json",
-#                 ],
-#             ),
-#             # GGUF quantized models
-#             HFQwenImage(
-#                 repo_id="city96/Qwen-Image-gguf",
-#                 path="qwen-image-Q2_K.gguf",
-#             ),
-#             HFQwenImage(
-#                 repo_id="city96/Qwen-Image-gguf",
-#                 path="qwen-image-Q3_K_S.gguf",
-#             ),
-#             HFQwenImage(
-#                 repo_id="city96/Qwen-Image-gguf",
-#                 path="qwen-image-Q4_K_S.gguf",
-#             ),
-#             HFQwenImage(
-#                 repo_id="city96/Qwen-Image-gguf",
-#                 path="qwen-image-Q5_K_S.gguf",
-#             ),
-#             HFQwenImage(
-#                 repo_id="city96/Qwen-Image-gguf",
-#                 path="qwen-image-Q6_K.gguf",
-#             ),
-#             HFQwenImage(
-#                 repo_id="city96/Qwen-Image-gguf",
-#                 path="qwen-image-Q8_0.gguf",
-#             ),
-#             HFQwenImage(
-#                 repo_id="city96/Qwen-Image-gguf",
-#                 path="qwen-image-BF16.gguf",
-#             ),
-#             # FP8 Text Encoder for optimized performance
-#             HFQwenImage(
-#                 repo_id="Comfy-Org/Qwen-Image_ComfyUI",
-#                 path="split_files/text_encoders/qwen_image_text_encoder_fp8.safetensors",
-#             ),
-#         ]
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFQwenImage(
+                repo_id="Qwen/Qwen-Image",
+                allow_patterns=[
+                    "**/*.safetensors",
+                    "**/*.json",
+                    "**/*.txt",
+                    "*.json",
+                ],
+            ),
+            # GGUF quantized models
+            HFQwenImage(
+                repo_id="city96/Qwen-Image-gguf",
+                path="qwen-image-Q2_K.gguf",
+            ),
+            HFQwenImage(
+                repo_id="city96/Qwen-Image-gguf",
+                path="qwen-image-Q3_K_S.gguf",
+            ),
+            HFQwenImage(
+                repo_id="city96/Qwen-Image-gguf",
+                path="qwen-image-Q4_K_S.gguf",
+            ),
+            HFQwenImage(
+                repo_id="city96/Qwen-Image-gguf",
+                path="qwen-image-Q5_K_S.gguf",
+            ),
+            HFQwenImage(
+                repo_id="city96/Qwen-Image-gguf",
+                path="qwen-image-Q6_K.gguf",
+            ),
+            HFQwenImage(
+                repo_id="city96/Qwen-Image-gguf",
+                path="qwen-image-Q8_0.gguf",
+            ),
+            HFQwenImage(
+                repo_id="city96/Qwen-Image-gguf",
+                path="qwen-image-BF16.gguf",
+            ),
+            HFLoraQwenImage(
+                repo_id="lightx2v/Qwen-Image-Lightning",
+                path="Qwen-Image-Lightning-8steps-V1.1.safetensors",
+            ),
+            # FP8 Text Encoder for optimized performance
+            HFQwenImage(
+                repo_id="Comfy-Org/Qwen-Image_ComfyUI",
+                path="split_files/text_encoders/qwen_image_text_encoder_fp8.safetensors",
+            ),
+        ]
 
-#     @classmethod
-#     def get_title(cls) -> str:
-#         return "Qwen-Image"
+    @classmethod
+    def get_title(cls) -> str:
+        return "Qwen-Image"
 
-#     @classmethod
-#     def get_basic_fields(cls) -> list[str]:
-#         return [
-#             "model",
-#             "prompt",
-#             "negative_prompt",
-#             "height",
-#             "width",
-#             "num_inference_steps",
-#         ]
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return [
+            "model",
+            "prompt",
+            "negative_prompt",
+            "height",
+            "width",
+            "num_inference_steps",
+        ]
 
-#     def get_model_id(self) -> str:
-#         if self.model.repo_id:
-#             return self.model.repo_id
-#         return "Qwen/Qwen-Image"
+    def get_model_id(self) -> str:
+        if self.model.repo_id:
+            return self.model.repo_id
+        return "Qwen/Qwen-Image"
 
-#     def _detect_gguf_quantization_type(self) -> str | None:
-#         """Detect GGUF quantization type from model path."""
-#         if not self.model.path:
-#             return None
+    def _detect_gguf_quantization_type(self) -> str | None:
+        """Detect GGUF quantization type from model path."""
+        if not self.model.path:
+            return None
 
-#         # Extract quantization type from filename patterns like "qwen-image-Q2_K.gguf"
-#         import re
+        # Extract quantization type from filename patterns like "qwen-image-Q2_K.gguf"
+        import re
 
-#         pattern = r"-(Q\\d+_[A-Z]+|Q\\d+|BF16)\\.gguf$"
-#         match = re.search(pattern, self.model.path, re.IGNORECASE)
-#         return match.group(1) if match else None
+        pattern = r"-(Q\\d+_[A-Z]+|Q\\d+|BF16)\\.gguf$"
+        match = re.search(pattern, self.model.path, re.IGNORECASE)
+        return match.group(1) if match else None
 
-#     def _is_gguf_model(self) -> bool:
-#         """Check if the model is a GGUF model based on file extension."""
-#         return self.model.path is not None and self.model.path.lower().endswith(".gguf")
+    def _is_gguf_model(self) -> bool:
+        """Check if the model is a GGUF model based on file extension."""
+        return self.model.path is not None and self.model.path.lower().endswith(".gguf")
 
-#     async def _load_fp8_text_encoder(self, context: ProcessingContext):
-#         """Load FP8 text encoder using the base class's load_model method."""
-#         try:
-#             from transformers import T5EncoderModel
+    async def _load_fp8_text_encoder(self, context: ProcessingContext):
+        """Load FP8 text encoder using the base class's load_model method."""
+        try:
+            from transformers import T5EncoderModel
 
-#             log.info(
-#                 f"Loading FP8 text encoder from {FP8_TEXT_ENCODER_REPO}/{FP8_TEXT_ENCODER_PATH}"
-#             )
+            log.info(
+                f"Loading FP8 text encoder from {FP8_TEXT_ENCODER_REPO}/{FP8_TEXT_ENCODER_PATH}"
+            )
 
-#             # Use the base class's load_model method
-#             text_encoder = await self.load_model(
-#                 context=context,
-#                 model_class=T5EncoderModel,
-#                 model_id=FP8_TEXT_ENCODER_REPO,
-#                 path=FP8_TEXT_ENCODER_PATH,
-#                 torch_dtype=(
-#                     torch.float8_e4m3fn
-#                     if hasattr(torch, "float8_e4m3fn")
-#                     else torch.bfloat16
-#                 ),
-#                 skip_cache=False,
-#             )
+            # Use the base class's load_model method
+            text_encoder = await self.load_model(
+                context=context,
+                model_class=T5EncoderModel,
+                model_id=FP8_TEXT_ENCODER_REPO,
+                path=FP8_TEXT_ENCODER_PATH,
+                torch_dtype=(
+                    torch.float8_e4m3fn
+                    if hasattr(torch, "float8_e4m3fn")
+                    else torch.bfloat16
+                ),
+                skip_cache=False,
+            )
 
-#             log.info("Successfully loaded FP8 text encoder")
-#             return text_encoder
+            log.info("Successfully loaded FP8 text encoder")
+            return text_encoder
 
-#         except Exception as e:
-#             log.warning(
-#                 f"Failed to load FP8 text encoder: {e}. Falling back to default."
-#             )
-#             return None
+        except Exception as e:
+            log.warning(
+                f"Failed to load FP8 text encoder: {e}. Falling back to default."
+            )
+            return None
 
-#     async def preload_model(self, context: ProcessingContext):
-#         # Load FP8 text encoder
-#         fp8_text_encoder = await self._load_fp8_text_encoder(context)
+    async def preload_model(self, context: ProcessingContext):
+        # Handle GGUF models separately to maintain existing behaviour
+        if self._is_gguf_model():
+            fp8_text_encoder = await self._load_fp8_text_encoder(context)
+            await self._load_gguf_model(context, torch.bfloat16, fp8_text_encoder)
+            return
 
-#         # Check if this is a GGUF model based on file extension
-#         if self._is_gguf_model():
-#             await self._load_gguf_model(context, torch.bfloat16, fp8_text_encoder)
-#         else:
-#             # Load the full pipeline normally
-#             log.info(f"Loading Qwen-Image pipeline from {self.get_model_id()}...")
+        # Prefer loading the 4-bit quantized pipeline for standard models
+        try:
+            await self._load_quantized_pipeline(context)
+        except Exception as exc:
+            log.warning(
+                f"Failed to load 4-bit quantized Qwen-Image pipeline: {exc}. Falling back to full-precision weights."
+            )
+            await self._load_full_precision_pipeline(context)
 
-#             # Prepare additional arguments for custom text encoder
-#             load_kwargs = {
-#                 "context": context,
-#                 "model_id": self.get_model_id(),
-#                 "model_class": AutoPipelineForText2Image,
-#                 "torch_dtype": torch.bfloat16,
-#                 "device": "cpu",  # Load on CPU first, then move to GPU in workflow runner
-#             }
+    async def _load_full_precision_pipeline(self, context: ProcessingContext):
+        log.info(
+            f"Loading Qwen-Image pipeline from {self.get_model_id()} without quantization..."
+        )
 
-#             # Add FP8 text encoder if available
-#             if fp8_text_encoder is not None:
-#                 load_kwargs["text_encoder"] = fp8_text_encoder
+        fp8_text_encoder = await self._load_fp8_text_encoder(context)
 
-#             self._pipeline = await self.load_model(**load_kwargs)
-#             assert self._pipeline is not None
+        load_kwargs = {
+            "context": context,
+            "model_id": self.get_model_id(),
+            "model_class": QwenImagePipeline,
+            "torch_dtype": torch.bfloat16,
+            "device": "cpu",  # Load on CPU first, then move to GPU in workflow runner
+        }
 
-#             # Apply memory optimizations after loading
-#             if self.enable_cpu_offload:
-#                 self._pipeline.enable_model_cpu_offload()
+        if fp8_text_encoder is not None:
+            load_kwargs["text_encoder"] = fp8_text_encoder
 
-#             if self.enable_vae_slicing:
-#                 self._pipeline.vae.enable_slicing()
+        self._pipeline = await self.load_model(**load_kwargs)
+        assert self._pipeline is not None
 
-#             if self.enable_vae_tiling:
-#                 self._pipeline.vae.enable_tiling()
+        # Apply memory optimizations after loading
+        if self.enable_cpu_offload:
+            self._pipeline.enable_model_cpu_offload()
 
-#             if self.enable_memory_efficient_attention:
-#                 self._pipeline.enable_attention_slicing()
+        if self.enable_vae_slicing and hasattr(self._pipeline, "vae"):
+            self._pipeline.vae.enable_slicing()
 
-#     async def _load_gguf_model(
-#         self, context: ProcessingContext, torch_dtype, fp8_text_encoder=None
-#     ):
-#         """Load Qwen-Image model with GGUF quantization."""
-#         from huggingface_hub.file_download import try_to_load_from_cache
-#         from diffusers.models.transformers.transformer_qwenimage import (
-#             QwenImageTransformer2DModel,
-#         )
+        if self.enable_vae_tiling and hasattr(self._pipeline, "vae"):
+            self._pipeline.vae.enable_tiling()
 
-#         quantization_type = self._detect_gguf_quantization_type()
+        if self.enable_memory_efficient_attention:
+            self._pipeline.enable_attention_slicing()
 
-#         if quantization_type:
-#             log.info(
-#                 f"Loading Qwen-Image transformer with GGUF {quantization_type} quantization..."
-#             )
-#         else:
-#             log.info(
-#                 "Loading GGUF model (quantization type not detected from filename)..."
-#             )
+    async def _load_quantized_pipeline(self, context: ProcessingContext):
+        log.info(
+            "Loading Qwen-Image pipeline with 4-bit quantization for transformer and text encoder..."
+        )
 
-#         # Get the cached file path
-#         assert self.model.path is not None
+        torch_dtype = torch.bfloat16
+        model_id = self.get_model_id()
 
-#         # Load the transformer with GGUF quantization
-#         transformer = await self.load_model(
-#             context=context,
-#             model_class=QwenImageTransformer2DModel,
-#             model_id=self.get_model_id(),
-#             path=self.model.path,
-#             torch_dtype=torch_dtype,
-#             quantization_config=GGUFQuantizationConfig(compute_dtype=torch_dtype),
-#             config="Qwen/Qwen-Image",
-#             subfolder="transformer",
-#         )
+        transformer_quant_config = DiffusersBitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch_dtype,
+            llm_int8_skip_modules=["transformer_blocks.0.img_mod"],
+        )
 
-#         # Create the pipeline with the quantized transformer
-#         log.info("Creating Qwen-Image pipeline with quantized transformer...")
+        text_encoder_quant_config = TransformersBitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch_dtype,
+        )
 
-#         # Use DiffusionPipeline for GGUF models
-#         pipeline_kwargs = {
-#             "transformer": transformer,
-#             "torch_dtype": torch_dtype,
-#         }
+        transformer = await self.load_model(
+            context=context,
+            model_class=QwenImageTransformer2DModel,
+            model_id=model_id,
+            torch_dtype=torch_dtype,
+            quantization_config=transformer_quant_config,
+            subfolder="transformer",
+        )
 
-#         # Add FP8 text encoder if provided
-#         if fp8_text_encoder is not None:
-#             pipeline_kwargs["text_encoder"] = fp8_text_encoder
+        # transformer = transformer.to("cpu")
 
-#         self._pipeline = await self.load_model(
-#             context=context,
-#             model_class=DiffusionPipeline,
-#             model_id="Qwen/Qwen-Image",
-#             **pipeline_kwargs,
-#         )
+        text_encoder = await self.load_model(
+            context=context,
+            model_class=Qwen2_5_VLForConditionalGeneration,
+            model_id=model_id,
+            torch_dtype=torch_dtype,
+            quantization_config=text_encoder_quant_config,
+            subfolder="text_encoder",
+        )
 
-#         # Apply memory optimizations after loading
-#         if self.enable_cpu_offload:
-#             self._pipeline.enable_model_cpu_offload()
+        # text_encoder = text_encoder.to("cpu")
 
-#         if self.enable_vae_slicing:
-#             self._pipeline.vae.enable_slicing()
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=QwenImagePipeline,
+            model_id=model_id,
+            torch_dtype=torch_dtype,
+            transformer=transformer,
+            text_encoder=text_encoder,
+        )
 
-#         if self.enable_vae_tiling:
-#             self._pipeline.vae.enable_tiling()
+        assert self._pipeline is not None
 
-#         if self.enable_memory_efficient_attention:
-#             self._pipeline.enable_attention_slicing()
+        # Optionally load recommended LoRA weights if available
+        try:
+            self._pipeline.load_lora_weights(
+                "lightx2v/Qwen-Image-Lightning",
+                weight_name="Qwen-Image-Lightning-8steps-V1.1.safetensors",
+            )
+        except Exception as lora_exc:
+            log.info(f"Skipping optional Qwen-Image Lightning LoRA: {lora_exc}")
 
-#     async def move_to_device(self, device: str):
-#         if self._pipeline is not None:
-#             # Handle CPU offload case
-#             if self.enable_cpu_offload:
-#                 # When moving to CPU, disable CPU offload and move all components to CPU
-#                 if device == "cpu":
-#                     self._pipeline.to(device)
-#                 # When moving to GPU with CPU offload, re-enable CPU offload
-#                 elif device in ["cuda", "mps"]:
-#                     self._pipeline.enable_model_cpu_offload()
-#             else:
-#                 # Normal device movement without CPU offload
-#                 self._pipeline.to(device)
+        # Apply memory optimizations after loading
+        if self.enable_cpu_offload:
+            self._pipeline.enable_model_cpu_offload()
 
-#     async def process(self, context: ProcessingContext) -> ImageRef:
-#         if self._pipeline is None:
-#             raise ValueError("Pipeline not initialized")
+        if self.enable_vae_slicing and hasattr(self._pipeline, "vae"):
+            self._pipeline.vae.enable_slicing()
 
-#         # Set up the generator for reproducibility
-#         generator = None
-#         if self.seed != -1:
-#             generator = torch.Generator(device=context.device).manual_seed(self.seed)
+        if self.enable_vae_tiling and hasattr(self._pipeline, "vae"):
+            self._pipeline.vae.enable_tiling()
 
-#         # Generate the image
-#         pipeline_kwargs = {
-#             "prompt": self.prompt,
-#             "negative_prompt": self.negative_prompt,
-#             "true_cfg_scale": self.true_cfg_scale,
-#             "num_inference_steps": self.num_inference_steps,
-#             "height": self.height,
-#             "width": self.width,
-#             "generator": generator,
-#             "callback_on_step_end": pipeline_progress_callback(
-#                 self.id, self.num_inference_steps, context
-#             ),
-#             "callback_on_step_end_tensor_inputs": ["latents"],
-#         }
+        if self.enable_memory_efficient_attention:
+            self._pipeline.enable_attention_slicing()
 
-#         # Generate the image off the event loop
-#         def _run_pipeline_sync():
-#             return self._pipeline(**pipeline_kwargs)  # type: ignore
+    async def _load_gguf_model(
+        self, context: ProcessingContext, torch_dtype, fp8_text_encoder=None
+    ):
+        """Load Qwen-Image model with GGUF quantization."""
+        from huggingface_hub.file_download import try_to_load_from_cache
+        from diffusers.models.transformers.transformer_qwenimage import (
+            QwenImageTransformer2DModel,
+        )
 
-#         output = await asyncio.to_thread(_run_pipeline_sync)
+        quantization_type = self._detect_gguf_quantization_type()
 
-#         image = output.images[0]  # type: ignore
+        if quantization_type:
+            log.info(
+                f"Loading Qwen-Image transformer with GGUF {quantization_type} quantization..."
+            )
+        else:
+            log.info(
+                "Loading GGUF model (quantization type not detected from filename)..."
+            )
 
-#         return await context.image_from_pil(image)
+        # Get the cached file path
+        assert self.model.path is not None
 
-#     def required_inputs(self):
-#         """Return list of required inputs that must be connected."""
-#         return []  # No required inputs - IP adapter image is optional
+        # Load the transformer with GGUF quantization
+        transformer = await self.load_model(
+            context=context,
+            model_class=QwenImageTransformer2DModel,
+            model_id=self.get_model_id(),
+            path=self.model.path,
+            torch_dtype=torch_dtype,
+            quantization_config=GGUFQuantizationConfig(compute_dtype=torch_dtype),
+            config="Qwen/Qwen-Image",
+            subfolder="transformer",
+        )
+
+        # Create the pipeline with the quantized transformer
+        log.info("Creating Qwen-Image pipeline with quantized transformer...")
+
+        # Use DiffusionPipeline for GGUF models
+        pipeline_kwargs = {
+            "transformer": transformer,
+            "torch_dtype": torch_dtype,
+        }
+
+        # Add FP8 text encoder if provided
+        if fp8_text_encoder is not None:
+            pipeline_kwargs["text_encoder"] = fp8_text_encoder
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=DiffusionPipeline,
+            model_id="Qwen/Qwen-Image",
+            **pipeline_kwargs,
+        )
+
+        # Apply memory optimizations after loading
+        if self.enable_cpu_offload:
+            self._pipeline.enable_model_cpu_offload()
+
+        if self.enable_vae_slicing:
+            self._pipeline.vae.enable_slicing()
+
+        if self.enable_vae_tiling:
+            self._pipeline.vae.enable_tiling()
+
+        if self.enable_memory_efficient_attention:
+            self._pipeline.enable_attention_slicing()
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None:
+            # Handle CPU offload case
+            if self.enable_cpu_offload:
+                # When moving to CPU, disable CPU offload and move all components to CPU
+                if device == "cpu":
+                    self._pipeline.to(device)
+                # When moving to GPU with CPU offload, re-enable CPU offload
+                elif device in ["cuda", "mps"]:
+                    self._pipeline.enable_model_cpu_offload()
+            else:
+                # Normal device movement without CPU offload
+                self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        # Set up the generator for reproducibility
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device=context.device).manual_seed(self.seed)
+
+        # Generate the image
+        pipeline_kwargs = {
+            "prompt": self.prompt,
+            "negative_prompt": self.negative_prompt,
+            "true_cfg_scale": self.true_cfg_scale,
+            "num_inference_steps": self.num_inference_steps,
+            "height": self.height,
+            "width": self.width,
+            "generator": generator,
+            "callback_on_step_end": pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            ),
+            "callback_on_step_end_tensor_inputs": ["latents"],
+        }
+
+        # Generate the image off the event loop
+        def _run_pipeline_sync():
+            return self._pipeline(**pipeline_kwargs)  # type: ignore
+
+        output = await asyncio.to_thread(_run_pipeline_sync)
+
+        image = output.images[0]  # type: ignore
+
+        return await context.image_from_pil(image)
+
+    def required_inputs(self):
+        """Return list of required inputs that must be connected."""
+        return []  # No required inputs - IP adapter image is optional
