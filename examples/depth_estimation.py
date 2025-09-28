@@ -2,14 +2,12 @@ import asyncio
 import os
 from nodetool.dsl.graph import graph, run_graph
 from nodetool.dsl.nodetool.constant import Image
+from nodetool.dsl.nodetool.image import SaveImageFile
 from nodetool.metadata.types import (
-    FolderPath,
     ImageRef,
     # HFDepthEstimation can be imported if specific model selection is needed
 )
 from nodetool.dsl.huggingface.depth_estimation import DepthEstimation
-from nodetool.dsl.nodetool.os import SaveImageFile
-from nodetool.metadata.types import HFDepthEstimation
 
 dirname = os.path.dirname(__file__)
 image_path = os.path.join(dirname, "test.jpg")
@@ -20,7 +18,7 @@ g = SaveImageFile(
     image=DepthEstimation(
         image=Image(value=ImageRef(uri=image_path, type="image")),
     ),
-    folder=FolderPath(path=output_dir),
+    folder=output_dir,
     filename="depth_map.png",  # Use PNG for potentially better quality depth map
 )
 

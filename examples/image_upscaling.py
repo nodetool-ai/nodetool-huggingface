@@ -4,7 +4,6 @@ import tempfile
 from nodetool.dsl.graph import graph, run_graph
 from nodetool.dsl.nodetool.constant import Image
 from nodetool.metadata.types import (
-    FolderPath,
     ImageRef,
     HFRealESRGAN,
     HFStableDiffusion,
@@ -13,7 +12,7 @@ from nodetool.dsl.huggingface.image_to_image import (
     RealESRGANNode,
     StableDiffusionImg2ImgNode,
 )
-from nodetool.dsl.nodetool.os import SaveImageFile
+from nodetool.dsl.nodetool.image import SaveImageFile
 from nodetool.nodes.huggingface.stable_diffusion_base import StableDiffusionBaseNode
 
 dirname = os.path.dirname(__file__)
@@ -46,7 +45,7 @@ g = SaveImageFile(
             path="RealESRGAN_x2.pth",
         ),
     ),
-    folder=FolderPath(path=dirname),
+    folder=dirname,
     filename="upscaled_image_4x.jpg",
 )
 
