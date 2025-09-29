@@ -1,4 +1,5 @@
 from enum import Enum
+import platform
 import re
 from typing import Any, TypedDict
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
@@ -23,6 +24,7 @@ from nodetool.workflows.base_node import BaseNode
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     HF_CONTROLNET_MODELS,
+    ModelVariant,
     StableDiffusionBaseNode,
     StableDiffusionXLBase,
 )
@@ -241,13 +243,6 @@ class Swin2SR(BaseImageToImage):
 
     def get_model_id(self):
         return self.model.repo_id
-
-
-class ModelVariant(Enum):
-    DEFAULT = "default"
-    FP16 = "fp16"
-    FP32 = "fp32"
-    BF16 = "bf16"
 
 
 class LoadImageToImageModel(HuggingFacePipelineNode):
@@ -680,10 +675,6 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
         ge=0.0,
         le=1.0,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
-    )
-    variant: ModelVariant = Field(
-        default=ModelVariant.FP16,
-        description="The variant of the model to use for Image-to-Image generation.",
     )
     _pipeline: StableDiffusionPAGImg2ImgPipeline | None = None
 
@@ -1433,10 +1424,6 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         le=1.0,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
     )
-    variant: ModelVariant = Field(
-        default=ModelVariant.FP16,
-        description="The variant of the model to use for Image-to-Image generation.",
-    )
     _pipeline: StableDiffusionXLPAGImg2ImgPipeline | None = None
 
     @classmethod
@@ -1507,10 +1494,6 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
         ge=0.0,
         le=1.0,
         description="Strength for inpainting. Higher values allow for more deviation from the original image.",
-    )
-    variant: ModelVariant = Field(
-        default=ModelVariant.FP16,
-        description="The variant of the model to use for Image-to-Image generation.",
     )
     _pipeline: StableDiffusionXLPAGInpaintPipeline | None = None
 
@@ -1612,14 +1595,20 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
 
     async def preload_model(self, context: ProcessingContext):
         # Use float32 for MPS compatibility with controlnet models
-        controlnet_dtype = torch.float32 if context.device == "mps" else torch.float16
+        if context.device == "mps" and self.variant != ModelVariant.FP16:
+            raise ValueError(
+                "ControlNet on Apple Silicon does not support fp16, please use fp32"
+            )
+
         controlnet = await self.load_model(
             context=context,
             model_class=ControlNetModel,
             model_id=self.controlnet.repo_id,
             path=self.controlnet.path,
-            variant=None,
-            torch_dtype=controlnet_dtype,
+            variant=self.variant.value,
+            torch_dtype=(
+                torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
+            ),
         )
         # Align pipeline dtype with controlnet dtype to avoid mismatches
         self._pipeline = await self.load_model(
@@ -1628,7 +1617,10 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
             model_id=self.model.repo_id,
             path=self.model.path,
             controlnet=controlnet,
-            torch_dtype=controlnet_dtype,
+            variant=self.variant.value,
+            torch_dtype=(
+                torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
+            ),
         )
         self._load_ip_adapter()
 

@@ -1,11 +1,8 @@
 from enum import Enum
 from typing import Any, TypedDict
-from nodetool.config.environment import Environment
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
     HFTextToImage,
-    HFImageToImage,
-    HFLoraSD,
     HFFlux,
     HFQwenImage,
     HFLoraQwenImage,
@@ -16,6 +13,7 @@ from nodetool.metadata.types import (
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.image_to_image import pipeline_progress_callback
 from nodetool.nodes.huggingface.stable_diffusion_base import (
+    ModelVariant,
     StableDiffusionBaseNode,
     StableDiffusionXLBase,
 )
@@ -96,6 +94,12 @@ class StableDiffusion(StableDiffusionBaseNode):
             path=self.model.path,
             config="Lykon/DreamShaper",
             pag_scale=self.pag_scale,
+            torch_dtype=(
+                torch.float16
+                if self.model.variant == ModelVariant.FP16
+                else torch.float32
+            ),
+            variant="fp16",
         )
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
@@ -136,7 +140,12 @@ class StableDiffusionXL(StableDiffusionXLBase):
             model_class=StableDiffusionXLPAGPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
-            variant="fp16",
+            torch_dtype=(
+                torch.float16
+                if self.model.variant == ModelVariant.FP16
+                else torch.float32
+            ),
+            variant=self.variant.value,
         )
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
@@ -154,13 +163,6 @@ class StableDiffusionXL(StableDiffusionXLBase):
         }
 
 
-class ModelVariant(Enum):
-    FP16 = "fp16"
-    FP32 = "fp32"
-    BF16 = "bf16"
-    DEFAULT = "default"
-
-
 class LoadTextToImageModel(HuggingFacePipelineNode):
     """
     Load HuggingFace model for image-to-image generation from a repo_id.
@@ -176,7 +178,7 @@ class LoadTextToImageModel(HuggingFacePipelineNode):
     )
 
     variant: ModelVariant = Field(
-        default=ModelVariant.DEFAULT,
+        default=ModelVariant.FP16,
         description="The variant of the model to use for text-to-image generation.",
     )
 
@@ -282,7 +284,11 @@ class Text2Image(HuggingFacePipelineNode):
             context=context,
             model_id=self.get_model_id(),
             model_class=AutoPipelineForText2Image,
-            torch_dtype=torch.float16,
+            torch_dtype=(
+                torch.float16
+                if self.model.variant == ModelVariant.FP16
+                else torch.float32
+            ),
             variant=(
                 self.model.variant
                 if self.model.variant != ModelVariant.DEFAULT
@@ -402,10 +408,6 @@ class Flux(HuggingFacePipelineNode):
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
         ge=-1,
-    )
-    enable_memory_efficient_attention: bool = Field(
-        default=True,
-        description="Enable memory efficient attention to reduce VRAM usage.",
     )
     enable_vae_tiling: bool = Field(
         default=False,
@@ -680,13 +682,10 @@ class Flux(HuggingFacePipelineNode):
             # Apply memory optimizations only when on GPU
             if device != "cpu":
                 if self.enable_vae_slicing:
-                    self._pipeline.vae.enable_slicing()
+                    self._pipeline.enable_vae_slicing()
 
                 if self.enable_vae_tiling:
-                    self._pipeline.vae.enable_tiling()
-
-                if self.enable_memory_efficient_attention:
-                    self._pipeline.enable_attention_slicing()
+                    self._pipeline.enable_vae_tiling()
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:

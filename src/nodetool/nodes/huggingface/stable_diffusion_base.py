@@ -626,6 +626,13 @@ def upscale_latents(latents: torch.Tensor, scale_factor: int = 2) -> torch.Tenso
     return upscaled
 
 
+class ModelVariant(Enum):
+    DEFAULT = "default"
+    FP16 = "fp16"
+    FP32 = "fp32"
+    BF16 = "bf16"
+
+
 class StableDiffusionBaseNode(HuggingFacePipelineNode):
 
     async def preload_model(self, context: ProcessingContext):
@@ -691,6 +698,10 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         default=HFStableDiffusion(),
         description="The model to use for image generation.",
     )
+    variant: ModelVariant = Field(
+        default=ModelVariant.FP16,
+        description="The variant of the model to use for generation.",
+    )
     prompt: str = Field(default="", description="The prompt for image generation.")
     negative_prompt: str = Field(
         default="",
@@ -740,12 +751,16 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         default=TorchTensor(),
         description="Optional initial latents to start generation from.",
     )
+    enable_attention_slicing: bool = Field(
+        default=True,
+        description="Enable attention slicing for the pipeline. This can reduce VRAM usage.",
+    )
     enable_tiling: bool = Field(
-        default=False,
+        default=True,
         description="Enable tiling for the VAE. This can reduce VRAM usage.",
     )
     enable_cpu_offload: bool = Field(
-        default=False,
+        default=True,
         description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
     )
     output_type: StableDiffusionOutputType = Field(
@@ -887,6 +902,11 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         if self.enable_cpu_offload:
             log.debug("Enabling model CPU offload")
             self._pipeline.enable_model_cpu_offload()
+
+        log.debug(f"Enable attention slicing: {self.enable_attention_slicing}")
+        if self.enable_attention_slicing:
+            log.debug("Enabling attention slicing")
+            self._pipeline.enable_attention_slicing()
 
         loras = [
             lora for lora in self.loras if not lora.lora.path in self._loaded_adapters
@@ -1046,6 +1066,10 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         default=HFStableDiffusionXL(),
         description="The Stable Diffusion XL model to use for generation.",
     )
+    variant: ModelVariant = Field(
+        default=ModelVariant.FP16,
+        description="The variant of the model to use for generation.",
+    )
     prompt: str = Field(default="", description="The prompt for image generation.")
     negative_prompt: str = Field(
         default="",
@@ -1102,6 +1126,10 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         ge=0.0,
         le=1.0,
         description="Strength of the IP adapter image",
+    )
+    enable_attention_slicing: bool = Field(
+        default=True,
+        description="Enable attention slicing for the pipeline. This can reduce VRAM usage.",
     )
     enable_tiling: bool = Field(
         default=False,
@@ -1250,6 +1278,11 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         if self._pipeline is None:
             log.error("Pipeline not initialized")
             raise ValueError("Pipeline not initialized")
+
+        log.debug(f"Enable attention slicing: {self.enable_attention_slicing}")
+        if self.enable_attention_slicing:
+            log.debug("Enabling attention slicing")
+            self._pipeline.enable_attention_slicing()
 
         log.debug(f"Enable tiling: {self.enable_tiling}")
         if self.enable_tiling:
