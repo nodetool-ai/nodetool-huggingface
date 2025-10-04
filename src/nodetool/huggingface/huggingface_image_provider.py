@@ -1,15 +1,14 @@
 """
-HuggingFace image provider implementation.
+HuggingFace local provider implementation.
 
-This module implements the ImageProvider interface for HuggingFace models.
+This module implements the BaseProvider interface for locally cached HuggingFace models.
 Uses the Text2Image and ImageToImage nodes from the nodetool-huggingface package.
 """
 
 import asyncio
 from typing import List, Set
 from huggingface_hub import CacheNotFound, scan_cache_dir
-from nodetool.image.providers.base import ImageProvider
-from nodetool.chat.providers.base import ProviderCapability
+from nodetool.chat.providers.base import BaseProvider, ProviderCapability
 from nodetool.image.types import ImageBytes, TextToImageParams, ImageToImageParams
 from nodetool.integrations.huggingface.huggingface_models import (
     fetch_model_info,
@@ -148,8 +147,8 @@ async def get_hf_cached_image_models() -> List[UnifiedModel]:
     return models
 
 
-class HuggingFaceImageProvider(ImageProvider):
-    """Image provider for HuggingFace models using local diffusion pipelines."""
+class HuggingFaceLocalProvider(BaseProvider):
+    """Local provider for HuggingFace models using cached diffusion pipelines."""
 
     provider_name = "hf_inference"
 

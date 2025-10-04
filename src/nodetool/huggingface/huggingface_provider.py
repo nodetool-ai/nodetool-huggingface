@@ -14,9 +14,9 @@ import httpx
 from huggingface_hub import AsyncInferenceClient
 
 from nodetool.chat.providers.base import (
-    ChatProvider,
+    BaseProvider,
     ProviderCapability,
-    register_chat_provider,
+    register_provider,
 )
 from nodetool.agents.tools.base import Tool
 from nodetool.config.logging_config import get_logger
@@ -59,31 +59,31 @@ PROVIDER_T = Literal[
 ]
 
 
-@register_chat_provider(Provider.HuggingFaceGroq, inference_provider="groq")
-@register_chat_provider(Provider.HuggingFaceCerebras, inference_provider="cerebras")
-@register_chat_provider(Provider.HuggingFaceCohere, inference_provider="cohere")
-@register_chat_provider(Provider.HuggingFaceFalAI, inference_provider="fal-ai")
-@register_chat_provider(
+@register_provider(Provider.HuggingFaceGroq, inference_provider="groq")
+@register_provider(Provider.HuggingFaceCerebras, inference_provider="cerebras")
+@register_provider(Provider.HuggingFaceCohere, inference_provider="cohere")
+@register_provider(Provider.HuggingFaceFalAI, inference_provider="fal-ai")
+@register_provider(
     Provider.HuggingFaceFeatherlessAI, inference_provider="featherless-ai"
 )
-@register_chat_provider(
+@register_provider(
     Provider.HuggingFaceFireworksAI, inference_provider="fireworks-ai"
 )
-@register_chat_provider(
+@register_provider(
     Provider.HuggingFaceBlackForestLabs, inference_provider="black-forest-labs"
 )
-@register_chat_provider(
+@register_provider(
     Provider.HuggingFaceHFInference, inference_provider="hf-inference"
 )
-@register_chat_provider(Provider.HuggingFaceHyperbolic, inference_provider="hyperbolic")
-@register_chat_provider(Provider.HuggingFaceNebius, inference_provider="nebius")
-@register_chat_provider(Provider.HuggingFaceNovita, inference_provider="novita")
-@register_chat_provider(Provider.HuggingFaceNscale, inference_provider="nscale")
-@register_chat_provider(Provider.HuggingFaceOpenAI, inference_provider="openai")
-@register_chat_provider(Provider.HuggingFaceReplicate, inference_provider="replicate")
-@register_chat_provider(Provider.HuggingFaceSambanova, inference_provider="sambanova")
-@register_chat_provider(Provider.HuggingFaceTogether, inference_provider="together")
-class HuggingFaceProvider(ChatProvider):
+@register_provider(Provider.HuggingFaceHyperbolic, inference_provider="hyperbolic")
+@register_provider(Provider.HuggingFaceNebius, inference_provider="nebius")
+@register_provider(Provider.HuggingFaceNovita, inference_provider="novita")
+@register_provider(Provider.HuggingFaceNscale, inference_provider="nscale")
+@register_provider(Provider.HuggingFaceOpenAI, inference_provider="openai")
+@register_provider(Provider.HuggingFaceReplicate, inference_provider="replicate")
+@register_provider(Provider.HuggingFaceSambanova, inference_provider="sambanova")
+@register_provider(Provider.HuggingFaceTogether, inference_provider="together")
+class HuggingFaceProvider(BaseProvider):
     """
     HuggingFace implementation of the ChatProvider interface.
 
@@ -170,10 +170,11 @@ class HuggingFaceProvider(ChatProvider):
             log.debug("Client does not have close method")
 
     def get_capabilities(self) -> set[ProviderCapability]:
-        """HuggingFace provider supports message generation."""
+        """HuggingFace provider supports message generation and text-to-speech."""
         return {
             ProviderCapability.GENERATE_MESSAGE,
             ProviderCapability.GENERATE_MESSAGES,
+            ProviderCapability.TEXT_TO_SPEECH,
         }
 
     def get_container_env(self) -> dict[str, str]:
@@ -743,3 +744,55 @@ class HuggingFaceProvider(ChatProvider):
         )
         log.debug(f"Checking if error is context length error: {is_context_error}")
         return is_context_error
+
+    async def text_to_speech(
+        self,
+        text: str,
+        model: str,
+        voice: str | None = None,
+        speed: float = 1.0,
+        timeout_s: int | None = None,
+        context: Any = None,
+        **kwargs: Any,
+    ) -> bytes:
+        """Generate speech audio from text using HuggingFace text-to-speech models.
+
+        Args:
+            text: Input text to convert to speech
+            model: Model identifier (HuggingFace model ID)
+            voice: Voice identifier (not used by most HF TTS models)
+            speed: Speech speed multiplier (not used by most HF TTS models)
+            timeout_s: Optional timeout in seconds
+            context: Optional processing context
+            **kwargs: Additional HuggingFace parameters
+
+        Returns:
+            Raw audio bytes (typically FLAC or WAV format)
+
+        Raises:
+            ValueError: If required parameters are missing
+            RuntimeError: If generation fails
+        """
+        log.debug(f"Generating speech with HuggingFace model: {model}")
+
+        if not text:
+            raise ValueError("text must not be empty")
+
+        log.debug(f"Making HuggingFace TTS API call with model={model}")
+
+        try:
+            # Use the text_to_speech method from AsyncInferenceClient
+            audio_bytes = await self.client.text_to_speech(
+                text=text,
+                model=model,
+            )
+
+            log.debug("HuggingFace TTS API call successful")
+
+            # audio_bytes is already bytes from the API
+            log.debug(f"Generated {len(audio_bytes)} bytes of audio")
+            return audio_bytes
+
+        except Exception as e:
+            log.error(f"HuggingFace TTS generation failed: {e}")
+            raise RuntimeError(f"HuggingFace TTS generation failed: {str(e)}")

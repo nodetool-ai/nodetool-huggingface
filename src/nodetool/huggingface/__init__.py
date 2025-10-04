@@ -2,8 +2,8 @@
 
 # Register the image provider
 from nodetool.image.providers import register_image_provider
-from nodetool.huggingface.huggingface_image_provider import HuggingFaceImageProvider
+from nodetool.huggingface.huggingface_image_provider import HuggingFaceLocalProvider
 
-register_image_provider("huggingface", lambda: HuggingFaceImageProvider())
+register_image_provider("huggingface", lambda: HuggingFaceLocalProvider())
 
-__all__ = ["HuggingFaceImageProvider"]
+__all__ = ["HuggingFaceLocalProvider"]
