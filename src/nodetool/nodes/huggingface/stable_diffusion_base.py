@@ -151,23 +151,7 @@ HF_CONTROLNET_MODELS: list[HFControlNet] = [
         path="diffusion_pytorch_model.fp16.safetensors",
     ),
     HFControlNet(
-        repo_id="lllyasviel/control_v11p_sd15_tile",
-        path="diffusion_pytorch_model.fp16.safetensors",
-    ),
-    HFControlNet(
-        repo_id="lllyasviel/control_v11p_sd15_shuffle",
-        path="diffusion_pytorch_model.fp16.safetensors",
-    ),
-    HFControlNet(
-        repo_id="lllyasviel/control_v11p_sd15_ip2p",
-        path="diffusion_pytorch_model.fp16.safetensors",
-    ),
-    HFControlNet(
         repo_id="lllyasviel/control_v11p_sd15_lineart",
-        path="diffusion_pytorch_model.fp16.safetensors",
-    ),
-    HFControlNet(
-        repo_id="lllyasviel/control_v11p_sd15_lineart_anime",
         path="diffusion_pytorch_model.fp16.safetensors",
     ),
     HFControlNet(
@@ -176,22 +160,6 @@ HF_CONTROLNET_MODELS: list[HFControlNet] = [
     ),
     HFControlNet(
         repo_id="lllyasviel/control_v11p_sd15_openpose",
-        path="diffusion_pytorch_model.fp16.safetensors",
-    ),
-    HFControlNet(
-        repo_id="lllyasviel/control_v11p_sd15_scribble",
-        path="diffusion_pytorch_model.fp16.safetensors",
-    ),
-    HFControlNet(
-        repo_id="lllyasviel/control_v11p_sd15_seg",
-        path="diffusion_pytorch_model.fp16.safetensors",
-    ),
-    HFControlNet(
-        repo_id="lllyasviel/control_v11p_sd15_hed",
-        path="diffusion_pytorch_model.fp16.safetensors",
-    ),
-    HFControlNet(
-        repo_id="lllyasviel/control_v11p_sd15_normalbae",
         path="diffusion_pytorch_model.fp16.safetensors",
     ),
 ]

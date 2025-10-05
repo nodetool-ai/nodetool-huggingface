@@ -224,12 +224,16 @@ class Swin2SR(BaseImageToImage):
                 allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
             ),
             HFImageToImage(
-                repo_id="caidas/swin2SR-classical-sr-x4-48",
+                repo_id="caidas/swin2SR-classical-sr-x4-64",
                 allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
             ),
             HFImageToImage(
-                repo_id="caidas/swin2SR-lightweight-sr-x2-64",
-                allow_patterns=["README.md", "*.bin", "*.json", "**/*.json"],
+                repo_id="caidas/swin2SR-lightweight-x2-64",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
+            ),
+            HFImageToImage(
+                repo_id="caidas/swin2SR-compressed-sr-x4-48",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
             ),
             HFImageToImage(
                 repo_id="caidas/swin2SR-realworld-sr-x4-64-bsrgan-psnr",

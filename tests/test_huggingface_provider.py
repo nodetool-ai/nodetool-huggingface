@@ -138,9 +138,9 @@ from unittest.mock import AsyncMock, patch, MagicMock
 import httpx
 from huggingface_hub import AsyncInferenceClient
 
-from nodetool.chat.providers.huggingface_provider import HuggingFaceProvider
+from nodetool.huggingface.huggingface_provider import HuggingFaceProvider
 from nodetool.metadata.types import Message, MessageTextContent, ToolCall
-from tests.chat.providers.test_base_provider import BaseProviderTest, ResponseFixtures
+from tests.huggingface.test_base_provider import BaseProviderTest, ResponseFixtures
 
 
 class TestHuggingFaceProvider(BaseProviderTest):
