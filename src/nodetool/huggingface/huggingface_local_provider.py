@@ -10,15 +10,22 @@ This module implements the BaseProvider interface for locally cached HuggingFace
 """
 
 import asyncio
+import base64
+from queue import Queue
+import threading
 from typing import Any, AsyncGenerator, List, Set
-from huggingface_hub import CacheNotFound, scan_cache_dir
-from nodetool.providers.base import BaseProvider, ProviderCapability, register_provider
+from diffusers.schedulers import AutoPipelineForImage2Image
+from huggingface_hub import scan_cache_dir
+from nodetool.providers.base import BaseProvider, register_provider
 from nodetool.providers.types import ImageBytes, TextToImageParams, ImageToImageParams
 from nodetool.integrations.huggingface.huggingface_models import (
     fetch_model_info,
     has_model_index,
     model_type_from_model_info,
 )
+import numpy as np
+from pydub import AudioSegment
+import io
 from nodetool.metadata.types import HFTextToImage, HFImageToImage, HFTextGeneration
 from io import BytesIO
 from nodetool.types.model import UnifiedModel
@@ -32,13 +39,42 @@ from nodetool.metadata.types import (
     MessageTextContent,
 )
 from nodetool.workflows.types import Chunk, NodeProgress
+from nodetool.metadata.types import ASRModel
 from typing import List, Sequence, Any, AsyncIterator
 from nodetool.config.logging_config import get_logger
+import torch
+from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
+from nodetool.ml.core.model_manager import ModelManager
+from huggingface_hub import try_to_load_from_cache
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
+from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
+from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import StableDiffusion3Pipeline
+from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 
-log = get_logger(__name__)
+# Import specific pipeline classes
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
+from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import StableDiffusionXLImg2ImgPipeline
+from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3_img2img import StableDiffusion3Img2ImgPipeline
+from diffusers.pipelines.flux.pipeline_flux_img2img import FluxImg2ImgPipeline
+from transformers import (
+    AutoModelForSpeechSeq2Seq,
+    AutoProcessor,
+    TextStreamer,
+    pipeline as create_pipeline,
+)
+from nodetool.nodes.huggingface.text_to_speech import KokoroTTS
+from nodetool.metadata.types import HFTextToSpeech
+from pydub import AudioSegment
+from io import BytesIO
+from nodetool.nodes.huggingface.text_to_speech import TextToSpeech
+from nodetool.metadata.types import HFTextToSpeech
 
 from nodetool.workflows.recommended_models import get_recommended_models
 from nodetool.metadata.types import LanguageModel
+from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
+from transformers.pipelines import pipeline
+
+log = get_logger(__name__)
 
 
 def get_model_type_from_id(model_id: str) -> str | None:
@@ -76,8 +112,6 @@ async def get_hf_cached_single_file_image_models() -> List[ImageModel]:
     Returns:
         List of ImageModel instances for cached single-file models
     """
-    from huggingface_hub import try_to_load_from_cache
-
     # Image model types we want to include (SD, SDXL, SD3, Flux, QwenImage)
     IMAGE_MODEL_TYPES = {
         "hf.stable_diffusion",
@@ -158,14 +192,8 @@ async def get_hf_cached_image_models() -> List[UnifiedModel]:
         "diffusers",
     }
 
-    try:
-        # Scan HF cache directory
-        cache_info = await asyncio.to_thread(scan_cache_dir)
-    except CacheNotFound:
-        log.debug(
-            "Hugging Face cache directory not found; returning empty image model list"
-        )
-        return []
+    # Scan HF cache directory
+    cache_info = await asyncio.to_thread(scan_cache_dir)
 
     model_repos = [repo for repo in cache_info.repos if repo.repo_type == "model"]
     recommended_models = get_recommended_models()
@@ -255,17 +283,6 @@ class HuggingFaceLocalProvider(BaseProvider):
     def __init__(self):
         super().__init__()
 
-    def get_capabilities(self) -> Set[ProviderCapability]:
-        """HuggingFace provider supports text-to-image, image-to-image, and text-to-speech."""
-        return {
-            ProviderCapability.GENERATE_MESSAGE,
-            ProviderCapability.GENERATE_MESSAGES,
-            ProviderCapability.TEXT_TO_IMAGE,
-            ProviderCapability.IMAGE_TO_IMAGE,
-            ProviderCapability.TEXT_TO_SPEECH,
-            ProviderCapability.AUTOMATIC_SPEECH_RECOGNITION,
-        }
-
     def get_container_env(self) -> dict[str, str]:
         """Return environment variables needed when running inside Docker."""
         # The nodes will handle HF_TOKEN internally
@@ -296,121 +313,106 @@ class HuggingFaceLocalProvider(BaseProvider):
                 "ProcessingContext is required for HuggingFace image generation"
             )
 
-        try:
-            import torch
-            from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
-            from nodetool.ml.core.model_manager import ModelManager
-            from huggingface_hub import try_to_load_from_cache
+        # Get or load the pipeline
+        model_id = params.model.id
+        cache_key = f"{model_id}:text2image"
+        pipeline = ModelManager.get_model(cache_key, "text2image")
 
-            # Get or load the pipeline
-            model_id = params.model.id
-            cache_key = f"{model_id}:text2image"
-            pipeline = ModelManager.get_model(cache_key, "text2image")
+        if not pipeline:
+            log.info(f"Loading text-to-image pipeline: {model_id}")
 
-            if not pipeline:
-                log.info(f"Loading text-to-image pipeline: {model_id}")
+            # Determine model type
+            model_type = get_model_type_from_id(model_id)
 
-                # Determine model type
-                model_type = get_model_type_from_id(model_id)
+            # Check if model_id is in "repo_id:path" format (single-file model)
+            if ":" in model_id and model_id.count(":") == 1:
+                repo_id, file_path = model_id.split(":", 1)
 
-                # Check if model_id is in "repo_id:path" format (single-file model)
-                if ":" in model_id and model_id.count(":") == 1:
-                    repo_id, file_path = model_id.split(":", 1)
+                # Verify the file is cached locally
+                cache_path = try_to_load_from_cache(repo_id, file_path)
+                if not cache_path:
+                    raise ValueError(f"Single-file model {repo_id}/{file_path} must be downloaded first")
 
-                    # Verify the file is cached locally
-                    cache_path = try_to_load_from_cache(repo_id, file_path)
-                    if not cache_path:
-                        raise ValueError(f"Single-file model {repo_id}/{file_path} must be downloaded first")
-
-                    # Import specific pipeline classes
-                    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
-                    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
-                    from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import StableDiffusion3Pipeline
-                    from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
-
-                    # Load pipeline from single file based on model type
-                    if model_type == "hf.stable_diffusion":
-                        pipeline = StableDiffusionPipeline.from_single_file(
-                            str(cache_path),
-                            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                        )
-                    elif model_type == "hf.stable_diffusion_xl":
-                        pipeline = StableDiffusionXLPipeline.from_single_file(
-                            str(cache_path),
-                            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                        )
-                    elif model_type == "hf.stable_diffusion_3":
-                        pipeline = StableDiffusion3Pipeline.from_single_file(
-                            str(cache_path),
-                            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                        )
-                    elif model_type == "hf.flux":
-                        pipeline = FluxPipeline.from_single_file(
-                            str(cache_path),
-                            torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
-                        )
-                    else:
-                        raise ValueError(f"Unsupported single-file model type: {model_type}")
-                else:
-                    # Load pipeline from multi-file model (standard format)
-                    pipeline = AutoPipelineForText2Image.from_pretrained(
-                        model_id,
+                # Load pipeline from single file based on model type
+                if model_type == "hf.stable_diffusion":
+                    pipeline = StableDiffusionPipeline.from_single_file(
+                        str(cache_path),
                         torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                        variant="fp16" if torch.cuda.is_available() else None,
                     )
-
-                pipeline.to(context.device)
-
-                # Cache the pipeline
-                ModelManager.set_model(cache_key, cache_key, "text2image", pipeline)
-
-            # Set up generator for reproducibility
-            generator = None
-            if params.seed is not None and params.seed != -1:
-                generator = torch.Generator(device="cpu").manual_seed(params.seed)
-
-            # Progress callback
-            num_steps = params.num_inference_steps or 50
-            def progress_callback(pipe, step: int, timestep: int, callback_kwargs: dict):
-                if context:
-                    context.post_message(
-                        NodeProgress(
-                            node_id="text_to_image",
-                            progress=step,
-                            total=num_steps,
-                        )
+                elif model_type == "hf.stable_diffusion_xl":
+                    pipeline = StableDiffusionXLPipeline.from_single_file(
+                        str(cache_path),
+                        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
                     )
-                return callback_kwargs
-
-            # Generate the image off the event loop
-            def _run_pipeline_sync():
-                return pipeline(
-                    prompt=params.prompt,
-                    negative_prompt=params.negative_prompt or "",
-                    num_inference_steps=num_steps,
-                    guidance_scale=params.guidance_scale or 7.5,
-                    width=params.width or 512,
-                    height=params.height or 512,
-                    generator=generator,
-                    callback_on_step_end=progress_callback,
-                    callback_on_step_end_tensor_inputs=["latents"],
+                elif model_type == "hf.stable_diffusion_3":
+                    pipeline = StableDiffusion3Pipeline.from_single_file(
+                        str(cache_path),
+                        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                    )
+                elif model_type == "hf.flux":
+                    pipeline = FluxPipeline.from_single_file(
+                        str(cache_path),
+                        torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+                    )
+                else:
+                    raise ValueError(f"Unsupported single-file model type: {model_type}")
+            else:
+                # Load pipeline from multi-file model (standard format)
+                pipeline = AutoPipelineForText2Image.from_pretrained(
+                    model_id,
+                    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                    variant="fp16" if torch.cuda.is_available() else None,
                 )
 
-            output = await asyncio.to_thread(_run_pipeline_sync)
+            pipeline.to(context.device)
 
-            # Get the generated image
-            pil_image = output.images[0]  # pyright: ignore[reportAttributeAccessIssue]
+            # Cache the pipeline
+            ModelManager.set_model(cache_key, cache_key, "text2image", pipeline)
 
-            # Convert PIL Image to bytes
-            img_buffer = BytesIO()
-            pil_image.save(img_buffer, format="PNG")
-            image_bytes = img_buffer.getvalue()
+        # Set up generator for reproducibility
+        generator = None
+        if params.seed is not None and params.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(params.seed)
 
-            return image_bytes
+        # Progress callback
+        num_steps = params.num_inference_steps or 50
 
-        except Exception as e:
-            log.error(f"HuggingFace text-to-image generation failed: {e}")
-            raise RuntimeError(f"HuggingFace text-to-image generation failed: {e}")
+        def progress_callback(pipe, step: int, timestep: int, callback_kwargs: dict):
+            if context:
+                context.post_message(
+                    NodeProgress(
+                        node_id="text_to_image",
+                        progress=step,
+                        total=num_steps,
+                    )
+                )
+            return callback_kwargs
+
+        # Generate the image off the event loop
+        def _run_pipeline_sync():
+            return pipeline(
+                prompt=params.prompt,
+                negative_prompt=params.negative_prompt or "",
+                num_inference_steps=num_steps,
+                guidance_scale=params.guidance_scale or 7.5,
+                width=params.width or 512,
+                height=params.height or 512,
+                generator=generator,
+                callback_on_step_end=progress_callback,  # type: ignore
+                callback_on_step_end_tensor_inputs=["latents"],
+            )
+
+        output = await asyncio.to_thread(_run_pipeline_sync)
+
+        # Get the generated image
+        pil_image = output.images[0]  # pyright: ignore[reportAttributeAccessIssue]
+
+        # Convert PIL Image to bytes
+        img_buffer = BytesIO()
+        pil_image.save(img_buffer, format="PNG")
+        image_bytes = img_buffer.getvalue()
+
+        return image_bytes
 
     async def image_to_image(
         self,
@@ -439,127 +441,112 @@ class HuggingFaceLocalProvider(BaseProvider):
                 "ProcessingContext is required for HuggingFace image generation"
             )
 
-        try:
-            import torch
-            from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
-            from nodetool.ml.core.model_manager import ModelManager
-            from huggingface_hub import try_to_load_from_cache
+        # Convert input image bytes to PIL Image
+        pil_image = Image.open(BytesIO(image))
 
-            # Convert input image bytes to PIL Image
-            pil_image = Image.open(BytesIO(image))
+        # Get or load the pipeline
+        model_id = params.model.id
+        cache_key = f"{model_id}:image2image"
+        pipeline = ModelManager.get_model(cache_key, "image2image")
 
-            # Get or load the pipeline
-            model_id = params.model.id
-            cache_key = f"{model_id}:image2image"
-            pipeline = ModelManager.get_model(cache_key, "image2image")
+        if not pipeline:
+            log.info(f"Loading image-to-image pipeline: {model_id}")
 
-            if not pipeline:
-                log.info(f"Loading image-to-image pipeline: {model_id}")
+            # Determine model type
+            model_type = get_model_type_from_id(model_id)
 
-                # Determine model type
-                model_type = get_model_type_from_id(model_id)
+            # Check if model_id is in "repo_id:path" format (single-file model)
+            if ":" in model_id and model_id.count(":") == 1:
+                repo_id, file_path = model_id.split(":", 1)
 
-                # Check if model_id is in "repo_id:path" format (single-file model)
-                if ":" in model_id and model_id.count(":") == 1:
-                    repo_id, file_path = model_id.split(":", 1)
-
-                    # Verify the file is cached locally
-                    cache_path = try_to_load_from_cache(repo_id, file_path)
-                    if not cache_path:
-                        raise ValueError(f"Single-file model {repo_id}/{file_path} must be downloaded first")
-
-                    # Import specific pipeline classes
-                    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
-                    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import StableDiffusionXLImg2ImgPipeline
-                    from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3_img2img import StableDiffusion3Img2ImgPipeline
-                    from diffusers.pipelines.flux.pipeline_flux_img2img import FluxImg2ImgPipeline
-
-                    # Load pipeline from single file based on model type
-                    if model_type == "hf.stable_diffusion":
-                        pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
-                            str(cache_path),
-                            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                        )
-                    elif model_type == "hf.stable_diffusion_xl":
-                        pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
-                            str(cache_path),
-                            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                        )
-                    elif model_type == "hf.stable_diffusion_3":
-                        pipeline = StableDiffusion3Img2ImgPipeline.from_single_file(
-                            str(cache_path),
-                            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                        )
-                    elif model_type == "hf.flux":
-                        pipeline = FluxImg2ImgPipeline.from_single_file(
-                            str(cache_path),
-                            torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
-                        )
-                    else:
-                        raise ValueError(f"Unsupported single-file model type: {model_type}")
-                else:
-                    # Load pipeline from multi-file model (standard format)
-                    pipeline = AutoPipelineForImage2Image.from_pretrained(
-                        model_id,
+                # Verify the file is cached locally
+                cache_path = try_to_load_from_cache(repo_id, file_path)
+                if not cache_path:
+                    raise ValueError(f"Single-file model {repo_id}/{file_path} must be downloaded first")
+                # Load pipeline from single file based on model type
+                if model_type == "hf.stable_diffusion":
+                    pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
+                        str(cache_path),
                         torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                        variant="fp16" if torch.cuda.is_available() else None,
                     )
-
-                pipeline.to(context.device)
-
-                # Cache the pipeline
-                ModelManager.set_model(cache_key, cache_key, "image2image", pipeline)
-
-            # Set up generator for reproducibility
-            generator = None
-            if params.seed is not None and params.seed != -1:
-                generator = torch.Generator(device="cpu").manual_seed(params.seed)
-
-            # Progress callback
-            num_steps = params.num_inference_steps or 25
-            def progress_callback(pipe, step: int, timestep: int, callback_kwargs: dict):
-                if context:
-                    context.post_message(
-                        NodeProgress(
-                            node_id="image_to_image",
-                            progress=step,
-                            total=num_steps,
-                        )
+                elif model_type == "hf.stable_diffusion_xl":
+                    pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
+                        str(cache_path),
+                        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
                     )
-                return callback_kwargs
-
-            # Generate the image off the event loop
-            def _run_pipeline_sync():
-                return pipeline(
-                    prompt=params.prompt,
-                    image=pil_image,
-                    negative_prompt=params.negative_prompt or "",
-                    strength=params.strength or 0.8,
-                    num_inference_steps=num_steps,
-                    guidance_scale=params.guidance_scale or 7.5,
-                    generator=generator,
-                    callback_on_step_end=progress_callback,
-                    callback_on_step_end_tensor_inputs=["latents"],
+                elif model_type == "hf.stable_diffusion_3":
+                    pipeline = StableDiffusion3Img2ImgPipeline.from_single_file(
+                        str(cache_path),
+                        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                    )
+                elif model_type == "hf.flux":
+                    pipeline = FluxImg2ImgPipeline.from_single_file(
+                        str(cache_path),
+                        torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+                    )
+                else:
+                    raise ValueError(f"Unsupported single-file model type: {model_type}")
+            else:
+                # Load pipeline from multi-file model (standard format)
+                pipeline = AutoPipelineForImage2Image.from_pretrained(
+                    model_id,
+                    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                    variant="fp16" if torch.cuda.is_available() else None,
                 )
 
-            output = await asyncio.to_thread(_run_pipeline_sync)
+            assert pipeline is not None
+            pipeline.to(context.device)
 
-            # Get the generated image
-            pil_output = output.images[0]  # pyright: ignore[reportAttributeAccessIssue]
+            # Cache the pipeline
+            ModelManager.set_model(cache_key, cache_key, "image2image", pipeline)
 
-            # Convert PIL Image to bytes
-            img_buffer = BytesIO()
-            pil_output.save(img_buffer, format="PNG")
-            image_bytes = img_buffer.getvalue()
+        # Set up generator for reproducibility
+        generator = None
+        if params.seed is not None and params.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(params.seed)
 
-            self.usage["total_requests"] += 1
-            self.usage["total_images"] += 1
+        # Progress callback
+        num_steps = params.num_inference_steps or 25
 
-            return image_bytes
+        def progress_callback(pipe, step: int, timestep: int, callback_kwargs: dict):
+            if context:
+                context.post_message(
+                    NodeProgress(
+                        node_id="image_to_image",
+                        progress=step,
+                        total=num_steps,
+                    )
+                )
+            return callback_kwargs
 
-        except Exception as e:
-            log.error(f"HuggingFace image-to-image generation failed: {e}")
-            raise RuntimeError(f"HuggingFace image-to-image generation failed: {e}")
+        # Generate the image off the event loop
+        def _run_pipeline_sync():
+            return pipeline(
+                prompt=params.prompt,
+                image=pil_image,
+                negative_prompt=params.negative_prompt or "",
+                strength=params.strength or 0.8,
+                num_inference_steps=num_steps,
+                guidance_scale=params.guidance_scale or 7.5,
+                generator=generator,
+                callback_on_step_end=progress_callback,  # type: ignore
+                callback_on_step_end_tensor_inputs=["latents"],
+            )
+
+        output = await asyncio.to_thread(_run_pipeline_sync)
+
+        # Get the generated image
+        pil_output = output.images[0]  # pyright: ignore[reportAttributeAccessIssue]
+
+        # Convert PIL Image to bytes
+        img_buffer = BytesIO()
+        pil_output.save(img_buffer, format="PNG")
+        image_bytes = img_buffer.getvalue()
+
+        self.usage["total_requests"] += 1
+        self.usage["total_images"] += 1
+
+        return image_bytes
 
     async def text_to_speech(
         self,
@@ -597,92 +584,186 @@ class HuggingFaceLocalProvider(BaseProvider):
                 "ProcessingContext is required for HuggingFace TTS generation"
             )
 
-        try:
-            import numpy as np
+        # Determine which TTS node to use based on model ID
+        model_lower = model.lower()
 
-            # Determine which TTS node to use based on model ID
-            model_lower = model.lower()
+        if "kokoro" in model_lower:
+            # Map voice string to Voice enum
+            voice_value = voice or "af_heart"  # Default voice
+            lang_code = kwargs.get("lang_code", "a")  # Default to American English
 
-            if "kokoro" in model_lower:
-                # Use KokoroTTS node - supports streaming and voices
-                from nodetool.nodes.huggingface.text_to_speech import KokoroTTS
-                from nodetool.metadata.types import HFTextToSpeech
+            node = KokoroTTS(
+                model=HFTextToSpeech(repo_id=model),
+                text=text,
+                voice=KokoroTTS.Voice(voice_value),
+                speed=max(0.5, min(2.0, speed)),
+                lang_code=KokoroTTS.LanguageCode(lang_code),
+            )
 
-                # Map voice string to Voice enum
-                voice_value = voice or "af_heart"  # Default voice
-                lang_code = kwargs.get("lang_code", "a")  # Default to American English
+            # Preload model
+            await node.preload_model(context)
 
-                node = KokoroTTS(
-                    model=HFTextToSpeech(repo_id=model),
-                    text=text,
-                    voice=KokoroTTS.Voice(voice_value),
-                    speed=max(0.5, min(2.0, speed)),
-                    lang_code=KokoroTTS.LanguageCode(lang_code),
-                )
+            # Stream chunks using gen_process
+            async for output in node.gen_process(context):
+                # Only yield chunk data (not the final AudioRef)
+                chunk = output.get("chunk")
+                if chunk and chunk.content and not chunk.done:
+                    # Decode base64 chunk to numpy array
+                    audio_bytes = base64.b64decode(chunk.content)
+                    audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
+                    yield audio_array
 
-                # Preload model
-                await node.preload_model(context)
+        else:
+            node = TextToSpeech(
+                model=HFTextToSpeech(repo_id=model),
+                text=text,
+            )
 
-                # Stream chunks using gen_process
-                async for output in node.gen_process(context):
-                    # Only yield chunk data (not the final AudioRef)
-                    chunk = output.get("chunk")
-                    if chunk and chunk.content and not chunk.done:
-                        # Decode base64 chunk to numpy array
-                        import base64
+            # Preload model
+            await node.preload_model(context)
 
-                        audio_bytes = base64.b64decode(chunk.content)
-                        audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
-                        yield audio_array
+            # Process to get audio
+            audio_ref = await node.process(context)
 
-            else:
-                # Use generic TextToSpeech node (MMS models)
-                from nodetool.nodes.huggingface.text_to_speech import TextToSpeech
-                from nodetool.metadata.types import HFTextToSpeech
+            # Convert AudioRef to numpy array
+            audio_bytes = await context.asset_to_bytes(audio_ref)
+            audio = AudioSegment.from_file(io.BytesIO(audio_bytes))
 
-                node = TextToSpeech(
-                    model=HFTextToSpeech(repo_id=model),
-                    text=text,
-                )
+            # Convert to mono if stereo
+            if audio.channels > 1:
+                audio = audio.set_channels(1)
 
-                # Preload model
-                await node.preload_model(context)
+            # Resample to 24kHz if needed
+            if audio.frame_rate != 24000:
+                audio = audio.set_frame_rate(24000)
 
-                # Process to get audio
-                audio_ref = await node.process(context)
+            # Ensure 16-bit sample width
+            if audio.sample_width != 2:
+                audio = audio.set_sample_width(2)
 
-                # Convert AudioRef to numpy array
-                audio_bytes = await context.asset_to_bytes(audio_ref)
-                from pydub import AudioSegment
-                import io
+            # Convert to numpy array
+            audio_array = np.array(audio.get_array_of_samples(), dtype=np.int16)
 
-                audio = AudioSegment.from_file(io.BytesIO(audio_bytes))
+            # Yield in chunks (4096 samples at a time)
+            chunk_size = 4096
+            for i in range(0, len(audio_array), chunk_size):
+                chunk = audio_array[i : i + chunk_size]
+                yield chunk
 
-                # Convert to mono if stereo
-                if audio.channels > 1:
-                    audio = audio.set_channels(1)
+    async def automatic_speech_recognition(
+        self,
+        audio: bytes,
+        model: str,
+        language: str | None = None,
+        prompt: str | None = None,
+        temperature: float = 0.0,
+        timeout_s: int | None = None,
+        context: Any = None,
+        **kwargs: Any,
+    ) -> str:
+        """Transcribe audio to text using HuggingFace Whisper models.
 
-                # Resample to 24kHz if needed
-                if audio.frame_rate != 24000:
-                    audio = audio.set_frame_rate(24000)
+        Args:
+            audio: Input audio as bytes (various formats supported)
+            model: Model repository ID (e.g., "openai/whisper-large-v3")
+            language: Optional ISO-639-1 language code to improve accuracy
+            prompt: Optional text to guide the model's style (initial_prompt)
+            temperature: Sampling temperature between 0 and 1 (default 0)
+            timeout_s: Optional timeout in seconds
+            context: Processing context (required)
+            **kwargs: Additional parameters (return_timestamps, chunk_length_s)
 
-                # Ensure 16-bit sample width
-                if audio.sample_width != 2:
-                    audio = audio.set_sample_width(2)
+        Returns:
+            Transcribed text from the audio
 
-                # Convert to numpy array
-                audio_array = np.array(audio.get_array_of_samples(), dtype=np.int16)
+        Raises:
+            ValueError: If required parameters are missing or context not provided
+            RuntimeError: If transcription fails
+        """
+        if context is None:
+            raise ValueError(
+                "ProcessingContext is required for HuggingFace ASR"
+            )
 
-                # Yield in chunks (4096 samples at a time)
-                chunk_size = 4096
-                for i in range(0, len(audio_array), chunk_size):
-                    chunk = audio_array[i : i + chunk_size]
-                    yield chunk
+        log.debug(f"Transcribing audio with HuggingFace Whisper model: {model}")
 
+        # Get or load the pipeline
+        cache_key = f"{model}:asr"
+        asr_pipeline = ModelManager.get_model(cache_key, "automatic-speech-recognition")
 
-        except Exception as e:
-            log.error(f"HuggingFace TTS generation failed: {e}")
-            raise RuntimeError(f"HuggingFace TTS generation failed: {e}")
+        if not asr_pipeline:
+            log.info(f"Loading automatic speech recognition pipeline: {model}")
+
+            # Determine torch dtype based on device
+            torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+
+            # Load model
+            hf_model = AutoModelForSpeechSeq2Seq.from_pretrained(
+                model,
+                torch_dtype=torch_dtype,
+                low_cpu_mem_usage=True,
+                use_safetensors=True,
+            )
+
+            # Load processor
+            processor = AutoProcessor.from_pretrained(model)
+
+            # Create pipeline
+            asr_pipeline = create_pipeline(
+                "automatic-speech-recognition",
+                model=hf_model,
+                tokenizer=processor.tokenizer,
+                feature_extractor=processor.feature_extractor,
+                torch_dtype=torch_dtype,
+                device=context.device,
+            )
+
+            # Cache the pipeline
+            ModelManager.set_model(cache_key, cache_key, "automatic-speech-recognition", asr_pipeline)
+
+        audio_segment = AudioSegment.from_file(BytesIO(audio))
+        # Whisper expects 16kHz mono audio
+        audio_segment = audio_segment.set_frame_rate(16000).set_channels(1)
+
+        # Convert to numpy array (float32)
+        samples = np.array(audio_segment.get_array_of_samples(), dtype=np.float32)
+        # Normalize to [-1, 1] range
+        samples = samples / (2**15)
+
+        # Build pipeline kwargs
+        pipeline_kwargs: dict[str, Any] = {
+            "return_timestamps": kwargs.get("return_timestamps", False),
+            "chunk_length_s": kwargs.get("chunk_length_s", 30.0),
+            "generate_kwargs": {},
+        }
+
+        # Add language if specified
+        if language:
+            pipeline_kwargs["generate_kwargs"]["language"] = language
+
+        # Add prompt if specified (Whisper uses initial_prompt)
+        if prompt:
+            pipeline_kwargs["generate_kwargs"]["initial_prompt"] = prompt
+
+        # Add temperature if non-zero
+        if temperature != 0.0:
+            pipeline_kwargs["generate_kwargs"]["temperature"] = temperature
+
+        # Run transcription in thread to avoid blocking
+        def _transcribe():
+            return asr_pipeline(samples, **pipeline_kwargs)
+
+        result = await asyncio.to_thread(_transcribe)
+
+        # Extract text from result
+        if isinstance(result, dict):
+            text = result.get("text", "")
+        else:
+            text = str(result)
+
+        log.debug(f"Transcription complete: {len(text)} characters")
+
+        return text
 
     async def get_available_language_models(self) -> List[LanguageModel]:
         """Get available HuggingFace GGUF language models.
@@ -693,27 +774,23 @@ class HuggingFaceLocalProvider(BaseProvider):
         Returns:
             List of LanguageModel instances for HuggingFace GGUF models
         """
-        try:
-            # Import the function to get locally cached GGUF models
-            from nodetool.integrations.huggingface.huggingface_models import (
-                get_llamacpp_language_models_from_hf_cache,
-            )
+        # Import the function to get locally cached GGUF models
+        from nodetool.integrations.huggingface.huggingface_models import (
+            get_llamacpp_language_models_from_hf_cache,
+        )
 
-            models = await get_llamacpp_language_models_from_hf_cache()
-            # Update provider to HuggingFace for these models
-            hf_models = [
-                LanguageModel(
-                    id=model.id,  # Already in "repo_id:filename" format
-                    name=model.name,
-                    provider=Provider.HuggingFace,
-                )
-                for model in models
-            ]
-            log.debug(f"Found {len(hf_models)} HuggingFace GGUF models in HF cache")
-            return hf_models
-        except Exception as e:
-            log.error(f"Error getting HuggingFace GGUF models: {e}")
-            return []
+        models = await get_llamacpp_language_models_from_hf_cache()
+        # Update provider to HuggingFace for these models
+        hf_models = [
+            LanguageModel(
+                id=model.id,  # Already in "repo_id:filename" format
+                name=model.name,
+                provider=Provider.HuggingFace,
+            )
+            for model in models
+        ]
+        log.debug(f"Found {len(hf_models)} HuggingFace GGUF models in HF cache")
+        return hf_models
 
     async def get_available_image_models(self) -> List[ImageModel]:
         """Get available HuggingFace image models.
@@ -812,6 +889,303 @@ class HuggingFaceLocalProvider(BaseProvider):
         log.debug(f"Returning {len(models)} HuggingFace TTS models")
         return models
 
+    async def get_available_asr_models(self) -> List["ASRModel"]:
+        """Get available HuggingFace ASR models from recommended models.
+
+        Returns ASR models based on the recommended models from the Whisper node:
+        - OpenAI Whisper models (large-v3, large-v3-turbo, large-v2, medium, small)
+        - Faster-whisper models (optimized for speed)
+
+        Returns:
+            List of ASRModel instances for HuggingFace ASR
+        """
+
+        models = [
+            ASRModel(
+                id="openai/whisper-large-v3",
+                name="Whisper Large V3",
+                provider=Provider.HuggingFace,
+            ),
+            ASRModel(
+                id="openai/whisper-large-v3-turbo",
+                name="Whisper Large V3 Turbo",
+                provider=Provider.HuggingFace,
+            ),
+            ASRModel(
+                id="openai/whisper-large-v2",
+                name="Whisper Large V2",
+                provider=Provider.HuggingFace,
+            ),
+            ASRModel(
+                id="openai/whisper-medium",
+                name="Whisper Medium",
+                provider=Provider.HuggingFace,
+            ),
+            ASRModel(
+                id="openai/whisper-small",
+                name="Whisper Small",
+                provider=Provider.HuggingFace,
+            ),
+            ASRModel(
+                id="Systran/faster-whisper-large-v3",
+                name="Faster Whisper Large V3",
+                provider=Provider.HuggingFace,
+            ),
+        ]
+
+        log.debug(f"Returning {len(models)} HuggingFace ASR models")
+        return models
+
+    @staticmethod
+    def _parse_model_spec(model: str) -> tuple[str, str | None, bool]:
+        """Return repo_id, optional filename, and GGUF flag from model spec."""
+        if ":" not in model:
+            return model, None, False
+        parts = model.split(":", 1)
+        if len(parts) != 2 or not parts[0] or not parts[1]:
+            raise ValueError(f"Invalid model spec: {model}")
+        repo_id, filename = parts
+        is_gguf = filename.lower().endswith(".gguf")
+        return repo_id, filename, is_gguf
+
+    @staticmethod
+    def _build_prompt_from_messages(messages: Sequence[Message]) -> str:
+        """Convert simple text-only chat history into a prompt string."""
+        system_parts: list[str] = []
+        user_prompt: str | None = None
+
+        for msg in messages:
+            if isinstance(msg.content, str):
+                content = msg.content.strip()
+            elif msg.content is None:
+                content = ""
+            else:
+                raise ValueError(
+                    "HuggingFace local provider only supports text messages for local models"
+                )
+
+            if msg.role == "system" and content:
+                system_parts.append(content)
+            elif msg.role == "user" and content:
+                user_prompt = content
+
+        if user_prompt is None:
+            raise ValueError(
+                "HuggingFace text generation requires at least one user message with text content"
+            )
+
+        if system_parts:
+            return "\n\n".join(system_parts + [user_prompt])
+        return user_prompt
+
+    async def _stream_gguf_generation(
+        self,
+        messages: Sequence[Message],
+        repo_id: str,
+        filename: str | None,
+        max_tokens: int,
+        temperature: float,
+        top_p: float,
+        do_sample: bool,
+    ) -> AsyncIterator[Chunk]:
+        if not filename:
+            raise ValueError("GGUF model path is required for HuggingFace local models")
+
+        chat: list[dict[str, str]] = []
+        for msg in messages:
+            if isinstance(msg.content, str):
+                content = msg.content
+            elif isinstance(msg.content, list):
+                raise ValueError(
+                    "HuggingFace GGUF models do not support multimodal content. "
+                    "Please use text-only messages."
+                )
+            else:
+                content = ""
+            chat.append({"role": msg.role, "content": content})
+
+        cache_key = f"{repo_id}:{filename}:text-generation"
+        cached_pipeline = ModelManager.get_model(cache_key, "text-generation")
+
+        if not cached_pipeline:
+            cache_path = try_to_load_from_cache(repo_id, filename)  # pyright: ignore[reportArgumentType]
+            if not cache_path:
+                raise ValueError(f"Model {repo_id}/{filename} must be downloaded first")
+
+            log.info(f"Loading GGUF model {repo_id}/{filename}")
+            hf_model = AutoModelForCausalLM.from_pretrained(
+                repo_id,
+                torch_dtype=torch.float32,
+                device_map="auto",
+                gguf_file=filename,
+            )
+            tokenizer = AutoTokenizer.from_pretrained(
+                repo_id,
+                gguf_file=filename,
+            )
+            cached_pipeline = pipeline(
+                "text-generation", model=hf_model, tokenizer=tokenizer
+            )
+            ModelManager.set_model(
+                cache_key, cache_key, "text-generation", cached_pipeline
+            )
+
+        tokenizer = cached_pipeline.tokenizer
+        assert tokenizer is not None
+        formatted_prompt = tokenizer.apply_chat_template(
+            chat, tokenize=False, add_generation_prompt=True
+        )
+
+        token_queue: Queue = Queue()
+
+        class AsyncTextStreamer(TextStreamer):
+            def __init__(self, tokenizer, skip_prompt=True, **decode_kwargs):
+                super().__init__(tokenizer, skip_prompt, **decode_kwargs)
+                self.token_queue = token_queue
+
+            def put(self, value):
+                if len(value.shape) > 1 and value.shape[0] > 1:
+                    raise ValueError("TextStreamer only supports batch size 1")
+                elif len(value.shape) > 1:
+                    value = value[0]
+
+                if self.skip_prompt and self.next_tokens_are_prompt:
+                    self.next_tokens_are_prompt = False
+                    return
+
+                text = self.tokenizer.decode(value, skip_special_tokens=True)  # pyright: ignore[reportAttributeAccessIssue]
+                if text:
+                    self.token_queue.put(text)
+
+            def end(self):
+                self.token_queue.put(None)
+
+        streamer = AsyncTextStreamer(
+            tokenizer,
+            skip_prompt=True,
+            skip_special_tokens=True,
+        )
+
+        def generate():
+            generation_kwargs = {
+                "max_new_tokens": max_tokens,
+                "temperature": temperature,
+                "top_p": top_p,
+                "do_sample": do_sample,
+                "streamer": streamer,
+                "return_full_text": False,
+            }
+            cached_pipeline(formatted_prompt, **generation_kwargs)  # type: ignore[reportArgumentType]
+
+        thread = threading.Thread(target=generate)
+        thread.start()
+
+        try:
+            while True:
+                await asyncio.sleep(0.01)
+                while not token_queue.empty():
+                    token = token_queue.get_nowait()
+                    if token is None:
+                        return
+                    yield Chunk(content=token, done=False, content_type="text")
+                if not thread.is_alive():
+                    while not token_queue.empty():
+                        token = token_queue.get_nowait()
+                        if token is None:
+                            return
+                        yield Chunk(content=token, done=False, content_type="text")
+                    break
+        finally:
+            thread.join(timeout=1.0)
+
+    async def _stream_pipeline_generation(
+        self,
+        repo_id: str,
+        prompt: str,
+        max_tokens: int,
+        temperature: float,
+        top_p: float,
+        do_sample: bool,
+        context: ProcessingContext,
+    ) -> AsyncIterator[Chunk]:
+        _ = context
+        cache_key = f"{repo_id}:text-generation"
+        cached_pipeline = ModelManager.get_model(cache_key, "text-generation")
+
+        if not cached_pipeline:
+            log.info(f"Loading HuggingFace pipeline model {repo_id}")
+            cached_pipeline = create_pipeline(
+                "text-generation",
+                model=repo_id,
+            )
+            ModelManager.set_model(cache_key, cache_key, "text-generation", cached_pipeline)
+
+        tokenizer = cached_pipeline.tokenizer
+        if tokenizer is None:
+            raise ValueError("Tokenizer missing from HuggingFace pipeline")
+
+        token_queue: Queue = Queue()
+
+        class AsyncTextStreamer(TextStreamer):
+            def __init__(self, tokenizer, skip_prompt=True, **decode_kwargs):
+                super().__init__(tokenizer, skip_prompt, **decode_kwargs)
+                self.token_queue = token_queue
+
+            def put(self, value):
+                if len(value.shape) > 1 and value.shape[0] > 1:
+                    raise ValueError("TextStreamer only supports batch size 1")
+                elif len(value.shape) > 1:
+                    value = value[0]
+
+                if self.skip_prompt and self.next_tokens_are_prompt:
+                    self.next_tokens_are_prompt = False
+                    return
+
+                text = self.tokenizer.decode(value, skip_special_tokens=True)  # pyright: ignore[reportAttributeAccessIssue]
+                if text:
+                    self.token_queue.put(text)
+
+            def end(self):
+                self.token_queue.put(None)
+
+        streamer = AsyncTextStreamer(
+            tokenizer,
+            skip_prompt=True,
+            skip_special_tokens=True,
+        )
+
+        def generate():
+            generation_kwargs = {
+                "max_new_tokens": max_tokens,
+                "temperature": temperature,
+                "top_p": top_p,
+                "do_sample": do_sample,
+                "streamer": streamer,
+                "return_full_text": False,
+            }
+            cached_pipeline(prompt, **generation_kwargs)  # type: ignore[reportArgumentType]
+
+        thread = threading.Thread(target=generate)
+        thread.start()
+
+        try:
+            while True:
+                await asyncio.sleep(0.01)
+                while not token_queue.empty():
+                    token = token_queue.get_nowait()
+                    if token is None:
+                        return
+                    yield Chunk(content=token, done=False, content_type="text")
+                if not thread.is_alive():
+                    while not token_queue.empty():
+                        token = token_queue.get_nowait()
+                        if token is None:
+                            return
+                        yield Chunk(content=token, done=False, content_type="text")
+                    break
+        finally:
+            thread.join(timeout=1.0)
+
     async def generate_message(
         self,
         messages: Sequence[Message],
@@ -843,123 +1217,27 @@ class HuggingFaceLocalProvider(BaseProvider):
         if not messages:
             raise ValueError("messages must not be empty")
 
-        # Get processing context from kwargs
-        context = kwargs.get("context")
+        context = kwargs.pop("context", None)
         if context is None:
             raise ValueError(
                 "ProcessingContext is required for HuggingFace text generation"
             )
 
-        try:
-            import torch
-            from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-            from nodetool.ml.core.model_manager import ModelManager
-            from huggingface_hub.file_download import try_to_load_from_cache
+        full_text = ""
+        async for chunk in self.generate_messages(
+            messages=messages,
+            model=model,
+            tools=tools,
+            max_tokens=max_tokens,
+            context_window=context_window,
+            response_format=response_format,
+            context=context,
+            **kwargs,
+        ):
+            if chunk.content:
+                full_text += chunk.content
 
-            # Convert messages to chat format for template application
-            chat = []
-            for msg in messages:
-                if isinstance(msg.content, str):
-                    content = msg.content
-                elif isinstance(msg.content, list):
-                    # GGUF models do not support multimodal content
-                    raise ValueError(
-                        "HuggingFace GGUF models do not support multimodal content. "
-                        "Please use text-only messages."
-                    )
-                else:
-                    content = ""
-
-                chat.append({"role": msg.role, "content": content})
-
-            # Extract generation parameters from kwargs
-            temperature = kwargs.get("temperature", 1.0)
-            top_p = kwargs.get("top_p", 1.0)
-            do_sample = kwargs.get("do_sample", True)
-
-            # Parse model ID: "repo_id:filename.gguf" format
-            if ":" in model and model.count(":") == 1:
-                repo_id, filename = model.split(":", 1)
-                if not filename.lower().endswith(".gguf"):
-                    raise ValueError(f"HuggingFace provider only supports GGUF models, got: {filename}")
-            else:
-                raise ValueError(f"Model ID must be in format 'repo_id:filename.gguf', got: {model}")
-
-            # Load or retrieve cached pipeline and tokenizer
-            cache_key = f"{repo_id}:{filename}:text-generation"
-            cached_pipeline = ModelManager.get_model(cache_key, "text-generation")
-
-            if not cached_pipeline:
-                # Check if model file is cached
-                cache_path = try_to_load_from_cache(repo_id, filename)  # pyright: ignore[reportArgumentType]
-                if not cache_path:
-                    raise ValueError(f"Model {repo_id}/{filename} must be downloaded first")
-
-                log.info(f"Loading GGUF model {repo_id}/{filename}")
-
-                # Load model with GGUF support
-                hf_model = AutoModelForCausalLM.from_pretrained(
-                    repo_id,
-                    torch_dtype=torch.float32,
-                    device_map="auto",
-                    gguf_file=filename,
-                )
-
-                # Load tokenizer
-                tokenizer = AutoTokenizer.from_pretrained(
-                    repo_id,
-                    gguf_file=filename,
-                )
-
-                # Create pipeline
-                cached_pipeline = pipeline(
-                    "text-generation", model=hf_model, tokenizer=tokenizer
-                )
-                ModelManager.set_model(
-                    cache_key, cache_key, "text-generation", cached_pipeline
-                )
-
-            # Apply chat template to format the prompt properly
-            tokenizer = cached_pipeline.tokenizer
-            try:
-                # Try to apply chat template with generation prompt
-                assert tokenizer is not None
-                formatted_prompt = tokenizer.apply_chat_template(
-                    chat, tokenize=False, add_generation_prompt=True
-                )
-            except Exception as e:
-                # Fallback to simple concatenation if chat template not available
-                log.warning(f"Chat template not available for {model}, using fallback: {e}")
-                prompt_parts = [f"{msg['role']}: {msg['content']}" for msg in chat]
-                formatted_prompt = "\n".join(prompt_parts)
-
-            # Generate text using the pipeline
-            generation_kwargs = {
-                "max_new_tokens": max_tokens,
-                "temperature": temperature,
-                "top_p": top_p,
-                "do_sample": do_sample,
-                "return_full_text": False,
-            }
-
-            # Run generation in thread to avoid blocking
-            def _generate():
-                return cached_pipeline(formatted_prompt, **generation_kwargs)  # type: ignore
-
-            result = await asyncio.to_thread(_generate)
-
-            # Extract generated text
-            generated_text = result[0]["generated_text"] if result else ""
-
-            # Return as a Message
-            return Message(
-                role="assistant",
-                content=generated_text,
-            )
-
-        except Exception as e:
-            log.error(f"HuggingFace text generation failed: {e}")
-            raise RuntimeError(f"HuggingFace text generation failed: {e}")
+        return Message(role="assistant", content=full_text, provider=Provider.HuggingFace, model=model)
 
     async def generate_messages(
         self,
@@ -992,185 +1270,43 @@ class HuggingFaceLocalProvider(BaseProvider):
         if not messages:
             raise ValueError("messages must not be empty")
 
-        # Get processing context from kwargs
         context = kwargs.get("context")
         if context is None:
             raise ValueError(
                 "ProcessingContext is required for HuggingFace text generation"
             )
 
-        try:
-            import torch
-            import threading
-            from queue import Queue
-            from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, TextStreamer
-            from nodetool.ml.core.model_manager import ModelManager
-            from huggingface_hub.file_download import try_to_load_from_cache
+        temperature = kwargs.get("temperature", 1.0)
+        top_p = kwargs.get("top_p", 1.0)
+        do_sample = kwargs.get("do_sample", True)
 
-            # Convert messages to chat format for template application
-            chat = []
-            for msg in messages:
-                if isinstance(msg.content, str):
-                    content = msg.content
-                elif isinstance(msg.content, list):
-                    # GGUF models do not support multimodal content
-                    raise ValueError(
-                        "HuggingFace GGUF models do not support multimodal content. "
-                        "Please use text-only messages."
-                    )
-                else:
-                    content = ""
+        repo_id, filename, is_gguf = self._parse_model_spec(model)
 
-                chat.append({"role": msg.role, "content": content})
+        if is_gguf:
+            async for chunk in self._stream_gguf_generation(
+                messages=messages,
+                repo_id=repo_id,
+                filename=filename,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                do_sample=do_sample,
+            ):
+                yield chunk
+            return
 
-            # Extract generation parameters from kwargs
-            temperature = kwargs.get("temperature", 1.0)
-            top_p = kwargs.get("top_p", 1.0)
-            do_sample = kwargs.get("do_sample", True)
+        prompt = self._build_prompt_from_messages(messages)
 
-            # Parse model ID: "repo_id:filename.gguf" format
-            if ":" in model and model.count(":") == 1:
-                repo_id, filename = model.split(":", 1)
-                if not filename.lower().endswith(".gguf"):
-                    raise ValueError(f"HuggingFace provider only supports GGUF models, got: {filename}")
-            else:
-                raise ValueError(f"Model ID must be in format 'repo_id:filename.gguf', got: {model}")
-
-            # Load or retrieve cached pipeline and tokenizer
-            cache_key = f"{repo_id}:{filename}:text-generation"
-            cached_pipeline = ModelManager.get_model(cache_key, "text-generation")
-
-            if not cached_pipeline:
-                # Check if model file is cached
-                cache_path = try_to_load_from_cache(repo_id, filename)  # pyright: ignore[reportArgumentType]
-                if not cache_path:
-                    raise ValueError(f"Model {repo_id}/{filename} must be downloaded first")
-
-                log.info(f"Loading GGUF model {repo_id}/{filename}")
-
-                # Load model with GGUF support
-                hf_model = AutoModelForCausalLM.from_pretrained(
-                    repo_id,
-                    torch_dtype=torch.float32,
-                    device_map="auto",
-                    gguf_file=filename,
-                )
-
-                # Load tokenizer
-                tokenizer = AutoTokenizer.from_pretrained(
-                    repo_id,
-                    gguf_file=filename,
-                )
-
-                # Create pipeline
-                cached_pipeline = pipeline(
-                    "text-generation", model=hf_model, tokenizer=tokenizer
-                )
-                ModelManager.set_model(
-                    cache_key, cache_key, "text-generation", cached_pipeline
-                )
-
-            # Apply chat template to format the prompt properly
-            tokenizer = cached_pipeline.tokenizer
-            try:
-                # Try to apply chat template with generation prompt
-                assert tokenizer is not None
-                formatted_prompt = tokenizer.apply_chat_template(
-                    chat, tokenize=False, add_generation_prompt=True
-                )
-            except Exception as e:
-                # Fallback to simple concatenation if chat template not available
-                log.warning(f"Chat template not available for {model}, using fallback: {e}")
-                prompt_parts = [f"{msg['role']}: {msg['content']}" for msg in chat]
-                formatted_prompt = "\n".join(prompt_parts)
-
-            # Create streaming setup (copied from TextGeneration node)
-            token_queue: Queue = Queue()
-
-            class AsyncTextStreamer(TextStreamer):
-                def __init__(self, tokenizer, skip_prompt=True, **decode_kwargs):
-                    super().__init__(tokenizer, skip_prompt, **decode_kwargs)
-                    self.token_queue = token_queue
-
-                def put(self, value):
-                    """Override put to send tokens to queue instead of stdout"""
-                    if len(value.shape) > 1 and value.shape[0] > 1:
-                        raise ValueError("TextStreamer only supports batch size 1")
-                    elif len(value.shape) > 1:
-                        value = value[0]
-
-                    if self.skip_prompt and self.next_tokens_are_prompt:
-                        self.next_tokens_are_prompt = False
-                        return
-
-                    # Decode the token
-                    text = self.tokenizer.decode(value, skip_special_tokens=True)  # pyright: ignore[reportAttributeAccessIssue]
-                    if text:
-                        self.token_queue.put(text)
-
-                def end(self):
-                    """Signal end of generation"""
-                    self.token_queue.put(None)  # Sentinel value
-
-            # Create the streaming tokenizer
-            streamer = AsyncTextStreamer(
-                tokenizer,  # pyright: ignore[reportArgumentType]
-                skip_prompt=True,
-                skip_special_tokens=True,
-            )
-
-            # Run generation in a separate thread
-            def generate():
-                try:
-                    generation_kwargs = {
-                        "max_new_tokens": max_tokens,
-                        "temperature": temperature,
-                        "top_p": top_p,
-                        "do_sample": do_sample,
-                        "streamer": streamer,
-                        "return_full_text": False,
-                    }
-
-                    cached_pipeline(formatted_prompt, **generation_kwargs)  # type: ignore[reportArgumentType]
-                except Exception as e:
-                    token_queue.put(f"Error: {e}")
-                    token_queue.put(None)
-
-            # Start generation in background thread
-            thread = threading.Thread(target=generate)
-            thread.start()
-
-            # Stream tokens as they become available
-            try:
-                while True:
-                    # Check queue with timeout to avoid blocking
-                    await asyncio.sleep(0.01)  # Small delay to prevent busy waiting
-
-                    # Non-blocking queue check
-                    while not token_queue.empty():
-                        token = token_queue.get_nowait()
-                        if token is None:  # Sentinel value indicating end
-                            return
-
-                        # Yield chunk for streaming
-                        yield Chunk(content=token, done=False)
-
-                    # Check if thread is still alive
-                    if not thread.is_alive():
-                        # Drain any remaining tokens
-                        while not token_queue.empty():
-                            token = token_queue.get_nowait()
-                            if token is not None:
-                                yield Chunk(content=token, done=False)
-                        break
-
-            finally:
-                # Ensure thread completes
-                thread.join(timeout=1.0)
-
-        except Exception as e:
-            log.error(f"HuggingFace streaming text generation failed: {e}")
-            raise RuntimeError(f"HuggingFace streaming text generation failed: {e}")
+        async for chunk in self._stream_pipeline_generation(
+            repo_id=repo_id,
+            prompt=prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            do_sample=do_sample,
+            context=context,
+        ):
+            yield chunk
 
 
 if __name__ == "__main__":
@@ -1208,33 +1344,18 @@ if __name__ == "__main__":
         models = await provider.get_available_language_models()
         model = models[0]
 
-        print(f"Testing generate_messages with model: {model}")
-        print(f"Messages: {messages}")
-        print("\nStreaming response:")
-        print("-" * 50)
-
-        try:
-            # Stream the response
-            full_response = ""
-            async for chunk in provider.generate_messages(
-                messages=messages,
-                model=model.id,
-                max_tokens=100,
-                temperature=0.7,
-                top_p=0.9,
-                do_sample=True,
-                context=context,
-            ):
-                print(chunk)
-
-            print("\n" + "-" * 50)
-            print(f"\nFull response: {full_response}")
-
-        except Exception as e:
-            print(f"\nError: {e}")
-            import traceback
-
-            traceback.print_exc()
+        # Stream the response
+        full_response = ""
+        async for chunk in provider.generate_messages(
+            messages=messages,
+            model=model.id,
+            max_tokens=100,
+            temperature=0.7,
+            top_p=0.9,
+            do_sample=True,
+            context=context,
+        ):
+            print(chunk)
 
     async def test_generate_message():
         """Test the generate_message method (non-streaming)."""
@@ -1263,29 +1384,14 @@ if __name__ == "__main__":
         models = await provider.get_available_language_models()
         model = models[0]
 
-        print(f"\nTesting generate_message with model: {model}")
-        print(f"Messages: {messages}")
-        print("\nResponse:")
-        print("-" * 50)
-
-        try:
-            # Get the response
-            response = await provider.generate_message(
-                messages=messages,
-                model=model.id,
-                max_tokens=50,
-                temperature=0.7,
-                context=context,
-            )
-
-            print(response.content)
-            print("-" * 50)
-
-        except Exception as e:
-            print(f"\nError: {e}")
-            import traceback
-
-            traceback.print_exc()
+        # Get the response
+        response = await provider.generate_message(
+            messages=messages,
+            model=model.id,
+            max_tokens=50,
+            temperature=0.7,
+            context=context,
+        )
 
     async def test_text_to_image():
         """Test the text_to_image method."""
@@ -1347,4 +1453,3 @@ if __name__ == "__main__":
     # asyncio.run(test_generate_message())
     # asyncio.run(test_text_to_image())
     # asyncio.run(test_image_to_image())
-

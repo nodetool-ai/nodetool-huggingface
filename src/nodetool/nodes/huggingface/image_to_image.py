@@ -560,7 +560,7 @@ class Inpaint(HuggingFacePipelineNode):
         return await context.image_from_pil(image)
 
 
-class StableDiffusionControlNetNode(StableDiffusionBaseNode):
+class StableDiffusionControlNet(StableDiffusionBaseNode):
     """
     Generates images using Stable Diffusion with ControlNet guidance.
     image, generation, text-to-image, controlnet, SD
