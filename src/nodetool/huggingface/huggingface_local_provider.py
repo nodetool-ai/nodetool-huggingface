@@ -70,9 +70,11 @@ from nodetool.nodes.huggingface.text_to_speech import TextToSpeech
 from nodetool.metadata.types import HFTextToSpeech
 
 from nodetool.workflows.recommended_models import get_recommended_models
-from nodetool.metadata.types import LanguageModel
+from nodetool.metadata.types import LanguageModel, VideoRef
 from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
 from transformers.pipelines import pipeline
+from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
+from diffusers.pipelines.wan.pipeline_wan import WanPipeline
 
 log = get_logger(__name__)
 
@@ -764,6 +766,148 @@ class HuggingFaceLocalProvider(BaseProvider):
         log.debug(f"Transcription complete: {len(text)} characters")
 
         return text
+
+    async def text_to_video(
+        self,
+        prompt: str,
+        model: str,
+        negative_prompt: str | None = None,
+        num_frames: int = 49,
+        guidance_scale: float = 5.0,
+        num_inference_steps: int = 30,
+        height: int = 480,
+        width: int = 720,
+        fps: int = 16,
+        seed: int | None = None,
+        max_sequence_length: int = 512,
+        enable_cpu_offload: bool = True,
+        enable_vae_slicing: bool = True,
+        enable_vae_tiling: bool = False,
+        timeout_s: int | None = None,
+        context: ProcessingContext | None = None,
+        **kwargs: Any,
+    ) -> VideoRef:
+        """Generate a video from a text prompt using HuggingFace text-to-video models.
+
+        Supports Wan text-to-video models (Wan-AI/Wan2.2-T2V-A14B-Diffusers, etc.).
+
+        Args:
+            prompt: Text description of the desired video
+            model: Model repository ID (e.g., "Wan-AI/Wan2.2-T2V-A14B-Diffusers")
+            negative_prompt: Text describing what to avoid in the video
+            num_frames: Number of frames to generate (16-129)
+            guidance_scale: Scale for classifier-free guidance (1.0-20.0)
+            num_inference_steps: Number of denoising steps (1-100)
+            height: Height of the generated video in pixels
+            width: Width of the generated video in pixels
+            fps: Frames per second for the output video
+            seed: Random seed for generation (None for random)
+            max_sequence_length: Maximum sequence length in encoded prompt
+            enable_cpu_offload: Enable CPU offload to reduce VRAM usage
+            enable_vae_slicing: Enable VAE slicing to reduce VRAM usage
+            enable_vae_tiling: Enable VAE tiling for large videos
+            timeout_s: Optional timeout in seconds
+            context: Processing context for asset handling
+            **kwargs: Additional arguments
+
+        Returns:
+            VideoRef to the generated video
+
+        Raises:
+            ValueError: If required parameters are missing or context not provided
+            RuntimeError: If generation fails
+        """
+        if context is None:
+            raise ValueError(
+                "ProcessingContext is required for HuggingFace text-to-video generation"
+            )
+
+        # Get or load the pipeline
+        model_id = model
+        cache_key = f"{model_id}:text2video"
+        pipeline = ModelManager.get_model(cache_key, "text2video")
+
+        if not pipeline:
+            log.info(f"Loading text-to-video pipeline: {model_id}")
+
+            # Load VAE first
+            vae = await asyncio.to_thread(
+                AutoencoderKLWan.from_pretrained,
+                model_id,
+                subfolder="vae",
+                torch_dtype=torch.float32,
+                low_cpu_mem_usage=False,
+                ignore_mismatched_sizes=True,
+            )
+
+            # Load WanPipeline
+            pipeline = await asyncio.to_thread(
+                WanPipeline.from_pretrained,
+                model_id,
+                torch_dtype=torch.bfloat16,
+                vae=vae,
+            )
+
+            # Apply memory optimization settings
+            if enable_cpu_offload and hasattr(pipeline, "enable_model_cpu_offload"):
+                pipeline.enable_model_cpu_offload()
+
+            if enable_vae_slicing and hasattr(pipeline, "vae"):
+                try:
+                    pipeline.vae.enable_slicing()
+                except Exception:
+                    pass
+
+            if enable_vae_tiling and hasattr(pipeline, "vae"):
+                try:
+                    pipeline.vae.enable_tiling()
+                except Exception:
+                    pass
+
+            # Cache the pipeline
+            ModelManager.set_model(cache_key, cache_key, "text2video", pipeline)
+
+        # Set up generator for reproducibility
+        generator = None
+        if seed is not None and seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(seed)
+
+        # Progress callback
+        def progress_callback(pipe, step: int, timestep: int, callback_kwargs: dict):
+            if context:
+                context.post_message(
+                    NodeProgress(
+                        node_id="text_to_video",
+                        progress=step,
+                        total=num_inference_steps,
+                    )
+                )
+            return callback_kwargs
+
+        # Generate the video off the event loop
+        def _run_pipeline_sync():
+            return pipeline(
+                prompt=prompt,
+                negative_prompt=negative_prompt or "",
+                num_frames=num_frames,
+                guidance_scale=guidance_scale,
+                num_inference_steps=num_inference_steps,
+                height=height,
+                width=width,
+                generator=generator,
+                max_sequence_length=max_sequence_length,
+                callback_on_step_end=progress_callback,
+            )
+
+        output = await asyncio.to_thread(_run_pipeline_sync)
+
+        # Get the generated frames
+        frames = output.frames[0]  # pyright: ignore[reportAttributeAccessIssue]
+
+        # Convert frames to video
+        video_ref = await context.video_from_frames(frames, fps=fps)
+
+        return video_ref
 
     async def get_available_language_models(self) -> List[LanguageModel]:
         """Get available HuggingFace GGUF language models.
