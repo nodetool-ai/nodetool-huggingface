@@ -1,3 +1,4 @@
+from pathlib import Path
 from nodetool.workflows.graph import BaseNode
 import torch
 import asyncio
@@ -58,6 +59,37 @@ class HuggingFacePipelineNode(BaseNode):
 
         if device is None:
             device = context.device
+
+        if (
+            isinstance(model_id, str)
+            and not self.should_skip_cache()
+            and not Path(model_id).expanduser().exists()
+        ):
+            repo_id_for_cache = model_id
+            revision = kwargs.get("revision")
+            cache_dir = kwargs.get("cache_dir")
+
+            if "@" in repo_id_for_cache and revision is None:
+                repo_id_for_cache, revision = repo_id_for_cache.rsplit("@", 1)
+
+            cache_checked = False
+            for candidate in ("model_index.json", "config.json"):
+                try:
+                    cache_path = try_to_load_from_cache(
+                        repo_id_for_cache,
+                        candidate,
+                        revision=revision,
+                        cache_dir=cache_dir,
+                    )
+                except Exception:
+                    cache_path = None
+
+                if cache_path:
+                    cache_checked = True
+                    break
+
+            if not cache_checked:
+                raise ValueError(f"Model {model_id} must be downloaded first")
 
         context.post_message(
             JobUpdate(
