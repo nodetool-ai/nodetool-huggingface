@@ -5,6 +5,7 @@ import torch
 from transformers import CLIPVisionModel
 from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
 from diffusers.pipelines.wan.pipeline_wan_i2v import WanImageToVideoPipeline
+from huggingface_hub.file_download import try_to_load_from_cache
 
 from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
@@ -147,24 +148,50 @@ class Wan_I2V(HuggingFacePipelineNode):
         return self.model_variant.value
 
     async def preload_model(self, context: ProcessingContext):
+        model_id = self.get_model_id()
+        repo_id_for_cache = model_id
+        revision = None
+        if "@" in repo_id_for_cache:
+            repo_id_for_cache, revision = repo_id_for_cache.rsplit("@", 1)
+
+        cache_checked = False
+        for candidate in ("model_index.json", "config.json"):
+            try:
+                cache_path = try_to_load_from_cache(
+                    repo_id_for_cache,
+                    candidate,
+                    revision=revision,
+                )
+            except Exception:
+                cache_path = None
+
+            if cache_path:
+                cache_checked = True
+                break
+
+        if not cache_checked:
+            raise ValueError(
+                f"Model {model_id} must be downloaded before running this node."
+            )
+
         image_encoder = await self.load_model(
             context=context,
             model_class=CLIPVisionModel,
-            model_id=self.get_model_id(),
+            model_id=model_id,
             subfolder="image_encoder",
             torch_dtype=torch.float32,
         )
         vae = await self.load_model(
             context=context,
             model_class=AutoencoderKLWan,
-            model_id=self.get_model_id(),
+            model_id=model_id,
             subfolder="vae",
             torch_dtype=torch.float32,
         )
         self._pipeline = await self.load_model(
             context=context,
             model_class=WanImageToVideoPipeline,
-            model_id=self.get_model_id(),
+            model_id=model_id,
             torch_dtype=torch.bfloat16,
             device="cpu",
             vae=vae,
