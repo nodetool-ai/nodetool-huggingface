@@ -10,11 +10,18 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_speech
+from nodetool.workflows.base_node import BaseNode
 
 
-class Bark(GraphNode):
+class Bark(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef]):
     """
+
     Bark is a text-to-audio model created by Suno. Bark can generate highly realistic, multilingual speech as well as other audio - including music, background noise and simple sound effects. The model can also produce nonverbal communications like laughing, sighing and crying.
     tts, audio, speech, huggingface
 
@@ -24,7 +31,7 @@ class Bark(GraphNode):
     - Generate automated announcements for public spaces
     """
 
-    model: types.HFTextToSpeech | GraphNode | tuple[GraphNode, str] = Field(
+    model: types.HFTextToSpeech | OutputHandle[types.HFTextToSpeech] = connect_field(
         default=types.HFTextToSpeech(
             type="hf.text_to_speech",
             repo_id="",
@@ -35,21 +42,31 @@ class Bark(GraphNode):
         ),
         description="The model ID to use for the image generation",
     )
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    prompt: str | OutputHandle[str] = connect_field(
         default="", description="The input text to the model"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_speech.Bark
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_speech.Bark"
+        return cls.get_node_class().get_node_type()
 
 
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
 import nodetool.nodes.huggingface.text_to_speech
-import nodetool.nodes.huggingface.text_to_speech
+from nodetool.workflows.base_node import BaseNode
 
 
-class KokoroTTS(GraphNode):
+class KokoroTTS(
+    GraphNode[nodetool.nodes.huggingface.text_to_speech.KokoroTTS.OutputType]
+):
     """
+
     Kokoro is an open-weight, fast, and lightweight TTS model (~82M params) with Apache-2.0 weights.
     It supports multiple languages via `misaki` and provides high-quality speech with selectable voices.
     tts, audio, speech, huggingface, kokoro
@@ -68,7 +85,8 @@ class KokoroTTS(GraphNode):
     Voice: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.text_to_speech.KokoroTTS.Voice
     )
-    model: types.HFTextToSpeech | GraphNode | tuple[GraphNode, str] = Field(
+
+    model: types.HFTextToSpeech | OutputHandle[types.HFTextToSpeech] = connect_field(
         default=types.HFTextToSpeech(
             type="hf.text_to_speech",
             repo_id="hexgrad/Kokoro-82M",
@@ -79,7 +97,7 @@ class KokoroTTS(GraphNode):
         ),
         description="The Kokoro repo to use (e.g., hexgrad/Kokoro-82M)",
     )
-    text: str | GraphNode | tuple[GraphNode, str] = Field(
+    text: str | OutputHandle[str] = connect_field(
         default="Hello from Kokoro.", description="Input text to synthesize"
     )
     lang_code: nodetool.nodes.huggingface.text_to_speech.KokoroTTS.LanguageCode = Field(
@@ -90,17 +108,45 @@ class KokoroTTS(GraphNode):
         default=nodetool.nodes.huggingface.text_to_speech.KokoroTTS.Voice.AF_HEART,
         description="Voice name (see VOICES.md on the model page). Examples: af_heart, af_bella, af_jessica.",
     )
-    speed: float | GraphNode | tuple[GraphNode, str] = Field(
+    speed: float | OutputHandle[float] = connect_field(
         default=1.0, description="Speech speed multiplier (0.5–2.0)"
     )
 
+    @property
+    def out(self) -> "KokoroTTSOutputs":
+        return KokoroTTSOutputs(self)
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_speech.KokoroTTS
+
     @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_speech.KokoroTTS"
+        return cls.get_node_class().get_node_type()
 
 
-class TextToSpeech(GraphNode):
+class KokoroTTSOutputs(OutputsProxy):
+    @property
+    def audio(self) -> OutputHandle[nodetool.metadata.types.AudioRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.AudioRef], self["audio"]
+        )
+
+    @property
+    def chunk(self) -> OutputHandle[types.Chunk]:
+        return typing.cast(OutputHandle[types.Chunk], self["chunk"])
+
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_speech
+from nodetool.workflows.base_node import BaseNode
+
+
+class TextToSpeech(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef]):
     """
+
     A generic Text-to-Speech node that can work with various Hugging Face TTS models.
     tts, audio, speech, huggingface, speak, voice
 
@@ -110,7 +156,7 @@ class TextToSpeech(GraphNode):
     - Produce audio narrations for videos, presentations, or e-learning content
     """
 
-    model: types.HFTextToSpeech | GraphNode | tuple[GraphNode, str] = Field(
+    model: types.HFTextToSpeech | OutputHandle[types.HFTextToSpeech] = connect_field(
         default=types.HFTextToSpeech(
             type="hf.text_to_speech",
             repo_id="",
@@ -121,11 +167,15 @@ class TextToSpeech(GraphNode):
         ),
         description="The model ID to use for text-to-speech generation",
     )
-    text: str | GraphNode | tuple[GraphNode, str] = Field(
+    text: str | OutputHandle[str] = connect_field(
         default="Hello, this is a test of the text-to-speech system.",
         description="The text to convert to speech",
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_speech.TextToSpeech
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_speech.TextToSpeech"
+        return cls.get_node_class().get_node_type()

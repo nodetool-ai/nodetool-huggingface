@@ -10,11 +10,20 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_generation
+from nodetool.workflows.base_node import BaseNode
 
 
-class TextGeneration(GraphNode):
+class TextGeneration(
+    GraphNode[nodetool.nodes.huggingface.text_generation.TextGeneration.OutputType]
+):
     """
+
     Generates text based on a given prompt.
     text, generation, natural language processing
 
@@ -25,35 +34,55 @@ class TextGeneration(GraphNode):
     - Code generation and completion
     """
 
-    model: types.HFTextGeneration | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFTextGeneration(
-            type="hf.text_generation",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model ID to use for the text generation. Supports both regular models and GGUF quantized models (detected by .gguf file extension).",
+    model: types.HFTextGeneration | OutputHandle[types.HFTextGeneration] = (
+        connect_field(
+            default=types.HFTextGeneration(
+                type="hf.text_generation",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model ID to use for the text generation. Supports both regular models and GGUF quantized models (detected by .gguf file extension).",
+        )
     )
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    prompt: str | OutputHandle[str] = connect_field(
         default="", description="The input text prompt for generation"
     )
-    max_new_tokens: int | GraphNode | tuple[GraphNode, str] = Field(
+    max_new_tokens: int | OutputHandle[int] = connect_field(
         default=50, description="The maximum number of new tokens to generate"
     )
-    temperature: float | GraphNode | tuple[GraphNode, str] = Field(
+    temperature: float | OutputHandle[float] = connect_field(
         default=1.0,
         description="Controls randomness in generation. Lower values make it more deterministic.",
     )
-    top_p: float | GraphNode | tuple[GraphNode, str] = Field(
+    top_p: float | OutputHandle[float] = connect_field(
         default=1.0,
         description="Controls diversity of generated text. Lower values make it more focused.",
     )
-    do_sample: bool | GraphNode | tuple[GraphNode, str] = Field(
+    do_sample: bool | OutputHandle[bool] = connect_field(
         default=True, description="Whether to use sampling or greedy decoding"
     )
 
+    @property
+    def out(self) -> "TextGenerationOutputs":
+        return TextGenerationOutputs(self)
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_generation.TextGeneration
+
     @classmethod
     def get_node_type(cls):
-        return "huggingface.text_generation.TextGeneration"
+        return cls.get_node_class().get_node_type()
+
+
+class TextGenerationOutputs(OutputsProxy):
+    @property
+    def text(self) -> OutputHandle[str]:
+        return typing.cast(OutputHandle[str], self["text"])
+
+    @property
+    def chunk(self) -> OutputHandle[types.Chunk]:
+        return typing.cast(OutputHandle[types.Chunk], self["chunk"])

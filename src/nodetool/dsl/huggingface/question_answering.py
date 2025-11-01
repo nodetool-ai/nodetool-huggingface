@@ -10,11 +10,22 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.question_answering
+from nodetool.workflows.base_node import BaseNode
 
 
-class QuestionAnswering(GraphNode):
+class QuestionAnswering(
+    GraphNode[
+        nodetool.nodes.huggingface.question_answering.QuestionAnswering.OutputType
+    ]
+):
     """
+
     Answers questions based on a given context.
     text, question answering, natural language processing
 
@@ -25,31 +36,71 @@ class QuestionAnswering(GraphNode):
     - Enhancing search functionality
     """
 
-    model: types.HFQuestionAnswering | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFQuestionAnswering(
-            type="hf.question_answering",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model ID to use for question answering",
+    model: types.HFQuestionAnswering | OutputHandle[types.HFQuestionAnswering] = (
+        connect_field(
+            default=types.HFQuestionAnswering(
+                type="hf.question_answering",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model ID to use for question answering",
+        )
     )
-    context: str | GraphNode | tuple[GraphNode, str] = Field(
+    context: str | OutputHandle[str] = connect_field(
         default="", description="The context or passage to answer questions from"
     )
-    question: str | GraphNode | tuple[GraphNode, str] = Field(
+    question: str | OutputHandle[str] = connect_field(
         default="", description="The question to be answered based on the context"
     )
 
+    @property
+    def out(self) -> "QuestionAnsweringOutputs":
+        return QuestionAnsweringOutputs(self)
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.question_answering.QuestionAnswering
+
     @classmethod
     def get_node_type(cls):
-        return "huggingface.question_answering.QuestionAnswering"
+        return cls.get_node_class().get_node_type()
 
 
-class TableQuestionAnswering(GraphNode):
+class QuestionAnsweringOutputs(OutputsProxy):
+    @property
+    def answer(self) -> OutputHandle[str]:
+        return typing.cast(OutputHandle[str], self["answer"])
+
+    @property
+    def score(self) -> OutputHandle[float]:
+        return typing.cast(OutputHandle[float], self["score"])
+
+    @property
+    def start(self) -> OutputHandle[int]:
+        return typing.cast(OutputHandle[int], self["start"])
+
+    @property
+    def end(self) -> OutputHandle[int]:
+        return typing.cast(OutputHandle[int], self["end"])
+
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.question_answering
+from nodetool.workflows.base_node import BaseNode
+
+
+class TableQuestionAnswering(
+    GraphNode[
+        nodetool.nodes.huggingface.question_answering.TableQuestionAnswering.OutputType
+    ]
+):
     """
+
     Answers questions based on tabular data.
     table, question answering, natural language processing
 
@@ -60,7 +111,9 @@ class TableQuestionAnswering(GraphNode):
     - Automated data exploration
     """
 
-    model: types.HFTableQuestionAnswering | GraphNode | tuple[GraphNode, str] = Field(
+    model: (
+        types.HFTableQuestionAnswering | OutputHandle[types.HFTableQuestionAnswering]
+    ) = connect_field(
         default=types.HFTableQuestionAnswering(
             type="hf.table_question_answering",
             repo_id="",
@@ -71,16 +124,42 @@ class TableQuestionAnswering(GraphNode):
         ),
         description="The model ID to use for table question answering",
     )
-    dataframe: types.DataframeRef | GraphNode | tuple[GraphNode, str] = Field(
+    dataframe: types.DataframeRef | OutputHandle[types.DataframeRef] = connect_field(
         default=types.DataframeRef(
             type="dataframe", uri="", asset_id=None, data=None, columns=None
         ),
         description="The input table to query",
     )
-    question: str | GraphNode | tuple[GraphNode, str] = Field(
+    question: str | OutputHandle[str] = connect_field(
         default="", description="The question to be answered based on the table"
     )
 
+    @property
+    def out(self) -> "TableQuestionAnsweringOutputs":
+        return TableQuestionAnsweringOutputs(self)
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.question_answering.TableQuestionAnswering
+
     @classmethod
     def get_node_type(cls):
-        return "huggingface.question_answering.TableQuestionAnswering"
+        return cls.get_node_class().get_node_type()
+
+
+class TableQuestionAnsweringOutputs(OutputsProxy):
+    @property
+    def answer(self) -> OutputHandle[str]:
+        return typing.cast(OutputHandle[str], self["answer"])
+
+    @property
+    def coordinates(self) -> OutputHandle[list[tuple[int, int]]]:
+        return typing.cast(OutputHandle[list[tuple[int, int]]], self["coordinates"])
+
+    @property
+    def cells(self) -> OutputHandle[list[str]]:
+        return typing.cast(OutputHandle[list[str]], self["cells"])
+
+    @property
+    def aggregator(self) -> OutputHandle[str]:
+        return typing.cast(OutputHandle[str], self["aggregator"])

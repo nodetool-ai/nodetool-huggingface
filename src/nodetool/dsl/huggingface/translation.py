@@ -10,14 +10,18 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
 
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
 import nodetool.nodes.huggingface.translation
-import nodetool.nodes.huggingface.translation
+from nodetool.workflows.base_node import BaseNode
 
 
-class Translation(GraphNode):
+class Translation(SingleOutputGraphNode[str], GraphNode[str]):
     """
+
     Translates text from one language to another.
     text, translation, natural language processing
 
@@ -35,7 +39,8 @@ class Translation(GraphNode):
     LanguageCode: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.translation.Translation.LanguageCode
     )
-    model: types.HFTranslation | GraphNode | tuple[GraphNode, str] = Field(
+
+    model: types.HFTranslation | OutputHandle[types.HFTranslation] = connect_field(
         default=types.HFTranslation(
             type="hf.translation",
             repo_id="",
@@ -46,7 +51,7 @@ class Translation(GraphNode):
         ),
         description="The model ID to use for translation",
     )
-    inputs: str | GraphNode | tuple[GraphNode, str] = Field(
+    inputs: str | OutputHandle[str] = connect_field(
         default="", description="The text to translate"
     )
     source_lang: nodetool.nodes.huggingface.translation.Translation.LanguageCode = (
@@ -63,5 +68,9 @@ class Translation(GraphNode):
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.translation.Translation
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.translation.Translation"
+        return cls.get_node_class().get_node_type()

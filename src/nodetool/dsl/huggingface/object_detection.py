@@ -10,11 +10,21 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.object_detection
+from nodetool.workflows.base_node import BaseNode
 
 
-class ObjectDetection(GraphNode):
+class ObjectDetection(
+    SingleOutputGraphNode[list[types.ObjectDetectionResult]],
+    GraphNode[list[types.ObjectDetectionResult]],
+):
     """
+
     Detects and localizes objects in images.
     image, object detection, bounding boxes, huggingface
 
@@ -25,54 +35,86 @@ class ObjectDetection(GraphNode):
     - Enhance security camera footage analysis
     """
 
-    model: types.HFObjectDetection | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFObjectDetection(
-            type="hf.object_detection",
-            repo_id="facebook/detr-resnet-50",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model ID to use for object detection",
+    model: types.HFObjectDetection | OutputHandle[types.HFObjectDetection] = (
+        connect_field(
+            default=types.HFObjectDetection(
+                type="hf.object_detection",
+                repo_id="facebook/detr-resnet-50",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model ID to use for object detection",
+        )
     )
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="The input image for object detection",
     )
-    threshold: float | GraphNode | tuple[GraphNode, str] = Field(
+    threshold: float | OutputHandle[float] = connect_field(
         default=0.9, description="Minimum confidence score for detected objects"
     )
-    top_k: int | GraphNode | tuple[GraphNode, str] = Field(
+    top_k: int | OutputHandle[int] = connect_field(
         default=5, description="The number of top predictions to return"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.object_detection.ObjectDetection
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.object_detection.ObjectDetection"
+        return cls.get_node_class().get_node_type()
 
 
-class VisualizeObjectDetection(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.object_detection
+from nodetool.workflows.base_node import BaseNode
+
+
+class VisualizeObjectDetection(
+    SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]
+):
     """
+
     Visualizes object detection results on images.
     image, object detection, bounding boxes, visualization, mask
     """
 
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="The input image to visualize",
     )
-    objects: list[types.ObjectDetectionResult] | GraphNode | tuple[GraphNode, str] = (
-        Field(default={}, description="The detected objects to visualize")
-    )
+    objects: (
+        list[types.ObjectDetectionResult]
+        | OutputHandle[list[types.ObjectDetectionResult]]
+    ) = connect_field(default={}, description="The detected objects to visualize")
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.object_detection.VisualizeObjectDetection
 
     @classmethod
     def get_node_type(cls):
-        return "huggingface.object_detection.VisualizeObjectDetection"
+        return cls.get_node_class().get_node_type()
 
 
-class ZeroShotObjectDetection(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.object_detection
+from nodetool.workflows.base_node import BaseNode
+
+
+class ZeroShotObjectDetection(
+    SingleOutputGraphNode[list[types.ObjectDetectionResult]],
+    GraphNode[list[types.ObjectDetectionResult]],
+):
     """
+
     Detects objects in images without the need for training data.
     image, object detection, bounding boxes, zero-shot, mask
 
@@ -82,7 +124,9 @@ class ZeroShotObjectDetection(GraphNode):
     - Automate object detection for large datasets
     """
 
-    model: types.HFZeroShotObjectDetection | GraphNode | tuple[GraphNode, str] = Field(
+    model: (
+        types.HFZeroShotObjectDetection | OutputHandle[types.HFZeroShotObjectDetection]
+    ) = connect_field(
         default=types.HFZeroShotObjectDetection(
             type="hf.zero_shot_object_detection",
             repo_id="google/owlv2-base-patch16",
@@ -93,21 +137,25 @@ class ZeroShotObjectDetection(GraphNode):
         ),
         description="The model ID to use for object detection",
     )
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="The input image for object detection",
     )
-    threshold: float | GraphNode | tuple[GraphNode, str] = Field(
+    threshold: float | OutputHandle[float] = connect_field(
         default=0.1, description="Minimum confidence score for detected objects"
     )
-    top_k: int | GraphNode | tuple[GraphNode, str] = Field(
+    top_k: int | OutputHandle[int] = connect_field(
         default=5, description="The number of top predictions to return"
     )
-    candidate_labels: str | GraphNode | tuple[GraphNode, str] = Field(
+    candidate_labels: str | OutputHandle[str] = connect_field(
         default="",
         description="The candidate labels to detect in the image, separated by commas",
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.object_detection.ZeroShotObjectDetection
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.object_detection.ZeroShotObjectDetection"
+        return cls.get_node_class().get_node_type()

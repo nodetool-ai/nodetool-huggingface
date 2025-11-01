@@ -10,11 +10,18 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.multimodal
+from nodetool.workflows.base_node import BaseNode
 
 
-class ImageToText(GraphNode):
+class ImageToText(SingleOutputGraphNode[str], GraphNode[str]):
     """
+
     Generates text descriptions from images.
     image, text, captioning, vision-language
 
@@ -25,7 +32,7 @@ class ImageToText(GraphNode):
     - Generating alt text for web images
     """
 
-    model: types.HFImageToText | GraphNode | tuple[GraphNode, str] = Field(
+    model: types.HFImageToText | OutputHandle[types.HFImageToText] = connect_field(
         default=types.HFImageToText(
             type="hf.image_to_text",
             repo_id="",
@@ -36,21 +43,33 @@ class ImageToText(GraphNode):
         ),
         description="The model ID to use for image-to-text generation",
     )
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="The image to generate text from",
     )
-    max_new_tokens: int | GraphNode | tuple[GraphNode, str] = Field(
+    max_new_tokens: int | OutputHandle[int] = connect_field(
         default=50, description="The maximum number of tokens to generate"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.multimodal.ImageToText
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.multimodal.ImageToText"
+        return cls.get_node_class().get_node_type()
 
 
-class VisualQuestionAnswering(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.multimodal
+from nodetool.workflows.base_node import BaseNode
+
+
+class VisualQuestionAnswering(SingleOutputGraphNode[str], GraphNode[str]):
     """
+
     Answers questions about images.
     image, text, question answering, multimodal
 
@@ -61,7 +80,9 @@ class VisualQuestionAnswering(GraphNode):
     - Accessibility tools for visually impaired users
     """
 
-    model: types.HFVisualQuestionAnswering | GraphNode | tuple[GraphNode, str] = Field(
+    model: (
+        types.HFVisualQuestionAnswering | OutputHandle[types.HFVisualQuestionAnswering]
+    ) = connect_field(
         default=types.HFVisualQuestionAnswering(
             type="hf.visual_question_answering",
             repo_id="",
@@ -72,14 +93,18 @@ class VisualQuestionAnswering(GraphNode):
         ),
         description="The model ID to use for visual question answering",
     )
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="The image to analyze",
     )
-    question: str | GraphNode | tuple[GraphNode, str] = Field(
+    question: str | OutputHandle[str] = connect_field(
         default="", description="The question to be answered about the image"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.multimodal.VisualQuestionAnswering
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.multimodal.VisualQuestionAnswering"
+        return cls.get_node_class().get_node_type()

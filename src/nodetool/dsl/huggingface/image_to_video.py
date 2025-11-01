@@ -10,13 +10,18 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
 
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
 import nodetool.nodes.huggingface.image_to_video
+from nodetool.workflows.base_node import BaseNode
 
 
-class Wan_I2V(GraphNode):
+class Wan_I2V(SingleOutputGraphNode[types.VideoRef], GraphNode[types.VideoRef]):
     """
+
     Generates a video from an input image using Wan image-to-video pipelines.
     video, generation, AI, image-to-video, diffusion, Wan
 
@@ -28,11 +33,12 @@ class Wan_I2V(GraphNode):
     WanI2VModel: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.image_to_video.Wan_I2V.WanI2VModel
     )
-    input_image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+
+    input_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="The input image to generate the video from.",
     )
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    prompt: str | OutputHandle[str] = connect_field(
         default="An astronaut walking on the moon, cinematic lighting, high detail",
         description="A text prompt describing the desired video.",
     )
@@ -42,45 +48,49 @@ class Wan_I2V(GraphNode):
             description="Select the Wan I2V model to use.",
         )
     )
-    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    negative_prompt: str | OutputHandle[str] = connect_field(
         default="", description="A text prompt describing what to avoid in the video."
     )
-    num_frames: int | GraphNode | tuple[GraphNode, str] = Field(
+    num_frames: int | OutputHandle[int] = connect_field(
         default=81, description="The number of frames in the video."
     )
-    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+    guidance_scale: float | OutputHandle[float] = connect_field(
         default=5.0, description="The scale for classifier-free guidance."
     )
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+    num_inference_steps: int | OutputHandle[int] = connect_field(
         default=50, description="The number of denoising steps."
     )
-    height: int | GraphNode | tuple[GraphNode, str] = Field(
+    height: int | OutputHandle[int] = connect_field(
         default=480, description="The height of the generated video in pixels."
     )
-    width: int | GraphNode | tuple[GraphNode, str] = Field(
+    width: int | OutputHandle[int] = connect_field(
         default=832, description="The width of the generated video in pixels."
     )
-    fps: int | GraphNode | tuple[GraphNode, str] = Field(
+    fps: int | OutputHandle[int] = connect_field(
         default=16, description="Frames per second for the output video."
     )
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+    seed: int | OutputHandle[int] = connect_field(
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
-    max_sequence_length: int | GraphNode | tuple[GraphNode, str] = Field(
+    max_sequence_length: int | OutputHandle[int] = connect_field(
         default=512, description="Maximum sequence length in encoded prompt."
     )
-    enable_cpu_offload: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=True, description="Enable CPU offload to reduce VRAM usage."
     )
-    enable_vae_slicing: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_vae_slicing: bool | OutputHandle[bool] = connect_field(
         default=True, description="Enable VAE slicing to reduce VRAM usage."
     )
-    enable_vae_tiling: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_vae_tiling: bool | OutputHandle[bool] = connect_field(
         default=False,
         description="Enable VAE tiling to reduce VRAM usage for large videos.",
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_to_video.Wan_I2V
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.image_to_video.Wan_I2V"
+        return cls.get_node_class().get_node_type()

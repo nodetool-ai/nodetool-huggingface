@@ -10,11 +10,18 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.ranking
+from nodetool.workflows.base_node import BaseNode
 
 
-class Reranker(GraphNode):
+class Reranker(SingleOutputGraphNode[dict[str, float]], GraphNode[dict[str, float]]):
     """
+
     Reranks pairs of text based on their semantic similarity.
     text, ranking, reranking, natural language processing
 
@@ -24,7 +31,7 @@ class Reranker(GraphNode):
     - Document relevance ranking
     """
 
-    model: types.HFReranker | GraphNode | tuple[GraphNode, str] = Field(
+    model: types.HFReranker | OutputHandle[types.HFReranker] = connect_field(
         default=types.HFReranker(
             type="hf.reranker",
             repo_id="",
@@ -35,13 +42,17 @@ class Reranker(GraphNode):
         ),
         description="The model ID to use for reranking",
     )
-    query: str | GraphNode | tuple[GraphNode, str] = Field(
+    query: str | OutputHandle[str] = connect_field(
         default="", description="The query text to compare against candidates"
     )
-    candidates: list[str] | GraphNode | tuple[GraphNode, str] = Field(
+    candidates: list[str] | OutputHandle[list[str]] = connect_field(
         default=[], description="List of candidate texts to rank"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.ranking.Reranker
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.ranking.Reranker"
+        return cls.get_node_class().get_node_type()

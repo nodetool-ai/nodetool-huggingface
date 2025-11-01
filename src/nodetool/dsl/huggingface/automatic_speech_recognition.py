@@ -10,11 +10,18 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.automatic_speech_recognition
+from nodetool.workflows.base_node import BaseNode
 
 
-class ChunksToSRT(GraphNode):
+class ChunksToSRT(SingleOutputGraphNode[str], GraphNode[str]):
     """
+
     Convert audio chunks to SRT (SubRip Subtitle) format
     subtitle, srt, whisper, transcription
 
@@ -29,25 +36,38 @@ class ChunksToSRT(GraphNode):
     - Generates properly formatted SRT file content
     """
 
-    chunks: list[types.AudioChunk] | GraphNode | tuple[GraphNode, str] = Field(
-        default=[], description="List of audio chunks from Whisper transcription"
+    chunks: list[types.AudioChunk] | OutputHandle[list[types.AudioChunk]] = (
+        connect_field(
+            default=[], description="List of audio chunks from Whisper transcription"
+        )
     )
-    time_offset: float | GraphNode | tuple[GraphNode, str] = Field(
+    time_offset: float | OutputHandle[float] = connect_field(
         default=0.0, description="Time offset in seconds to apply to all timestamps"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.automatic_speech_recognition.ChunksToSRT
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.automatic_speech_recognition.ChunksToSRT"
+        return cls.get_node_class().get_node_type()
 
 
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
 import nodetool.nodes.huggingface.automatic_speech_recognition
-import nodetool.nodes.huggingface.automatic_speech_recognition
-import nodetool.nodes.huggingface.automatic_speech_recognition
+from nodetool.workflows.base_node import BaseNode
 
 
-class Whisper(GraphNode):
+class Whisper(
+    GraphNode[
+        nodetool.nodes.huggingface.automatic_speech_recognition.Whisper.OutputType
+    ]
+):
     """
+
     Convert speech to text
     asr, automatic-speech-recognition, speech-to-text, translate, transcribe, audio, huggingface
 
@@ -79,20 +99,22 @@ class Whisper(GraphNode):
     Timestamps: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.automatic_speech_recognition.Timestamps
     )
-    model: types.HFAutomaticSpeechRecognition | GraphNode | tuple[GraphNode, str] = (
-        Field(
-            default=types.HFAutomaticSpeechRecognition(
-                type="hf.automatic_speech_recognition",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The model ID to use for the speech recognition.",
-        )
+
+    model: (
+        types.HFAutomaticSpeechRecognition
+        | OutputHandle[types.HFAutomaticSpeechRecognition]
+    ) = connect_field(
+        default=types.HFAutomaticSpeechRecognition(
+            type="hf.automatic_speech_recognition",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model ID to use for the speech recognition.",
     )
-    audio: types.AudioRef | GraphNode | tuple[GraphNode, str] = Field(
+    audio: types.AudioRef | OutputHandle[types.AudioRef] = connect_field(
         default=types.AudioRef(type="audio", uri="", asset_id=None, data=None),
         description="The input audio to transcribe.",
     )
@@ -113,6 +135,24 @@ class Whisper(GraphNode):
         )
     )
 
+    @property
+    def out(self) -> "WhisperOutputs":
+        return WhisperOutputs(self)
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.automatic_speech_recognition.Whisper
+
     @classmethod
     def get_node_type(cls):
-        return "huggingface.automatic_speech_recognition.Whisper"
+        return cls.get_node_class().get_node_type()
+
+
+class WhisperOutputs(OutputsProxy):
+    @property
+    def text(self) -> OutputHandle[str]:
+        return typing.cast(OutputHandle[str], self["text"])
+
+    @property
+    def chunks(self) -> OutputHandle[list[types.AudioChunk]]:
+        return typing.cast(OutputHandle[list[types.AudioChunk]], self["chunks"])

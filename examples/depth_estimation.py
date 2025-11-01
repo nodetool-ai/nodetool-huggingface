@@ -1,6 +1,6 @@
 import asyncio
 import os
-from nodetool.dsl.graph import graph, run_graph
+from nodetool.dsl.graph import create_graph, run_graph
 from nodetool.dsl.nodetool.constant import Image
 from nodetool.dsl.nodetool.image import SaveImageFile
 from nodetool.metadata.types import (
@@ -25,7 +25,7 @@ g = SaveImageFile(
 
 # Run the graph
 async def main():
-    await run_graph(graph(g))
+    await run_graph(create_graph(g))
 
 
 if __name__ == "__main__":

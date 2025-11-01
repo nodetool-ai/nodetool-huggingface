@@ -1,6 +1,6 @@
 import asyncio
 import os
-from nodetool.dsl.graph import graph, run_graph
+from nodetool.dsl.graph import create_graph, run_graph
 from nodetool.dsl.huggingface.text_to_image import StableDiffusion
 from nodetool.dsl.huggingface.automatic_speech_recognition import Whisper
 from nodetool.dsl.nodetool.constant import Audio
@@ -29,4 +29,4 @@ g = StableDiffusion(
     ),
 )
 
-asyncio.run(run_graph(graph(g)))
+asyncio.run(run_graph(create_graph(g)))

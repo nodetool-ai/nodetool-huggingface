@@ -10,13 +10,20 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
 
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
 import nodetool.nodes.huggingface.token_classification
+from nodetool.workflows.base_node import BaseNode
 
 
-class TokenClassification(GraphNode):
+class TokenClassification(
+    SingleOutputGraphNode[types.DataframeRef], GraphNode[types.DataframeRef]
+):
     """
+
     Performs token classification tasks such as Named Entity Recognition (NER).
     text, token classification, named entity recognition, natural language processing
 
@@ -30,18 +37,21 @@ class TokenClassification(GraphNode):
     AggregationStrategy: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.token_classification.TokenClassification.AggregationStrategy
     )
-    model: types.HFTokenClassification | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFTokenClassification(
-            type="hf.token_classification",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model ID to use for token classification",
+
+    model: types.HFTokenClassification | OutputHandle[types.HFTokenClassification] = (
+        connect_field(
+            default=types.HFTokenClassification(
+                type="hf.token_classification",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model ID to use for token classification",
+        )
     )
-    inputs: str | GraphNode | tuple[GraphNode, str] = Field(
+    inputs: str | OutputHandle[str] = connect_field(
         default="", description="The input text for token classification"
     )
     aggregation_strategy: (
@@ -52,5 +62,9 @@ class TokenClassification(GraphNode):
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.token_classification.TokenClassification
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.token_classification.TokenClassification"
+        return cls.get_node_class().get_node_type()

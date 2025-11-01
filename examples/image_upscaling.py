@@ -1,7 +1,7 @@
 import asyncio
 import os
 import tempfile
-from nodetool.dsl.graph import graph, run_graph
+from nodetool.dsl.graph import create_graph, run_graph
 from nodetool.dsl.nodetool.constant import Image
 from nodetool.metadata.types import (
     ImageRef,
@@ -49,4 +49,4 @@ g = SaveImageFile(
     filename="upscaled_image_4x.jpg",
 )
 
-asyncio.run(run_graph(graph(g)))
+asyncio.run(run_graph(create_graph(g)))

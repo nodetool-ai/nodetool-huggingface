@@ -10,37 +10,62 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_classification
+from nodetool.workflows.base_node import BaseNode
 
 
-class TextClassifier(GraphNode):
+class TextClassifier(
+    SingleOutputGraphNode[dict[str, float]], GraphNode[dict[str, float]]
+):
     """
+
     Classifies text into predefined categories using a Hugging Face model.
     text, classification, zero-shot, natural language processing
     """
 
-    model: types.HFTextClassification | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFTextClassification(
-            type="hf.text_classification",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model ID to use for the classification",
+    model: types.HFTextClassification | OutputHandle[types.HFTextClassification] = (
+        connect_field(
+            default=types.HFTextClassification(
+                type="hf.text_classification",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model ID to use for the classification",
+        )
     )
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    prompt: str | OutputHandle[str] = connect_field(
         default="", description="The input text to the model"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_classification.TextClassifier
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_classification.TextClassifier"
+        return cls.get_node_class().get_node_type()
 
 
-class ZeroShotTextClassifier(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_classification
+from nodetool.workflows.base_node import BaseNode
+
+
+class ZeroShotTextClassifier(
+    SingleOutputGraphNode[dict[str, float]], GraphNode[dict[str, float]]
+):
     """
+
     Performs zero-shot classification on text.
     text, classification, zero-shot, natural language processing
 
@@ -51,7 +76,9 @@ class ZeroShotTextClassifier(GraphNode):
     - Intent classification in conversational AI
     """
 
-    model: types.HFZeroShotClassification | GraphNode | tuple[GraphNode, str] = Field(
+    model: (
+        types.HFZeroShotClassification | OutputHandle[types.HFZeroShotClassification]
+    ) = connect_field(
         default=types.HFZeroShotClassification(
             type="hf.zero_shot_classification",
             repo_id="",
@@ -62,17 +89,21 @@ class ZeroShotTextClassifier(GraphNode):
         ),
         description="The model ID to use for zero-shot classification",
     )
-    inputs: str | GraphNode | tuple[GraphNode, str] = Field(
+    inputs: str | OutputHandle[str] = connect_field(
         default="", description="The text to classify"
     )
-    candidate_labels: str | GraphNode | tuple[GraphNode, str] = Field(
+    candidate_labels: str | OutputHandle[str] = connect_field(
         default="",
         description="Comma-separated list of candidate labels for classification",
     )
-    multi_label: bool | GraphNode | tuple[GraphNode, str] = Field(
+    multi_label: bool | OutputHandle[bool] = connect_field(
         default=False, description="Whether to perform multi-label classification"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_classification.ZeroShotTextClassifier
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_classification.ZeroShotTextClassifier"
+        return cls.get_node_class().get_node_type()

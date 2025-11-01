@@ -10,11 +10,18 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_text
+from nodetool.workflows.base_node import BaseNode
 
 
-class TextToText(GraphNode):
+class TextToText(SingleOutputGraphNode[str], GraphNode[str]):
     """
+
     Performs text-to-text generation tasks.
     text, generation, translation, question-answering, summarization, nlp, natural-language-processing
 
@@ -33,24 +40,30 @@ class TextToText(GraphNode):
     - Q: Who ate the cookie? followed by the text of the cookie monster.
     """
 
-    model: types.HFText2TextGeneration | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFText2TextGeneration(
-            type="hf.text2text_generation",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model ID to use for the text-to-text generation",
+    model: types.HFText2TextGeneration | OutputHandle[types.HFText2TextGeneration] = (
+        connect_field(
+            default=types.HFText2TextGeneration(
+                type="hf.text2text_generation",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model ID to use for the text-to-text generation",
+        )
     )
-    text: str | GraphNode | tuple[GraphNode, str] = Field(
+    text: str | OutputHandle[str] = connect_field(
         default="", description="The input text for the text-to-text task"
     )
-    max_length: int | GraphNode | tuple[GraphNode, str] = Field(
+    max_length: int | OutputHandle[int] = connect_field(
         default=50, description="The maximum length of the generated text"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_text.TextToText
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_text.TextToText"
+        return cls.get_node_class().get_node_type()

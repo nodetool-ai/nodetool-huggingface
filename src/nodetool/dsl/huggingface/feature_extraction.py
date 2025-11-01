@@ -10,11 +10,18 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.feature_extraction
+from nodetool.workflows.base_node import BaseNode
 
 
-class FeatureExtraction(GraphNode):
+class FeatureExtraction(SingleOutputGraphNode[types.NPArray], GraphNode[types.NPArray]):
     """
+
     Extracts features from text using pre-trained models.
     text, feature extraction, embeddings, natural language processing
 
@@ -25,21 +32,27 @@ class FeatureExtraction(GraphNode):
     - Semantic search applications
     """
 
-    model: types.HFFeatureExtraction | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFFeatureExtraction(
-            type="hf.feature_extraction",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model ID to use for feature extraction",
+    model: types.HFFeatureExtraction | OutputHandle[types.HFFeatureExtraction] = (
+        connect_field(
+            default=types.HFFeatureExtraction(
+                type="hf.feature_extraction",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model ID to use for feature extraction",
+        )
     )
-    inputs: str | GraphNode | tuple[GraphNode, str] = Field(
+    inputs: str | OutputHandle[str] = connect_field(
         default="", description="The text to extract features from"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.feature_extraction.FeatureExtraction
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.feature_extraction.FeatureExtraction"
+        return cls.get_node_class().get_node_type()

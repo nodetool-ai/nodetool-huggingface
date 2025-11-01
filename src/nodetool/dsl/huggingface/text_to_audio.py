@@ -10,11 +10,18 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_audio
+from nodetool.workflows.base_node import BaseNode
 
 
-class AudioLDM(GraphNode):
+class AudioLDM(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef]):
     """
+
     Generates audio using the AudioLDM model based on text prompts.
     audio, generation, AI, text-to-audio
 
@@ -25,30 +32,42 @@ class AudioLDM(GraphNode):
     - Explore AI-generated audio for music production or sound design
     """
 
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    prompt: str | OutputHandle[str] = connect_field(
         default="Techno music with a strong, upbeat tempo and high melodic riffs",
         description="A text prompt describing the desired audio.",
     )
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+    num_inference_steps: int | OutputHandle[int] = connect_field(
         default=10,
         description="Number of denoising steps. More steps generally improve quality but increase generation time.",
     )
-    audio_length_in_s: float | GraphNode | tuple[GraphNode, str] = Field(
+    audio_length_in_s: float | OutputHandle[float] = connect_field(
         default=5.0,
         description="The desired duration of the generated audio in seconds.",
     )
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+    seed: int | OutputHandle[int] = connect_field(
         default=0,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_audio.AudioLDM
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_audio.AudioLDM"
+        return cls.get_node_class().get_node_type()
 
 
-class AudioLDM2(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_audio
+from nodetool.workflows.base_node import BaseNode
+
+
+class AudioLDM2(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef]):
     """
+
     Generates audio using the AudioLDM2 model based on text prompts.
     audio, generation, AI, text-to-audio
 
@@ -59,37 +78,49 @@ class AudioLDM2(GraphNode):
     - Explore AI-generated audio for creative sound design
     """
 
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    prompt: str | OutputHandle[str] = connect_field(
         default="The sound of a hammer hitting a wooden surface.",
         description="A text prompt describing the desired audio.",
     )
-    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    negative_prompt: str | OutputHandle[str] = connect_field(
         default="Low quality.",
         description="A text prompt describing what you don't want in the audio.",
     )
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+    num_inference_steps: int | OutputHandle[int] = connect_field(
         default=200,
         description="Number of denoising steps. More steps generally improve quality but increase generation time.",
     )
-    audio_length_in_s: float | GraphNode | tuple[GraphNode, str] = Field(
+    audio_length_in_s: float | OutputHandle[float] = connect_field(
         default=10.0,
         description="The desired duration of the generated audio in seconds.",
     )
-    num_waveforms_per_prompt: int | GraphNode | tuple[GraphNode, str] = Field(
+    num_waveforms_per_prompt: int | OutputHandle[int] = connect_field(
         default=3, description="Number of audio samples to generate per prompt."
     )
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+    seed: int | OutputHandle[int] = connect_field(
         default=0,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_audio.AudioLDM2
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_audio.AudioLDM2"
+        return cls.get_node_class().get_node_type()
 
 
-class DanceDiffusion(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_audio
+from nodetool.workflows.base_node import BaseNode
+
+
+class DanceDiffusion(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef]):
     """
+
     Generates audio using the DanceDiffusion model.
     audio, generation, AI, music, text-to-audio
 
@@ -100,26 +131,38 @@ class DanceDiffusion(GraphNode):
     - Explore AI-composed musical ideas
     """
 
-    audio_length_in_s: float | GraphNode | tuple[GraphNode, str] = Field(
+    audio_length_in_s: float | OutputHandle[float] = connect_field(
         default=4.0,
         description="The desired duration of the generated audio in seconds.",
     )
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+    num_inference_steps: int | OutputHandle[int] = connect_field(
         default=50,
         description="Number of denoising steps. More steps generally improve quality but increase generation time.",
     )
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+    seed: int | OutputHandle[int] = connect_field(
         default=0,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_audio.DanceDiffusion
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_audio.DanceDiffusion"
+        return cls.get_node_class().get_node_type()
 
 
-class MusicGen(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_audio
+from nodetool.workflows.base_node import BaseNode
+
+
+class MusicGen(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef]):
     """
+
     Generates audio (music or sound effects) from text descriptions.
     audio, music, generation, huggingface, text-to-audio
 
@@ -129,7 +172,7 @@ class MusicGen(GraphNode):
     - Prototype musical ideas quickly
     """
 
-    model: types.HFTextToAudio | GraphNode | tuple[GraphNode, str] = Field(
+    model: types.HFTextToAudio | OutputHandle[types.HFTextToAudio] = connect_field(
         default=types.HFTextToAudio(
             type="hf.text_to_audio",
             repo_id="",
@@ -140,20 +183,32 @@ class MusicGen(GraphNode):
         ),
         description="The model ID to use for the audio generation",
     )
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    prompt: str | OutputHandle[str] = connect_field(
         default="", description="The input text to the model"
     )
-    max_new_tokens: int | GraphNode | tuple[GraphNode, str] = Field(
+    max_new_tokens: int | OutputHandle[int] = connect_field(
         default=1024, description="The maximum number of tokens to generate"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_audio.MusicGen
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_audio.MusicGen"
+        return cls.get_node_class().get_node_type()
 
 
-class MusicLDM(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_audio
+from nodetool.workflows.base_node import BaseNode
+
+
+class MusicLDM(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef]):
     """
+
     Generates audio (music or sound effects) from text descriptions.
     audio, music, generation, huggingface, text-to-audio
 
@@ -163,7 +218,7 @@ class MusicLDM(GraphNode):
     - Prototype musical ideas quickly
     """
 
-    model: types.HFTextToAudio | GraphNode | tuple[GraphNode, str] = Field(
+    model: types.HFTextToAudio | OutputHandle[types.HFTextToAudio] = connect_field(
         default=types.HFTextToAudio(
             type="hf.text_to_audio",
             repo_id="",
@@ -174,24 +229,36 @@ class MusicLDM(GraphNode):
         ),
         description="The model ID to use for the audio generation",
     )
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    prompt: str | OutputHandle[str] = connect_field(
         default="", description="The input text to the model"
     )
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+    num_inference_steps: int | OutputHandle[int] = connect_field(
         default=10,
         description="The number of inference steps to use for the generation",
     )
-    audio_length_in_s: float | GraphNode | tuple[GraphNode, str] = Field(
+    audio_length_in_s: float | OutputHandle[float] = connect_field(
         default=5.0, description="The length of the generated audio in seconds"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_audio.MusicLDM
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_audio.MusicLDM"
+        return cls.get_node_class().get_node_type()
 
 
-class StableAudioNode(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_audio
+from nodetool.workflows.base_node import BaseNode
+
+
+class StableAudioNode(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef]):
     """
+
     Generate audio using Stable Audio model based on text prompts. Features high-quality audio synthesis with configurable parameters.
     audio, generation, synthesis, text-to-audio, text-to-audio
 
@@ -203,27 +270,31 @@ class StableAudioNode(GraphNode):
     - Generate experimental audio content
     """
 
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    prompt: str | OutputHandle[str] = connect_field(
         default="A peaceful piano melody.",
         description="A text prompt describing the desired audio.",
     )
-    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    negative_prompt: str | OutputHandle[str] = connect_field(
         default="Low quality.",
         description="A text prompt describing what you don't want in the audio.",
     )
-    duration: float | GraphNode | tuple[GraphNode, str] = Field(
+    duration: float | OutputHandle[float] = connect_field(
         default=10.0,
         description="The desired duration of the generated audio in seconds.",
     )
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+    num_inference_steps: int | OutputHandle[int] = connect_field(
         default=200,
         description="Number of denoising steps. More steps generally improve quality but increase generation time.",
     )
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+    seed: int | OutputHandle[int] = connect_field(
         default=0,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_audio.StableAudioNode
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_audio.StableAudio"
+        return cls.get_node_class().get_node_type()

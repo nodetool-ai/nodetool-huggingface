@@ -10,11 +10,20 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.audio_classification
+from nodetool.workflows.base_node import BaseNode
 
 
-class AudioClassifier(GraphNode):
+class AudioClassifier(
+    SingleOutputGraphNode[dict[str, float]], GraphNode[dict[str, float]]
+):
     """
+
     Classifies audio into predefined categories.
     audio, classification, labeling, categorization
 
@@ -29,32 +38,48 @@ class AudioClassifier(GraphNode):
     - ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition
     """
 
-    model: types.HFAudioClassification | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFAudioClassification(
-            type="hf.audio_classification",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model ID to use for audio classification",
+    model: types.HFAudioClassification | OutputHandle[types.HFAudioClassification] = (
+        connect_field(
+            default=types.HFAudioClassification(
+                type="hf.audio_classification",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model ID to use for audio classification",
+        )
     )
-    audio: types.AudioRef | GraphNode | tuple[GraphNode, str] = Field(
+    audio: types.AudioRef | OutputHandle[types.AudioRef] = connect_field(
         default=types.AudioRef(type="audio", uri="", asset_id=None, data=None),
         description="The input audio to classify",
     )
-    top_k: int | GraphNode | tuple[GraphNode, str] = Field(
+    top_k: int | OutputHandle[int] = connect_field(
         default=10, description="The number of top results to return"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.audio_classification.AudioClassifier
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.audio_classification.AudioClassifier"
+        return cls.get_node_class().get_node_type()
 
 
-class ZeroShotAudioClassifier(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.audio_classification
+from nodetool.workflows.base_node import BaseNode
+
+
+class ZeroShotAudioClassifier(
+    SingleOutputGraphNode[dict[str, float]], GraphNode[dict[str, float]]
+):
     """
+
     Classifies audio into categories without the need for training data.
     audio, classification, labeling, categorization, zero-shot
 
@@ -64,28 +89,33 @@ class ZeroShotAudioClassifier(GraphNode):
     - Automate audio tagging for large datasets
     """
 
-    model: types.HFZeroShotAudioClassification | GraphNode | tuple[GraphNode, str] = (
-        Field(
-            default=types.HFZeroShotAudioClassification(
-                type="hf.zero_shot_audio_classification",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The model ID to use for the classification",
-        )
+    model: (
+        types.HFZeroShotAudioClassification
+        | OutputHandle[types.HFZeroShotAudioClassification]
+    ) = connect_field(
+        default=types.HFZeroShotAudioClassification(
+            type="hf.zero_shot_audio_classification",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model ID to use for the classification",
     )
-    audio: types.AudioRef | GraphNode | tuple[GraphNode, str] = Field(
+    audio: types.AudioRef | OutputHandle[types.AudioRef] = connect_field(
         default=types.AudioRef(type="audio", uri="", asset_id=None, data=None),
         description="The input audio to classify",
     )
-    candidate_labels: str | GraphNode | tuple[GraphNode, str] = Field(
+    candidate_labels: str | OutputHandle[str] = connect_field(
         default="",
         description="The candidate labels to classify the audio against, separated by commas",
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.audio_classification.ZeroShotAudioClassifier
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.audio_classification.ZeroShotAudioClassifier"
+        return cls.get_node_class().get_node_type()

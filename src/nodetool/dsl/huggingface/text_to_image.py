@@ -10,11 +10,18 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_image
+from nodetool.workflows.base_node import BaseNode
 
 
-class Chroma(GraphNode):
+class Chroma(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
+
     Generates images from text prompts using Chroma, a text-to-image model based on Flux.
     image, generation, AI, text-to-image, flux, chroma, transformer
 
@@ -26,59 +33,73 @@ class Chroma(GraphNode):
     - Create professional-quality images with precise color control
     """
 
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    prompt: str | OutputHandle[str] = connect_field(
         default="A high-fashion close-up portrait of a blonde woman in clear sunglasses. The image uses a bold teal and red color split for dramatic lighting. The background is a simple teal-green. The photo is sharp and well-composed, and is designed for viewing with anaglyph 3D glasses for optimal effect. It looks professionally done.",
         description="A text prompt describing the desired image.",
     )
-    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    negative_prompt: str | OutputHandle[str] = connect_field(
         default="low quality, ugly, unfinished, out of focus, deformed, disfigure, blurry, smudged, restricted palette, flat colors",
         description="A text prompt describing what to avoid in the image.",
     )
-    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+    guidance_scale: float | OutputHandle[float] = connect_field(
         default=3.0, description="The scale for classifier-free guidance."
     )
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+    num_inference_steps: int | OutputHandle[int] = connect_field(
         default=40, description="The number of denoising steps."
     )
-    height: int | GraphNode | tuple[GraphNode, str] = Field(
+    height: int | OutputHandle[int] = connect_field(
         default=1024, description="The height of the generated image."
     )
-    width: int | GraphNode | tuple[GraphNode, str] = Field(
+    width: int | OutputHandle[int] = connect_field(
         default=1024, description="The width of the generated image."
     )
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+    seed: int | OutputHandle[int] = connect_field(
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
-    max_sequence_length: int | GraphNode | tuple[GraphNode, str] = Field(
+    max_sequence_length: int | OutputHandle[int] = connect_field(
         default=512, description="Maximum sequence length to use with the prompt."
     )
     ip_adapter_image: (
-        nodetool.metadata.types.ImageRef | None | GraphNode | tuple[GraphNode, str]
-    ) = Field(
+        nodetool.metadata.types.ImageRef
+        | OutputHandle[nodetool.metadata.types.ImageRef]
+        | None
+    ) = connect_field(
         default=None, description="Optional image input for IP Adapter style control."
     )
-    enable_cpu_offload: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=True, description="Enable CPU offload to reduce VRAM usage."
     )
-    enable_vae_slicing: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_vae_slicing: bool | OutputHandle[bool] = connect_field(
         default=True, description="Enable VAE slicing to reduce VRAM usage."
     )
-    enable_vae_tiling: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_vae_tiling: bool | OutputHandle[bool] = connect_field(
         default=True,
         description="Enable VAE tiling to reduce VRAM usage for large images.",
     )
-    enable_attention_slicing: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_attention_slicing: bool | OutputHandle[bool] = connect_field(
         default=True, description="Enable attention slicing to reduce memory usage."
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_image.Chroma
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_image.Chroma"
+        return cls.get_node_class().get_node_type()
 
 
-class Flux(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_image
+from nodetool.workflows.base_node import BaseNode
+
+
+class Flux(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
+
     Generates images using FLUX models with support for GGUF quantization for memory efficiency.
     image, generation, AI, text-to-image, flux, quantization
 
@@ -90,7 +111,7 @@ class Flux(GraphNode):
     - Controlled generation with Fill, Canny, or Depth variants
     """
 
-    model: types.HFFlux | GraphNode | tuple[GraphNode, str] = Field(
+    model: types.HFFlux | OutputHandle[types.HFFlux] = connect_field(
         default=types.HFFlux(
             type="hf.flux",
             repo_id="",
@@ -101,54 +122,62 @@ class Flux(GraphNode):
         ),
         description="The FLUX model to use for text-to-image generation.",
     )
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    prompt: str | OutputHandle[str] = connect_field(
         default="A cat holding a sign that says hello world",
         description="A text prompt describing the desired image.",
     )
-    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+    guidance_scale: float | OutputHandle[float] = connect_field(
         default=3.5,
         description="The scale for classifier-free guidance. Use 0.0 for schnell, 3.5 for dev.",
     )
-    width: int | GraphNode | tuple[GraphNode, str] = Field(
+    width: int | OutputHandle[int] = connect_field(
         default=1024, description="The width of the generated image."
     )
-    height: int | GraphNode | tuple[GraphNode, str] = Field(
+    height: int | OutputHandle[int] = connect_field(
         default=1024, description="The height of the generated image."
     )
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+    num_inference_steps: int | OutputHandle[int] = connect_field(
         default=20,
         description="The number of denoising steps. Use 4 for schnell, 20-50 for dev.",
     )
-    max_sequence_length: int | GraphNode | tuple[GraphNode, str] = Field(
+    max_sequence_length: int | OutputHandle[int] = connect_field(
         default=512,
         description="Maximum sequence length for the prompt. Use 256 for schnell, 512 for dev.",
     )
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+    seed: int | OutputHandle[int] = connect_field(
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
-    enable_memory_efficient_attention: bool | GraphNode | tuple[GraphNode, str] = Field(
-        default=True,
-        description="Enable memory efficient attention to reduce VRAM usage.",
-    )
-    enable_vae_tiling: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_vae_tiling: bool | OutputHandle[bool] = connect_field(
         default=False,
         description="Enable VAE tiling to reduce VRAM usage for large images.",
     )
-    enable_vae_slicing: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_vae_slicing: bool | OutputHandle[bool] = connect_field(
         default=False, description="Enable VAE slicing to reduce VRAM usage."
     )
-    enable_cpu_offload: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=False, description="Enable CPU offload to reduce VRAM usage."
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_image.Flux
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_image.Flux"
+        return cls.get_node_class().get_node_type()
 
 
-class Kolors(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_image
+from nodetool.workflows.base_node import BaseNode
+
+
+class Kolors(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
+
     Generates images from text prompts using Kolors, a large-scale text-to-image generation model.
     image, generation, AI, text-to-image, kolors, chinese, english
 
@@ -160,47 +189,59 @@ class Kolors(GraphNode):
     - Create detailed images with strong text rendering capabilities
     """
 
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    prompt: str | OutputHandle[str] = connect_field(
         default='A ladybug photo, macro, zoom, high quality, film, holding a sign that says "可图"',
         description="A text prompt describing the desired image. Supports both Chinese and English.",
     )
-    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    negative_prompt: str | OutputHandle[str] = connect_field(
         default="", description="A text prompt describing what to avoid in the image."
     )
-    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+    guidance_scale: float | OutputHandle[float] = connect_field(
         default=6.5, description="The scale for classifier-free guidance."
     )
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+    num_inference_steps: int | OutputHandle[int] = connect_field(
         default=25, description="The number of denoising steps."
     )
-    width: int | GraphNode | tuple[GraphNode, str] = Field(
+    width: int | OutputHandle[int] = connect_field(
         default=1024, description="The width of the generated image."
     )
-    height: int | GraphNode | tuple[GraphNode, str] = Field(
+    height: int | OutputHandle[int] = connect_field(
         default=1024, description="The height of the generated image."
     )
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+    seed: int | OutputHandle[int] = connect_field(
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
-    max_sequence_length: int | GraphNode | tuple[GraphNode, str] = Field(
+    max_sequence_length: int | OutputHandle[int] = connect_field(
         default=256, description="Maximum sequence length for the prompt."
     )
-    use_dpm_solver: bool | GraphNode | tuple[GraphNode, str] = Field(
+    use_dpm_solver: bool | OutputHandle[bool] = connect_field(
         default=True,
         description="Whether to use DPMSolverMultistepScheduler with Karras sigmas for better quality.",
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_image.Kolors
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_image.Kolors"
+        return cls.get_node_class().get_node_type()
 
 
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
 import nodetool.nodes.huggingface.text_to_image
+from nodetool.workflows.base_node import BaseNode
+import nodetool.nodes.huggingface.stable_diffusion_base
 
 
-class LoadTextToImageModel(GraphNode):
+class LoadTextToImageModel(
+    SingleOutputGraphNode[types.HFTextToImage], GraphNode[types.HFTextToImage]
+):
     """
+
     Load HuggingFace model for image-to-image generation from a repo_id.
 
     Use cases:
@@ -209,24 +250,37 @@ class LoadTextToImageModel(GraphNode):
     """
 
     ModelVariant: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.text_to_image.ModelVariant
+        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
     )
-    repo_id: str | GraphNode | tuple[GraphNode, str] = Field(
+
+    repo_id: str | OutputHandle[str] = connect_field(
         default="",
         description="The repository ID of the model to use for image-to-image generation.",
     )
-    variant: nodetool.nodes.huggingface.text_to_image.ModelVariant = Field(
-        default=nodetool.nodes.huggingface.text_to_image.ModelVariant.DEFAULT,
+    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
+        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
         description="The variant of the model to use for text-to-image generation.",
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_image.LoadTextToImageModel
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_image.LoadTextToImageModel"
+        return cls.get_node_class().get_node_type()
 
 
-class QwenImage(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_image
+from nodetool.workflows.base_node import BaseNode
+
+
+class QwenImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
+
     Generates images from text prompts using Qwen-Image with support for GGUF quantization.
     image, generation, AI, text-to-image, qwen, quantization
 
@@ -237,7 +291,7 @@ class QwenImage(GraphNode):
     - Works out-of-the-box with the official Qwen model
     """
 
-    model: types.HFQwenImage | GraphNode | tuple[GraphNode, str] = Field(
+    model: types.HFQwenImage | OutputHandle[types.HFQwenImage] = connect_field(
         default=types.HFQwenImage(
             type="hf.qwen_image",
             repo_id="",
@@ -248,55 +302,66 @@ class QwenImage(GraphNode):
         ),
         description="The Qwen-Image model to use for text-to-image generation.",
     )
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    prompt: str | OutputHandle[str] = connect_field(
         default="A cat holding a sign that says hello world",
         description="A text prompt describing the desired image.",
     )
-    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    negative_prompt: str | OutputHandle[str] = connect_field(
         default="", description="A text prompt describing what to avoid in the image."
     )
-    true_cfg_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+    true_cfg_scale: float | OutputHandle[float] = connect_field(
         default=1.0, description="True CFG scale for Qwen-Image models."
     )
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+    num_inference_steps: int | OutputHandle[int] = connect_field(
         default=20, description="The number of denoising steps."
     )
-    height: int | GraphNode | tuple[GraphNode, str] = Field(
+    height: int | OutputHandle[int] = connect_field(
         default=1024, description="The height of the generated image."
     )
-    width: int | GraphNode | tuple[GraphNode, str] = Field(
+    width: int | OutputHandle[int] = connect_field(
         default=1024, description="The width of the generated image."
     )
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+    seed: int | OutputHandle[int] = connect_field(
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
-    enable_memory_efficient_attention: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_memory_efficient_attention: bool | OutputHandle[bool] = connect_field(
         default=True,
         description="Enable memory efficient attention to reduce VRAM usage.",
     )
-    enable_vae_tiling: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_vae_tiling: bool | OutputHandle[bool] = connect_field(
         default=False,
         description="Enable VAE tiling to reduce VRAM usage for large images.",
     )
-    enable_vae_slicing: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_vae_slicing: bool | OutputHandle[bool] = connect_field(
         default=False, description="Enable VAE slicing to reduce VRAM usage."
     )
-    enable_cpu_offload: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=False, description="Enable CPU offload to reduce VRAM usage."
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_image.QwenImage
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_image.QwenImage"
+        return cls.get_node_class().get_node_type()
 
 
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_image
+from nodetool.workflows.base_node import BaseNode
 import nodetool.nodes.huggingface.stable_diffusion_base
-import nodetool.nodes.huggingface.stable_diffusion_base
 
 
-class StableDiffusion(GraphNode):
+class StableDiffusion(
+    GraphNode[nodetool.nodes.huggingface.text_to_image.StableDiffusion.OutputType]
+):
     """
+
     Generates images from text prompts using Stable Diffusion.
     image, generation, AI, text-to-image, SD
 
@@ -307,38 +372,48 @@ class StableDiffusion(GraphNode):
     - Exploring AI-generated art for personal or professional use
     """
 
+    ModelVariant: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
+    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionScheduler
     )
     StableDiffusionOutputType: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     )
-    model: types.HFStableDiffusion | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFStableDiffusion(
-            type="hf.stable_diffusion",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model to use for image generation.",
+
+    model: types.HFStableDiffusion | OutputHandle[types.HFStableDiffusion] = (
+        connect_field(
+            default=types.HFStableDiffusion(
+                type="hf.stable_diffusion",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model to use for image generation.",
+        )
     )
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
+        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
+        description="The variant of the model to use for generation.",
+    )
+    prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
     )
-    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    negative_prompt: str | OutputHandle[str] = connect_field(
         default="",
         description="The negative prompt to guide what should not appear in the generated image.",
     )
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+    seed: int | OutputHandle[int] = connect_field(
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+    num_inference_steps: int | OutputHandle[int] = connect_field(
         default=25, description="Number of denoising steps."
     )
-    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+    guidance_scale: float | OutputHandle[float] = connect_field(
         default=7.5, description="Guidance scale for generation."
     )
     scheduler: (
@@ -347,43 +422,51 @@ class StableDiffusion(GraphNode):
         default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionScheduler.EulerDiscreteScheduler,
         description="The scheduler to use for the diffusion process.",
     )
-    loras: list[types.HFLoraSDConfig] | GraphNode | tuple[GraphNode, str] = Field(
-        default=[], description="The LoRA models to use for image processing"
+    loras: list[types.HFLoraSDConfig] | OutputHandle[list[types.HFLoraSDConfig]] = (
+        connect_field(
+            default=[], description="The LoRA models to use for image processing"
+        )
     )
-    ip_adapter_model: types.HFIPAdapter | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFIPAdapter(
-            type="hf.ip_adapter",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The IP adapter model to use for image processing",
+    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
+        connect_field(
+            default=types.HFIPAdapter(
+                type="hf.ip_adapter",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The IP adapter model to use for image processing",
+        )
     )
-    ip_adapter_image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="When provided the image will be fed into the IP adapter",
     )
-    ip_adapter_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+    ip_adapter_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="The strength of the IP adapter"
     )
-    pag_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+    pag_scale: float | OutputHandle[float] = connect_field(
         default=3.0,
         description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
-    latents: types.TorchTensor | GraphNode | tuple[GraphNode, str] = Field(
+    latents: types.TorchTensor | OutputHandle[types.TorchTensor] = connect_field(
         default=types.TorchTensor(
             type="torch_tensor", value=None, dtype="<i8", shape=(1,)
         ),
         description="Optional initial latents to start generation from.",
     )
-    enable_tiling: bool | GraphNode | tuple[GraphNode, str] = Field(
-        default=False,
+    enable_attention_slicing: bool | OutputHandle[bool] = connect_field(
+        default=True,
+        description="Enable attention slicing for the pipeline. This can reduce VRAM usage.",
+    )
+    enable_tiling: bool | OutputHandle[bool] = connect_field(
+        default=True,
         description="Enable tiling for the VAE. This can reduce VRAM usage.",
     )
-    enable_cpu_offload: bool | GraphNode | tuple[GraphNode, str] = Field(
-        default=False,
+    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
+        default=True,
         description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
     )
     output_type: (
@@ -392,24 +475,53 @@ class StableDiffusion(GraphNode):
         default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType.IMAGE,
         description="The type of output to generate.",
     )
-    width: int | GraphNode | tuple[GraphNode, str] = Field(
+    width: int | OutputHandle[int] = connect_field(
         default=512, description="Width of the generated image."
     )
-    height: int | GraphNode | tuple[GraphNode, str] = Field(
+    height: int | OutputHandle[int] = connect_field(
         default=512, description="Height of the generated image"
     )
 
+    @property
+    def out(self) -> "StableDiffusionOutputs":
+        return StableDiffusionOutputs(self)
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_image.StableDiffusion
+
     @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_image.StableDiffusion"
+        return cls.get_node_class().get_node_type()
 
 
+class StableDiffusionOutputs(OutputsProxy):
+    @property
+    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
+        )
+
+    @property
+    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
+        )
+
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_image
+from nodetool.workflows.base_node import BaseNode
 import nodetool.nodes.huggingface.stable_diffusion_base
-import nodetool.nodes.huggingface.stable_diffusion_base
 
 
-class StableDiffusionXL(GraphNode):
+class StableDiffusionXL(
+    GraphNode[nodetool.nodes.huggingface.text_to_image.StableDiffusionXL.OutputType]
+):
     """
+
     Generates images from text prompts using Stable Diffusion XL.
     image, generation, AI, text-to-image, SDXL
 
@@ -420,43 +532,53 @@ class StableDiffusionXL(GraphNode):
     - Visualizing interior design concepts for clients
     """
 
+    ModelVariant: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
+    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
     )
     StableDiffusionOutputType: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionOutputType
     )
-    model: types.HFStableDiffusionXL | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFStableDiffusionXL(
-            type="hf.stable_diffusion_xl",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The Stable Diffusion XL model to use for generation.",
+
+    model: types.HFStableDiffusionXL | OutputHandle[types.HFStableDiffusionXL] = (
+        connect_field(
+            default=types.HFStableDiffusionXL(
+                type="hf.stable_diffusion_xl",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The Stable Diffusion XL model to use for generation.",
+        )
     )
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
+        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
+        description="The variant of the model to use for generation.",
+    )
+    prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
     )
-    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    negative_prompt: str | OutputHandle[str] = connect_field(
         default="",
         description="The negative prompt to guide what should not appear in the generated image.",
     )
-    width: int | GraphNode | tuple[GraphNode, str] = Field(
+    width: int | OutputHandle[int] = connect_field(
         default=1024, description="Width of the generated image."
     )
-    height: int | GraphNode | tuple[GraphNode, str] = Field(
+    height: int | OutputHandle[int] = connect_field(
         default=1024, description="Height of the generated image"
     )
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+    seed: int | OutputHandle[int] = connect_field(
         default=-1, description="Seed for the random number generator."
     )
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+    num_inference_steps: int | OutputHandle[int] = connect_field(
         default=25, description="Number of inference steps."
     )
-    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+    guidance_scale: float | OutputHandle[float] = connect_field(
         default=7.0, description="Guidance scale for generation."
     )
     scheduler: (
@@ -465,39 +587,47 @@ class StableDiffusionXL(GraphNode):
         default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler.EulerDiscreteScheduler,
         description="The scheduler to use for the diffusion process.",
     )
-    pag_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+    pag_scale: float | OutputHandle[float] = connect_field(
         default=3.0,
         description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
-    loras: list[types.HFLoraSDXLConfig] | GraphNode | tuple[GraphNode, str] = Field(
-        default=[], description="The LoRA models to use for image processing"
+    loras: list[types.HFLoraSDXLConfig] | OutputHandle[list[types.HFLoraSDXLConfig]] = (
+        connect_field(
+            default=[], description="The LoRA models to use for image processing"
+        )
     )
-    lora_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+    lora_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="Strength of the LoRAs"
     )
-    ip_adapter_model: types.HFIPAdapter | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFIPAdapter(
-            type="hf.ip_adapter",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The IP adapter model to use for image processing",
+    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
+        connect_field(
+            default=types.HFIPAdapter(
+                type="hf.ip_adapter",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The IP adapter model to use for image processing",
+        )
     )
-    ip_adapter_image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="When provided the image will be fed into the IP adapter",
     )
-    ip_adapter_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+    ip_adapter_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="Strength of the IP adapter image"
     )
-    enable_tiling: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_attention_slicing: bool | OutputHandle[bool] = connect_field(
+        default=True,
+        description="Enable attention slicing for the pipeline. This can reduce VRAM usage.",
+    )
+    enable_tiling: bool | OutputHandle[bool] = connect_field(
         default=False,
         description="Enable tiling for the VAE. This can reduce VRAM usage.",
     )
-    enable_cpu_offload: bool | GraphNode | tuple[GraphNode, str] = Field(
+    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=False,
         description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
     )
@@ -508,13 +638,45 @@ class StableDiffusionXL(GraphNode):
         description="The type of output to generate.",
     )
 
+    @property
+    def out(self) -> "StableDiffusionXLOutputs":
+        return StableDiffusionXLOutputs(self)
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_image.StableDiffusionXL
+
     @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_image.StableDiffusionXL"
+        return cls.get_node_class().get_node_type()
 
 
-class Text2Image(GraphNode):
+class StableDiffusionXLOutputs(OutputsProxy):
+    @property
+    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
+        )
+
+    @property
+    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
+        )
+
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_image
+from nodetool.workflows.base_node import BaseNode
+
+
+class Text2Image(
+    GraphNode[nodetool.nodes.huggingface.text_to_image.Text2Image.OutputType]
+):
     """
+
     Generates images from text prompts using AutoPipeline for automatic pipeline selection.
     image, generation, AI, text-to-image, auto
 
@@ -525,7 +687,7 @@ class Text2Image(GraphNode):
     - Streamlined workflow for different model architectures
     """
 
-    model: types.HFTextToImage | GraphNode | tuple[GraphNode, str] = Field(
+    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
         default=types.HFTextToImage(
             type="hf.text_to_image",
             repo_id="",
@@ -536,34 +698,56 @@ class Text2Image(GraphNode):
         ),
         description="The model to use for text-to-image generation.",
     )
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    prompt: str | OutputHandle[str] = connect_field(
         default="A cat holding a sign that says hello world",
         description="A text prompt describing the desired image.",
     )
-    negative_prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    negative_prompt: str | OutputHandle[str] = connect_field(
         default="", description="A text prompt describing what to avoid in the image."
     )
-    num_inference_steps: int | GraphNode | tuple[GraphNode, str] = Field(
+    num_inference_steps: int | OutputHandle[int] = connect_field(
         default=50, description="The number of denoising steps."
     )
-    guidance_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+    guidance_scale: float | OutputHandle[float] = connect_field(
         default=7.5, description="The scale for classifier-free guidance."
     )
-    width: int | GraphNode | tuple[GraphNode, str] = Field(
+    width: int | OutputHandle[int] = connect_field(
         default=512, description="The width of the generated image."
     )
-    height: int | GraphNode | tuple[GraphNode, str] = Field(
+    height: int | OutputHandle[int] = connect_field(
         default=512, description="The height of the generated image."
     )
-    pag_scale: float | GraphNode | tuple[GraphNode, str] = Field(
+    pag_scale: float | OutputHandle[float] = connect_field(
         default=3.0,
         description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
-    seed: int | GraphNode | tuple[GraphNode, str] = Field(
+    seed: int | OutputHandle[int] = connect_field(
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
 
+    @property
+    def out(self) -> "Text2ImageOutputs":
+        return Text2ImageOutputs(self)
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_image.Text2Image
+
     @classmethod
     def get_node_type(cls):
-        return "huggingface.text_to_image.Text2Image"
+        return cls.get_node_class().get_node_type()
+
+
+class Text2ImageOutputs(OutputsProxy):
+    @property
+    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
+        )
+
+    @property
+    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
+        )

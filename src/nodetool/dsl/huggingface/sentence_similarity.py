@@ -10,11 +10,20 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.sentence_similarity
+from nodetool.workflows.base_node import BaseNode
 
 
-class SentenceSimilarity(GraphNode):
+class SentenceSimilarity(
+    SingleOutputGraphNode[types.NPArray], GraphNode[types.NPArray]
+):
     """
+
     Compares the similarity between two sentences.
     text, sentence similarity, embeddings, natural language processing
 
@@ -24,21 +33,27 @@ class SentenceSimilarity(GraphNode):
     - Sentiment analysis
     """
 
-    model: types.HFSentenceSimilarity | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFSentenceSimilarity(
-            type="hf.sentence_similarity",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model ID to use for sentence similarity",
+    model: types.HFSentenceSimilarity | OutputHandle[types.HFSentenceSimilarity] = (
+        connect_field(
+            default=types.HFSentenceSimilarity(
+                type="hf.sentence_similarity",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model ID to use for sentence similarity",
+        )
     )
-    inputs: str | GraphNode | tuple[GraphNode, str] = Field(
+    inputs: str | OutputHandle[str] = connect_field(
         default="", description="The text to compare"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.sentence_similarity.SentenceSimilarity
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.sentence_similarity.SentenceSimilarity"
+        return cls.get_node_class().get_node_type()

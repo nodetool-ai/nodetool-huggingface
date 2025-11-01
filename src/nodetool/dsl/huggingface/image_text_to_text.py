@@ -10,11 +10,18 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.image_text_to_text
+from nodetool.workflows.base_node import BaseNode
 
 
-class ImageTextToText(GraphNode):
+class ImageTextToText(SingleOutputGraphNode[str], GraphNode[str]):
     """
+
     Answers questions or follows instructions given both an image and text.
     image, text, visual question answering, multimodal, VLM
 
@@ -25,36 +32,52 @@ class ImageTextToText(GraphNode):
     - Multi-turn, instruction-following conversations grounded in an image
     """
 
-    model: types.HFImageTextToText | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFImageTextToText(
-            type="hf.image_text_to_text",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The image-text-to-text model to use.",
+    model: types.HFImageTextToText | OutputHandle[types.HFImageTextToText] = (
+        connect_field(
+            default=types.HFImageTextToText(
+                type="hf.image_text_to_text",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The image-text-to-text model to use.",
+        )
     )
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="The image to analyze.",
     )
-    prompt: str | GraphNode | tuple[GraphNode, str] = Field(
+    prompt: str | OutputHandle[str] = connect_field(
         default="Describe this image.",
         description="Instruction or question for the model about the image.",
     )
-    max_new_tokens: int | GraphNode | tuple[GraphNode, str] = Field(
+    max_new_tokens: int | OutputHandle[int] = connect_field(
         default=256, description="Maximum number of tokens to generate."
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_text_to_text.ImageTextToText
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.image_text_to_text.ImageTextToText"
+        return cls.get_node_class().get_node_type()
 
 
-class LoadImageTextToTextModel(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.image_text_to_text
+from nodetool.workflows.base_node import BaseNode
+
+
+class LoadImageTextToTextModel(
+    SingleOutputGraphNode[types.HFImageTextToText], GraphNode[types.HFImageTextToText]
+):
     """
+
     Load a Hugging Face image-text-to-text model/pipeline by repo_id.
 
     Use cases:
@@ -62,11 +85,15 @@ class LoadImageTextToTextModel(GraphNode):
     - Ensures the selected model can be loaded with the "image-text-to-text" task
     """
 
-    repo_id: str | GraphNode | tuple[GraphNode, str] = Field(
+    repo_id: str | OutputHandle[str] = connect_field(
         default="",
         description="The model repository ID to use for image-text-to-text generation.",
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_text_to_text.LoadImageTextToTextModel
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.image_text_to_text.LoadImageTextToTextModel"
+        return cls.get_node_class().get_node_type()

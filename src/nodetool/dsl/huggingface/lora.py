@@ -10,11 +10,21 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.lora
+from nodetool.workflows.base_node import BaseNode
 
 
-class LoRASelector(GraphNode):
+class LoRASelector(
+    SingleOutputGraphNode[list[types.HFLoraSDConfig]],
+    GraphNode[list[types.HFLoraSDConfig]],
+):
     """
+
     Selects up to 5 LoRA models to apply to a Stable Diffusion model.
     lora, model customization, fine-tuning, SD
 
@@ -24,7 +34,7 @@ class LoRASelector(GraphNode):
     - Experimenting with different LoRA combinations
     """
 
-    lora1: types.HFLoraSD | GraphNode | tuple[GraphNode, str] = Field(
+    lora1: types.HFLoraSD | OutputHandle[types.HFLoraSD] = connect_field(
         default=types.HFLoraSD(
             type="hf.lora_sd",
             repo_id="",
@@ -35,10 +45,10 @@ class LoRASelector(GraphNode):
         ),
         description="First LoRA model",
     )
-    strength1: float | GraphNode | tuple[GraphNode, str] = Field(
+    strength1: float | OutputHandle[float] = connect_field(
         default=1.0, description="Strength for first LoRA"
     )
-    lora2: types.HFLoraSD | GraphNode | tuple[GraphNode, str] = Field(
+    lora2: types.HFLoraSD | OutputHandle[types.HFLoraSD] = connect_field(
         default=types.HFLoraSD(
             type="hf.lora_sd",
             repo_id="",
@@ -49,10 +59,10 @@ class LoRASelector(GraphNode):
         ),
         description="Second LoRA model",
     )
-    strength2: float | GraphNode | tuple[GraphNode, str] = Field(
+    strength2: float | OutputHandle[float] = connect_field(
         default=1.0, description="Strength for second LoRA"
     )
-    lora3: types.HFLoraSD | GraphNode | tuple[GraphNode, str] = Field(
+    lora3: types.HFLoraSD | OutputHandle[types.HFLoraSD] = connect_field(
         default=types.HFLoraSD(
             type="hf.lora_sd",
             repo_id="",
@@ -63,10 +73,10 @@ class LoRASelector(GraphNode):
         ),
         description="Third LoRA model",
     )
-    strength3: float | GraphNode | tuple[GraphNode, str] = Field(
+    strength3: float | OutputHandle[float] = connect_field(
         default=1.0, description="Strength for third LoRA"
     )
-    lora4: types.HFLoraSD | GraphNode | tuple[GraphNode, str] = Field(
+    lora4: types.HFLoraSD | OutputHandle[types.HFLoraSD] = connect_field(
         default=types.HFLoraSD(
             type="hf.lora_sd",
             repo_id="",
@@ -77,10 +87,10 @@ class LoRASelector(GraphNode):
         ),
         description="Fourth LoRA model",
     )
-    strength4: float | GraphNode | tuple[GraphNode, str] = Field(
+    strength4: float | OutputHandle[float] = connect_field(
         default=1.0, description="Strength for fourth LoRA"
     )
-    lora5: types.HFLoraSD | GraphNode | tuple[GraphNode, str] = Field(
+    lora5: types.HFLoraSD | OutputHandle[types.HFLoraSD] = connect_field(
         default=types.HFLoraSD(
             type="hf.lora_sd",
             repo_id="",
@@ -91,17 +101,32 @@ class LoRASelector(GraphNode):
         ),
         description="Fifth LoRA model",
     )
-    strength5: float | GraphNode | tuple[GraphNode, str] = Field(
+    strength5: float | OutputHandle[float] = connect_field(
         default=1.0, description="Strength for fifth LoRA"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.lora.LoRASelector
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.lora.LoRASelector"
+        return cls.get_node_class().get_node_type()
 
 
-class LoRASelectorXL(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.lora
+from nodetool.workflows.base_node import BaseNode
+
+
+class LoRASelectorXL(
+    SingleOutputGraphNode[list[types.HFLoraSDXLConfig]],
+    GraphNode[list[types.HFLoraSDXLConfig]],
+):
     """
+
     Selects up to 5 LoRA models to apply to a Stable Diffusion XL model.
     lora, model customization, fine-tuning, SDXL
 
@@ -111,7 +136,7 @@ class LoRASelectorXL(GraphNode):
     - Experimenting with different LoRA combinations
     """
 
-    lora1: types.HFLoraSDXL | GraphNode | tuple[GraphNode, str] = Field(
+    lora1: types.HFLoraSDXL | OutputHandle[types.HFLoraSDXL] = connect_field(
         default=types.HFLoraSDXL(
             type="hf.lora_sdxl",
             repo_id="",
@@ -122,10 +147,10 @@ class LoRASelectorXL(GraphNode):
         ),
         description="First LoRA model",
     )
-    strength1: float | GraphNode | tuple[GraphNode, str] = Field(
+    strength1: float | OutputHandle[float] = connect_field(
         default=1.0, description="Strength for first LoRA"
     )
-    lora2: types.HFLoraSDXL | GraphNode | tuple[GraphNode, str] = Field(
+    lora2: types.HFLoraSDXL | OutputHandle[types.HFLoraSDXL] = connect_field(
         default=types.HFLoraSDXL(
             type="hf.lora_sdxl",
             repo_id="",
@@ -136,10 +161,10 @@ class LoRASelectorXL(GraphNode):
         ),
         description="Second LoRA model",
     )
-    strength2: float | GraphNode | tuple[GraphNode, str] = Field(
+    strength2: float | OutputHandle[float] = connect_field(
         default=1.0, description="Strength for second LoRA"
     )
-    lora3: types.HFLoraSDXL | GraphNode | tuple[GraphNode, str] = Field(
+    lora3: types.HFLoraSDXL | OutputHandle[types.HFLoraSDXL] = connect_field(
         default=types.HFLoraSDXL(
             type="hf.lora_sdxl",
             repo_id="",
@@ -150,10 +175,10 @@ class LoRASelectorXL(GraphNode):
         ),
         description="Third LoRA model",
     )
-    strength3: float | GraphNode | tuple[GraphNode, str] = Field(
+    strength3: float | OutputHandle[float] = connect_field(
         default=1.0, description="Strength for third LoRA"
     )
-    lora4: types.HFLoraSDXL | GraphNode | tuple[GraphNode, str] = Field(
+    lora4: types.HFLoraSDXL | OutputHandle[types.HFLoraSDXL] = connect_field(
         default=types.HFLoraSDXL(
             type="hf.lora_sdxl",
             repo_id="",
@@ -164,10 +189,10 @@ class LoRASelectorXL(GraphNode):
         ),
         description="Fourth LoRA model",
     )
-    strength4: float | GraphNode | tuple[GraphNode, str] = Field(
+    strength4: float | OutputHandle[float] = connect_field(
         default=1.0, description="Strength for fourth LoRA"
     )
-    lora5: types.HFLoraSDXL | GraphNode | tuple[GraphNode, str] = Field(
+    lora5: types.HFLoraSDXL | OutputHandle[types.HFLoraSDXL] = connect_field(
         default=types.HFLoraSDXL(
             type="hf.lora_sdxl",
             repo_id="",
@@ -178,10 +203,14 @@ class LoRASelectorXL(GraphNode):
         ),
         description="Fifth LoRA model",
     )
-    strength5: float | GraphNode | tuple[GraphNode, str] = Field(
+    strength5: float | OutputHandle[float] = connect_field(
         default=1.0, description="Strength for fifth LoRA"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.lora.LoRASelectorXL
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.lora.LoRASelectorXL"
+        return cls.get_node_class().get_node_type()

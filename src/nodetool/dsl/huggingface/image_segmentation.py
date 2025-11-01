@@ -10,29 +10,51 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.image_segmentation
+from nodetool.workflows.base_node import BaseNode
 
 
-class FindSegment(GraphNode):
+class FindSegment(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
+
     Extracts a specific segment from a list of segmentation masks.
     image, segmentation, object detection, mask
     """
 
     segments: (
-        list[types.ImageSegmentationResult] | GraphNode | tuple[GraphNode, str]
-    ) = Field(default=[], description="The segmentation masks to search")
-    segment_label: str | GraphNode | tuple[GraphNode, str] = Field(
+        list[types.ImageSegmentationResult]
+        | OutputHandle[list[types.ImageSegmentationResult]]
+    ) = connect_field(default=[], description="The segmentation masks to search")
+    segment_label: str | OutputHandle[str] = connect_field(
         default="", description="The label of the segment to extract"
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_segmentation.FindSegment
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.image_segmentation.FindSegment"
+        return cls.get_node_class().get_node_type()
 
 
-class SAM2Segmentation(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.image_segmentation
+from nodetool.workflows.base_node import BaseNode
+
+
+class SAM2Segmentation(
+    SingleOutputGraphNode[list[types.ImageRef]], GraphNode[list[types.ImageRef]]
+):
     """
+
     Performs semantic segmentation on images using SAM2 (Segment Anything Model 2).
     image, segmentation, object detection, scene parsing, mask
 
@@ -43,18 +65,33 @@ class SAM2Segmentation(GraphNode):
     - Scene understanding and object detection
     """
 
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="The input image to segment",
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_segmentation.SAM2Segmentation
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.image_segmentation.SAM2Segmentation"
+        return cls.get_node_class().get_node_type()
 
 
-class Segmentation(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.image_segmentation
+from nodetool.workflows.base_node import BaseNode
+
+
+class Segmentation(
+    SingleOutputGraphNode[list[types.ImageSegmentationResult]],
+    GraphNode[list[types.ImageSegmentationResult]],
+):
     """
+
     Performs semantic segmentation on images, identifying and labeling different regions.
     image, segmentation, object detection, scene parsing
 
@@ -63,29 +100,45 @@ class Segmentation(GraphNode):
     - Segmenting facial features in images
     """
 
-    model: types.HFImageSegmentation | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFImageSegmentation(
-            type="hf.image_segmentation",
-            repo_id="nvidia/segformer-b3-finetuned-ade-512-512",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model ID to use for the segmentation",
+    model: types.HFImageSegmentation | OutputHandle[types.HFImageSegmentation] = (
+        connect_field(
+            default=types.HFImageSegmentation(
+                type="hf.image_segmentation",
+                repo_id="nvidia/segformer-b3-finetuned-ade-512-512",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model ID to use for the segmentation",
+        )
     )
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="The input image to segment",
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_segmentation.Segmentation
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.image_segmentation.Segmentation"
+        return cls.get_node_class().get_node_type()
 
 
-class VisualizeSegmentation(GraphNode):
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.image_segmentation
+from nodetool.workflows.base_node import BaseNode
+
+
+class VisualizeSegmentation(
+    SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]
+):
     """
+
     Visualizes segmentation masks on images with labels.
     image, segmentation, visualization, mask
 
@@ -95,14 +148,19 @@ class VisualizeSegmentation(GraphNode):
     - Create labeled images for presentations or reports
     """
 
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="The input image to visualize",
     )
     segments: (
-        list[types.ImageSegmentationResult] | GraphNode | tuple[GraphNode, str]
-    ) = Field(default=[], description="The segmentation masks to visualize")
+        list[types.ImageSegmentationResult]
+        | OutputHandle[list[types.ImageSegmentationResult]]
+    ) = connect_field(default=[], description="The segmentation masks to visualize")
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_segmentation.VisualizeSegmentation
 
     @classmethod
     def get_node_type(cls):
-        return "huggingface.image_segmentation.VisualizeSegmentation"
+        return cls.get_node_class().get_node_type()

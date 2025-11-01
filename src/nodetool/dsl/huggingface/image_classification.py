@@ -10,11 +10,20 @@ import typing
 from typing import Any
 import nodetool.metadata.types
 import nodetool.metadata.types as types
-from nodetool.dsl.graph import GraphNode
+from nodetool.dsl.graph import GraphNode, SingleOutputGraphNode
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.image_classification
+from nodetool.workflows.base_node import BaseNode
 
 
-class ImageClassifier(GraphNode):
+class ImageClassifier(
+    SingleOutputGraphNode[dict[str, float]], GraphNode[dict[str, float]]
+):
     """
+
     Classifies images into predefined categories.
     image, classification, labeling, categorization
 
@@ -23,42 +32,10 @@ class ImageClassifier(GraphNode):
     - Organizing photo libraries by automatically tagging images
     """
 
-    model: types.HFImageClassification | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.HFImageClassification(
-            type="hf.image_classification",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model ID to use for the classification",
-    )
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The input image to classify",
-    )
-
-    @classmethod
-    def get_node_type(cls):
-        return "huggingface.image_classification.ImageClassifier"
-
-
-class ZeroShotImageClassifier(GraphNode):
-    """
-    Classifies images into categories without the need for training data.
-    image, classification, labeling, categorization
-
-    Use cases:
-    - Quickly categorize images without training data
-    - Identify objects in images without predefined labels
-    - Automate image tagging for large datasets
-    """
-
-    model: types.HFZeroShotImageClassification | GraphNode | tuple[GraphNode, str] = (
-        Field(
-            default=types.HFZeroShotImageClassification(
-                type="hf.zero_shot_image_classification",
+    model: types.HFImageClassification | OutputHandle[types.HFImageClassification] = (
+        connect_field(
+            default=types.HFImageClassification(
+                type="hf.image_classification",
                 repo_id="",
                 path=None,
                 variant=None,
@@ -68,15 +45,68 @@ class ZeroShotImageClassifier(GraphNode):
             description="The model ID to use for the classification",
         )
     )
-    image: types.ImageRef | GraphNode | tuple[GraphNode, str] = Field(
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="The input image to classify",
     )
-    candidate_labels: str | GraphNode | tuple[GraphNode, str] = Field(
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_classification.ImageClassifier
+
+    @classmethod
+    def get_node_type(cls):
+        return cls.get_node_class().get_node_type()
+
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.image_classification
+from nodetool.workflows.base_node import BaseNode
+
+
+class ZeroShotImageClassifier(
+    SingleOutputGraphNode[dict[str, float]], GraphNode[dict[str, float]]
+):
+    """
+
+    Classifies images into categories without the need for training data.
+    image, classification, labeling, categorization
+
+    Use cases:
+    - Quickly categorize images without training data
+    - Identify objects in images without predefined labels
+    - Automate image tagging for large datasets
+    """
+
+    model: (
+        types.HFZeroShotImageClassification
+        | OutputHandle[types.HFZeroShotImageClassification]
+    ) = connect_field(
+        default=types.HFZeroShotImageClassification(
+            type="hf.zero_shot_image_classification",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model ID to use for the classification",
+    )
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The input image to classify",
+    )
+    candidate_labels: str | OutputHandle[str] = connect_field(
         default="",
         description="The candidate labels to classify the image against, separated by commas",
     )
 
     @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_classification.ZeroShotImageClassifier
+
+    @classmethod
     def get_node_type(cls):
-        return "huggingface.image_classification.ZeroShotImageClassifier"
+        return cls.get_node_class().get_node_type()
