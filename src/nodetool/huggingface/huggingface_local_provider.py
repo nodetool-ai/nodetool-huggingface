@@ -14,7 +14,7 @@ import base64
 from queue import Queue
 import threading
 from typing import Any, AsyncGenerator, List, Set
-from diffusers.schedulers import AutoPipelineForImage2Image
+from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
 from huggingface_hub import scan_cache_dir
 from nodetool.providers.base import BaseProvider, register_provider
 from nodetool.providers.types import ImageBytes, TextToImageParams, ImageToImageParams
@@ -26,7 +26,6 @@ from nodetool.integrations.huggingface.huggingface_models import (
 import numpy as np
 from pydub import AudioSegment
 import io
-from nodetool.metadata.types import HFTextToImage, HFImageToImage, HFTextGeneration
 from io import BytesIO
 from nodetool.types.model import UnifiedModel
 from nodetool.workflows.processing_context import ProcessingContext
@@ -36,7 +35,6 @@ from nodetool.metadata.types import (
     Provider,
     TTSModel,
     Message,
-    MessageTextContent,
 )
 from nodetool.workflows.types import Chunk, NodeProgress
 from nodetool.metadata.types import ASRModel
