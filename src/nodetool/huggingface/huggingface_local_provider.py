@@ -280,9 +280,6 @@ class HuggingFaceLocalProvider(BaseProvider):
 
     provider_name = "hf_inference"
 
-    def __init__(self):
-        super().__init__()
-
     def get_container_env(self, context: ProcessingContext) -> dict[str, str]:
         """Return environment variables needed when running inside Docker."""
         # The nodes will handle HF_TOKEN internally
