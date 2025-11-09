@@ -38,7 +38,7 @@ from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
 from diffusers.pipelines.pag.pipeline_pag_sd import StableDiffusionPAGPipeline
 from diffusers.pipelines.pag.pipeline_pag_sd_xl import StableDiffusionXLPAGPipeline
-from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+from diffusers import DiffusionPipeline
 from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
 from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
 from diffusers.schedulers.scheduling_dpmsolver_multistep import (
@@ -131,23 +131,37 @@ class StableDiffusionXL(StableDiffusionXLBase):
         return "Stable Diffusion XL"
 
     async def preload_model(self, context: ProcessingContext):
-        if "playground" in self.model.repo_id:
-            raise ValueError("Playground models are not supported in this node")
+        repo_id = (self.model.repo_id or "").lower()
+        is_playground = "playground" in repo_id
 
-        self._pipeline = await self.load_model(
-            context=context,
-            model_class=StableDiffusionXLPAGPipeline,
-            model_id=self.model.repo_id,
-            path=self.model.path,
-            torch_dtype=(
-                torch.float16
-                if self.model.variant == ModelVariant.FP16
-                else torch.float32
-            ),
-            variant=self.variant.value,
-        )
+        if is_playground:
+            # Playground XL models need the generic DiffusionPipeline to avoid watermarking.
+            self._pipeline = await self.load_model(
+                context=context,
+                model_class=DiffusionPipeline,
+                model_id=self.model.repo_id or "playgroundai/playground-v2-1024px-aesthetic",
+                path=self.model.path,
+                torch_dtype=torch.float16,
+                use_safetensors=True,
+                add_watermarker=False,
+                variant="fp16",
+            )
+        else:
+            self._pipeline = await self.load_model(
+                context=context,
+                model_class=StableDiffusionXLPAGPipeline,
+                model_id=self.model.repo_id,
+                path=self.model.path,
+                torch_dtype=(
+                    torch.float16
+                    if self.model.variant == ModelVariant.FP16
+                    else torch.float32
+                ),
+                variant=self.variant.value,
+            )
         assert self._pipeline is not None
-        self._set_scheduler(self.scheduler)
+        if hasattr(self._pipeline, "scheduler"):
+            self._set_scheduler(self.scheduler)
 
     class OutputType(TypedDict):
         image: ImageRef | None
