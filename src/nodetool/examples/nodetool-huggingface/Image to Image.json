@@ -5,7 +5,10 @@
   "updated_at": "2025-07-06T22:40:19.661800",
   "name": "Image to Image",
   "description": "",
-  "tags": ["start", "image"],
+  "tags": [
+    "start",
+    "image"
+  ],
   "thumbnail": null,
   "thumbnail_url": null,
   "graph": {
@@ -47,9 +50,6 @@
           "guidance_scale": 7.5,
           "scheduler": "EulerDiscreteScheduler",
           "loras": [],
-          "ip_adapter_model": {},
-          "ip_adapter_image": {},
-          "ip_adapter_scale": 0.5,
           "pag_scale": 3,
           "detail_level": 0.5,
           "enable_tiling": false,

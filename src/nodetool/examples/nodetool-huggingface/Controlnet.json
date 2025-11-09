@@ -5,7 +5,10 @@
   "updated_at": "2025-07-06T18:52:09.116270",
   "name": "Controlnet",
   "description": "",
-  "tags": ["start", "image"],
+  "tags": [
+    "start",
+    "image"
+  ],
   "thumbnail": null,
   "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Baldassare_Castiglione%2C_by_Raffaello_Sanzio%2C_from_C2RMF_retouched.jpg/960px-Baldassare_Castiglione%2C_by_Raffaello_Sanzio%2C_from_C2RMF_retouched.jpg",
   "graph": {
@@ -26,9 +29,6 @@
           "guidance_scale": 7.5,
           "scheduler": "EulerDiscreteScheduler",
           "loras": [],
-          "ip_adapter_model": {},
-          "ip_adapter_image": {},
-          "ip_adapter_scale": 0.5,
           "pag_scale": 3,
           "detail_level": 0.5,
           "enable_tiling": false,

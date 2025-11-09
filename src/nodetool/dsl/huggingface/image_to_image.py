@@ -442,26 +442,6 @@ class StableDiffusionControlNet(
             default=[], description="The LoRA models to use for image processing"
         )
     )
-    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
-        connect_field(
-            default=types.HFIPAdapter(
-                type="hf.ip_adapter",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The IP adapter model to use for image processing",
-        )
-    )
-    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="When provided the image will be fed into the IP adapter",
-    )
-    ip_adapter_scale: float | OutputHandle[float] = connect_field(
-        default=0.5, description="The strength of the IP adapter"
-    )
     pag_scale: float | OutputHandle[float] = connect_field(
         default=3.0,
         description="Scale of the Perturbed-Attention Guidance applied to the image.",
@@ -552,7 +532,7 @@ class StableDiffusionControlNetImg2ImgNode(
     """
 
     Transforms existing images using Stable Diffusion with ControlNet guidance.
-    image, generation, image-to-image, controlnet, SD, style-transfer, ipadapter
+    image, generation, image-to-image, controlnet, SD, style-transfer
 
     Use cases:
     - Modify existing images with precise control over composition and structure
@@ -615,26 +595,6 @@ class StableDiffusionControlNetImg2ImgNode(
         connect_field(
             default=[], description="The LoRA models to use for image processing"
         )
-    )
-    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
-        connect_field(
-            default=types.HFIPAdapter(
-                type="hf.ip_adapter",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The IP adapter model to use for image processing",
-        )
-    )
-    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="When provided the image will be fed into the IP adapter",
-    )
-    ip_adapter_scale: float | OutputHandle[float] = connect_field(
-        default=0.5, description="The strength of the IP adapter"
     )
     pag_scale: float | OutputHandle[float] = connect_field(
         default=3.0,
@@ -732,7 +692,7 @@ class StableDiffusionControlNetInpaintNode(
     """
 
     Performs inpainting on images using Stable Diffusion with ControlNet guidance.
-    image, inpainting, controlnet, SD, style-transfer, ipadapter
+    image, inpainting, controlnet, SD, style-transfer
 
     Use cases:
     - Remove unwanted objects from images with precise control
@@ -797,26 +757,6 @@ class StableDiffusionControlNetInpaintNode(
         connect_field(
             default=[], description="The LoRA models to use for image processing"
         )
-    )
-    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
-        connect_field(
-            default=types.HFIPAdapter(
-                type="hf.ip_adapter",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The IP adapter model to use for image processing",
-        )
-    )
-    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="When provided the image will be fed into the IP adapter",
-    )
-    ip_adapter_scale: float | OutputHandle[float] = connect_field(
-        default=0.5, description="The strength of the IP adapter"
     )
     pag_scale: float | OutputHandle[float] = connect_field(
         default=3.0,
@@ -913,7 +853,7 @@ class StableDiffusionImg2ImgNode(
     """
 
     Transforms existing images based on text prompts using Stable Diffusion.
-    image, generation, image-to-image, SD, img2img, style-transfer, ipadapter
+    image, generation, image-to-image, SD, img2img, style-transfer
 
     Use cases:
     - Modifying existing images to fit a specific style or theme
@@ -976,26 +916,6 @@ class StableDiffusionImg2ImgNode(
         connect_field(
             default=[], description="The LoRA models to use for image processing"
         )
-    )
-    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
-        connect_field(
-            default=types.HFIPAdapter(
-                type="hf.ip_adapter",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The IP adapter model to use for image processing",
-        )
-    )
-    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="When provided the image will be fed into the IP adapter",
-    )
-    ip_adapter_scale: float | OutputHandle[float] = connect_field(
-        default=0.5, description="The strength of the IP adapter"
     )
     pag_scale: float | OutputHandle[float] = connect_field(
         default=3.0,
@@ -1139,26 +1059,6 @@ class StableDiffusionInpaintNode(
         connect_field(
             default=[], description="The LoRA models to use for image processing"
         )
-    )
-    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
-        connect_field(
-            default=types.HFIPAdapter(
-                type="hf.ip_adapter",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The IP adapter model to use for image processing",
-        )
-    )
-    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="When provided the image will be fed into the IP adapter",
-    )
-    ip_adapter_scale: float | OutputHandle[float] = connect_field(
-        default=0.5, description="The strength of the IP adapter"
     )
     pag_scale: float | OutputHandle[float] = connect_field(
         default=3.0,
@@ -1438,26 +1338,6 @@ class StableDiffusionXLControlNetNode(
     lora_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="Strength of the LoRAs"
     )
-    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
-        connect_field(
-            default=types.HFIPAdapter(
-                type="hf.ip_adapter",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The IP adapter model to use for image processing",
-        )
-    )
-    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="When provided the image will be fed into the IP adapter",
-    )
-    ip_adapter_scale: float | OutputHandle[float] = connect_field(
-        default=0.5, description="Strength of the IP adapter image"
-    )
     enable_attention_slicing: bool | OutputHandle[bool] = connect_field(
         default=True,
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage.",
@@ -1546,7 +1426,7 @@ class StableDiffusionXLImg2Img(
     """
 
     Transforms existing images based on text prompts using Stable Diffusion XL.
-    image, generation, image-to-image, SDXL, style-transfer, ipadapter
+    image, generation, image-to-image, SDXL, style-transfer
 
     Use cases:
     - Modifying existing images to fit a specific style or theme
@@ -1621,26 +1501,6 @@ class StableDiffusionXLImg2Img(
     )
     lora_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="Strength of the LoRAs"
-    )
-    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
-        connect_field(
-            default=types.HFIPAdapter(
-                type="hf.ip_adapter",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The IP adapter model to use for image processing",
-        )
-    )
-    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="When provided the image will be fed into the IP adapter",
-    )
-    ip_adapter_scale: float | OutputHandle[float] = connect_field(
-        default=0.5, description="Strength of the IP adapter image"
     )
     enable_attention_slicing: bool | OutputHandle[bool] = connect_field(
         default=True,
@@ -1786,26 +1646,6 @@ class StableDiffusionXLInpainting(
     )
     lora_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="Strength of the LoRAs"
-    )
-    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
-        connect_field(
-            default=types.HFIPAdapter(
-                type="hf.ip_adapter",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The IP adapter model to use for image processing",
-        )
-    )
-    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="When provided the image will be fed into the IP adapter",
-    )
-    ip_adapter_scale: float | OutputHandle[float] = connect_field(
-        default=0.5, description="Strength of the IP adapter image"
     )
     enable_attention_slicing: bool | OutputHandle[bool] = connect_field(
         default=True,

@@ -161,14 +161,6 @@
           "scheduler": "DPMSolverMultistepScheduler",
           "loras": [],
           "lora_scale": 0.5,
-          "ip_adapter_model": "",
-          "ip_adapter_image": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null
-          },
-          "ip_adapter_scale": 0.5,
           "hires": true,
           "enable_tiling": false,
           "strength": 0.5,

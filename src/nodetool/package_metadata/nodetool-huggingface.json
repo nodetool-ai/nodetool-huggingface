@@ -1352,7 +1352,7 @@
     },
     {
       "title": "Chroma",
-      "description": "Generates images from text prompts using Chroma, a text-to-image model based on Flux.\n    image, generation, AI, text-to-image, flux, chroma, transformer\n\n    Use cases:\n    - Generate high-quality images with Flux-based architecture\n    - Create images with advanced attention masking for enhanced fidelity\n    - Produce images with IP adapter support for style control\n    - Generate images with optimized memory usage\n    - Create professional-quality images with precise color control",
+      "description": "Generates images from text prompts using Chroma, a text-to-image model based on Flux.\n    image, generation, AI, text-to-image, flux, chroma, transformer\n\n    Use cases:\n    - Generate high-quality images with Flux-based architecture\n    - Create images with advanced attention masking for enhanced fidelity\n    - Generate images with optimized memory usage\n    - Create professional-quality images with precise color control",
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.Chroma",
       "properties": [
@@ -1438,16 +1438,6 @@
           "description": "Maximum sequence length to use with the prompt.",
           "min": 1.0,
           "max": 512.0
-        },
-        {
-          "name": "ip_adapter_image",
-          "type": {
-            "type": "image",
-            "optional": true
-          },
-          "default": null,
-          "title": "Ip Adapter Image",
-          "description": "Optional image input for IP Adapter style control."
         },
         {
           "name": "enable_cpu_offload",
@@ -2682,47 +2672,6 @@
           "description": "The LoRA models to use for image processing"
         },
         {
-          "name": "ip_adapter_model",
-          "type": {
-            "type": "hf.ip_adapter"
-          },
-          "default": {
-            "type": "hf.ip_adapter",
-            "repo_id": "",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Ip Adapter Model",
-          "description": "The IP adapter model to use for image processing"
-        },
-        {
-          "name": "ip_adapter_image",
-          "type": {
-            "type": "image"
-          },
-          "default": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null
-          },
-          "title": "Ip Adapter Image",
-          "description": "When provided the image will be fed into the IP adapter"
-        },
-        {
-          "name": "ip_adapter_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 0.5,
-          "title": "Ip Adapter Scale",
-          "description": "The strength of the IP adapter",
-          "min": 0.0,
-          "max": 1.0
-        },
-        {
           "name": "pag_scale",
           "type": {
             "type": "float"
@@ -2828,72 +2777,6 @@
         }
       ],
       "recommended_models": [
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15.bin",
-          "size_on_disk": 44642825,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_light.bin",
-          "size_on_disk": 44642819,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_vit-G.bin",
-          "size_on_disk": 46215689,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
         {
           "id": "SG161222/Realistic_Vision_V5.1_noVAE:Realistic_Vision_V5.1_fp16-no-ema.safetensors",
           "type": "hf.stable_diffusion",
@@ -3115,72 +2998,6 @@
           "has_model_index": true,
           "downloads": 5246,
           "likes": 1578
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15.bin",
-          "size_on_disk": 44642825,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_light.bin",
-          "size_on_disk": 44642819,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_vit-G.bin",
-          "size_on_disk": 46215689,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
         }
       ],
       "basic_fields": [
@@ -3364,47 +3181,6 @@
           "max": 1.0
         },
         {
-          "name": "ip_adapter_model",
-          "type": {
-            "type": "hf.ip_adapter"
-          },
-          "default": {
-            "type": "hf.ip_adapter",
-            "repo_id": "",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Ip Adapter Model",
-          "description": "The IP adapter model to use for image processing"
-        },
-        {
-          "name": "ip_adapter_image",
-          "type": {
-            "type": "image"
-          },
-          "default": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null
-          },
-          "title": "Ip Adapter Image",
-          "description": "When provided the image will be fed into the IP adapter"
-        },
-        {
-          "name": "ip_adapter_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 0.5,
-          "title": "Ip Adapter Scale",
-          "description": "Strength of the IP adapter image",
-          "min": 0.0,
-          "max": 1.0
-        },
-        {
           "name": "enable_attention_slicing",
           "type": {
             "type": "bool"
@@ -3461,72 +3237,6 @@
         }
       ],
       "recommended_models": [
-        {
-          "id": "h94/IP-Adapter:sdxl_models/ip-adapter_sdxl.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "sdxl_models/ip-adapter_sdxl.bin",
-          "size_on_disk": 702585097,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:sdxl_models/ip-adapter_sdxl_vit-h.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "sdxl_models/ip-adapter_sdxl_vit-h.bin",
-          "size_on_disk": 698390793,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:sdxl_models/ip-adapter-plus_sdxl_vit-h.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "sdxl_models/ip-adapter-plus_sdxl_vit-h.bin",
-          "size_on_disk": 1013454427,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
         {
           "id": "stabilityai/stable-diffusion-xl-base-1.0:sd_xl_base_1.0.safetensors",
           "type": "hf.stable_diffusion_xl",
@@ -6832,47 +6542,6 @@
           "description": "The LoRA models to use for image processing"
         },
         {
-          "name": "ip_adapter_model",
-          "type": {
-            "type": "hf.ip_adapter"
-          },
-          "default": {
-            "type": "hf.ip_adapter",
-            "repo_id": "",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Ip Adapter Model",
-          "description": "The IP adapter model to use for image processing"
-        },
-        {
-          "name": "ip_adapter_image",
-          "type": {
-            "type": "image"
-          },
-          "default": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null
-          },
-          "title": "Ip Adapter Image",
-          "description": "When provided the image will be fed into the IP adapter"
-        },
-        {
-          "name": "ip_adapter_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 0.5,
-          "title": "Ip Adapter Scale",
-          "description": "The strength of the IP adapter",
-          "min": 0.0,
-          "max": 1.0
-        },
-        {
           "name": "pag_scale",
           "type": {
             "type": "float"
@@ -7154,72 +6823,6 @@
           "likes": 123
         },
         {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15.bin",
-          "size_on_disk": 44642825,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_light.bin",
-          "size_on_disk": 44642819,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_vit-G.bin",
-          "size_on_disk": 46215689,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
           "id": "SG161222/Realistic_Vision_V5.1_noVAE:Realistic_Vision_V5.1_fp16-no-ema.safetensors",
           "type": "hf.stable_diffusion",
           "name": "SG161222/Realistic_Vision_V5.1_noVAE",
@@ -7440,72 +7043,6 @@
           "has_model_index": true,
           "downloads": 5246,
           "likes": 1578
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15.bin",
-          "size_on_disk": 44642825,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_light.bin",
-          "size_on_disk": 44642819,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_vit-G.bin",
-          "size_on_disk": 46215689,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
         }
       ],
       "basic_fields": [
@@ -7518,7 +7055,7 @@
     },
     {
       "title": "Stable Diffusion ControlNet (Img2Img)",
-      "description": "Transforms existing images using Stable Diffusion with ControlNet guidance.\n    image, generation, image-to-image, controlnet, SD, style-transfer, ipadapter\n\n    Use cases:\n    - Modify existing images with precise control over composition and structure\n    - Apply specific styles or concepts to photographs or artwork with guided transformations\n    - Create variations of existing visual content while maintaining certain features\n    - Enhance image editing capabilities with AI-guided transformations",
+      "description": "Transforms existing images using Stable Diffusion with ControlNet guidance.\n    image, generation, image-to-image, controlnet, SD, style-transfer\n\n    Use cases:\n    - Modify existing images with precise control over composition and structure\n    - Apply specific styles or concepts to photographs or artwork with guided transformations\n    - Create variations of existing visual content while maintaining certain features\n    - Enhance image editing capabilities with AI-guided transformations",
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.StableDiffusionControlNetImg2Img",
       "properties": [
@@ -7644,47 +7181,6 @@
           "default": [],
           "title": "Loras",
           "description": "The LoRA models to use for image processing"
-        },
-        {
-          "name": "ip_adapter_model",
-          "type": {
-            "type": "hf.ip_adapter"
-          },
-          "default": {
-            "type": "hf.ip_adapter",
-            "repo_id": "",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Ip Adapter Model",
-          "description": "The IP adapter model to use for image processing"
-        },
-        {
-          "name": "ip_adapter_image",
-          "type": {
-            "type": "image"
-          },
-          "default": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null
-          },
-          "title": "Ip Adapter Image",
-          "description": "When provided the image will be fed into the IP adapter"
-        },
-        {
-          "name": "ip_adapter_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 0.5,
-          "title": "Ip Adapter Scale",
-          "description": "The strength of the IP adapter",
-          "min": 0.0,
-          "max": 1.0
         },
         {
           "name": "pag_scale",
@@ -7982,72 +7478,6 @@
           "likes": 123
         },
         {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15.bin",
-          "size_on_disk": 44642825,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_light.bin",
-          "size_on_disk": 44642819,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_vit-G.bin",
-          "size_on_disk": 46215689,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
           "id": "SG161222/Realistic_Vision_V5.1_noVAE:Realistic_Vision_V5.1_fp16-no-ema.safetensors",
           "type": "hf.stable_diffusion",
           "name": "SG161222/Realistic_Vision_V5.1_noVAE",
@@ -8268,72 +7698,6 @@
           "has_model_index": true,
           "downloads": 5246,
           "likes": 1578
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15.bin",
-          "size_on_disk": 44642825,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_light.bin",
-          "size_on_disk": 44642819,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_vit-G.bin",
-          "size_on_disk": 46215689,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
         }
       ],
       "basic_fields": [
@@ -8346,7 +7710,7 @@
     },
     {
       "title": "Stable Diffusion ControlNet Inpaint",
-      "description": "Performs inpainting on images using Stable Diffusion with ControlNet guidance.\n    image, inpainting, controlnet, SD, style-transfer, ipadapter\n\n    Use cases:\n    - Remove unwanted objects from images with precise control\n    - Fill in missing parts of images guided by control images\n    - Modify specific areas of images while preserving the rest and maintaining structure",
+      "description": "Performs inpainting on images using Stable Diffusion with ControlNet guidance.\n    image, inpainting, controlnet, SD, style-transfer\n\n    Use cases:\n    - Remove unwanted objects from images with precise control\n    - Fill in missing parts of images guided by control images\n    - Modify specific areas of images while preserving the rest and maintaining structure",
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.StableDiffusionControlNetInpaint",
       "properties": [
@@ -8472,47 +7836,6 @@
           "default": [],
           "title": "Loras",
           "description": "The LoRA models to use for image processing"
-        },
-        {
-          "name": "ip_adapter_model",
-          "type": {
-            "type": "hf.ip_adapter"
-          },
-          "default": {
-            "type": "hf.ip_adapter",
-            "repo_id": "",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Ip Adapter Model",
-          "description": "The IP adapter model to use for image processing"
-        },
-        {
-          "name": "ip_adapter_image",
-          "type": {
-            "type": "image"
-          },
-          "default": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null
-          },
-          "title": "Ip Adapter Image",
-          "description": "When provided the image will be fed into the IP adapter"
-        },
-        {
-          "name": "ip_adapter_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 0.5,
-          "title": "Ip Adapter Scale",
-          "description": "The strength of the IP adapter",
-          "min": 0.0,
-          "max": 1.0
         },
         {
           "name": "pag_scale",
@@ -8665,72 +7988,6 @@
       ],
       "recommended_models": [
         {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15.bin",
-          "size_on_disk": 44642825,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_light.bin",
-          "size_on_disk": 44642819,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_vit-G.bin",
-          "size_on_disk": 46215689,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
           "id": "SG161222/Realistic_Vision_V5.1_noVAE:Realistic_Vision_V5.1_fp16-no-ema.safetensors",
           "type": "hf.stable_diffusion",
           "name": "SG161222/Realistic_Vision_V5.1_noVAE",
@@ -8951,72 +8208,6 @@
           "has_model_index": true,
           "downloads": 5246,
           "likes": 1578
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15.bin",
-          "size_on_disk": 44642825,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_light.bin",
-          "size_on_disk": 44642819,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_vit-G.bin",
-          "size_on_disk": 46215689,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
         }
       ],
       "basic_fields": [
@@ -9030,7 +8221,7 @@
     },
     {
       "title": "Stable Diffusion (Img2Img)",
-      "description": "Transforms existing images based on text prompts using Stable Diffusion.\n    image, generation, image-to-image, SD, img2img, style-transfer, ipadapter\n\n    Use cases:\n    - Modifying existing images to fit a specific style or theme\n    - Enhancing or altering photographs\n    - Creating variations of existing artwork\n    - Applying text-guided edits to images",
+      "description": "Transforms existing images based on text prompts using Stable Diffusion.\n    image, generation, image-to-image, SD, img2img, style-transfer\n\n    Use cases:\n    - Modifying existing images to fit a specific style or theme\n    - Enhancing or altering photographs\n    - Creating variations of existing artwork\n    - Applying text-guided edits to images",
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.StableDiffusionImg2Img",
       "properties": [
@@ -9158,47 +8349,6 @@
           "description": "The LoRA models to use for image processing"
         },
         {
-          "name": "ip_adapter_model",
-          "type": {
-            "type": "hf.ip_adapter"
-          },
-          "default": {
-            "type": "hf.ip_adapter",
-            "repo_id": "",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Ip Adapter Model",
-          "description": "The IP adapter model to use for image processing"
-        },
-        {
-          "name": "ip_adapter_image",
-          "type": {
-            "type": "image"
-          },
-          "default": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null
-          },
-          "title": "Ip Adapter Image",
-          "description": "When provided the image will be fed into the IP adapter"
-        },
-        {
-          "name": "ip_adapter_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 0.5,
-          "title": "Ip Adapter Scale",
-          "description": "The strength of the IP adapter",
-          "min": 0.0,
-          "max": 1.0
-        },
-        {
           "name": "pag_scale",
           "type": {
             "type": "float"
@@ -9307,72 +8457,6 @@
         }
       ],
       "recommended_models": [
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15.bin",
-          "size_on_disk": 44642825,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_light.bin",
-          "size_on_disk": 44642819,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_vit-G.bin",
-          "size_on_disk": 46215689,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
         {
           "id": "SG161222/Realistic_Vision_V5.1_noVAE:Realistic_Vision_V5.1_fp16-no-ema.safetensors",
           "type": "hf.stable_diffusion",
@@ -9594,72 +8678,6 @@
           "has_model_index": true,
           "downloads": 5246,
           "likes": 1578
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15.bin",
-          "size_on_disk": 44642825,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_light.bin",
-          "size_on_disk": 44642819,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_vit-G.bin",
-          "size_on_disk": 46215689,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
         }
       ],
       "basic_fields": [
@@ -9799,47 +8817,6 @@
           "description": "The LoRA models to use for image processing"
         },
         {
-          "name": "ip_adapter_model",
-          "type": {
-            "type": "hf.ip_adapter"
-          },
-          "default": {
-            "type": "hf.ip_adapter",
-            "repo_id": "",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Ip Adapter Model",
-          "description": "The IP adapter model to use for image processing"
-        },
-        {
-          "name": "ip_adapter_image",
-          "type": {
-            "type": "image"
-          },
-          "default": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null
-          },
-          "title": "Ip Adapter Image",
-          "description": "When provided the image will be fed into the IP adapter"
-        },
-        {
-          "name": "ip_adapter_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 0.5,
-          "title": "Ip Adapter Scale",
-          "description": "The strength of the IP adapter",
-          "min": 0.0,
-          "max": 1.0
-        },
-        {
           "name": "pag_scale",
           "type": {
             "type": "float"
@@ -9962,72 +8939,6 @@
         }
       ],
       "recommended_models": [
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15.bin",
-          "size_on_disk": 44642825,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_light.bin",
-          "size_on_disk": 44642819,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_vit-G.bin",
-          "size_on_disk": 46215689,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
         {
           "id": "SG161222/Realistic_Vision_V5.1_noVAE:Realistic_Vision_V5.1_fp16-no-ema.safetensors",
           "type": "hf.stable_diffusion",
@@ -10249,72 +9160,6 @@
           "has_model_index": true,
           "downloads": 5246,
           "likes": 1578
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15.bin",
-          "size_on_disk": 44642825,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_light.bin",
-          "size_on_disk": 44642819,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "models/ip-adapter_sd15_vit-G.bin",
-          "size_on_disk": 46215689,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
         }
       ],
       "basic_fields": [
@@ -10739,47 +9584,6 @@
           "max": 1.0
         },
         {
-          "name": "ip_adapter_model",
-          "type": {
-            "type": "hf.ip_adapter"
-          },
-          "default": {
-            "type": "hf.ip_adapter",
-            "repo_id": "",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Ip Adapter Model",
-          "description": "The IP adapter model to use for image processing"
-        },
-        {
-          "name": "ip_adapter_image",
-          "type": {
-            "type": "image"
-          },
-          "default": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null
-          },
-          "title": "Ip Adapter Image",
-          "description": "When provided the image will be fed into the IP adapter"
-        },
-        {
-          "name": "ip_adapter_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 0.5,
-          "title": "Ip Adapter Scale",
-          "description": "Strength of the IP adapter image",
-          "min": 0.0,
-          "max": 1.0
-        },
-        {
           "name": "enable_attention_slicing",
           "type": {
             "type": "bool"
@@ -10902,72 +9706,6 @@
         }
       ],
       "recommended_models": [
-        {
-          "id": "h94/IP-Adapter:sdxl_models/ip-adapter_sdxl.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "sdxl_models/ip-adapter_sdxl.bin",
-          "size_on_disk": 702585097,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:sdxl_models/ip-adapter_sdxl_vit-h.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "sdxl_models/ip-adapter_sdxl_vit-h.bin",
-          "size_on_disk": 698390793,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:sdxl_models/ip-adapter-plus_sdxl_vit-h.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "sdxl_models/ip-adapter-plus_sdxl_vit-h.bin",
-          "size_on_disk": 1013454427,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
         {
           "id": "stabilityai/stable-diffusion-xl-base-1.0:sd_xl_base_1.0.safetensors",
           "type": "hf.stable_diffusion_xl",
@@ -11235,7 +9973,7 @@
     },
     {
       "title": "Stable Diffusion XL (Img2Img)",
-      "description": "Transforms existing images based on text prompts using Stable Diffusion XL.\n    image, generation, image-to-image, SDXL, style-transfer, ipadapter\n\n    Use cases:\n    - Modifying existing images to fit a specific style or theme\n    - Enhancing or altering photographs\n    - Creating variations of existing artwork\n    - Applying text-guided edits to images",
+      "description": "Transforms existing images based on text prompts using Stable Diffusion XL.\n    image, generation, image-to-image, SDXL, style-transfer\n\n    Use cases:\n    - Modifying existing images to fit a specific style or theme\n    - Enhancing or altering photographs\n    - Creating variations of existing artwork\n    - Applying text-guided edits to images",
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.StableDiffusionXLImg2Img",
       "properties": [
@@ -11407,47 +10145,6 @@
           "max": 1.0
         },
         {
-          "name": "ip_adapter_model",
-          "type": {
-            "type": "hf.ip_adapter"
-          },
-          "default": {
-            "type": "hf.ip_adapter",
-            "repo_id": "",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Ip Adapter Model",
-          "description": "The IP adapter model to use for image processing"
-        },
-        {
-          "name": "ip_adapter_image",
-          "type": {
-            "type": "image"
-          },
-          "default": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null
-          },
-          "title": "Ip Adapter Image",
-          "description": "When provided the image will be fed into the IP adapter"
-        },
-        {
-          "name": "ip_adapter_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 0.5,
-          "title": "Ip Adapter Scale",
-          "description": "Strength of the IP adapter image",
-          "min": 0.0,
-          "max": 1.0
-        },
-        {
           "name": "enable_attention_slicing",
           "type": {
             "type": "bool"
@@ -11529,72 +10226,6 @@
         }
       ],
       "recommended_models": [
-        {
-          "id": "h94/IP-Adapter:sdxl_models/ip-adapter_sdxl.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "sdxl_models/ip-adapter_sdxl.bin",
-          "size_on_disk": 702585097,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:sdxl_models/ip-adapter_sdxl_vit-h.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "sdxl_models/ip-adapter_sdxl_vit-h.bin",
-          "size_on_disk": 698390793,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:sdxl_models/ip-adapter-plus_sdxl_vit-h.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "sdxl_models/ip-adapter-plus_sdxl_vit-h.bin",
-          "size_on_disk": 1013454427,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
         {
           "id": "stabilityai/stable-diffusion-xl-base-1.0:sd_xl_base_1.0.safetensors",
           "type": "hf.stable_diffusion_xl",
@@ -12031,47 +10662,6 @@
           "max": 1.0
         },
         {
-          "name": "ip_adapter_model",
-          "type": {
-            "type": "hf.ip_adapter"
-          },
-          "default": {
-            "type": "hf.ip_adapter",
-            "repo_id": "",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Ip Adapter Model",
-          "description": "The IP adapter model to use for image processing"
-        },
-        {
-          "name": "ip_adapter_image",
-          "type": {
-            "type": "image"
-          },
-          "default": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null
-          },
-          "title": "Ip Adapter Image",
-          "description": "When provided the image will be fed into the IP adapter"
-        },
-        {
-          "name": "ip_adapter_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 0.5,
-          "title": "Ip Adapter Scale",
-          "description": "Strength of the IP adapter image",
-          "min": 0.0,
-          "max": 1.0
-        },
-        {
           "name": "enable_attention_slicing",
           "type": {
             "type": "bool"
@@ -12167,72 +10757,6 @@
         }
       ],
       "recommended_models": [
-        {
-          "id": "h94/IP-Adapter:sdxl_models/ip-adapter_sdxl.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "sdxl_models/ip-adapter_sdxl.bin",
-          "size_on_disk": 702585097,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:sdxl_models/ip-adapter_sdxl_vit-h.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "sdxl_models/ip-adapter_sdxl_vit-h.bin",
-          "size_on_disk": 698390793,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
-        {
-          "id": "h94/IP-Adapter:sdxl_models/ip-adapter-plus_sdxl_vit-h.bin",
-          "type": "hf.ip_adapter",
-          "name": "h94/IP-Adapter",
-          "repo_id": "h94/IP-Adapter",
-          "path": "sdxl_models/ip-adapter-plus_sdxl_vit-h.bin",
-          "size_on_disk": 1013454427,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "text-to-image",
-            "stable-diffusion",
-            "en",
-            "arxiv:2308.06721",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 0,
-          "likes": 1239
-        },
         {
           "id": "stabilityai/stable-diffusion-xl-base-1.0:sd_xl_base_1.0.safetensors",
           "type": "hf.stable_diffusion_xl",

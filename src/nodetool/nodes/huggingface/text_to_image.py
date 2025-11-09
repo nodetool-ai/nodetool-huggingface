@@ -103,7 +103,6 @@ class StableDiffusion(StableDiffusionBaseNode):
         )
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
-        self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext):
         result = await self.run_pipeline(context, width=self.width, height=self.height)
@@ -149,7 +148,6 @@ class StableDiffusionXL(StableDiffusionXLBase):
         )
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
-        self._load_ip_adapter()
 
     class OutputType(TypedDict):
         image: ImageRef | None
@@ -904,7 +902,6 @@ class Chroma(HuggingFacePipelineNode):
     Use cases:
     - Generate high-quality images with Flux-based architecture
     - Create images with advanced attention masking for enhanced fidelity
-    - Produce images with IP adapter support for style control
     - Generate images with optimized memory usage
     - Create professional-quality images with precise color control
     """
@@ -951,10 +948,6 @@ class Chroma(HuggingFacePipelineNode):
         description="Maximum sequence length to use with the prompt.",
         ge=1,
         le=512,
-    )
-    ip_adapter_image: ImageRef | None = Field(
-        default=None,
-        description="Optional image input for IP Adapter style control.",
     )
     enable_cpu_offload: bool = Field(
         default=True,
@@ -1039,11 +1032,6 @@ class Chroma(HuggingFacePipelineNode):
         if self.seed != -1:
             generator = torch.Generator(device="cpu").manual_seed(self.seed)
 
-        # Process IP adapter image if provided
-        ip_adapter_image = None
-        if self.ip_adapter_image is not None:
-            ip_adapter_image = await context.image_to_pil(self.ip_adapter_image)
-
         # Generate the image
         pipeline_kwargs = {
             "prompt": self.prompt,
@@ -1057,10 +1045,6 @@ class Chroma(HuggingFacePipelineNode):
             "callback_on_step_end": pipeline_progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
             "callback_on_step_end_tensor_inputs": ["latents"],
         }
-
-        # Add IP adapter image if provided
-        if ip_adapter_image is not None:
-            pipeline_kwargs["ip_adapter_image"] = ip_adapter_image
 
         # Generate the image off the event loop
         pipeline = self._pipeline

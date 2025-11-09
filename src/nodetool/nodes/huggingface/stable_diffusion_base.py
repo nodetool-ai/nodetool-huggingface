@@ -17,7 +17,6 @@ from nodetool.metadata.types import (
     HFCLIPVision,
     HFControlNet,
     HFFlux,
-    HFIPAdapter,
     HFLoraSDConfig,
     HFLoraSDXLConfig,
     HFStableDiffusion,
@@ -57,33 +56,6 @@ from nodetool.workflows.types import NodeProgress
 
 log = get_logger(__name__)
 
-
-class IPAdapter_SDXL_Model(str, Enum):
-    NONE = ""
-    IP_ADAPTER = "ip-adapter_sdxl.bin"
-    IP_ADAPTER_PLUS = "ip-adapter-plus_sdxl_vit-h.bin"
-
-
-class IPAdapter_SD15_Model(str, Enum):
-    NONE = ""
-    IP_ADAPTER = "ip-adapter_sd15.bin"
-    IP_ADAPTER_LIGHT = "ip-adapter_sd15_light_v11.bin"
-    IP_ADAPTER_PLUS = "ip-adapter-plus_sd15_vit-G.bin"
-
-
-HF_IP_ADAPTER_MODELS = [
-    HFIPAdapter(repo_id="h94/IP-Adapter", path="models/ip-adapter_sd15.bin"),
-    HFIPAdapter(repo_id="h94/IP-Adapter", path="models/ip-adapter_sd15_light.bin"),
-    HFIPAdapter(repo_id="h94/IP-Adapter", path="models/ip-adapter_sd15_vit-G.bin"),
-]
-
-HF_IP_ADAPTER_XL_MODELS = [
-    HFIPAdapter(repo_id="h94/IP-Adapter", path="sdxl_models/ip-adapter_sdxl.bin"),
-    HFIPAdapter(repo_id="h94/IP-Adapter", path="sdxl_models/ip-adapter_sdxl_vit-h.bin"),
-    HFIPAdapter(
-        repo_id="h94/IP-Adapter", path="sdxl_models/ip-adapter-plus_sdxl_vit-h.bin"
-    ),
-]
 
 HF_STABLE_DIFFUSION_MODELS = [
     HFStableDiffusion(
@@ -695,20 +667,6 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         default=[],
         description="The LoRA models to use for image processing",
     )
-    ip_adapter_model: HFIPAdapter = Field(
-        default=HFIPAdapter(),
-        description="The IP adapter model to use for image processing",
-    )
-    ip_adapter_image: ImageRef = Field(
-        default=ImageRef(),
-        description="When provided the image will be fed into the IP adapter",
-    )
-    ip_adapter_scale: float = Field(
-        default=0.5,
-        ge=0.0,
-        le=1.0,
-        description="The strength of the IP adapter",
-    )
     pag_scale: float = Field(
         default=3.0,
         ge=0.0,
@@ -744,7 +702,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
 
     @classmethod
     def get_recommended_models(cls):
-        return HF_IP_ADAPTER_MODELS + HF_STABLE_DIFFUSION_MODELS + HF_IP_ADAPTER_MODELS
+        return HF_STABLE_DIFFUSION_MODELS
 
     @classmethod
     def is_visible(cls) -> bool:
@@ -761,47 +719,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         )
 
     def should_skip_cache(self):
-        if self.ip_adapter_model.repo_id != "":
-            return True
-        if len(self.loras) > 0:
-            return True
-        return False
-
-    def _load_ip_adapter(self):
-        log.debug("Checking IP Adapter configuration")
-        log.debug(f"IP Adapter model repo_id: {self.ip_adapter_model.repo_id}")
-        log.debug(f"IP Adapter model path: {self.ip_adapter_model.path}")
-        log.debug(f"IP Adapter scale: {self.ip_adapter_scale}")
-
-        if self.ip_adapter_model.repo_id != "" and self.ip_adapter_model.path:
-            log.debug("IP Adapter model is configured, loading from cache")
-            cache_path = try_to_load_from_cache(
-                self.ip_adapter_model.repo_id, self.ip_adapter_model.path
-            )
-            if cache_path is None:
-                log.error(
-                    f"IP Adapter cache not found for {self.ip_adapter_model.repo_id}/{self.ip_adapter_model.path}"
-                )
-                raise ValueError(
-                    f"Install the {self.ip_adapter_model.repo_id}/{self.ip_adapter_model.path} IP Adapter model to use it (Recommended Models above)"
-                )
-            path_parts = self.ip_adapter_model.path.split("/")
-            subfolder = "/".join(path_parts[0:-1])
-            weight_name = path_parts[-1]
-            log.info(
-                f"Loading IP Adapter {self.ip_adapter_model.repo_id}/{self.ip_adapter_model.path}"
-            )
-            log.debug(f"IP Adapter cache path: {cache_path}")
-            log.debug(f"IP Adapter subfolder: {subfolder}")
-            log.debug(f"IP Adapter weight name: {weight_name}")
-            self._pipeline.load_ip_adapter(
-                self.ip_adapter_model.repo_id,
-                subfolder=subfolder,
-                weight_name=weight_name,
-            )
-            log.debug("IP Adapter loaded successfully")
-        else:
-            log.debug("No IP Adapter model configured")
+        return len(self.loras) > 0
 
     def _set_scheduler(self, scheduler_type: StableDiffusionScheduler):
         log.debug(f"Setting scheduler to: {scheduler_type}")
@@ -887,19 +805,6 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         log.debug("Setting up generator")
         generator = self._setup_generator()
 
-        log.debug(f"IP Adapter image set: {self.ip_adapter_image.is_set()}")
-        if self.ip_adapter_image.is_set():
-            if self.ip_adapter_model.repo_id == "":
-                log.error("IP Adapter image provided but no model selected")
-                raise ValueError("Select an IP Adapter model")
-            log.debug("Converting IP Adapter image to PIL")
-            ip_adapter_image = await context.image_to_pil(self.ip_adapter_image)
-        else:
-            ip_adapter_image = None
-
-        log.debug(f"Setting IP Adapter scale: {self.ip_adapter_scale}")
-        self._pipeline.set_ip_adapter_scale(self.ip_adapter_scale)
-
         width = kwargs.get("width", None)
         height = kwargs.get("height", None)
         log.debug(f"Original dimensions - width: {width}, height: {height}")
@@ -943,7 +848,6 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                 guidance_scale=self.guidance_scale,
                 generator=generator,
                 latents=latents,
-                ip_adapter_image=ip_adapter_image,
                 cross_attention_kwargs={"scale": 1.0},
                 callback_on_step_end=self.progress_callback(
                     context, 0, self.num_inference_steps
@@ -1081,20 +985,6 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         le=1.0,
         description="Strength of the LoRAs",
     )
-    ip_adapter_model: HFIPAdapter = Field(
-        default=HFIPAdapter(),
-        description="The IP adapter model to use for image processing",
-    )
-    ip_adapter_image: ImageRef = Field(
-        default=ImageRef(),
-        description="When provided the image will be fed into the IP adapter",
-    )
-    ip_adapter_scale: float = Field(
-        default=0.5,
-        ge=0.0,
-        le=1.0,
-        description="Strength of the IP adapter image",
-    )
     enable_attention_slicing: bool = Field(
         default=True,
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage.",
@@ -1125,7 +1015,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
 
     @classmethod
     def get_recommended_models(cls):
-        return HF_IP_ADAPTER_XL_MODELS + HF_STABLE_DIFFUSION_XL_MODELS
+        return HF_STABLE_DIFFUSION_XL_MODELS
 
     @classmethod
     def is_visible(cls) -> bool:
@@ -1142,11 +1032,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         )
 
     def should_skip_cache(self):
-        if self.ip_adapter_model.repo_id != "":
-            return True
-        if len(self.loras) > 0:
-            return True
-        return False
+        return len(self.loras) > 0
 
     def _set_scheduler(self, scheduler_type: StableDiffusionScheduler):
         log.debug(f"Setting scheduler to: {scheduler_type} (XL)")
@@ -1187,42 +1073,6 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             log.debug("Using random seed (XL)")
         log.debug("Generator setup complete (XL)")
         return generator
-
-    def _load_ip_adapter(self):
-        log.debug("Checking IP Adapter configuration (XL)")
-        log.debug(f"IP Adapter model repo_id: {self.ip_adapter_model.repo_id}")
-        log.debug(f"IP Adapter model path: {self.ip_adapter_model.path}")
-        log.debug(f"IP Adapter scale: {self.ip_adapter_scale}")
-
-        if self.ip_adapter_model.repo_id != "" and self.ip_adapter_model.path:
-            log.debug("IP Adapter model is configured, loading from cache (XL)")
-            cache_path = try_to_load_from_cache(
-                self.ip_adapter_model.repo_id, self.ip_adapter_model.path
-            )
-            if cache_path is None:
-                log.error(
-                    f"IP Adapter cache not found for {self.ip_adapter_model.repo_id}/{self.ip_adapter_model.path}"
-                )
-                raise ValueError(
-                    f"Install the {self.ip_adapter_model.repo_id}/{self.ip_adapter_model.path} IP Adapter model to use it (Recommended Models above)"
-                )
-            path_parts = self.ip_adapter_model.path.split("/")
-            subfolder = "/".join(path_parts[0:-1])
-            weight_name = path_parts[-1]
-            log.info(
-                f"Loading IP Adapter {self.ip_adapter_model.repo_id}/{self.ip_adapter_model.path}"
-            )
-            log.debug(f"IP Adapter cache path: {cache_path}")
-            log.debug(f"IP Adapter subfolder: {subfolder}")
-            log.debug(f"IP Adapter weight name: {weight_name}")
-            self._pipeline.load_ip_adapter(
-                self.ip_adapter_model.repo_id,
-                subfolder=subfolder,
-                weight_name=weight_name,
-            )
-            log.debug("IP Adapter loaded successfully (XL)")
-        else:
-            log.debug("No IP Adapter model configured (XL)")
 
     def progress_callback(self, context: ProcessingContext):
         def callback(
@@ -1273,13 +1123,6 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         log.debug("Setting up generator (XL)")
         generator = self._setup_generator()
 
-        log.debug(f"IP Adapter image set (XL): {self.ip_adapter_image.is_set()}")
-        ip_adapter_image = (
-            await context.image_to_pil(self.ip_adapter_image)
-            if self.ip_adapter_image.is_set()
-            else None
-        )
-
         log.debug("Starting pipeline inference (XL)")
         log.debug(
             f"Prompt: {self.prompt[:100]}{'...' if len(self.prompt) > 100 else ''}"
@@ -1300,8 +1143,6 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
                 guidance_scale=self.guidance_scale,
                 width=self.width,
                 height=self.height,
-                ip_adapter_image=ip_adapter_image,
-                ip_adapter_scale=self.ip_adapter_scale,
                 cross_attention_kwargs={"scale": self.lora_scale},
                 callback_on_step_end=self.progress_callback(context),
                 generator=generator,

@@ -28,7 +28,6 @@ class Chroma(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     Use cases:
     - Generate high-quality images with Flux-based architecture
     - Create images with advanced attention masking for enhanced fidelity
-    - Produce images with IP adapter support for style control
     - Generate images with optimized memory usage
     - Create professional-quality images with precise color control
     """
@@ -59,13 +58,6 @@ class Chroma(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     )
     max_sequence_length: int | OutputHandle[int] = connect_field(
         default=512, description="Maximum sequence length to use with the prompt."
-    )
-    ip_adapter_image: (
-        nodetool.metadata.types.ImageRef
-        | OutputHandle[nodetool.metadata.types.ImageRef]
-        | None
-    ) = connect_field(
-        default=None, description="Optional image input for IP Adapter style control."
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=True, description="Enable CPU offload to reduce VRAM usage."
@@ -427,26 +419,6 @@ class StableDiffusion(
             default=[], description="The LoRA models to use for image processing"
         )
     )
-    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
-        connect_field(
-            default=types.HFIPAdapter(
-                type="hf.ip_adapter",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The IP adapter model to use for image processing",
-        )
-    )
-    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="When provided the image will be fed into the IP adapter",
-    )
-    ip_adapter_scale: float | OutputHandle[float] = connect_field(
-        default=0.5, description="The strength of the IP adapter"
-    )
     pag_scale: float | OutputHandle[float] = connect_field(
         default=3.0,
         description="Scale of the Perturbed-Attention Guidance applied to the image.",
@@ -598,26 +570,6 @@ class StableDiffusionXL(
     )
     lora_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="Strength of the LoRAs"
-    )
-    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
-        connect_field(
-            default=types.HFIPAdapter(
-                type="hf.ip_adapter",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The IP adapter model to use for image processing",
-        )
-    )
-    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="When provided the image will be fed into the IP adapter",
-    )
-    ip_adapter_scale: float | OutputHandle[float] = connect_field(
-        default=0.5, description="Strength of the IP adapter image"
     )
     enable_attention_slicing: bool | OutputHandle[bool] = connect_field(
         default=True,

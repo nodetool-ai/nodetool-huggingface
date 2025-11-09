@@ -4,7 +4,7 @@
   "created_at": "2025-07-06T18:41:04.869459",
   "updated_at": "2025-07-06T18:41:04.869522",
   "name": "Style Transfer",
-  "description": "Transform your images by applying artistic styles from reference images. This workflow uses IP-Adapter to transfer visual styles while ControlNet preserves the original structure. Perfect for creating artistic variations of portraits or other images.",
+  "description": "Transform your images by applying artistic styles from reference images. This workflow relies on ControlNet to preserve structure while prompts and model choices guide the style. Perfect for creating artistic variations of portraits or other images.",
   "tags": [
     "huggingface",
     "image",
@@ -25,15 +25,7 @@
               "type": "paragraph",
               "children": [
                 {
-                  "text": "* IP Adapter applies the style of an image to the generated image"
-                }
-              ]
-            },
-            {
-              "type": "paragraph",
-              "children": [
-                {
-                  "text": "* Controlnet preserves the structure of the input image"
+                  "text": "* ControlNet preserves the structure of the input image"
                 }
               ]
             },
@@ -49,7 +41,7 @@
               "type": "paragraph",
               "children": [
                 {
-                  "text": "* Experiment with different IP Adapter images"
+                  "text": "* Try different reference images"
                 }
               ]
             },
@@ -58,14 +50,6 @@
               "children": [
                 {
                   "text": "* Experiment with parameters for "
-                }
-              ]
-            },
-            {
-              "type": "paragraph",
-              "children": [
-                {
-                  "text": "  * IP Adapter Scale"
                 }
               ]
             },
@@ -96,7 +80,7 @@
                       "format": 0,
                       "mode": "normal",
                       "style": "",
-                      "text": "* IP Adapter applies the style of an image to the generated image\n* Controlnet preserves the structure of the input image\n* Experiment with different models\n* Experiment with different IP Adapter images\n* Experiment with parameters for \n  * IP Adapter Scale\n  * Strength\n  * Controlnet Conditioning Scale ",
+                      "text": "* ControlNet preserves the structure of the input image\n* Experiment with different models\n* Try different reference images\n* Experiment with parameters for \n  * Strength\n  * Controlnet Conditioning Scale ",
                       "type": "text",
                       "version": 1
                     }
@@ -147,12 +131,6 @@
           "scheduler": "HeunDiscreteScheduler",
           "loras": [],
           "lora_scale": 0.5,
-          "ip_adapter_model": {
-            "type": "hf.ip_adapter",
-            "repo_id": "h94/IP-Adapter",
-            "path": "models/ip-adapter_sd15.bin"
-          },
-          "ip_adapter_scale": 0.86,
           "hires": false,
           "enable_tiling": true,
           "controlnet": {
@@ -390,16 +368,6 @@
         "sourceHandle": "output",
         "target": "737d7244-9a11-4631-89d3-16145f8d7ce9",
         "targetHandle": "image",
-        "ui_properties": {
-          "className": "image"
-        }
-      },
-      {
-        "id": "eafe71ec-ba0b-4dfe-8aaf-85e622322091",
-        "source": "18",
-        "sourceHandle": "output",
-        "target": "14",
-        "targetHandle": "ip_adapter_image",
         "ui_properties": {
           "className": "image"
         }

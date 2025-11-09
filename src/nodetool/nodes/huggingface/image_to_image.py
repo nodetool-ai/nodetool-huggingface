@@ -641,7 +641,6 @@ class StableDiffusionControlNet(StableDiffusionBaseNode):
             torch_dtype=controlnet_dtype,
         )
         self._set_scheduler(self.scheduler)
-        self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         control_image = await context.image_to_pil(self.control_image)
@@ -661,7 +660,7 @@ class StableDiffusionControlNet(StableDiffusionBaseNode):
 class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
     """
     Transforms existing images based on text prompts using Stable Diffusion.
-    image, generation, image-to-image, SD, img2img, style-transfer, ipadapter
+    image, generation, image-to-image, SD, img2img, style-transfer
 
     Use cases:
     - Modifying existing images to fit a specific style or theme
@@ -712,7 +711,6 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
         )
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
-        self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         init_image = await context.image_to_pil(self.init_image)
@@ -734,7 +732,7 @@ class StableDiffusionControlNetModel(str, Enum):
 class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
     """
     Performs inpainting on images using Stable Diffusion with ControlNet guidance.
-    image, inpainting, controlnet, SD, style-transfer, ipadapter
+    image, inpainting, controlnet, SD, style-transfer
 
     Use cases:
     - Remove unwanted objects from images with precise control
@@ -810,7 +808,6 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
         )  # type: ignore
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
-        self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         init_image = await context.image_to_pil(self.init_image)
@@ -895,7 +892,6 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
                 variant=self.variant.value,
             )
             assert self._pipeline is not None
-            self._load_ip_adapter()
             self._set_scheduler(self.scheduler)
 
     async def process(self, context: ProcessingContext) -> OutputType:
@@ -918,7 +914,7 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
 class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
     """
     Transforms existing images using Stable Diffusion with ControlNet guidance.
-    image, generation, image-to-image, controlnet, SD, style-transfer, ipadapter
+    image, generation, image-to-image, controlnet, SD, style-transfer
 
     Use cases:
     - Modify existing images with precise control over composition and structure
@@ -997,7 +993,6 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
             config="Lykon/DreamShaper",  # workaround for missing SD15 repo
         )
         self._set_scheduler(self.scheduler)
-        self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         if self._pipeline is None:
@@ -1409,7 +1404,7 @@ class VAEDecode(HuggingFacePipelineNode):
 class StableDiffusionXLImg2Img(StableDiffusionXLBase):
     """
     Transforms existing images based on text prompts using Stable Diffusion XL.
-    image, generation, image-to-image, SDXL, style-transfer, ipadapter
+    image, generation, image-to-image, SDXL, style-transfer
 
     Use cases:
     - Modifying existing images to fit a specific style or theme
@@ -1460,7 +1455,6 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         assert self._pipeline is not None
         self._pipeline.enable_model_cpu_offload()
         self._set_scheduler(self.scheduler)
-        self._load_ip_adapter()
 
     async def process(self, context) -> OutputType:
         init_image = await context.image_to_pil(self.init_image)
@@ -1532,7 +1526,6 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
                 variant=self.variant.value,
             )
             assert self._pipeline is not None
-            self._load_ip_adapter()
             self._set_scheduler(self.scheduler)
 
     async def process(self, context: ProcessingContext) -> OutputType:
@@ -1626,7 +1619,6 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
                 torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
             ),
         )
-        self._load_ip_adapter()
 
     class OutputType(TypedDict):
         image: ImageRef | None
