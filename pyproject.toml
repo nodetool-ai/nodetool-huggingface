@@ -12,12 +12,13 @@ requires-python = ">=3.10.13"
 
 dependencies = [
     "nodetool-core>=0.6.0,<0.7.0",
-    "torch==2.9.0",
+    "torch==2.8.0",
     "torchsde",
     "torchvision",
     "torchaudio",
     "hf_xet",
     "kokoro>=0.9.4",
+    "xformers",
     # Use dev branches to keep logging API compatible across packages
     "diffusers[torch]>=0.35.1",
     "llama-index-embeddings-huggingface>=0.6.1",
