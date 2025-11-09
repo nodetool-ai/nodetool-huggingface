@@ -124,7 +124,8 @@ class StableDiffusionXL(StableDiffusionXLBase):
     - Visualizing interior design concepts for clients
     """
 
-    _pipeline: StableDiffusionXLPAGPipeline | None = None
+    _pipeline: StableDiffusionXLPAGPipeline | DiffusionPipeline | None = None
+    _using_playground_pipeline: bool = False
 
     @classmethod
     def get_title(cls):
@@ -133,6 +134,8 @@ class StableDiffusionXL(StableDiffusionXLBase):
     async def preload_model(self, context: ProcessingContext):
         repo_id = (self.model.repo_id or "").lower()
         is_playground = "playground" in repo_id
+
+        self._using_playground_pipeline = is_playground
 
         if is_playground:
             # Playground XL models need the generic DiffusionPipeline to avoid watermarking.
@@ -160,7 +163,7 @@ class StableDiffusionXL(StableDiffusionXLBase):
                 variant=self.variant.value,
             )
         assert self._pipeline is not None
-        if hasattr(self._pipeline, "scheduler"):
+        if not self._using_playground_pipeline:
             self._set_scheduler(self.scheduler)
 
     class OutputType(TypedDict):

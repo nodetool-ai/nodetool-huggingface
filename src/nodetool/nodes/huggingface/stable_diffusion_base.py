@@ -495,6 +495,14 @@ def load_loras(pipeline: Any, loras: list[HFLoraSDConfig] | list[HFLoraSDXLConfi
         log.debug("No LoRAs to load")
         return
 
+    if not hasattr(pipeline, "load_lora_weights") or not hasattr(
+        pipeline, "set_adapters"
+    ):
+        log.warning(
+            "Skipping LoRA loading because the current pipeline does not support adapters"
+        )
+        return
+
     lora_names = []
     lora_weights = []
     for i, lora in enumerate(loras):
@@ -725,9 +733,13 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         log.debug(f"Setting scheduler to: {scheduler_type}")
         scheduler_class = self.get_scheduler_class(scheduler_type)
         log.debug(f"Scheduler class: {scheduler_class.__name__}")
-        self._pipeline.scheduler = scheduler_class.from_config(
-            self._pipeline.scheduler.config
-        )
+        scheduler = getattr(self._pipeline, "scheduler", None)
+        if scheduler is None:
+            log.warning(
+                "Current pipeline does not expose a scheduler; skipping scheduler update"
+            )
+            return
+        self._pipeline.scheduler = scheduler_class.from_config(scheduler.config)
         log.debug("Scheduler set successfully")
 
     async def move_to_device(self, device: str):
@@ -780,17 +792,23 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             raise ValueError("Pipeline not initialized")
 
         log.debug(f"Enable tiling: {self.enable_tiling}")
-        if self.enable_tiling:
+        if self.enable_tiling and hasattr(self._pipeline, "vae"):
             log.debug("Enabling VAE tiling")
-            self._pipeline.vae.enable_tiling()
+            vae = getattr(self._pipeline, "vae", None)
+            if vae is not None and hasattr(vae, "enable_tiling"):
+                vae.enable_tiling()
 
         log.debug(f"Enable CPU offload: {self.enable_cpu_offload}")
-        if self.enable_cpu_offload:
+        if self.enable_cpu_offload and hasattr(
+            self._pipeline, "enable_model_cpu_offload"
+        ):
             log.debug("Enabling model CPU offload")
             self._pipeline.enable_model_cpu_offload()
 
         log.debug(f"Enable attention slicing: {self.enable_attention_slicing}")
-        if self.enable_attention_slicing:
+        if self.enable_attention_slicing and hasattr(
+            self._pipeline, "enable_attention_slicing"
+        ):
             log.debug("Enabling attention slicing")
             self._pipeline.enable_attention_slicing()
 
@@ -841,21 +859,25 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                 if unet is not None and hasattr(unet, "dtype"):
                     latents = latents.to(dtype=unet.dtype)
 
-            return self._pipeline(
-                prompt=self.prompt,
-                negative_prompt=self.negative_prompt,
-                num_inference_steps=self.num_inference_steps,
-                guidance_scale=self.guidance_scale,
-                generator=generator,
-                latents=latents,
-                cross_attention_kwargs={"scale": 1.0},
-                callback_on_step_end=self.progress_callback(
+            call_kwargs: dict[str, Any] = {
+                "prompt": self.prompt,
+                "negative_prompt": self.negative_prompt,
+                "num_inference_steps": self.num_inference_steps,
+                "guidance_scale": self.guidance_scale,
+                "generator": generator,
+                "latents": latents,
+                "callback_on_step_end": self.progress_callback(
                     context, 0, self.num_inference_steps
                 ),
-                pag_scale=self.pag_scale,
-                output_type=self.output_type.value,
-                **kwargs,
-            )
+                "pag_scale": self.pag_scale,
+                "output_type": self.output_type.value,
+            }
+
+            if self._loaded_adapters:
+                call_kwargs["cross_attention_kwargs"] = {"scale": 1.0}
+
+            call_kwargs.update(kwargs)
+            return self._pipeline(**call_kwargs)
 
         output = await asyncio.to_thread(_run_pipeline_sync)
         image = output.images[0]
@@ -1039,17 +1061,23 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         log.debug(f"Model repo_id: {self.model.repo_id}")
         scheduler_class = self.get_scheduler_class(scheduler_type)
         log.debug(f"Scheduler class: {scheduler_class.__name__}")
+        scheduler = getattr(self._pipeline, "scheduler", None)
+        if scheduler is None:
+            log.warning(
+                "Current pipeline does not expose a scheduler; skipping scheduler update (XL)"
+            )
+            return
 
         if "turbo" in self.model.repo_id:
             log.debug("Using turbo mode with trailing timestep spacing")
             self._pipeline.scheduler = scheduler_class.from_config(
-                self._pipeline.scheduler.config,
+                scheduler.config,
                 timestep_spacing="trailing",
             )
         else:
             log.debug("Using standard timestep spacing")
             self._pipeline.scheduler = scheduler_class.from_config(
-                self._pipeline.scheduler.config,
+                scheduler.config,
             )
         log.debug("Scheduler set successfully (XL)")
 
@@ -1098,17 +1126,23 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             raise ValueError("Pipeline not initialized")
 
         log.debug(f"Enable attention slicing: {self.enable_attention_slicing}")
-        if self.enable_attention_slicing:
+        if self.enable_attention_slicing and hasattr(
+            self._pipeline, "enable_attention_slicing"
+        ):
             log.debug("Enabling attention slicing")
             self._pipeline.enable_attention_slicing()
 
         log.debug(f"Enable tiling: {self.enable_tiling}")
-        if self.enable_tiling:
+        if self.enable_tiling and hasattr(self._pipeline, "vae"):
             log.debug("Enabling VAE tiling (XL)")
-            self._pipeline.vae.enable_tiling()
+            vae = getattr(self._pipeline, "vae", None)
+            if vae is not None and hasattr(vae, "enable_tiling"):
+                vae.enable_tiling()
 
         log.debug(f"Enable CPU offload: {self.enable_cpu_offload}")
-        if self.enable_cpu_offload:
+        if self.enable_cpu_offload and hasattr(
+            self._pipeline, "enable_model_cpu_offload"
+        ):
             log.debug("Enabling model CPU offload (XL)")
             self._pipeline.enable_model_cpu_offload()
 
@@ -1136,19 +1170,23 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         log.debug(f"LoRA scale: {self.lora_scale}")
 
         def _run_pipeline_sync_xl():
-            return self._pipeline(
-                prompt=self.prompt,
-                negative_prompt=self.negative_prompt,
-                num_inference_steps=self.num_inference_steps,
-                guidance_scale=self.guidance_scale,
-                width=self.width,
-                height=self.height,
-                cross_attention_kwargs={"scale": self.lora_scale},
-                callback_on_step_end=self.progress_callback(context),
-                generator=generator,
-                output_type=self.output_type.value,
-                **kwargs,
-            )
+            call_kwargs: dict[str, Any] = {
+                "prompt": self.prompt,
+                "negative_prompt": self.negative_prompt,
+                "num_inference_steps": self.num_inference_steps,
+                "guidance_scale": self.guidance_scale,
+                "width": self.width,
+                "height": self.height,
+                "callback_on_step_end": self.progress_callback(context),
+                "generator": generator,
+                "output_type": self.output_type.value,
+            }
+
+            if self._loaded_adapters:
+                call_kwargs["cross_attention_kwargs"] = {"scale": self.lora_scale}
+
+            call_kwargs.update(kwargs)
+            return self._pipeline(**call_kwargs)
 
         output = await asyncio.to_thread(_run_pipeline_sync_xl)
         image = output.images[0]
