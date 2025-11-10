@@ -12,21 +12,20 @@ from nodetool.metadata.types import (
 
 dirname = os.path.dirname(__file__)
 audio_path = os.path.join(dirname, "sample-0.mp3")
+audio = Audio(value=AudioRef(uri=audio_path, type="audio"))
+whisper = Whisper(
+    audio=audio.output,
+    model=HFAutomaticSpeechRecognition(
+        repo_id="openai/whisper-small",
+    ),
+)
 
 g = StableDiffusion(
-    prompt=(
-        Whisper(
-            audio=Audio(value=AudioRef(uri=audio_path, type="audio")),
-            model=HFAutomaticSpeechRecognition(
-                repo_id="openai/whisper-small",
-            ),
-        ),
-        "text",
-    ),
+    prompt=whisper.out.text,
     model=HFStableDiffusion(
         repo_id="SG161222/Realistic_Vision_V5.1_noVAE",
         path="Realistic_Vision_V5.1_fp16-no-ema.safetensors",
     ),
 )
 
-asyncio.run(run_graph(create_graph(g)))
+run_graph(create_graph(g))
