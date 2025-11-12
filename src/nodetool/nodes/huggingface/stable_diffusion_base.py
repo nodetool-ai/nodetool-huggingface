@@ -59,298 +59,31 @@ log = get_logger(__name__)
 
 HF_STABLE_DIFFUSION_MODELS = [
     HFStableDiffusion(
+        repo_id="stable-diffusion-v1-5/stable-diffusion-v1-5",
+        ignore_patterns=["v1-5-*.safetensors", "v1-5-*.ckpt"],
+    ),
+    HFStableDiffusion(
         repo_id="SG161222/Realistic_Vision_V5.1_noVAE",
-        path="Realistic_Vision_V5.1_fp16-no-ema.safetensors",
-    ),
-    HFStableDiffusion(
-        repo_id="digiplay/majicMIX_realistic_v7",
-        path="majicmixRealistic_v7.safetensors",
-    ),
-    HFStableDiffusion(
-        repo_id="philz1337x/epicrealism",
-        path="epicrealism_naturalSinRC1VAE.safetensors",
+        ignore_patterns=["Realistic_Vision_*.safetensors"],
     ),
     HFStableDiffusion(
         repo_id="Lykon/DreamShaper",
-        path="DreamShaper_5_beta2_noVae_half_pruned.safetensors",
+        ignore_patterns=["DreamShaper_*.safetensors"],
     ),
-    HFStableDiffusion(
-        repo_id="Lykon/DreamShaper",
-        path="DreamShaper_4BakedVae_fp16.safetensors",
-    ),
-    HFStableDiffusion(
-        repo_id="XpucT/Deliberate",
-        path="Deliberate_v6.safetensors",
-    ),
-    HFStableDiffusion(
-        repo_id="XpucT/Deliberate",
-        path="Deliberate_v6-inpainting.safetensors",
-    ),
-    HFStableDiffusion(
-        repo_id="Lykon/AbsoluteReality",
-        path="AbsoluteReality_1.8.1_pruned.safetensors",
-    ),
-    HFStableDiffusion(
-        repo_id="Lykon/AbsoluteReality",
-        path="AbsoluteReality_1.8.1_INPAINTING.inpainting.safetensors",
-    ),
-    HFStableDiffusion(
-        repo_id="gsdf/Counterfeit-V2.5",
-        path="Counterfeit-V2.5_fp16.safetensors",
-    ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/Deliberate2",
-    #     path="Deliberate_v2.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/epiCPhotoGasm", path="epiCPhotoGasmVAE.safetensors"
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/YiffyMix",
-    #     path="yiffymix_v31_vae.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/DreamPhotoGASM",
-    #     path="DreamPhotoGASM.safetensors",
-    # ),
-    # HFStableDiffusion(repo_id="Yntec/epiCEpic", path="epiCEpic.safetensors"),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/HyperRealism",
-    #     path="Hyper_Realism_1.2_fp16.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/AbsoluteReality",
-    #     path="absolutereality_v16.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/RealLife",
-    #     path="reallife_v20.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/beLIEve",
-    #     path="beLIEve.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/photoMovieXFinal",
-    #     path="photoMovieXFinal.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/aMovieX",
-    #     path="AmovieX.safetensors",
-    # ),
-    # HFStableDiffusion(repo_id="Yntec/Paramount", path="Paramount.safetensors"),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/realisticStockPhoto3",
-    #     path="realisticStockPhoto_v30SD15.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/Analog",
-    #     path="Analog.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/insaneRealistic_v2",
-    #     path="insaneRealistic_v20.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/CyberRealistic",
-    #     path="CyberRealistic20.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/photoMovieRealistic",
-    #     path="photoMovieRealistic-no-ema.safetensors",
-    # ),
-    # HFStableDiffusion(repo_id="Yntec/VisionVision", path="VisionVision.safetensors"),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/Timeless",
-    #     path="Timeless.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/HyperRemix",
-    #     path="HyperRemix.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/HyperPhotoGASM",
-    #     path="HyperPhotoGASM.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/ZootVision", path="zootvisionAlpha_v10Alpha.safetensors"
-    # ),
-    # HFStableDiffusion(repo_id="Yntec/ChunkyCat", path="ChunkyCat.safetensors"),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/TickleYourFancy",
-    #     path="TickleYourFancy.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/AllRoadsLeadToRetro",
-    #     path="AllRoadsLeadToRetro.safetensors",
-    # ),
-    # HFStableDiffusion(repo_id="Yntec/ClayStyle", path="ClayStyle.safetensors"),
-    # HFStableDiffusion(repo_id="Yntec/epiCDream", path="epicdream_lullaby.safetensors"),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/Epsilon_Naught",
-    #     path="Epsilon_Naught.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/BetterPonyDiffusion",
-    #     path="betterPonyDiffusionV6_v20.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/ZootVisionEpsilon",
-    #     path="zootvisionEpsilon_v50Epsilon.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/RevAnimatedV2Rebirth",
-    #     path="revAnimated_v2RebirthVAE.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/AnimephilesAnonymous",
-    #     path="AnimephilesAnonymous.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/GrandPrix",
-    #     path="GrandPrix.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/InsaneSurreality",
-    #     path="InsaneSurreality.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/DreamlikePhotoReal2",
-    #     path="DreamlikePhotoReal2.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/DreamShaperRemix",
-    #     path="DreamShaperRemix.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/epiCVision",
-    #     path="epiCVision.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/IncredibleWorld2",
-    #     path="incredibleWorld_v20.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/CrystalReality",
-    #     path="CrystalReality.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/ZooFun",
-    #     path="ZooFun.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/DreamWorks",
-    #     path="DreamWorks.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/AnythingV7",
-    #     path="AnythingV7.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/ICantBelieveItSNotPhotography",
-    #     path="icbinpICantBelieveIts_v10_pruned.safetensors",
-    # ),
-    # HFStableDiffusion(repo_id="Yntec/fennPhoto", path="fennPhoto_v10.safetensors"),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/Surreality",
-    #     path="ChainGirl-Surreality.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/WinningBlunder",
-    #     path="WinningBlunder.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/Neurogen",
-    #     path="NeurogenVAE.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/Hyperlink",
-    #     path="Hyperlink.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/Disneyify",
-    #     path="Disneyify_v1.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/DisneyPixarCartoon768",
-    #     path="disneyPixarCartoonVAE.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/Wonder",
-    #     path="Wonder.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/Voxel",
-    #     path="VoxelVAE.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/Vintage",
-    #     path="Vintage.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/BeautyFoolRemix",
-    #     path="BeautyFoolRemix.safetensors",
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/handpaintedRPGIcons",
-    #     path="handpaintedRPGIcons_v1.safetensors",
-    # ),
-    # HFStableDiffusion(repo_id="Yntec/526Mix", path="526mixV15.safetensors"),
-    # HFStableDiffusion(repo_id="Yntec/majicmixLux", path="majicmixLux_v1.safetensors"),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/incha_re_zoro", path="inchaReZoro_v10.safetensors"
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/3DCartoonVision", path="3dCartoonVision_v10.safetensors"
-    # ),
-    # HFStableDiffusion(repo_id="Yntec/RetroRetro", path="RetroRetro.safetensors"),
-    # HFStableDiffusion(repo_id="Yntec/ClassicToons", path="ClassicToons.safetensors"),
-    # HFStableDiffusion(repo_id="Yntec/PixelKicks", path="PixelKicks.safetensors"),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/NostalgicLife", path="NostalgicLifeVAE.safetensors"
-    # ),
-    # HFStableDiffusion(
-    #     repo_id="Yntec/ArthemyComics",
-    #     path="arthemyComics_v10Bakedvae.safetensors",
-    # ),
 ]
 
 HF_STABLE_DIFFUSION_XL_MODELS = [
     HFStableDiffusionXL(
         repo_id="stabilityai/stable-diffusion-xl-base-1.0",
-        path="sd_xl_base_1.0.safetensors",
+        ignore_patterns=["sd_xl_base_*.safetensors"],
     ),
     HFStableDiffusionXL(
         repo_id="stabilityai/stable-diffusion-xl-refiner-1.0",
-        path="sd_xl_refiner_1.0.safetensors",
+        ignore_patterns=["sd_xl_refiner_*.safetensors"],
     ),
     HFStableDiffusionXL(
-        repo_id="playgroundai/playground-v2.5-1024px-aesthetic",
-        path="playground-v2.5-1024px-aesthetic.fp16.safetensors",
-    ),
-    HFStableDiffusionXL(
-        repo_id="RunDiffusion/Juggernaut-XL-v9",
-        path="Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors",
-    ),
-    HFStableDiffusionXL(
-        repo_id="dataautogpt3/ProteusV0.5",
-        path="proteusV0.5.safetensors",
-    ),
-    HFStableDiffusionXL(
-        repo_id="Lykon/dreamshaper-xl-lightning",
-        path="DreamShaperXL_Lightning.safetensors",
-    ),
-    HFStableDiffusionXL(
-        repo_id="Lykon/AAM_XL_AnimeMix",
-        path="AAM_XL_Anime_Mix.safetensors",
-    ),
-    HFStableDiffusionXL(
-        repo_id="stabilityai/sdxl-turbo", path="sd_xl_turbo_1.0_fp16.safetensors"
-    ),
-    HFStableDiffusionXL(
-        repo_id="Lykon/dreamshaper-xl-v2-turbo",
-        path="DreamShaperXL_Turbo_v2_1.safetensors",
-    ),
+        repo_id="fal-collab-models/dreamshaper-xl-1-0",
+    )
 ]
 
 HF_STABLE_DIFFUSION_3_MODELS = [
@@ -361,21 +94,6 @@ HF_STABLE_DIFFUSION_3_MODELS = [
     HFStableDiffusion3(
         repo_id="Comfy-Org/stable-diffusion-3.5-fp8",
         path="sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors",
-    ),
-]
-
-HF_FLUX_MODELS = [
-    HFFlux(
-        repo_id="Comfy-Org/flux1-dev",
-        path="flux1-dev-fp8.safetensors",
-    ),
-    HFFlux(
-        repo_id="Comfy-Org/flux1-schnell",
-        path="flux1-schnell-fp8.safetensors",
-    ),
-    HFFlux(
-        repo_id="black-forest-labs/FLUX.1-Fill-dev",
-        path="flux1-fill-dev.safetensors",
     ),
 ]
 
@@ -457,25 +175,6 @@ HF_CLIP_VISION_MODELS = [
     HFCLIPVision(
         repo_id="h94/IP-Adapter",
         path="sdxl_models/image_encoder/model.safetensors",
-    ),
-]
-
-HF_UNET_MODELS = [
-    HFUnet(
-        repo_id="Comfy-Org/mochi_preview_repackaged",
-        path="split_files/diffusion_models/mochi_preview_bf16.safetensors",
-    ),
-    HFUnet(
-        repo_id="Comfy-Org/mochi_preview_repackaged",
-        path="split_files/diffusion_models/mochi_preview_fp8_scaled.safetensors",
-    ),
-    HFUnet(
-        repo_id="black-forest-labs/FLUX.1-dev",
-        path="flux1-dev.safetensors",
-    ),
-    HFUnet(
-        repo_id="black-forest-labs/FLUX.1-schnell",
-        path="flux1-schnell.safetensors",
     ),
 ]
 

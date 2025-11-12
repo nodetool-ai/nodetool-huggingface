@@ -13,6 +13,7 @@ from huggingface_hub import try_to_load_from_cache
 from nodetool.metadata.types import (
     HFControlNet,
     HFImageToImage,
+    HFQwenImageEdit,
     HFRealESRGAN,
     HFStableDiffusionUpscale,
     HFVAE,
@@ -396,7 +397,14 @@ class ImageToImage(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
-            self._pipeline.to(device)
+            try:
+                self._pipeline.to(device)
+            except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                raise ValueError(
+                    "VRAM out of memory while moving Qwen Image Edit pipeline to device. "
+                    "Try enabling 'CPU offload' in the advanced node properties (if available), "
+                    "or reduce image size/steps."
+                ) from e
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
@@ -426,7 +434,14 @@ class ImageToImage(HuggingFacePipelineNode):
         if self.negative_prompt:
             kwargs["negative_prompt"] = self.negative_prompt
 
-        output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
+        try:
+            output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
+        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            raise ValueError(
+                "VRAM out of memory while running Qwen Image Edit. "
+                "Enable 'CPU offload' in the advanced node properties (if available), "
+                "or reduce image size/steps."
+            ) from e
         image = output.images[0]
 
         return await context.image_from_pil(image)
@@ -1811,6 +1826,13 @@ class QwenImageEdit(HuggingFacePipelineNode):
     - Background and clothing changes
     - Complex image transformations guided by text
     """
+    model: HFQwenImageEdit = Field(
+        default=HFQwenImageEdit(
+            repo_id="QuantStack/Qwen-Image-Edit-2509-GGUF",
+            path="Qwen-Image-Edit-2509-Q4_K_M.gguf",
+        ),
+        description="The Qwen-Image-Edit model to use for image editing.",
+    )
 
     image: ImageRef = Field(
         default=ImageRef(), title="Input Image", description="The input image to edit"
@@ -1861,9 +1883,13 @@ class QwenImageEdit(HuggingFacePipelineNode):
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
         return [
             HuggingFaceModel(
-                repo_id="Qwen/Qwen-Image-Edit",
-                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
-            )
+                repo_id="QuantStack/Qwen-Image-Edit-2509-GGUF",
+                path="Qwen-Image-Edit-2509-Q4_K_M.gguf",
+            ),
+            HuggingFaceModel(
+                repo_id="QuantStack/Qwen-Image-Edit-2509-GGUF",
+                path="Qwen-Image-Edit-2509-Q8_0.gguf",
+            ),
         ]
 
     async def preload_model(self, context: ProcessingContext):

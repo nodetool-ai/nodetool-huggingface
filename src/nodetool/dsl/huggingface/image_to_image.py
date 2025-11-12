@@ -286,6 +286,17 @@ class QwenImageEdit(SingleOutputGraphNode[types.ImageRef], GraphNode[types.Image
     - Complex image transformations guided by text
     """
 
+    model: types.HFQwenImageEdit | OutputHandle[types.HFQwenImageEdit] = connect_field(
+        default=types.HFQwenImageEdit(
+            type="hf.qwen_image_edit",
+            repo_id="QuantStack/Qwen-Image-Edit-2509-GGUF",
+            path="Qwen-Image-Edit-2509-Q4_K_M.gguf",
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The Qwen-Image-Edit model to use for image editing.",
+    )
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="The input image to edit",

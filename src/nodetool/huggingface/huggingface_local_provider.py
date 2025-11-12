@@ -43,7 +43,8 @@ from nodetool.config.logging_config import get_logger
 import torch
 from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
 from nodetool.ml.core.model_manager import ModelManager
-from huggingface_hub import try_to_load_from_cache
+from huggingface_hub import try_to_load_from_cache, _CACHED_NO_EXIST
+import os
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
 from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import StableDiffusion3Pipeline
@@ -102,6 +103,45 @@ def get_model_type_from_id(model_id: str) -> str | None:
     return None
 
 
+def _detect_cached_variant(repo_id: str) -> str | None:
+    """Detect a cached diffusers variant (e.g., fp16) for a given repo.
+
+    Heuristic: locate any cached file for the repo, then scan its snapshot
+    folder for files containing ".fp16." in the filename. If found, return
+    "fp16". Otherwise return None.
+
+    This avoids passing a non-existent variant to diffusers.from_pretrained,
+    which would error if the repo does not publish that variant.
+    """
+    # Try a few common files to retrieve the snapshot directory from cache
+    probe_files = [
+        "model_index.json",
+        "unet/diffusion_pytorch_model.safetensors",
+        "vae/diffusion_pytorch_model.safetensors",
+        "text_encoder/model.safetensors",
+    ]
+    snapshot_dir: str | None = None
+    for fname in probe_files:
+        p = try_to_load_from_cache(repo_id, fname)
+        if isinstance(p, str):
+            snapshot_dir = os.path.dirname(p)
+            break
+        if p is _CACHED_NO_EXIST:
+            # This file not in cache; try next
+            continue
+
+    if not snapshot_dir or not os.path.isdir(snapshot_dir):
+        return None
+
+    # Walk snapshot dir and look for any *.fp16.* file
+    for root, _, files in os.walk(snapshot_dir):
+        for f in files:
+            if ".fp16." in f:
+                return "fp16"
+
+    return None
+
+
 async def get_hf_cached_single_file_image_models() -> List[ImageModel]:
     """
     Get single-file image models from HF cache based on recommended models.
@@ -155,6 +195,7 @@ async def get_hf_cached_single_file_image_models() -> List[ImageModel]:
                     id=model_id,
                     name=model_config.name,
                     provider=Provider.HuggingFace,
+                    supported_tasks=["text_to_image", "image_to_image"],
                 )
             )
             log.debug(f"Found cached single-file model: {model_id}")
@@ -358,7 +399,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 pipeline = AutoPipelineForText2Image.from_pretrained(
                     model_id,
                     torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                    variant="fp16" if torch.cuda.is_available() else None,
+                    variant=_detect_cached_variant(model_id),
                 )
 
             pipeline.to(context.device)
@@ -488,7 +529,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 pipeline = AutoPipelineForImage2Image.from_pretrained(
                     model_id,
                     torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                    variant="fp16" if torch.cuda.is_available() else None,
+                    variant=_detect_cached_variant(model_id),
                 )
 
             assert pipeline is not None
@@ -925,6 +966,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 id=model.id,  # Already in "repo_id:filename" format
                 name=model.name,
                 provider=Provider.HuggingFace,
+                supported_tasks=["text_generation"],
             )
             for model in models
         ]
@@ -940,7 +982,12 @@ class HuggingFaceLocalProvider(BaseProvider):
         # Get multi-file models
         unified_models = await get_hf_cached_image_models()
         image_models = [
-            ImageModel(id=model.id, name=model.name, provider=Provider.HuggingFace)
+            ImageModel(
+                id=model.id,
+                name=model.name,
+                provider=Provider.HuggingFace,
+                supported_tasks=["text_to_image", "image_to_image"],
+            )
             for model in unified_models
         ]
 

@@ -38,7 +38,7 @@ from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
 from diffusers.pipelines.pag.pipeline_pag_sd import StableDiffusionPAGPipeline
 from diffusers.pipelines.pag.pipeline_pag_sd_xl import StableDiffusionXLPAGPipeline
-from diffusers import DiffusionPipeline
+from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
 from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
 from diffusers.schedulers.scheduling_dpmsolver_multistep import (
@@ -314,7 +314,13 @@ class Text2Image(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
-            self._pipeline.to(device)
+            try:
+                self._pipeline.to(device)
+            except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                raise ValueError(
+                    "VRAM out of memory while moving Kolors pipeline to device. "
+                    "Enable 'CPU offload' in advanced node properties or reduce image size/steps."
+                ) from e
 
     class OutputType(TypedDict):
         image: ImageRef | None
@@ -442,84 +448,15 @@ class Flux(HuggingFacePipelineNode):
     @classmethod
     def get_recommended_models(cls) -> list[HFFlux]:
         return [
-            HFFlux(
-                repo_id="black-forest-labs/FLUX.1-schnell",
-                allow_patterns=[
-                    "**/*.safetensors",
-                    "**/*.json",
-                    "**/*.txt",
-                    "*.json",
-                ],
-            ),
-            HFFlux(
-                repo_id="black-forest-labs/FLUX.1-dev",
-                allow_patterns=[
-                    "**/*.safetensors",
-                    "**/*.json",
-                    "**/*.txt",
-                    "*.json",
-                ],
-            ),
-            HFFlux(
-                repo_id="black-forest-labs/FLUX.1-Fill-dev",
-                allow_patterns=[
-                    "**/*.safetensors",
-                    "**/*.json",
-                    "**/*.txt",
-                    "*.json",
-                ],
-            ),
-            HFFlux(
-                repo_id="black-forest-labs/FLUX.1-Canny-dev",
-                allow_patterns=[
-                    "**/*.safetensors",
-                    "**/*.json",
-                    "**/*.txt",
-                    "*.json",
-                ],
-            ),
-            HFFlux(
-                repo_id="black-forest-labs/FLUX.1-Depth-dev",
-                allow_patterns=[
-                    "**/*.safetensors",
-                    "**/*.json",
-                    "**/*.txt",
-                    "*.json",
-                ],
-            ),
             # GGUF quantized models
-            HFFlux(
-                repo_id="city96/FLUX.1-dev-gguf",
-                path="flux1-dev-Q2_K.gguf",
-            ),
-            HFFlux(
-                repo_id="city96/FLUX.1-dev-gguf",
-                path="flux1-dev-Q3_K_S.gguf",
-            ),
             HFFlux(
                 repo_id="city96/FLUX.1-dev-gguf",
                 path="flux1-dev-Q4_K_S.gguf",
             ),
-            HFFlux(
-                repo_id="city96/FLUX.1-dev-gguf",
-                path="flux1-dev-Q5_K_S.gguf",
-            ),
             # FLUX.1-schnell GGUF models
             HFFlux(
                 repo_id="city96/FLUX.1-schnell-gguf",
-                path="flux1-schnell-Q2_K.gguf",
-            ),
-            HFFlux(
-                repo_id="city96/FLUX.1-schnell-gguf",
-                path="flux1-schnell-Q3_K_S.gguf",
-            ),
-            HFFlux(
-                repo_id="city96/FLUX.1-schnell-gguf",
                 path="flux1-schnell-Q4_K_S.gguf",
-            ),
-            HFFlux(
-                repo_id="city96/FLUX.1-schnell-gguf",
-                path="flux1-schnell-Q5_K_S.gguf",
             ),
         ]
 
@@ -686,13 +623,25 @@ class Flux(HuggingFacePipelineNode):
                 # When moving to CPU, we should disable CPU offload and move everything to CPU
                 if device == "cpu":
                     # Disable CPU offload and move all components to CPU
-                    self._pipeline.to(device)
+                    try:
+                        self._pipeline.to(device)
+                    except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                        raise ValueError(
+                            "VRAM out of memory while moving Flux to device. "
+                            "Enable 'CPU offload' in the advanced node properties or reduce image size/steps."
+                        ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
                     self._pipeline.enable_sequential_cpu_offload()
             else:
                 # Normal device movement without CPU offload
-                self._pipeline.to(device)
+                try:
+                    self._pipeline.to(device)
+                except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                    raise ValueError(
+                        "VRAM out of memory while moving Flux to device. "
+                        "Try enabling 'CPU offload' in the advanced node properties, reduce image size, or lower steps."
+                    ) from e
 
             # Apply memory optimizations only when on GPU
             if device != "cpu":
@@ -760,7 +709,14 @@ class Flux(HuggingFacePipelineNode):
                 callback_on_step_end_tensor_inputs=["latents"],
             )
 
-        output = await asyncio.to_thread(_run_pipeline_sync)
+        try:
+            output = await asyncio.to_thread(_run_pipeline_sync)
+        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            raise ValueError(
+                "VRAM out of memory while running Flux. "
+                "Try enabling 'CPU offload' in the advanced node properties "
+                "(Enable CPU offload), reduce image size, or lower steps."
+            ) from e
 
         image = output.images[0]  # type: ignore
 
@@ -894,7 +850,14 @@ class Kolors(HuggingFacePipelineNode):
                 callback_on_step_end_tensor_inputs=["latents"],
             )
 
-        output = await asyncio.to_thread(_run_pipeline_sync)
+        try:
+            output = await asyncio.to_thread(_run_pipeline_sync)
+        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            raise ValueError(
+                "VRAM out of memory while running Qwen-Image. "
+                "Enable 'CPU offload' in the advanced node properties (Enable CPU offload), "
+                "or reduce image size/steps."
+            ) from e
 
         image = output.images[0]  # type: ignore
 
@@ -1021,13 +984,25 @@ class Chroma(HuggingFacePipelineNode):
             if self.enable_cpu_offload:
                 # When moving to CPU, disable CPU offload and move all components to CPU
                 if device == "cpu":
-                    self._pipeline.to(device)
+                    try:
+                        self._pipeline.to(device)
+                    except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                        raise ValueError(
+                            "VRAM out of memory while moving Chroma pipeline to device. "
+                            "Enable 'CPU offload' in the advanced node properties or reduce image size/steps."
+                        ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
                     self._pipeline.enable_model_cpu_offload()
             else:
                 # Normal device movement without CPU offload
-                self._pipeline.to(device)
+                try:
+                    self._pipeline.to(device)
+                except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                    raise ValueError(
+                        "VRAM out of memory while moving Chroma pipeline to device. "
+                        "Try enabling 'CPU offload' in the advanced node properties, reduce image size, or lower steps."
+                    ) from e
 
             # Apply memory optimizations only when on GPU
             if device != "cpu":
@@ -1170,51 +1145,12 @@ class QwenImage(HuggingFacePipelineNode):
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
         return [
             HFQwenImage(
-                repo_id="Qwen/Qwen-Image",
-                allow_patterns=[
-                    "**/*.safetensors",
-                    "**/*.json",
-                    "**/*.txt",
-                    "*.json",
-                ],
-            ),
-            # GGUF quantized models
-            HFQwenImage(
                 repo_id="city96/Qwen-Image-gguf",
-                path="qwen-image-Q2_K.gguf",
-            ),
-            HFQwenImage(
-                repo_id="city96/Qwen-Image-gguf",
-                path="qwen-image-Q3_K_S.gguf",
-            ),
-            HFQwenImage(
-                repo_id="city96/Qwen-Image-gguf",
-                path="qwen-image-Q4_K_S.gguf",
-            ),
-            HFQwenImage(
-                repo_id="city96/Qwen-Image-gguf",
-                path="qwen-image-Q5_K_S.gguf",
-            ),
-            HFQwenImage(
-                repo_id="city96/Qwen-Image-gguf",
-                path="qwen-image-Q6_K.gguf",
+                path="qwen-image-Q4_K_M.gguf",
             ),
             HFQwenImage(
                 repo_id="city96/Qwen-Image-gguf",
                 path="qwen-image-Q8_0.gguf",
-            ),
-            HFQwenImage(
-                repo_id="city96/Qwen-Image-gguf",
-                path="qwen-image-BF16.gguf",
-            ),
-            HFLoraQwenImage(
-                repo_id="lightx2v/Qwen-Image-Lightning",
-                path="Qwen-Image-Lightning-8steps-V1.1.safetensors",
-            ),
-            # FP8 Text Encoder for optimized performance
-            HFQwenImage(
-                repo_id="Comfy-Org/Qwen-Image_ComfyUI",
-                path="split_files/text_encoders/qwen_image_text_encoder_fp8.safetensors",
             ),
         ]
 
@@ -1486,13 +1422,25 @@ class QwenImage(HuggingFacePipelineNode):
             if self.enable_cpu_offload:
                 # When moving to CPU, disable CPU offload and move all components to CPU
                 if device == "cpu":
-                    self._pipeline.to(device)
+                    try:
+                        self._pipeline.to(device)
+                    except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                        raise ValueError(
+                            "VRAM out of memory while moving Qwen-Image pipeline to device. "
+                            "Enable 'CPU offload' in advanced node properties or reduce image size/steps."
+                        ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
                     self._pipeline.enable_model_cpu_offload()
             else:
                 # Normal device movement without CPU offload
-                self._pipeline.to(device)
+                try:
+                    self._pipeline.to(device)
+                except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                    raise ValueError(
+                        "VRAM out of memory while moving Qwen-Image pipeline to device. "
+                        "Enable 'CPU offload' in advanced node properties or reduce image size/steps."
+                    ) from e
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
