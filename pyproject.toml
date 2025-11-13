@@ -4,21 +4,21 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nodetool-huggingface"
-version = "0.6.1"
+version = "0.6.2rc1"
 description = "HuggingFace nodes for Nodetool"
 readme = "README.md"
 authors = [{ name = "Matthias Georgi", email = "matti.georgi@gmail.com" }]
 requires-python = ">=3.10.13"
 
 dependencies = [
-    "nodetool-core>=0.6.0,<0.7.0",
+    "nodetool-core>=0.6.1,<0.7.0",
     "torch==2.8.0",
     "torchsde",
     "torchvision",
     "torchaudio",
     "hf_xet",
     "kokoro>=0.9.4",
-    "xformers",
+    # "xformers",
     # Use dev branches to keep logging API compatible across packages
     "diffusers[torch]>=0.35.1",
     "llama-index-embeddings-huggingface>=0.6.1",
