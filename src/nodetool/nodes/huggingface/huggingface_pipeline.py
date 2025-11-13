@@ -1,21 +1,17 @@
-from pathlib import Path
 from nodetool.workflows.graph import BaseNode
 import torch
 import asyncio
-from nodetool.config.environment import Environment
 from nodetool.config.logging_config import get_logger
 from nodetool.nodes.huggingface.huggingface_node import (
     setup_hf_logging,
 )
-from nodetool.types.job import JobUpdate
 from nodetool.workflows.processing_context import ProcessingContext
-from pydantic import Field
 from transformers.pipelines.base import Pipeline
-from transformers.pipelines import pipeline
-from typing import Any
-from nodetool.ml.core.model_manager import ModelManager
-from huggingface_hub.file_download import try_to_load_from_cache
 from typing import Any, TypeVar
+from nodetool.huggingface.huggingface_local_provider import (
+    load_pipeline,
+    load_model,
+)
 
 T = TypeVar("T")
 
@@ -47,65 +43,17 @@ class HuggingFacePipelineNode(BaseNode):
         torch_dtype: torch.dtype | None = None,
         **kwargs: Any,
     ):
-        if model_id == "" or model_id is None:
-            raise ValueError("Please select a model")
-
-        cached_model = ModelManager.get_model(model_id, pipeline_task)
-        if cached_model:
-            return cached_model
-
-        # if not context.is_huggingface_model_cached(model_id):
-        #     raise ValueError(f"Model {model_id} must be downloaded first")
-
-        if device is None:
-            device = context.device
-
-        if (
-            isinstance(model_id, str)
-            and not self.should_skip_cache()
-            and not Path(model_id).expanduser().exists()
-        ):
-            repo_id_for_cache = model_id
-            revision = kwargs.get("revision")
-            cache_dir = kwargs.get("cache_dir")
-
-            if "@" in repo_id_for_cache and revision is None:
-                repo_id_for_cache, revision = repo_id_for_cache.rsplit("@", 1)
-
-            cache_checked = False
-            for candidate in ("model_index.json", "config.json"):
-                try:
-                    cache_path = try_to_load_from_cache(
-                        repo_id_for_cache,
-                        candidate,
-                        revision=revision,
-                        cache_dir=cache_dir,
-                    )
-                except Exception:
-                    cache_path = None
-
-                if cache_path:
-                    cache_checked = True
-                    break
-
-            if not cache_checked:
-                raise ValueError(f"Model {model_id} must be downloaded first")
-
-        context.post_message(
-            JobUpdate(
-                status="running",
-                message=f"Loading pipeline {type(model_id) == str and model_id or pipeline_task} from HuggingFace",
-            )
-        )
-        model = pipeline(
-            pipeline_task,  # type: ignore
-            model=model_id,
-            torch_dtype=torch_dtype,
+        """Load a HuggingFace pipeline model (instance method wrapper)."""
+        return await load_pipeline(
+            self.id,
+            context,
+            pipeline_task,
+            model_id,
             device=device,
+            torch_dtype=torch_dtype,
+            skip_cache=self.should_skip_cache(),
             **kwargs,
-        )  # type: ignore
-        ModelManager.set_model(self.id, model_id, pipeline_task, model)
-        return model  # type: ignore
+        )
 
     async def load_model(
         self,
@@ -118,58 +66,18 @@ class HuggingFacePipelineNode(BaseNode):
         skip_cache: bool = False,
         **kwargs: Any,
     ) -> T:
-        if model_id == "":
-            raise ValueError("Please select a model")
-
-        if not skip_cache and not self.should_skip_cache():
-            cached_model = ModelManager.get_model(model_id, model_class.__name__, path)
-            if cached_model:
-                return cached_model
-
-        if path:
-            cache_path = try_to_load_from_cache(model_id, path)
-            if not cache_path:
-                raise ValueError(f"Model {model_id}/{path} must be downloaded first")
-            log.info(f"Loading model {model_id}/{path} from {cache_path}")
-            context.post_message(
-                JobUpdate(
-                    status="running",
-                    message=f"Loading model {model_id} from {cache_path}",
-                )
-            )
-
-            if hasattr(model_class, "from_single_file"):
-                model = model_class.from_single_file(  # type: ignore
-                    cache_path,
-                    torch_dtype=torch_dtype,
-                    variant=variant,
-                    **kwargs,
-                )
-            else:
-                # Fallback to from_pretrained for classes without from_single_file
-                model = model_class.from_pretrained(  # type: ignore
-                    model_id,
-                    torch_dtype=torch_dtype,
-                    variant=variant,
-                    **kwargs,
-                )
-        else:
-            log.info(f"Loading model {model_id} from HuggingFace")
-            context.post_message(
-                JobUpdate(
-                    status="running",
-                    message=f"Loading model {model_id} from HuggingFace",
-                )
-            )
-            model = model_class.from_pretrained(  # type: ignore
-                model_id,
-                torch_dtype=torch_dtype,
-                variant=variant,
-                **kwargs,
-            )
-
-        ModelManager.set_model(self.id, model_id, model_class.__name__, model, path)
-        return model
+        """Load a HuggingFace model (instance method wrapper)."""
+        return await load_model(
+            self.id,
+            context,
+            model_class,
+            model_id,
+            variant=variant,
+            torch_dtype=torch_dtype,
+            path=path,
+            skip_cache=skip_cache or self.should_skip_cache(),
+            **kwargs,
+        )
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None and hasattr(self._pipeline, "to"):

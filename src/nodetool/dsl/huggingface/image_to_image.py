@@ -275,8 +275,8 @@ from nodetool.workflows.base_node import BaseNode
 class QwenImageEdit(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
 
-    Performs image editing using the Qwen Image Edit model.
-    image, editing, semantic, appearance, qwen, multimodal
+    Performs image editing using the Qwen Image Edit model with support for GGUF quantization.
+    image, editing, semantic, appearance, qwen, multimodal, quantization
 
     Use cases:
     - Semantic editing (object rotation, style transfer)
@@ -284,11 +284,12 @@ class QwenImageEdit(SingleOutputGraphNode[types.ImageRef], GraphNode[types.Image
     - Precise text modifications in images
     - Background and clothing changes
     - Complex image transformations guided by text
+    - Memory-efficient editing using GGUF quantization
     """
 
-    model: types.HFQwenImageEdit | OutputHandle[types.HFQwenImageEdit] = connect_field(
-        default=types.HFQwenImageEdit(
-            type="hf.qwen_image_edit",
+    model: types.HFImageToImage | OutputHandle[types.HFImageToImage] = connect_field(
+        default=types.HFImageToImage(
+            type="hf.image_to_image",
             repo_id="QuantStack/Qwen-Image-Edit-2509-GGUF",
             path="Qwen-Image-Edit-2509-Q4_K_M.gguf",
             variant=None,
@@ -319,6 +320,20 @@ class QwenImageEdit(SingleOutputGraphNode[types.ImageRef], GraphNode[types.Image
     seed: int | OutputHandle[int] = connect_field(
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed",
+    )
+    enable_memory_efficient_attention: bool | OutputHandle[bool] = connect_field(
+        default=True,
+        description="Enable memory efficient attention to reduce VRAM usage.",
+    )
+    enable_vae_tiling: bool | OutputHandle[bool] = connect_field(
+        default=False,
+        description="Enable VAE tiling to reduce VRAM usage for large images.",
+    )
+    enable_vae_slicing: bool | OutputHandle[bool] = connect_field(
+        default=False, description="Enable VAE slicing to reduce VRAM usage."
+    )
+    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
+        default=True, description="Enable CPU offload to reduce VRAM usage."
     )
 
     @classmethod
@@ -408,18 +423,16 @@ class StableDiffusionControlNet(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     )
 
-    model: types.HFStableDiffusion | OutputHandle[types.HFStableDiffusion] = (
-        connect_field(
-            default=types.HFStableDiffusion(
-                type="hf.stable_diffusion",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The model to use for image generation.",
-        )
+    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
+        default=types.HFTextToImage(
+            type="hf.text_to_image",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model to use for image generation.",
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -562,18 +575,16 @@ class StableDiffusionControlNetImg2ImgNode(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     )
 
-    model: types.HFStableDiffusion | OutputHandle[types.HFStableDiffusion] = (
-        connect_field(
-            default=types.HFStableDiffusion(
-                type="hf.stable_diffusion",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The model to use for image generation.",
-        )
+    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
+        default=types.HFTextToImage(
+            type="hf.text_to_image",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model to use for image generation.",
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -724,18 +735,16 @@ class StableDiffusionControlNetInpaintNode(
         nodetool.nodes.huggingface.image_to_image.StableDiffusionControlNetModel
     )
 
-    model: types.HFStableDiffusion | OutputHandle[types.HFStableDiffusion] = (
-        connect_field(
-            default=types.HFStableDiffusion(
-                type="hf.stable_diffusion",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The model to use for image generation.",
-        )
+    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
+        default=types.HFTextToImage(
+            type="hf.text_to_image",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model to use for image generation.",
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -883,18 +892,16 @@ class StableDiffusionImg2ImgNode(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     )
 
-    model: types.HFStableDiffusion | OutputHandle[types.HFStableDiffusion] = (
-        connect_field(
-            default=types.HFStableDiffusion(
-                type="hf.stable_diffusion",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The model to use for image generation.",
-        )
+    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
+        default=types.HFTextToImage(
+            type="hf.text_to_image",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model to use for image generation.",
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -1026,18 +1033,16 @@ class StableDiffusionInpaintNode(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     )
 
-    model: types.HFStableDiffusion | OutputHandle[types.HFStableDiffusion] = (
-        connect_field(
-            default=types.HFStableDiffusion(
-                type="hf.stable_diffusion",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The model to use for image generation.",
-        )
+    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
+        default=types.HFTextToImage(
+            type="hf.text_to_image",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model to use for image generation.",
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -1292,18 +1297,16 @@ class StableDiffusionXLControlNetNode(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionOutputType
     )
 
-    model: types.HFStableDiffusionXL | OutputHandle[types.HFStableDiffusionXL] = (
-        connect_field(
-            default=types.HFStableDiffusionXL(
-                type="hf.stable_diffusion_xl",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The Stable Diffusion XL model to use for generation.",
-        )
+    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
+        default=types.HFTextToImage(
+            type="hf.text_to_image",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The Stable Diffusion XL model to use for generation.",
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -1456,18 +1459,16 @@ class StableDiffusionXLImg2Img(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionOutputType
     )
 
-    model: types.HFStableDiffusionXL | OutputHandle[types.HFStableDiffusionXL] = (
-        connect_field(
-            default=types.HFStableDiffusionXL(
-                type="hf.stable_diffusion_xl",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The Stable Diffusion XL model to use for generation.",
-        )
+    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
+        default=types.HFTextToImage(
+            type="hf.text_to_image",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The Stable Diffusion XL model to use for generation.",
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -1601,18 +1602,16 @@ class StableDiffusionXLInpainting(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionOutputType
     )
 
-    model: types.HFStableDiffusionXL | OutputHandle[types.HFStableDiffusionXL] = (
-        connect_field(
-            default=types.HFStableDiffusionXL(
-                type="hf.stable_diffusion_xl",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The Stable Diffusion XL model to use for generation.",
-        )
+    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
+        default=types.HFTextToImage(
+            type="hf.text_to_image",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The Stable Diffusion XL model to use for generation.",
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,

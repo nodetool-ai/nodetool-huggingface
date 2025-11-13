@@ -13,16 +13,17 @@ import asyncio
 import base64
 from queue import Queue
 import threading
-from typing import Any, AsyncGenerator, List, Set
+import re
+from typing import Any, AsyncGenerator, List, Literal, Set
 from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
-from huggingface_hub import scan_cache_dir
 from nodetool.providers.base import BaseProvider, register_provider
 from nodetool.providers.types import ImageBytes, TextToImageParams, ImageToImageParams
 from nodetool.integrations.huggingface.huggingface_models import (
     fetch_model_info,
-    has_model_index,
-    model_type_from_model_info,
+    get_image_to_image_models_from_hf_cache,
+    get_text_to_image_models_from_hf_cache,
 )
+from nodetool.types.job import JobUpdate
 import numpy as np
 from pydub import AudioSegment
 import io
@@ -43,13 +44,15 @@ from nodetool.config.logging_config import get_logger
 import torch
 from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
 from nodetool.ml.core.model_manager import ModelManager
-from huggingface_hub import try_to_load_from_cache, _CACHED_NO_EXIST
+from huggingface_hub import hf_hub_download, try_to_load_from_cache, _CACHED_NO_EXIST
 import os
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
 from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import StableDiffusion3Pipeline
 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
-
+from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
+from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
+from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 # Import specific pipeline classes
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import StableDiffusionXLImg2ImgPipeline
@@ -58,14 +61,17 @@ from diffusers.pipelines.flux.pipeline_flux_img2img import FluxImg2ImgPipeline
 from transformers import (
     AutoModelForSpeechSeq2Seq,
     AutoProcessor,
+    T5EncoderModel,
     TextStreamer,
     pipeline as create_pipeline,
 )
-from nodetool.nodes.huggingface.text_to_speech import KokoroTTS
+from diffusers.models.transformers.transformer_qwenimage import (
+    QwenImageTransformer2DModel,
+)
+
 from nodetool.metadata.types import HFTextToSpeech
 from pydub import AudioSegment
 from io import BytesIO
-from nodetool.nodes.huggingface.text_to_speech import TextToSpeech
 from nodetool.metadata.types import HFTextToSpeech
 
 from nodetool.workflows.recommended_models import get_recommended_models
@@ -74,33 +80,161 @@ from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
 from transformers.pipelines import pipeline
 from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
 from diffusers.pipelines.wan.pipeline_wan import WanPipeline
+from nodetool.integrations.huggingface.huggingface_models import (
+    get_llamacpp_language_models_from_hf_cache
+)
+from pathlib import Path
+from typing import TypeVar
+
+T = TypeVar("T")
 
 log = get_logger(__name__)
 
 
-def get_model_type_from_id(model_id: str) -> str | None:
-    """
-    Determine the model type from a model ID by looking it up in recommended models.
+async def load_pipeline(
+    node_id: str,
+    context: ProcessingContext,
+    pipeline_task: str,
+    model_id: Any,
+    device: str | None = None,
+    torch_dtype: torch.dtype | None = None,
+    skip_cache: bool = False,
+    **kwargs: Any,
+):
+    """Load a HuggingFace pipeline model."""
+    if model_id == "" or model_id is None:
+        raise ValueError("Please select a model")
 
-    Args:
-        model_id: Model ID in format "repo_id" or "repo_id:path"
+    cached_model = ModelManager.get_model(model_id, pipeline_task)
+    if cached_model:
+        return cached_model
 
-    Returns:
-        Model type string (e.g., "hf.stable_diffusion") or None if not found
-    """
-    recommended_models = get_recommended_models()
+    if device is None:
+        device = context.device
 
-    # Flatten all recommended models
-    all_models = []
-    for models_list in recommended_models.values():
-        all_models.extend(models_list)
+    if (
+        isinstance(model_id, str)
+        and not skip_cache
+        and not Path(model_id).expanduser().exists()
+    ):
+        repo_id_for_cache = model_id
+        revision = kwargs.get("revision")
+        cache_dir = kwargs.get("cache_dir")
 
-    # Look for model by ID
-    for model in all_models:
-        if model.id == model_id:
-            return model.type
+        if "@" in repo_id_for_cache and revision is None:
+            repo_id_for_cache, revision = repo_id_for_cache.rsplit("@", 1)
 
-    return None
+        cache_checked = False
+        for candidate in ("model_index.json", "config.json"):
+            try:
+                cache_path = try_to_load_from_cache(
+                    repo_id_for_cache,
+                    candidate,
+                    revision=revision,
+                    cache_dir=cache_dir,
+                )
+            except Exception:
+                cache_path = None
+
+            if cache_path:
+                cache_checked = True
+                break
+
+        if not cache_checked:
+            raise ValueError(f"Model {model_id} must be downloaded first")
+
+    context.post_message(
+        JobUpdate(
+            status="running",
+            message=f"Loading pipeline {type(model_id) == str and model_id or pipeline_task} from HuggingFace",
+        )
+    )
+    model = pipeline(
+        pipeline_task,  # type: ignore
+        model=model_id,
+        torch_dtype=torch_dtype,
+        device=device,
+        **kwargs,
+    )  # type: ignore
+    ModelManager.set_model(node_id, model_id, pipeline_task, model)
+    return model  # type: ignore
+
+
+async def load_model(
+    node_id: str,
+    context: ProcessingContext,
+    model_class: type[T],
+    model_id: str,
+    variant: str | None = None,
+    torch_dtype: torch.dtype | None = None,
+    path: str | None = None,
+    skip_cache: bool = False,
+    **kwargs: Any,
+) -> T:
+    """Load a HuggingFace model."""
+    if model_id == "":
+        raise ValueError("Please select a model")
+
+    if not skip_cache:
+        cached_model = ModelManager.get_model(model_id, model_class.__name__, path)
+        if cached_model:
+            return cached_model
+
+    if path:
+        cache_path = try_to_load_from_cache(model_id, path)
+        if not cache_path:
+            context.post_message(
+                JobUpdate(
+                    status="running",
+                    message=f"Downloading model {model_id}/{path} from HuggingFace",
+                )
+            )
+            hf_hub_download(model_id, path)
+            cache_path = try_to_load_from_cache(model_id, path)
+            if not cache_path:
+                raise ValueError(f"Downloading model {model_id}/{path} from HuggingFace failed")
+
+        log.info(f"Loading model {model_id}/{path} from {cache_path}")
+        context.post_message(
+            JobUpdate(
+                status="running",
+                message=f"Loading model {model_id} from {cache_path}",
+            )
+        )
+
+        if hasattr(model_class, "from_single_file"):
+            model = model_class.from_single_file(  # type: ignore
+                cache_path,
+                torch_dtype=torch_dtype,
+                variant=variant,
+                **kwargs,
+            )
+        else:
+            # Fallback to from_pretrained for classes without from_single_file
+            model = model_class.from_pretrained(  # type: ignore
+                model_id,
+                torch_dtype=torch_dtype,
+                variant=variant,
+                **kwargs,
+            )
+    else:
+        log.info(f"Loading model {model_id} from HuggingFace")
+        context.post_message(
+            JobUpdate(
+                status="running",
+                message=f"Loading model {model_id} from HuggingFace",
+            )
+        )
+        model = model_class.from_pretrained(  # type: ignore
+            model_id,
+            torch_dtype=torch_dtype,
+            variant=variant,
+            **kwargs,
+        )
+
+    ModelManager.set_model(node_id, model_id, model_class.__name__, model, path)
+    return model
+
 
 
 def _detect_cached_variant(repo_id: str) -> str | None:
@@ -142,178 +276,162 @@ def _detect_cached_variant(repo_id: str) -> str | None:
     return None
 
 
-async def get_hf_cached_single_file_image_models() -> List[ImageModel]:
-    """
-    Get single-file image models from HF cache based on recommended models.
+def _is_qwen_image_gguf_model(repo_id: str, file_path: str | None) -> bool:
+    """Check if the repo/path pair corresponds to a Qwen-Image GGUF model."""
+    if not file_path:
+        return False
+    combined = f"{repo_id}:{file_path}".lower()
+    return file_path.lower().endswith(".gguf") and "qwen-image" in combined
 
-    Returns models in format "repo_id:path" for single-file models (.safetensors)
-    that are cached locally.
 
-    Returns:
-        List of ImageModel instances for cached single-file models
-    """
-    # Image model types we want to include (SD, SDXL, SD3, Flux, QwenImage)
-    IMAGE_MODEL_TYPES = {
-        "hf.stable_diffusion",
-        "hf.stable_diffusion_xl",
-        "hf.stable_diffusion_3",
-        "hf.flux",
-        "hf.qwen_image",
+def _is_flux_gguf_model(repo_id: str, file_path: str | None) -> bool:
+    """Check if the repo/path pair corresponds to a FLUX GGUF model."""
+    if not file_path:
+        return False
+    combined = f"{repo_id}:{file_path}".lower()
+    return file_path.lower().endswith(".gguf") and "flux" in combined
+
+
+def _detect_flux_variant(repo_id: str, file_path: str | None) -> str:
+    """Detect which FLUX base model should be used."""
+    candidates = [repo_id, file_path or ""]
+    for value in candidates:
+        lower = value.lower()
+        if "schnell" in lower:
+            return "schnell"
+        if "fill" in lower:
+            return "fill"
+        if "canny" in lower:
+            return "canny"
+        if "depth" in lower:
+            return "depth"
+        if "dev" in lower:
+            return "dev"
+    return "dev"
+
+
+def _flux_variant_to_base_model_id(variant: str) -> str:
+    """Map detected variant names to canonical FLUX repos."""
+    mapping = {
+        "schnell": "black-forest-labs/FLUX.1-schnell",
+        "fill": "black-forest-labs/FLUX.1-Fill-dev",
+        "canny": "black-forest-labs/FLUX.1-Canny-dev",
+        "depth": "black-forest-labs/FLUX.1-Depth-dev",
+        "dev": "black-forest-labs/FLUX.1-dev",
     }
-
-    models: list[ImageModel] = []
-    seen: set[str] = set()
-
-    def flatten(models: list[list[UnifiedModel]]) -> list[UnifiedModel]:
-        return [model for sublist in models for model in sublist]
-
-    # Get all recommended models and filter by image model types
-    recommended_models: list[UnifiedModel] = flatten(list(get_recommended_models().values()))
-    image_models = [
-        model for model in recommended_models
-        if model.type in IMAGE_MODEL_TYPES
-    ]
-
-    for model_config in image_models:
-        # Check if the file is cached locally
-        split_path = model_config.id.split(':')
-        if len(split_path) != 2:
-            continue
-        repo_id = split_path[0]
-        path = split_path[1]
-        cache_path = try_to_load_from_cache(repo_id, path)
-        if cache_path:
-            # Create model ID in format "repo_id:path"
-            model_id = f"{repo_id}:{path}"
-
-            if model_id in seen:
-                continue
-            seen.add(model_id)
-
-            models.append(
-                ImageModel(
-                    id=model_id,
-                    name=model_config.name,
-                    provider=Provider.HuggingFace,
-                    supported_tasks=["text_to_image", "image_to_image"],
-                )
-            )
-            log.debug(f"Found cached single-file model: {model_id}")
-
-    log.debug(f"Found {len(models)} cached single-file image models")
-    return models
+    return mapping.get(variant, "black-forest-labs/FLUX.1-dev")
 
 
-async def get_hf_cached_image_models() -> List[UnifiedModel]:
-    """
-    Scan the Hugging Face cache directory and return models that are compatible
-    with image generation architectures: SD1.5, SDXL, SD3, Flux, QwenImage, and Chroma.
+async def _load_flux_gguf_pipeline(
+    repo_id: str,
+    file_path: str,
+    context: ProcessingContext,
+    task: Literal["text2image", "image2image"],
+    node_id: str | None = None,
+):
+    """Load a FLUX GGUF quantized transformer and wrap it in the requested pipeline."""
 
-    Returns:
-        List[UnifiedModel]: List of cached image models compatible with the supported architectures
-    """
-    # Model types we want to include (image generation models)
-    COMPATIBLE_MODEL_TYPES = {
-        "hf.stable_diffusion",  # SD1.5
-        "hf.stable_diffusion_xl",  # SDXL
-        "hf.stable_diffusion_3",  # SD3
-        "hf.flux",  # Flux
-        "hf.qwen_image",  # QwenImage
-    }
+    cache_path = try_to_load_from_cache(repo_id, file_path)
+    if not cache_path:
+        raise ValueError(
+            f"Model {repo_id}/{file_path} must be downloaded first"
+        )
 
-    # Tags that indicate image generation models we want to include
-    COMPATIBLE_TAGS = {
-        "stable-diffusion",
-        "stable-diffusion-xl",
-        "stable-diffusion-3",
-        "flux",
-        "qwen",
-        "chroma",
-        "text-to-image",
-        "diffusers",
-    }
-
-    # Scan HF cache directory
-    cache_info = await asyncio.to_thread(scan_cache_dir)
-
-    model_repos = [repo for repo in cache_info.repos if repo.repo_type == "model"]
-    recommended_models = get_recommended_models()
-
-    # Fetch model info for all cached repos
-    model_infos = await asyncio.gather(
-        *[fetch_model_info(repo.repo_id) for repo in model_repos]
+    variant = _detect_flux_variant(repo_id, file_path)
+    torch_dtype = (
+        torch.bfloat16 if variant in {"schnell", "dev"} else torch.float16
     )
 
-    models: list[UnifiedModel] = []
-    for repo, model_info in zip(model_repos, model_infos):
-        # Skip if we couldn't fetch model info
-        if model_info is None:
-            continue
+    transformer = await load_model(
+        node_id=node_id,
+        context=context,
+        model_class=FluxTransformer2DModel,
+        model_id=repo_id,
+        path=file_path,
+        torch_dtype=torch_dtype,
+        skip_cache=False,
+        quantization_config=GGUFQuantizationConfig(compute_dtype=torch_dtype),
+    )
 
-        # Determine model type
-        model_type = model_type_from_model_info(
-            recommended_models, repo.repo_id, model_info
+    base_model_id = _flux_variant_to_base_model_id(variant)
+    log.info(
+        f"Initializing FLUX {task} pipeline from {base_model_id} with quantized transformer..."
+    )
+    context.post_message(
+        JobUpdate(
+            status="running",
+            message="Downloading FLUX pipelines components...",
+        )
+    )
+    if task == "image2image":
+        pipeline = FluxImg2ImgPipeline.from_pretrained(
+            base_model_id,
+            transformer=transformer,
+            torch_dtype=torch_dtype,
+        )
+    elif task == "text2image":
+        pipeline = FluxPipeline.from_pretrained(
+            base_model_id,
+            transformer=transformer,
+            torch_dtype=torch_dtype,
+        )
+    else:
+        raise ValueError(f"Unsupported FLUX gguf task: {task}")
+
+    pipeline.enable_sequential_cpu_offload()
+    return pipeline
+
+
+async def load_qwen_image_gguf_pipeline(
+    model_id: str, path: str, context: ProcessingContext, torch_dtype: torch.dtype, node_id: str | None = None,
+):
+    """Load Qwen-Image model with GGUF quantization."""
+    log.info(f"Loading Qwen-Image model: {model_id}/{path}")
+
+    cache_path = try_to_load_from_cache(model_id, path)
+    if not cache_path:
+        raise ValueError(
+            f"Model {model_id}/{path} must be downloaded first"
         )
 
-        # Check if this is a compatible image model
-        is_compatible = False
+    log.debug(f"Cache path: {cache_path}")
+    log.debug(f"Torch dtype: {torch_dtype}")
 
-        # Check by model type
-        if model_type:
-            if model_type in COMPATIBLE_MODEL_TYPES:
-                is_compatible = True
-            else:
-                continue
+    transformer = await load_model(
+        node_id=node_id,
+        context=context,
+        model_class=QwenImageTransformer2DModel,
+        model_id=model_id,
+        path=path,
+        torch_dtype=torch_dtype,
+        skip_cache=False,
+        quantization_config=GGUFQuantizationConfig(compute_dtype=torch_dtype),
+        config="Qwen/Qwen-Image",
+        subfolder="transformer",
+        device="cpu",
+    )
 
-        # Check by tags
-        if not is_compatible and model_info.tags:
-            model_tags_lower = [tag.lower() for tag in model_info.tags]
-            if any(
-                compatible_tag in tag
-                for tag in model_tags_lower
-                for compatible_tag in COMPATIBLE_TAGS
-            ):
-                is_compatible = True
-
-        # Check by pipeline tag
-        if not is_compatible and model_info.pipeline_tag:
-            if model_info.pipeline_tag in ["text-to-image", "image-to-image"]:
-                is_compatible = True
-
-        # Skip if not compatible
-        if not is_compatible:
-            continue
-
-        # Use repo name as display name (last part of repo_id)
-        display_name = (
-            repo.repo_id.split("/")[-1] if "/" in repo.repo_id else repo.repo_id
+    # Create the pipeline with the quantized transformer
+    log.info("Creating Qwen-Image pipeline with quantized transformer...")
+    context.post_message(
+        JobUpdate(
+            status="running",
+            message="Downloading Qwen-Image pipelines components...",
         )
+    )
 
-        models.append(
-            UnifiedModel(
-                id=repo.repo_id,
-                type=model_type,
-                name=display_name,
-                cache_path=str(repo.repo_path),
-                allow_patterns=None,
-                ignore_patterns=None,
-                description=None,
-                readme=None,
-                downloaded=repo.repo_path is not None,
-                pipeline_tag=model_info.pipeline_tag,
-                tags=model_info.tags,
-                has_model_index=has_model_index(model_info),
-                repo_id=repo.repo_id,
-                path=None,
-                size_on_disk=repo.size_on_disk,
-                downloads=model_info.downloads,
-                likes=model_info.likes,
-                trending_score=model_info.trending_score,
-            )
-        )
+    pipeline = DiffusionPipeline.from_pretrained(
+        "Qwen/Qwen-Image",
+        transformer=transformer,
+        torch_dtype=torch_dtype,
+        device="cpu",
+    )
+    pipeline.enable_model_cpu_offload()
+    pipeline.enable_attention_slicing()
 
-    log.info(f"Found {len(models)} cached image models")
-    return models
+    return pipeline
+
+
 
 @register_provider(Provider.HuggingFace)
 class HuggingFaceLocalProvider(BaseProvider):
@@ -331,6 +449,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         params: TextToImageParams,
         timeout_s: int | None = None,
         context: ProcessingContext | None = None,
+        node_id: str | None = None,
     ) -> ImageBytes:
         """Generate an image from a text prompt using HuggingFace diffusion models.
 
@@ -338,7 +457,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             params: Text-to-image generation parameters
             timeout_s: Optional timeout in seconds
             context: Processing context for asset handling
-
+            node_id: Optional node ID for progress tracking
         Returns:
             Raw image bytes as PNG
 
@@ -346,63 +465,106 @@ class HuggingFaceLocalProvider(BaseProvider):
             ValueError: If required parameters are missing or context not provided
             RuntimeError: If generation fails
         """
+        from nodetool.nodes.huggingface.image_to_image import pipeline_progress_callback
         if context is None:
             raise ValueError(
                 "ProcessingContext is required for HuggingFace image generation"
             )
 
-        # Get or load the pipeline
-        model_id = params.model.id
-        cache_key = f"{model_id}:text2image"
+        cache_key = f"{params.model.id}:text2image"
         pipeline = ModelManager.get_model(cache_key, "text2image")
 
         if not pipeline:
-            log.info(f"Loading text-to-image pipeline: {model_id}")
-
-            # Determine model type
-            model_type = get_model_type_from_id(model_id)
+            log.info(f"Loading text-to-image pipeline: {params.model.id}")
+            use_cpu_offload = False
 
             # Check if model_id is in "repo_id:path" format (single-file model)
-            if ":" in model_id and model_id.count(":") == 1:
-                repo_id, file_path = model_id.split(":", 1)
-
+            if params.model.path:
                 # Verify the file is cached locally
-                cache_path = try_to_load_from_cache(repo_id, file_path)
+                cache_path = try_to_load_from_cache(params.model.id, params.model.path)
                 if not cache_path:
-                    raise ValueError(f"Single-file model {repo_id}/{file_path} must be downloaded first")
+                    raise ValueError(
+                        f"Single-file model {params.model.id}/{params.model.path} must be downloaded first"
+                    )
 
-                # Load pipeline from single file based on model type
-                if model_type == "hf.stable_diffusion":
-                    pipeline = StableDiffusionPipeline.from_single_file(
-                        str(cache_path),
-                        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                model_info = await fetch_model_info(params.model.id)
+                if model_info is None:
+                    raise ValueError(f"Model {params.model.id} not found")
+
+                if model_info.pipeline_tag != "text-to-image":
+                    raise ValueError(
+                        f"Model {params.model.id} is not a text-to-image model"
                     )
-                elif model_type == "hf.stable_diffusion_xl":
-                    pipeline = StableDiffusionXLPipeline.from_single_file(
-                        str(cache_path),
-                        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+
+                if not model_info.tags:
+                    raise ValueError(f"Model {params.model.id} has no tags")
+
+                if _is_flux_gguf_model(params.model.id, params.model.path):
+                    pipeline = await _load_flux_gguf_pipeline(
+                        repo_id=params.model.id, 
+                        file_path=params.model.path, 
+                        context=context, 
+                        task="text2image", 
+                        node_id=node_id
                     )
-                elif model_type == "hf.stable_diffusion_3":
-                    pipeline = StableDiffusion3Pipeline.from_single_file(
-                        str(cache_path),
-                        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                    use_cpu_offload = True
+                elif _is_qwen_image_gguf_model(params.model.id, params.model.path):
+                    pipeline = await load_qwen_image_gguf_pipeline(
+                        model_id=params.model.id, 
+                        path=params.model.path, 
+                        context=context, 
+                        torch_dtype=torch.bfloat16,
+                        node_id=node_id
                     )
-                elif model_type == "hf.flux":
-                    pipeline = FluxPipeline.from_single_file(
-                        str(cache_path),
-                        torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
-                    )
+                    use_cpu_offload = True
                 else:
-                    raise ValueError(f"Unsupported single-file model type: {model_type}")
+                    model_type = model_info.pipeline_tag or "unknown"
+
+                    # Load pipeline from single file based on model type
+                    if "diffusers:StableDiffusionXLPipeline" in model_info.tags:
+                        pipeline = StableDiffusionXLPipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=torch.float16
+                            if torch.cuda.is_available()
+                            else torch.float32,
+                        )
+                    elif "diffusers:StableDiffusionPipeline" in model_info.tags:
+                        pipeline = StableDiffusionPipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=torch.float16
+                            if torch.cuda.is_available()
+                            else torch.float32,
+                        )
+                    elif "diffusers:StableDiffusion3Pipeline" in model_info.tags:
+                        pipeline = StableDiffusion3Pipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=torch.float16
+                            if torch.cuda.is_available()
+                            else torch.float32,
+                        )
+                    elif "flux" in model_info.tags:
+                        pipeline = FluxPipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=torch.bfloat16
+                            if torch.cuda.is_available()
+                            else torch.float32,
+                        )
+                    else:
+                        raise ValueError(
+                            f"Unsupported single-file model type: {model_type}"
+                        )
             else:
                 # Load pipeline from multi-file model (standard format)
                 pipeline = AutoPipelineForText2Image.from_pretrained(
-                    model_id,
-                    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                    variant=_detect_cached_variant(model_id),
+                    params.model.id,
+                    torch_dtype=torch.float16
+                    if torch.cuda.is_available()
+                    else torch.float32,
+                    variant=_detect_cached_variant(params.model.id),
                 )
 
-            pipeline.to(context.device)
+            if not use_cpu_offload:
+                pipeline.to(context.device)
 
             # Cache the pipeline
             ModelManager.set_model(cache_key, cache_key, "text2image", pipeline)
@@ -415,17 +577,6 @@ class HuggingFaceLocalProvider(BaseProvider):
         # Progress callback
         num_steps = params.num_inference_steps or 50
 
-        def progress_callback(pipe, step: int, timestep: int, callback_kwargs: dict):
-            if context:
-                context.post_message(
-                    NodeProgress(
-                        node_id="text_to_image",
-                        progress=step,
-                        total=num_steps,
-                    )
-                )
-            return callback_kwargs
-
         # Generate the image off the event loop
         def _run_pipeline_sync():
             return pipeline(
@@ -436,11 +587,15 @@ class HuggingFaceLocalProvider(BaseProvider):
                 width=params.width or 512,
                 height=params.height or 512,
                 generator=generator,
-                callback_on_step_end=progress_callback,  # type: ignore
+                callback_on_step_end=pipeline_progress_callback(
+                    node_id=node_id, total_steps=num_steps, context=context
+                ),  # type: ignore
                 callback_on_step_end_tensor_inputs=["latents"],
             )
 
         output = await asyncio.to_thread(_run_pipeline_sync)
+
+        pipeline.to("cpu")
 
         # Get the generated image
         pil_image = output.images[0]  # pyright: ignore[reportAttributeAccessIssue]
@@ -458,6 +613,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         params: ImageToImageParams,
         context: ProcessingContext | None = None,
         timeout_s: int | None = None,
+        node_id: str | None = None,
     ) -> ImageBytes:
         """Transform an image based on a text prompt using HuggingFace diffusion models.
 
@@ -466,7 +622,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             params: Image-to-image generation parameters
             timeout_s: Optional timeout in seconds
             context: Processing context for asset handling
-
+            node_id: Optional node ID for progress tracking
         Returns:
             Raw image bytes as PNG
 
@@ -483,57 +639,95 @@ class HuggingFaceLocalProvider(BaseProvider):
         pil_image = Image.open(BytesIO(image))
 
         # Get or load the pipeline
-        model_id = params.model.id
-        cache_key = f"{model_id}:image2image"
+        cache_key = f"{params.model.id}:image2image"
         pipeline = ModelManager.get_model(cache_key, "image2image")
 
         if not pipeline:
-            log.info(f"Loading image-to-image pipeline: {model_id}")
-
-            # Determine model type
-            model_type = get_model_type_from_id(model_id)
+            log.info(f"Loading image-to-image pipeline: {params.model.id}")
+            use_cpu_offload = False
 
             # Check if model_id is in "repo_id:path" format (single-file model)
-            if ":" in model_id and model_id.count(":") == 1:
-                repo_id, file_path = model_id.split(":", 1)
-
+            if params.model.path:
                 # Verify the file is cached locally
-                cache_path = try_to_load_from_cache(repo_id, file_path)
+                cache_path = try_to_load_from_cache(params.model.id, params.model.path)
                 if not cache_path:
-                    raise ValueError(f"Single-file model {repo_id}/{file_path} must be downloaded first")
-                # Load pipeline from single file based on model type
-                if model_type == "hf.stable_diffusion":
-                    pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
-                        str(cache_path),
-                        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                    raise ValueError(
+                        f"Single-file model {params.model.id}/{params.model.path} must be downloaded first"
                     )
-                elif model_type == "hf.stable_diffusion_xl":
-                    pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
-                        str(cache_path),
-                        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+
+                if _is_flux_gguf_model(params.model.id, params.model.path):
+                    pipeline = await _load_flux_gguf_pipeline(
+                        repo_id=params.model.id, 
+                        file_path=params.model.path, 
+                        context=context, 
+                        task="image2image", 
+                        node_id=node_id
                     )
-                elif model_type == "hf.stable_diffusion_3":
-                    pipeline = StableDiffusion3Img2ImgPipeline.from_single_file(
-                        str(cache_path),
-                        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                    )
-                elif model_type == "hf.flux":
-                    pipeline = FluxImg2ImgPipeline.from_single_file(
-                        str(cache_path),
-                        torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
-                    )
+                    use_cpu_offload = True
                 else:
-                    raise ValueError(f"Unsupported single-file model type: {model_type}")
+                    # Verify the file is cached locally
+                    cache_path = try_to_load_from_cache(params.model.id, params.model.path)
+                    if not cache_path:
+                        raise ValueError(
+                            f"Single-file model {params.model.id}/{params.model.path} must be downloaded first"
+                        )
+
+                    model_info = await fetch_model_info(params.model.id)
+                    if model_info is None:
+                        raise ValueError(f"Model {params.model.id} not found")
+
+                    if model_info.pipeline_tag != "image-to-image":
+                        raise ValueError(
+                            f"Model {params.model.id} is not an image-to-image model"
+                        )
+
+                    if not model_info.tags:
+                        raise ValueError(f"Model {params.model.id} has no tags")
+
+                    # Load pipeline from single file based on model type
+                    if "diffusers:StableDiffusionPipeline" in model_info.tags:
+                        pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=torch.float16
+                            if torch.cuda.is_available()
+                            else torch.float32,
+                        )
+                    elif "diffusers:StableDiffusionXLPipeline" in model_info.tags:
+                        pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=torch.float16
+                            if torch.cuda.is_available()
+                            else torch.float32,
+                        )
+                    elif "diffusers:StableDiffusion3Pipeline" in model_info.tags:
+                        pipeline = StableDiffusion3Img2ImgPipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=torch.float16
+                            if torch.cuda.is_available()
+                            else torch.float32,
+                        )
+                    elif "flux" in model_info.tags:
+                        pipeline = FluxImg2ImgPipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=torch.bfloat16
+                            if torch.cuda.is_available()
+                            else torch.float32,
+                        )
+                    else:
+                        raise ValueError(
+                            f"Unsupported single-file model type: {model_info.pipeline_tag}"
+                        )
             else:
                 # Load pipeline from multi-file model (standard format)
                 pipeline = AutoPipelineForImage2Image.from_pretrained(
-                    model_id,
+                    params.model.id,
                     torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                    variant=_detect_cached_variant(model_id),
+                    variant=_detect_cached_variant(params.model.id),
                 )
 
             assert pipeline is not None
-            pipeline.to(context.device)
+            if not use_cpu_offload:
+                pipeline.to(context.device)
 
             # Cache the pipeline
             ModelManager.set_model(cache_key, cache_key, "image2image", pipeline)
@@ -546,17 +740,6 @@ class HuggingFaceLocalProvider(BaseProvider):
         # Progress callback
         num_steps = params.num_inference_steps or 25
 
-        def progress_callback(pipe, step: int, timestep: int, callback_kwargs: dict):
-            if context:
-                context.post_message(
-                    NodeProgress(
-                        node_id="image_to_image",
-                        progress=step,
-                        total=num_steps,
-                    )
-                )
-            return callback_kwargs
-
         # Generate the image off the event loop
         def _run_pipeline_sync():
             return pipeline(
@@ -567,11 +750,15 @@ class HuggingFaceLocalProvider(BaseProvider):
                 num_inference_steps=num_steps,
                 guidance_scale=params.guidance_scale or 7.5,
                 generator=generator,
-                callback_on_step_end=progress_callback,  # type: ignore
+                callback_on_step_end=pipeline_progress_callback(
+                    node_id=node_id, total_steps=num_steps, context=context
+                ),  # type: ignore
                 callback_on_step_end_tensor_inputs=["latents"],
             )
 
         output = await asyncio.to_thread(_run_pipeline_sync)
+
+        pipeline.to("cpu")
 
         # Get the generated image
         pil_output = output.images[0]  # pyright: ignore[reportAttributeAccessIssue]
@@ -617,6 +804,8 @@ class HuggingFaceLocalProvider(BaseProvider):
             ValueError: If required parameters are missing or context not provided
             RuntimeError: If generation fails
         """
+        from nodetool.nodes.huggingface.text_to_speech import KokoroTTS
+        from nodetool.nodes.huggingface.text_to_speech import TextToSpeech
         if context is None:
             raise ValueError(
                 "ProcessingContext is required for HuggingFace TTS generation"
@@ -735,10 +924,14 @@ class HuggingFaceLocalProvider(BaseProvider):
             # Determine torch dtype based on device
             torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-            # Load model
-            hf_model = AutoModelForSpeechSeq2Seq.from_pretrained(
-                model,
+            # Load model using helper
+            hf_model = await load_model(
+                node_id=cache_key,
+                context=context,
+                model_class=AutoModelForSpeechSeq2Seq,
+                model_id=model,
                 torch_dtype=torch_dtype,
+                skip_cache=False,
                 low_cpu_mem_usage=True,
                 use_safetensors=True,
             )
@@ -908,18 +1101,6 @@ class HuggingFaceLocalProvider(BaseProvider):
         if seed is not None and seed != -1:
             generator = torch.Generator(device="cpu").manual_seed(seed)
 
-        # Progress callback
-        def progress_callback(pipe, step: int, timestep: int, callback_kwargs: dict):
-            if context:
-                context.post_message(
-                    NodeProgress(
-                        node_id="text_to_video",
-                        progress=step,
-                        total=num_inference_steps,
-                    )
-                )
-            return callback_kwargs
-
         # Generate the video off the event loop
         def _run_pipeline_sync():
             return pipeline(
@@ -932,7 +1113,9 @@ class HuggingFaceLocalProvider(BaseProvider):
                 width=width,
                 generator=generator,
                 max_sequence_length=max_sequence_length,
-                callback_on_step_end=progress_callback,
+                callback_on_step_end=pipeline_progress_callback(
+                    node_id=node_id, total_steps=num_inference_steps, context=context
+                ),  # type: ignore
             )
 
         output = await asyncio.to_thread(_run_pipeline_sync)
@@ -941,7 +1124,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         frames = output.frames[0]  # pyright: ignore[reportAttributeAccessIssue]
 
         # Convert frames to video
-        video_ref = await context.video_from_frames(frames, fps=fps)
+        video_ref = await context.video_from_frames(frames, fps=fps)  # type: ignore
 
         return video_ref
 
@@ -954,11 +1137,6 @@ class HuggingFaceLocalProvider(BaseProvider):
         Returns:
             List of LanguageModel instances for HuggingFace GGUF models
         """
-        # Import the function to get locally cached GGUF models
-        from nodetool.integrations.huggingface.huggingface_models import (
-            get_llamacpp_language_models_from_hf_cache,
-        )
-
         models = await get_llamacpp_language_models_from_hf_cache()
         # Update provider to HuggingFace for these models
         hf_models = [
@@ -980,22 +1158,11 @@ class HuggingFaceLocalProvider(BaseProvider):
         Single-file models use format "repo_id:path".
         """
         # Get multi-file models
-        unified_models = await get_hf_cached_image_models()
-        image_models = [
-            ImageModel(
-                id=model.id,
-                name=model.name,
-                provider=Provider.HuggingFace,
-                supported_tasks=["text_to_image", "image_to_image"],
-            )
-            for model in unified_models
-        ]
+        text_to_image_models = await get_text_to_image_models_from_hf_cache()
+        image_to_image_models = await get_image_to_image_models_from_hf_cache()
 
         # Get single-file models
-        single_file_models = await get_hf_cached_single_file_image_models()
-        image_models.extend(single_file_models)
-
-        return image_models
+        return text_to_image_models + image_to_image_models
 
     async def get_available_tts_models(self) -> List[TTSModel]:
         """Get available HuggingFace TTS models from recommended models.
@@ -1199,12 +1366,20 @@ class HuggingFaceLocalProvider(BaseProvider):
                 raise ValueError(f"Model {repo_id}/{filename} must be downloaded first")
 
             log.info(f"Loading GGUF model {repo_id}/{filename}")
-            hf_model = AutoModelForCausalLM.from_pretrained(
-                repo_id,
-                torch_dtype=torch.float32,
-                device_map="auto",
-                gguf_file=filename,
-            )
+            # Note: load_model doesn't support gguf_file parameter, so we load manually
+            # but still use ModelManager for caching consistency
+            cached_model = ModelManager.get_model(repo_id, AutoModelForCausalLM.__name__, filename)
+            if not cached_model:
+                hf_model = AutoModelForCausalLM.from_pretrained(
+                    repo_id,
+                    torch_dtype=torch.float32,
+                    device_map="auto",
+                    gguf_file=filename,
+                )
+                ModelManager.set_model(repo_id, AutoModelForCausalLM.__name__, filename, hf_model)
+            else:
+                hf_model = cached_model
+            
             tokenizer = AutoTokenizer.from_pretrained(
                 repo_id,
                 gguf_file=filename,
@@ -1293,17 +1468,25 @@ class HuggingFaceLocalProvider(BaseProvider):
         top_p: float,
         do_sample: bool,
         context: ProcessingContext,
+        node_id: str | None,
     ) -> AsyncIterator[Chunk]:
-        _ = context
+        # Check cache with our key format for backward compatibility
         cache_key = f"{repo_id}:text-generation"
         cached_pipeline = ModelManager.get_model(cache_key, "text-generation")
+        
+        # Also check with load_pipeline's cache format
+        if not cached_pipeline:
+            cached_pipeline = ModelManager.get_model(repo_id, "text-generation")
 
         if not cached_pipeline:
             log.info(f"Loading HuggingFace pipeline model {repo_id}")
-            cached_pipeline = create_pipeline(
-                "text-generation",
-                model=repo_id,
+            cached_pipeline = await load_pipeline(
+                node_id=node_id,
+                context=context,
+                pipeline_task="text-generation",
+                model_id=repo_id,
             )
+            # Cache with our key format for backward compatibility
             ModelManager.set_model(cache_key, cache_key, "text-generation", cached_pipeline)
 
         tokenizer = cached_pipeline.tokenizer
@@ -1491,12 +1674,16 @@ class HuggingFaceLocalProvider(BaseProvider):
             top_p=top_p,
             do_sample=do_sample,
             context=context,
+            node_id=node_id,
         ):
             yield chunk
 
 
 if __name__ == "__main__":
     import asyncio
+    # Create provider instance
+    provider = HuggingFaceLocalProvider()
+
 
     async def test_generate_messages():
         """Test the generate_messages method with streaming."""
@@ -1505,9 +1692,6 @@ if __name__ == "__main__":
 
         # Initialize environment
         env = Environment.get_environment()
-
-        # Create provider instance
-        provider = HuggingFaceLocalProvider()
 
         # Create a simple processing context (you may need to adjust this based on your setup)
         context = ProcessingContext()
@@ -1547,9 +1731,6 @@ if __name__ == "__main__":
         """Test the generate_message method (non-streaming)."""
         from nodetool.workflows.processing_context import ProcessingContext
 
-        # Create provider instance
-        provider = HuggingFaceLocalProvider()
-
         # Create a simple processing context
         context = ProcessingContext()
         context.device = "mps"
@@ -1581,10 +1762,9 @@ if __name__ == "__main__":
 
     async def test_text_to_image():
         """Test the text_to_image method."""
-        models = await get_hf_cached_single_file_image_models()
+        models = await provider.get_available_image_models()
         print(models)
         model = models[0]
-        provider = HuggingFaceLocalProvider()
         context = ProcessingContext()
         context.device = "mps"
         image = await provider.text_to_image(
@@ -1599,7 +1779,7 @@ if __name__ == "__main__":
     
     async def test_image_to_image():
         """Test the image_to_image method."""
-        models = await get_hf_cached_single_file_image_models()
+        models = await provider.get_available_image_models()
         print(models)
         model = models[0]
         provider = HuggingFaceLocalProvider()

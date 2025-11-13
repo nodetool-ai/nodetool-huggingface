@@ -13,15 +13,11 @@ from nodetool.config.environment import Environment
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
     HFCLIP,
-    HFLTXV,
     HFCLIPVision,
     HFControlNet,
-    HFFlux,
     HFLoraSDConfig,
     HFLoraSDXLConfig,
-    HFStableDiffusion,
-    HFStableDiffusion3,
-    HFStableDiffusionXL,
+    HFTextToImage,
     HFUnet,
     ImageRef,
     TorchTensor,
@@ -58,40 +54,40 @@ log = get_logger(__name__)
 
 
 HF_STABLE_DIFFUSION_MODELS = [
-    HFStableDiffusion(
+    HFTextToImage(
         repo_id="stable-diffusion-v1-5/stable-diffusion-v1-5",
         ignore_patterns=["v1-5-*.safetensors", "v1-5-*.ckpt"],
     ),
-    HFStableDiffusion(
+    HFTextToImage(
         repo_id="SG161222/Realistic_Vision_V5.1_noVAE",
         ignore_patterns=["Realistic_Vision_*.safetensors"],
     ),
-    HFStableDiffusion(
+    HFTextToImage(
         repo_id="Lykon/DreamShaper",
         ignore_patterns=["DreamShaper_*.safetensors"],
     ),
 ]
 
 HF_STABLE_DIFFUSION_XL_MODELS = [
-    HFStableDiffusionXL(
+    HFTextToImage(
         repo_id="stabilityai/stable-diffusion-xl-base-1.0",
         ignore_patterns=["sd_xl_base_*.safetensors"],
     ),
-    HFStableDiffusionXL(
+    HFTextToImage(
         repo_id="stabilityai/stable-diffusion-xl-refiner-1.0",
         ignore_patterns=["sd_xl_refiner_*.safetensors"],
     ),
-    HFStableDiffusionXL(
+    HFTextToImage(
         repo_id="fal-collab-models/dreamshaper-xl-1-0",
     )
 ]
 
 HF_STABLE_DIFFUSION_3_MODELS = [
-    HFStableDiffusion3(
+    HFTextToImage(
         repo_id="Comfy-Org/stable-diffusion-3.5-fp8",
         path="sd3.5_large_fp8_scaled.safetensors",
     ),
-    HFStableDiffusion3(
+    HFTextToImage(
         repo_id="Comfy-Org/stable-diffusion-3.5-fp8",
         path="sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors",
     ),
@@ -141,7 +137,7 @@ HF_CONTROL_NET_XL_MODELS: list[HFControlNet] = [
 ]
 
 HF_LTXV_MODELS = [
-    HFLTXV(
+    HFTextToImage(
         repo_id="Lightricks/LTX-Video",
         path="ltx-video-2b-v0.9.safetensors",
     ),
@@ -341,8 +337,8 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         elif scheduler == cls.StableDiffusionScheduler.KDPM2AncestralDiscreteScheduler:
             return KDPM2AncestralDiscreteScheduler
 
-    model: HFStableDiffusion = Field(
-        default=HFStableDiffusion(),
+    model: HFTextToImage = Field(
+        default=HFTextToImage(),
         description="The model to use for image generation.",
     )
     variant: ModelVariant = Field(
@@ -655,8 +651,8 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         elif scheduler == cls.StableDiffusionScheduler.KDPM2AncestralDiscreteScheduler:
             return KDPM2AncestralDiscreteScheduler
 
-    model: HFStableDiffusionXL = Field(
-        default=HFStableDiffusionXL(),
+    model: HFTextToImage = Field(
+        default=HFTextToImage(),
         description="The Stable Diffusion XL model to use for generation.",
     )
     variant: ModelVariant = Field(

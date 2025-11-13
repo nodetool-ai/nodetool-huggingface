@@ -1,21 +1,23 @@
 from enum import Enum
 import platform
 import re
+import asyncio
 from typing import Any, TypedDict
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 from diffusers.models.autoencoders.vae import DecoderOutput
 from diffusers.models.modeling_outputs import AutoencoderKLOutput
+from nodetool.config.logging_config import get_logger
 from nodetool.workflows.types import NodeProgress
 import numpy as np
 import torch
 from RealESRGAN import RealESRGAN
 from huggingface_hub import try_to_load_from_cache
 from nodetool.metadata.types import (
-    HFControlNet,
     HFImageToImage,
-    HFQwenImageEdit,
+    HFControlNet,
+    HFTextToImage,
+    HFImageToImage,
     HFRealESRGAN,
-    HFStableDiffusionUpscale,
     HFVAE,
     TorchTensor,
     HuggingFaceModel,
@@ -38,6 +40,12 @@ from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
 from diffusers.pipelines.auto_pipeline import AutoPipelineForInpainting
 from diffusers.models.controlnets.controlnet import ControlNetModel
 from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import QwenImageEditPipeline
+from diffusers.models.transformers.transformer_qwenimage import (
+    QwenImageTransformer2DModel,
+)
+from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
+from diffusers.pipelines.flux.pipeline_flux_fill import FluxFillPipeline
+from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
 from diffusers.pipelines.pag.pipeline_pag_controlnet_sd import (
     StableDiffusionControlNetPAGPipeline,
 )
@@ -72,6 +80,8 @@ from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upsca
     StableDiffusionLatentUpscalePipeline,
 )
 from pydantic import Field
+
+log = get_logger(__name__)
 
 
 class BaseImageToImage(HuggingFacePipelineNode):
@@ -1096,7 +1106,7 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
     @classmethod
     def get_recommended_models(cls):
         return [
-            HFStableDiffusionUpscale(
+            HFImageToImage(
                 repo_id="stabilityai/stable-diffusion-x4-upscaler",
                 allow_patterns=[
                     "README.md",
@@ -1816,8 +1826,8 @@ class OmniGenNode(HuggingFacePipelineNode):
 
 class QwenImageEdit(HuggingFacePipelineNode):
     """
-    Performs image editing using the Qwen Image Edit model.
-    image, editing, semantic, appearance, qwen, multimodal
+    Performs image editing using the Qwen Image Edit model with support for GGUF quantization.
+    image, editing, semantic, appearance, qwen, multimodal, quantization
 
     Use cases:
     - Semantic editing (object rotation, style transfer)
@@ -1825,9 +1835,10 @@ class QwenImageEdit(HuggingFacePipelineNode):
     - Precise text modifications in images
     - Background and clothing changes
     - Complex image transformations guided by text
+    - Memory-efficient editing using GGUF quantization
     """
-    model: HFQwenImageEdit = Field(
-        default=HFQwenImageEdit(
+    model: HFImageToImage = Field(
+        default=HFImageToImage(
             repo_id="QuantStack/Qwen-Image-Edit-2509-GGUF",
             path="Qwen-Image-Edit-2509-Q4_K_M.gguf",
         ),
@@ -1862,12 +1873,28 @@ class QwenImageEdit(HuggingFacePipelineNode):
         description="Seed for the random number generator. Use -1 for a random seed",
         ge=-1,
     )
+    enable_memory_efficient_attention: bool = Field(
+        default=True,
+        description="Enable memory efficient attention to reduce VRAM usage.",
+    )
+    enable_vae_tiling: bool = Field(
+        default=False,
+        description="Enable VAE tiling to reduce VRAM usage for large images.",
+    )
+    enable_vae_slicing: bool = Field(
+        default=False,
+        description="Enable VAE slicing to reduce VRAM usage.",
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Enable CPU offload to reduce VRAM usage.",
+    )
 
-    _pipeline: QwenImageEditPipeline | None = None
+    _pipeline: QwenImageEditPipeline | DiffusionPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
-        return ["image", "prompt", "negative_prompt", "true_cfg_scale"]
+        return ["model", "image", "prompt", "negative_prompt", "true_cfg_scale"]
 
     def required_inputs(self):
         return ["image"]
@@ -1877,40 +1904,133 @@ class QwenImageEdit(HuggingFacePipelineNode):
         return "Qwen Image Edit"
 
     def get_model_id(self) -> str:
+        if self.model.repo_id:
+            return self.model.repo_id
         return "Qwen/Qwen-Image-Edit"
 
+    def _is_gguf_model(self) -> bool:
+        """Check if the model is a GGUF model based on file extension."""
+        return self.model.path is not None and self.model.path.lower().endswith(".gguf")
+
     @classmethod
-    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+    def get_recommended_models(cls) -> list[HFTextToImage]:
         return [
-            HuggingFaceModel(
+            HFTextToImage(
                 repo_id="QuantStack/Qwen-Image-Edit-2509-GGUF",
                 path="Qwen-Image-Edit-2509-Q4_K_M.gguf",
             ),
-            HuggingFaceModel(
+            HFTextToImage(
                 repo_id="QuantStack/Qwen-Image-Edit-2509-GGUF",
                 path="Qwen-Image-Edit-2509-Q8_0.gguf",
             ),
         ]
 
-    async def preload_model(self, context: ProcessingContext):
+    async def _load_gguf_model(
+        self, context: ProcessingContext, torch_dtype,
+    ):
+        """Load Qwen-Image-Edit model with GGUF quantization."""
+        # Get the cached file path
+        assert self.model.path is not None
+
+        # Load the transformer with GGUF quantization
+        transformer = await self.load_model(
+            context=context,
+            model_class=QwenImageTransformer2DModel,
+            model_id=self.get_model_id(),
+            path=self.model.path,
+            torch_dtype=torch_dtype,
+            quantization_config=GGUFQuantizationConfig(compute_dtype=torch_dtype),
+            config="Qwen/Qwen-Image-Edit",
+            subfolder="transformer",
+            device="cpu",  # Load on CPU first, then move to GPU
+        )
+
+        # Create the pipeline with the quantized transformer
+        log.info("Creating Qwen-Image-Edit pipeline with quantized transformer...")
+
         self._pipeline = await self.load_model(
             context=context,
+            model_class=DiffusionPipeline,
             model_id="Qwen/Qwen-Image-Edit",
-            model_class=QwenImageEditPipeline,
-            torch_dtype=torch.bfloat16,
-            variant=None,
+            torch_dtype=torch_dtype,
+            transformer=transformer,
+            device="cpu",  # Load on CPU first, then move to GPU
         )
+
+        # Apply memory optimizations after loading
+        if self._pipeline is not None:
+            if self.enable_cpu_offload:
+                self._pipeline.enable_model_cpu_offload()
+
+            if self.enable_vae_slicing:
+                self._pipeline.vae.enable_slicing()
+
+            if self.enable_vae_tiling:
+                self._pipeline.vae.enable_tiling()
+
+            if self.enable_memory_efficient_attention:
+                self._pipeline.enable_attention_slicing()
+
+    async def _load_full_precision_pipeline(self, context: ProcessingContext):
+        log.info(
+            f"Loading Qwen-Image-Edit pipeline from {self.get_model_id()} without quantization..."
+        )
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=QwenImageEditPipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=torch.bfloat16,
+            device="cpu",  # Load on CPU first, then move to GPU in workflow runner
+        )
+        assert self._pipeline is not None
+
+        # Apply memory optimizations after loading
+        if self.enable_cpu_offload:
+            self._pipeline.enable_model_cpu_offload()
+
+        if self.enable_vae_slicing and hasattr(self._pipeline, "vae"):
+            self._pipeline.vae.enable_slicing()
+
+        if self.enable_vae_tiling and hasattr(self._pipeline, "vae"):
+            self._pipeline.vae.enable_tiling()
+
+        if self.enable_memory_efficient_attention:
+            self._pipeline.enable_attention_slicing()
+
+    async def preload_model(self, context: ProcessingContext):
+        # Handle GGUF models separately to maintain existing behaviour
+        if self._is_gguf_model():
+            await self._load_gguf_model(context, torch.bfloat16)
+        else:
+            await self._load_full_precision_pipeline(context)
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
-            self._pipeline.to(device)
+            # Handle CPU offload case
+            if self.enable_cpu_offload:
+                # When moving to CPU, disable CPU offload and move all components to CPU
+                if device == "cpu":
+                    self._pipeline.to(device)
+                # When moving to GPU with CPU offload, re-enable CPU offload
+                elif device in ["cuda", "mps"]:
+                    self._pipeline.enable_model_cpu_offload()
+            else:
+                # Normal device movement without CPU offload
+                try:
+                    self._pipeline.to(device)
+                except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                    raise ValueError(
+                        "VRAM out of memory while moving Qwen Image Edit pipeline to device. "
+                        "Enable 'CPU offload' in advanced node properties or reduce image size/steps."
+                    ) from e
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
         # Set up the generator for reproducibility
-        generator = torch.Generator(device="cpu")
+        generator = torch.Generator(device=context.device)
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
 
@@ -1934,7 +2054,281 @@ class QwenImageEdit(HuggingFacePipelineNode):
         else:
             kwargs["negative_prompt"] = " "  # Default as shown in Qwen example
 
-        output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
+        try:
+            output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
+        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            raise ValueError(
+                "VRAM out of memory while running Qwen Image Edit. "
+                "Enable 'CPU offload' in the advanced node properties (if available), "
+                "or reduce image size/steps."
+            ) from e
         image = output.images[0]
 
         return await context.image_from_pil(image)
+
+
+# class FluxFill(HuggingFacePipelineNode):
+#     """
+#     Performs image inpainting/filling using FLUX Fill models with support for GGUF quantization.
+#     image, inpainting, fill, flux, quantization, mask
+
+#     Use cases:
+#     - Fill masked regions in images with high-quality content
+#     - Remove unwanted objects from images
+#     - Complete missing parts of images
+#     - Memory-efficient inpainting using GGUF quantization
+#     - High-quality image editing with FLUX models
+#     """
+
+#     model: HFImageToImage = Field(
+#         default=HFImageToImage(),
+#         description="The FLUX Fill model to use for image inpainting.",
+#     )
+#     prompt: str = Field(
+#         default="a white paper cup",
+#         description="A text prompt describing what should fill the masked area.",
+#     )
+#     image: ImageRef = Field(
+#         default=ImageRef(),
+#         title="Input Image",
+#         description="The input image to fill/inpaint",
+#     )
+#     mask_image: ImageRef = Field(
+#         default=ImageRef(),
+#         title="Mask Image",
+#         description="The mask image indicating areas to be filled (white areas will be filled)",
+#     )
+#     height: int = Field(
+#         default=1024, description="The height of the generated image.", ge=64, le=2048
+#     )
+#     width: int = Field(
+#         default=1024, description="The width of the generated image.", ge=64, le=2048
+#     )
+#     max_sequence_length: int = Field(
+#         default=512,
+#         description="Maximum sequence length for the prompt.",
+#         ge=1,
+#         le=512,
+#     )
+#     seed: int = Field(
+#         default=-1,
+#         description="Seed for the random number generator. Use -1 for a random seed.",
+#         ge=-1,
+#     )
+#     enable_vae_tiling: bool = Field(
+#         default=False,
+#         description="Enable VAE tiling to reduce VRAM usage for large images.",
+#     )
+#     enable_vae_slicing: bool = Field(
+#         default=False,
+#         description="Enable VAE slicing to reduce VRAM usage.",
+#     )
+#     enable_cpu_offload: bool = Field(
+#         default=False,
+#         description="Enable CPU offload to reduce VRAM usage.",
+#     )
+
+#     _pipeline: FluxFillPipeline | None = None
+
+#     @classmethod
+#     def get_recommended_models(cls) -> list[HFTextToImage]:
+#         return [
+#             # GGUF quantized models from YarvixPA/FLUX.1-Fill-dev-GGUF
+#             # https://huggingface.co/YarvixPA/FLUX.1-Fill-dev-GGUF/tree/main
+#             HFTextToImage(
+#                 repo_id="YarvixPA/FLUX.1-Fill-dev-GGUF",
+#                 path="flux1-fill-dev-Q4_K_S.gguf",
+#             ),
+#             HFTextToImage(
+#                 repo_id="YarvixPA/FLUX.1-Fill-dev-GGUF",
+#                 path="flux1-fill-dev-Q5_K_S.gguf",
+#             ),
+#             HFTextToImage(
+#                 repo_id="YarvixPA/FLUX.1-Fill-dev-GGUF",
+#                 path="flux1-fill-dev-Q6_K.gguf",
+#             ),
+#             HFTextToImage(
+#                 repo_id="YarvixPA/FLUX.1-Fill-dev-GGUF",
+#                 path="flux1-fill-dev-Q8_0.gguf",
+#             ),
+#             # Standard full precision model
+#             HFTextToImage(
+#                 repo_id="black-forest-labs/FLUX.1-Fill-dev",
+#             ),
+#         ]
+
+#     @classmethod
+#     def get_title(cls) -> str:
+#         return "Flux Fill"
+
+#     @classmethod
+#     def get_basic_fields(cls) -> list[str]:
+#         return [
+#             "model",
+#             "image",
+#             "mask_image",
+#             "prompt",
+#             "height",
+#             "width",
+#             "seed",
+#         ]
+
+#     def required_inputs(self):
+#         return ["image", "mask_image"]
+
+#     def get_model_id(self) -> str:
+#         if self.model.repo_id:
+#             return self.model.repo_id
+#         return "black-forest-labs/FLUX.1-Fill-dev"
+
+#     def _is_gguf_model(self) -> bool:
+#         """Check if the model is a GGUF model based on file extension."""
+#         return self.model.path is not None and self.model.path.lower().endswith(".gguf")
+
+#     async def _load_gguf_model(self, context: ProcessingContext, torch_dtype):
+#         """Load FLUX Fill model with GGUF quantization."""
+#         from huggingface_hub.file_download import try_to_load_from_cache
+
+#         # Get the cached file path
+#         assert self.model.path is not None
+#         cache_path = try_to_load_from_cache(self.get_model_id(), self.model.path)
+#         if not cache_path:
+#             raise ValueError(
+#                 f"Model {self.get_model_id()}/{self.model.path} must be downloaded first"
+#             )
+
+#         # Load the transformer with GGUF quantization
+#         transformer = FluxTransformer2DModel.from_single_file(
+#             cache_path,
+#             quantization_config=GGUFQuantizationConfig(compute_dtype=torch_dtype),
+#             torch_dtype=torch_dtype,
+#         )
+
+#         # Create the pipeline with the quantized transformer
+#         log.info("Creating FLUX Fill pipeline...")
+
+#         base_model_id = "black-forest-labs/FLUX.1-Fill-dev"
+
+#         log.info(
+#             f"Loading FLUX Fill pipeline from {base_model_id} with quantized transformer..."
+#         )
+#         self._pipeline = FluxFillPipeline.from_pretrained(
+#             base_model_id,
+#             transformer=transformer,
+#             torch_dtype=torch_dtype,
+#         )
+
+#         # Apply CPU offload if enabled
+#         if self.enable_cpu_offload:
+#             self._pipeline.enable_sequential_cpu_offload()
+
+#     async def preload_model(self, context: ProcessingContext):
+#         # Use bfloat16 for FLUX Fill models
+#         torch_dtype = torch.bfloat16
+
+#         # Check if this is a GGUF model based on file extension
+#         if self._is_gguf_model():
+#             await self._load_gguf_model(context, torch_dtype)
+#         else:
+#             # Load the full pipeline normally
+#             log.info(f"Loading FLUX Fill pipeline from {self.get_model_id()}...")
+#             self._pipeline = await self.load_model(
+#                 context=context,
+#                 model_id=self.get_model_id(),
+#                 path=self.model.path,
+#                 model_class=FluxFillPipeline,
+#                 torch_dtype=torch_dtype,
+#                 variant=None,
+#                 device="cpu",
+#             )
+
+#         # Apply CPU offload if enabled
+#         if self._pipeline is not None and self.enable_cpu_offload:
+#             self._pipeline.enable_sequential_cpu_offload()
+
+#     async def move_to_device(self, device: str):
+#         if self._pipeline is not None:
+#             # If CPU offload is enabled, we need to handle device movement differently
+#             if self.enable_cpu_offload:
+#                 # With CPU offload, components are automatically managed
+#                 # When moving to CPU, we should disable CPU offload and move everything to CPU
+#                 if device == "cpu":
+#                     # Disable CPU offload and move all components to CPU
+#                     try:
+#                         self._pipeline.to(device)
+#                     except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+#                         raise ValueError(
+#                             "VRAM out of memory while moving Flux Fill to device. "
+#                             "Enable 'CPU offload' in the advanced node properties or reduce image size/steps."
+#                         ) from e
+#                 # When moving to GPU with CPU offload, re-enable CPU offload
+#                 elif device in ["cuda", "mps"]:
+#                     self._pipeline.enable_sequential_cpu_offload()
+#             else:
+#                 # Normal device movement without CPU offload
+#                 try:
+#                     self._pipeline.to(device)
+#                 except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+#                     raise ValueError(
+#                         "VRAM out of memory while moving Flux Fill to device. "
+#                         "Try enabling 'CPU offload' in the advanced node properties, reduce image size, or lower steps."
+#                     ) from e
+
+#             # Apply memory optimizations only when on GPU
+#             if device != "cpu":
+#                 if self.enable_vae_slicing:
+#                     self._pipeline.enable_vae_slicing()
+
+#                 if self.enable_vae_tiling:
+#                     self._pipeline.enable_vae_tiling()
+
+#     async def process(self, context: ProcessingContext) -> ImageRef:
+#         if self._pipeline is None:
+#             raise ValueError("Pipeline not initialized")
+
+#         # Set up the generator for reproducibility
+#         generator = None
+#         if self.seed != -1:
+#             generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+#         input_image = await context.image_to_pil(self.image)
+#         mask_image = await context.image_to_pil(self.mask_image)
+
+#         def progress_callback(
+#             pipeline: Any, step: int, timestep: int, callback_kwargs: dict
+#         ) -> dict:
+#             context.post_message(
+#                 NodeProgress(
+#                     node_id=self.id,
+#                     progress=step,
+#                     total=50,  # Default num_inference_steps for FLUX Fill
+#                 )
+#             )
+#             return callback_kwargs
+
+#         # Generate the image off the event loop
+#         def _run_pipeline_sync():
+#             return self._pipeline(
+#                 prompt=self.prompt,
+#                 image=input_image,
+#                 mask_image=mask_image,
+#                 height=self.height,
+#                 width=self.width,
+#                 max_sequence_length=self.max_sequence_length,
+#                 generator=generator,
+#                 callback_on_step_end=progress_callback,  # type: ignore
+#                 callback_on_step_end_tensor_inputs=["latents"],
+#             )
+
+#         try:
+#             output = await asyncio.to_thread(_run_pipeline_sync)
+#         except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+#             raise ValueError(
+#                 "VRAM out of memory while running Flux Fill. "
+#                 "Try enabling 'CPU offload' in the advanced node properties "
+#                 "(Enable CPU offload), reduce image size, or lower max_sequence_length."
+#             ) from e
+
+#         image = output.images[0]  # type: ignore
+
+#         return await context.image_from_pil(image)

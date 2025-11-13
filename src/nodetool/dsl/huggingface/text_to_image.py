@@ -103,9 +103,9 @@ class Flux(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     - Controlled generation with Fill, Canny, or Depth variants
     """
 
-    model: types.HFFlux | OutputHandle[types.HFFlux] = connect_field(
-        default=types.HFFlux(
-            type="hf.flux",
+    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
+        default=types.HFTextToImage(
+            type="hf.text_to_image",
             repo_id="",
             path=None,
             variant=None,
@@ -130,7 +130,7 @@ class Flux(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     )
     num_inference_steps: int | OutputHandle[int] = connect_field(
         default=20,
-        description="The number of denoising steps. Use 4 for schnell, 20-50 for dev.",
+        description="The number of denoising steps. 4 steps is forced for schnell models.",
     )
     max_sequence_length: int | OutputHandle[int] = connect_field(
         default=512,
@@ -283,9 +283,9 @@ class QwenImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]
     - Works out-of-the-box with the official Qwen model
     """
 
-    model: types.HFQwenImage | OutputHandle[types.HFQwenImage] = connect_field(
-        default=types.HFQwenImage(
-            type="hf.qwen_image",
+    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
+        default=types.HFTextToImage(
+            type="hf.text_to_image",
             repo_id="",
             path=None,
             variant=None,
@@ -305,7 +305,7 @@ class QwenImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]
         default=1.0, description="True CFG scale for Qwen-Image models."
     )
     num_inference_steps: int | OutputHandle[int] = connect_field(
-        default=20, description="The number of denoising steps."
+        default=50, description="The number of denoising steps."
     )
     height: int | OutputHandle[int] = connect_field(
         default=1024, description="The height of the generated image."
@@ -329,7 +329,7 @@ class QwenImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]
         default=False, description="Enable VAE slicing to reduce VRAM usage."
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
-        default=False, description="Enable CPU offload to reduce VRAM usage."
+        default=True, description="Enable CPU offload to reduce VRAM usage."
     )
 
     @classmethod
@@ -374,18 +374,16 @@ class StableDiffusion(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     )
 
-    model: types.HFStableDiffusion | OutputHandle[types.HFStableDiffusion] = (
-        connect_field(
-            default=types.HFStableDiffusion(
-                type="hf.stable_diffusion",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The model to use for image generation.",
-        )
+    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
+        default=types.HFTextToImage(
+            type="hf.text_to_image",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The model to use for image generation.",
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -514,18 +512,16 @@ class StableDiffusionXL(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionOutputType
     )
 
-    model: types.HFStableDiffusionXL | OutputHandle[types.HFStableDiffusionXL] = (
-        connect_field(
-            default=types.HFStableDiffusionXL(
-                type="hf.stable_diffusion_xl",
-                repo_id="",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The Stable Diffusion XL model to use for generation.",
-        )
+    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
+        default=types.HFTextToImage(
+            type="hf.text_to_image",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The Stable Diffusion XL model to use for generation.",
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,

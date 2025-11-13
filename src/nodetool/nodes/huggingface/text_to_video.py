@@ -7,7 +7,6 @@ from nodetool.nodes.huggingface.huggingface_node import progress_callback
 from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.metadata.types import (
-    HFStableDiffusion,
     HuggingFaceModel,
     HFTextToVideo,
     ImageRef,
