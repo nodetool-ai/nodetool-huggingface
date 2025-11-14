@@ -55,41 +55,41 @@ log = get_logger(__name__)
 
 HF_STABLE_DIFFUSION_MODELS = [
     HFTextToImage(
-        repo_id="stable-diffusion-v1-5/stable-diffusion-v1-5",
-        ignore_patterns=["v1-5-*.safetensors", "v1-5-*.ckpt"],
-    ),
-    HFTextToImage(
-        repo_id="SG161222/Realistic_Vision_V5.1_noVAE",
-        ignore_patterns=["Realistic_Vision_*.safetensors"],
-    ),
-    HFTextToImage(
         repo_id="Lykon/DreamShaper",
-        ignore_patterns=["DreamShaper_*.safetensors"],
+        path="DreamShaper_6.2_BakedVae_pruned.safetensors"
     ),
 ]
 
 HF_STABLE_DIFFUSION_XL_MODELS = [
     HFTextToImage(
         repo_id="stabilityai/stable-diffusion-xl-base-1.0",
-        ignore_patterns=["sd_xl_base_*.safetensors"],
-    ),
-    HFTextToImage(
-        repo_id="stabilityai/stable-diffusion-xl-refiner-1.0",
-        ignore_patterns=["sd_xl_refiner_*.safetensors"],
+        allow_patterns=[
+            "unet/**.fp16.safetensors",
+            "vae/**.fp16.safetensors",
+            "text_encoder/**.fp16.safetensors",
+            "text_encoder_2/**.fp16.safetensors",
+            "scheduler/**",
+            "tokenizer/**",
+            "tokenizer_2/**",
+            "*.json",
+            "*.yaml",
+            "*.yml",
+        ],
     ),
     HFTextToImage(
         repo_id="fal-collab-models/dreamshaper-xl-1-0",
-    )
-]
-
-HF_STABLE_DIFFUSION_3_MODELS = [
-    HFTextToImage(
-        repo_id="Comfy-Org/stable-diffusion-3.5-fp8",
-        path="sd3.5_large_fp8_scaled.safetensors",
-    ),
-    HFTextToImage(
-        repo_id="Comfy-Org/stable-diffusion-3.5-fp8",
-        path="sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors",
+        allow_patterns=[
+            "unet/**.fp16.safetensors",
+            "vae/**.fp16.safetensors",
+            "text_encoder/**.fp16.safetensors",
+            "text_encoder_2/**.fp16.safetensors",
+            "scheduler/**",
+            "tokenizer/**",
+            "tokenizer_2/**",
+            "*.json",
+            "*.yaml",
+            "*.yml",
+        ],
     ),
 ]
 
@@ -135,45 +135,6 @@ HF_CONTROL_NET_XL_MODELS: list[HFControlNet] = [
         path="diffusion_pytorch_model.fp16.safetensors",
     ),
 ]
-
-HF_LTXV_MODELS = [
-    HFTextToImage(
-        repo_id="Lightricks/LTX-Video",
-        path="ltx-video-2b-v0.9.safetensors",
-    ),
-]
-
-HF_CLIP_MODELS = [
-    HFCLIP(
-        repo_id="Comfy-Org/mochi_preview_repackaged",
-        path="split_files/text_encoders/t5xxl_fp16.safetensors",
-    ),
-    HFCLIP(
-        repo_id="Comfy-Org/mochi_preview_repackaged",
-        path="split_files/text_encoders/t5xxl_fp8_e4m3fn_scaled.safetensors",
-    ),
-    HFCLIP(repo_id="comfyanonymous/flux_text_encoders", path="clip_l.safetensors"),
-    HFCLIP(
-        repo_id="comfyanonymous/flux_text_encoders",
-        path="t5xxl_fp16.safetensors",
-    ),
-]
-
-HF_CLIP_VISION_MODELS = [
-    HFCLIPVision(
-        repo_id="Comfy-Org/sigclip_vision_384",
-        path="sigclip_vision_patch14_384.safetensors",
-    ),
-    HFCLIPVision(
-        repo_id="h94/IP-Adapter",
-        path="models/image_encoder/model.safetensors",
-    ),
-    HFCLIPVision(
-        repo_id="h94/IP-Adapter",
-        path="sdxl_models/image_encoder/model.safetensors",
-    ),
-]
-
 
 class StableDiffusionDetailLevel(str, Enum):
     LOW = "Low"

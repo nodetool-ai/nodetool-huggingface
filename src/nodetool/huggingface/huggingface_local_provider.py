@@ -1014,6 +1014,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         enable_vae_tiling: bool = False,
         timeout_s: int | None = None,
         context: ProcessingContext | None = None,
+        node_id: str | None = None,
         **kwargs: Any,
     ) -> VideoRef:
         """Generate a video from a text prompt using HuggingFace text-to-video models.
