@@ -440,7 +440,7 @@ class Flux(HuggingFacePipelineNode):
         description="Enable VAE slicing to reduce VRAM usage.",
     )
     enable_cpu_offload: bool = Field(
-        default=False,
+        default=True,
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
