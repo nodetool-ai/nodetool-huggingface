@@ -1852,7 +1852,7 @@
           ],
           "has_model_index": false,
           "downloads": 251854,
-          "likes": 455
+          "likes": 456
         },
         {
           "id": "microsoft/resnet-18",
@@ -2630,7 +2630,7 @@
           ],
           "has_model_index": false,
           "downloads": 7916073,
-          "likes": 553
+          "likes": 554
         },
         {
           "id": "llava-hf/llava-interleave-qwen-0.5b-hf",
@@ -5766,23 +5766,12 @@
       ],
       "recommended_models": [
         {
-          "id": "stabilityai/stable-diffusion-xl-base-1.0",
+          "id": "stabilityai/stable-diffusion-xl-base-1.0:sd_xl_base_1.0.safetensors",
           "type": "hf.text_to_image",
           "name": "stabilityai/stable-diffusion-xl-base-1.0",
           "repo_id": "stabilityai/stable-diffusion-xl-base-1.0",
-          "allow_patterns": [
-            "unet/**.fp16.safetensors",
-            "vae/**.fp16.safetensors",
-            "text_encoder/**.fp16.safetensors",
-            "text_encoder_2/**.fp16.safetensors",
-            "scheduler/**",
-            "tokenizer/**",
-            "tokenizer_2/**",
-            "*.json",
-            "*.yaml",
-            "*.yml"
-          ],
-          "size_on_disk": 6941189357,
+          "path": "sd_xl_base_1.0.safetensors",
+          "size_on_disk": 6938078334,
           "pipeline_tag": "text-to-image",
           "tags": [
             "diffusers",
@@ -5802,39 +5791,7 @@
           ],
           "has_model_index": true,
           "downloads": 2646483,
-          "likes": 7127
-        },
-        {
-          "id": "fal-collab-models/dreamshaper-xl-1-0",
-          "type": "hf.text_to_image",
-          "name": "fal-collab-models/dreamshaper-xl-1-0",
-          "repo_id": "fal-collab-models/dreamshaper-xl-1-0",
-          "allow_patterns": [
-            "unet/**.fp16.safetensors",
-            "vae/**.fp16.safetensors",
-            "text_encoder/**.fp16.safetensors",
-            "text_encoder_2/**.fp16.safetensors",
-            "scheduler/**",
-            "tokenizer/**",
-            "tokenizer_2/**",
-            "*.json",
-            "*.yaml",
-            "*.yml"
-          ],
-          "size_on_disk": 3177421,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "arxiv:1910.09700",
-            "autotrain_compatible",
-            "endpoints_compatible",
-            "diffusers:StableDiffusionXLPipeline",
-            "region:us"
-          ],
-          "has_model_index": true,
-          "downloads": 25538,
-          "likes": 0
+          "likes": 7129
         }
       ],
       "basic_fields": [
@@ -6105,23 +6062,12 @@
       ],
       "recommended_models": [
         {
-          "id": "stabilityai/stable-diffusion-xl-base-1.0",
+          "id": "stabilityai/stable-diffusion-xl-base-1.0:sd_xl_base_1.0.safetensors",
           "type": "hf.text_to_image",
           "name": "stabilityai/stable-diffusion-xl-base-1.0",
           "repo_id": "stabilityai/stable-diffusion-xl-base-1.0",
-          "allow_patterns": [
-            "unet/**.fp16.safetensors",
-            "vae/**.fp16.safetensors",
-            "text_encoder/**.fp16.safetensors",
-            "text_encoder_2/**.fp16.safetensors",
-            "scheduler/**",
-            "tokenizer/**",
-            "tokenizer_2/**",
-            "*.json",
-            "*.yaml",
-            "*.yml"
-          ],
-          "size_on_disk": 6941189357,
+          "path": "sd_xl_base_1.0.safetensors",
+          "size_on_disk": 6938078334,
           "pipeline_tag": "text-to-image",
           "tags": [
             "diffusers",
@@ -6141,39 +6087,7 @@
           ],
           "has_model_index": true,
           "downloads": 2646483,
-          "likes": 7127
-        },
-        {
-          "id": "fal-collab-models/dreamshaper-xl-1-0",
-          "type": "hf.text_to_image",
-          "name": "fal-collab-models/dreamshaper-xl-1-0",
-          "repo_id": "fal-collab-models/dreamshaper-xl-1-0",
-          "allow_patterns": [
-            "unet/**.fp16.safetensors",
-            "vae/**.fp16.safetensors",
-            "text_encoder/**.fp16.safetensors",
-            "text_encoder_2/**.fp16.safetensors",
-            "scheduler/**",
-            "tokenizer/**",
-            "tokenizer_2/**",
-            "*.json",
-            "*.yaml",
-            "*.yml"
-          ],
-          "size_on_disk": 3177421,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "arxiv:1910.09700",
-            "autotrain_compatible",
-            "endpoints_compatible",
-            "diffusers:StableDiffusionXLPipeline",
-            "region:us"
-          ],
-          "has_model_index": true,
-          "downloads": 25538,
-          "likes": 0
+          "likes": 7129
         }
       ],
       "basic_fields": [
@@ -6455,23 +6369,12 @@
       ],
       "recommended_models": [
         {
-          "id": "stabilityai/stable-diffusion-xl-base-1.0",
+          "id": "stabilityai/stable-diffusion-xl-base-1.0:sd_xl_base_1.0.safetensors",
           "type": "hf.text_to_image",
           "name": "stabilityai/stable-diffusion-xl-base-1.0",
           "repo_id": "stabilityai/stable-diffusion-xl-base-1.0",
-          "allow_patterns": [
-            "unet/**.fp16.safetensors",
-            "vae/**.fp16.safetensors",
-            "text_encoder/**.fp16.safetensors",
-            "text_encoder_2/**.fp16.safetensors",
-            "scheduler/**",
-            "tokenizer/**",
-            "tokenizer_2/**",
-            "*.json",
-            "*.yaml",
-            "*.yml"
-          ],
-          "size_on_disk": 6941189357,
+          "path": "sd_xl_base_1.0.safetensors",
+          "size_on_disk": 6938078334,
           "pipeline_tag": "text-to-image",
           "tags": [
             "diffusers",
@@ -6491,39 +6394,7 @@
           ],
           "has_model_index": true,
           "downloads": 2646483,
-          "likes": 7127
-        },
-        {
-          "id": "fal-collab-models/dreamshaper-xl-1-0",
-          "type": "hf.text_to_image",
-          "name": "fal-collab-models/dreamshaper-xl-1-0",
-          "repo_id": "fal-collab-models/dreamshaper-xl-1-0",
-          "allow_patterns": [
-            "unet/**.fp16.safetensors",
-            "vae/**.fp16.safetensors",
-            "text_encoder/**.fp16.safetensors",
-            "text_encoder_2/**.fp16.safetensors",
-            "scheduler/**",
-            "tokenizer/**",
-            "tokenizer_2/**",
-            "*.json",
-            "*.yaml",
-            "*.yml"
-          ],
-          "size_on_disk": 3177421,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "arxiv:1910.09700",
-            "autotrain_compatible",
-            "endpoints_compatible",
-            "diffusers:StableDiffusionXLPipeline",
-            "region:us"
-          ],
-          "has_model_index": true,
-          "downloads": 25538,
-          "likes": 0
+          "likes": 7129
         }
       ],
       "basic_fields": [
@@ -13057,23 +12928,12 @@
       ],
       "recommended_models": [
         {
-          "id": "stabilityai/stable-diffusion-xl-base-1.0",
+          "id": "stabilityai/stable-diffusion-xl-base-1.0:sd_xl_base_1.0.safetensors",
           "type": "hf.text_to_image",
           "name": "stabilityai/stable-diffusion-xl-base-1.0",
           "repo_id": "stabilityai/stable-diffusion-xl-base-1.0",
-          "allow_patterns": [
-            "unet/**.fp16.safetensors",
-            "vae/**.fp16.safetensors",
-            "text_encoder/**.fp16.safetensors",
-            "text_encoder_2/**.fp16.safetensors",
-            "scheduler/**",
-            "tokenizer/**",
-            "tokenizer_2/**",
-            "*.json",
-            "*.yaml",
-            "*.yml"
-          ],
-          "size_on_disk": 6941189357,
+          "path": "sd_xl_base_1.0.safetensors",
+          "size_on_disk": 6938078334,
           "pipeline_tag": "text-to-image",
           "tags": [
             "diffusers",
@@ -13093,39 +12953,7 @@
           ],
           "has_model_index": true,
           "downloads": 2646483,
-          "likes": 7127
-        },
-        {
-          "id": "fal-collab-models/dreamshaper-xl-1-0",
-          "type": "hf.text_to_image",
-          "name": "fal-collab-models/dreamshaper-xl-1-0",
-          "repo_id": "fal-collab-models/dreamshaper-xl-1-0",
-          "allow_patterns": [
-            "unet/**.fp16.safetensors",
-            "vae/**.fp16.safetensors",
-            "text_encoder/**.fp16.safetensors",
-            "text_encoder_2/**.fp16.safetensors",
-            "scheduler/**",
-            "tokenizer/**",
-            "tokenizer_2/**",
-            "*.json",
-            "*.yaml",
-            "*.yml"
-          ],
-          "size_on_disk": 3177421,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "arxiv:1910.09700",
-            "autotrain_compatible",
-            "endpoints_compatible",
-            "diffusers:StableDiffusionXLPipeline",
-            "region:us"
-          ],
-          "has_model_index": true,
-          "downloads": 25538,
-          "likes": 0
+          "likes": 7129
         }
       ],
       "basic_fields": [

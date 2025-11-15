@@ -8,7 +8,6 @@ from diffusers.models.autoencoders.vae import DecoderOutput
 from diffusers.models.modeling_outputs import AutoencoderKLOutput
 from nodetool.config.logging_config import get_logger
 from nodetool.workflows.types import NodeProgress
-import numpy as np
 import torch
 from RealESRGAN import RealESRGAN
 from huggingface_hub import try_to_load_from_cache
@@ -284,9 +283,7 @@ class LoadImageToImageModel(HuggingFacePipelineNode):
             context=context,
             model_id=self.repo_id,
             model_class=AutoPipelineForImage2Image,
-            torch_dtype=(
-                torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
-            ),
+            torch_dtype=self.get_torch_dtype(),
             use_safetensors=True,
             variant=(
                 self.variant.value if self.variant != ModelVariant.DEFAULT else None
@@ -396,11 +393,7 @@ class ImageToImage(HuggingFacePipelineNode):
             model_id=self.model.repo_id,
             path=self.model.path,
             model_class=AutoPipelineForImage2Image,
-            torch_dtype=(
-                torch.float16
-                if self.model.variant == ModelVariant.FP16
-                else torch.float32
-            ),
+            torch_dtype=self.get_torch_dtype(),
             use_safetensors=True,
             variant=self.model.variant,
         )
@@ -532,15 +525,7 @@ class Inpaint(HuggingFacePipelineNode):
             model_id=self.model.repo_id,
             path=self.model.path,
             model_class=AutoPipelineForInpainting,
-            torch_dtype=(
-                torch.float16
-                if self.model.variant == ModelVariant.FP16
-                else (
-                    torch.bfloat16
-                    if self.model.variant == ModelVariant.BF16
-                    else torch.float32
-                )
-            ),
+            torch_dtype=self.get_torch_dtype(),
             use_safetensors=True,
             variant=self.model.variant,
         )
@@ -909,11 +894,7 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
                 path=self.model.path,
                 safety_checker=None,
                 config="Lykon/DreamShaper",
-                torch_dtype=(
-                    torch.float16
-                    if self.variant == ModelVariant.FP16
-                    else torch.float32
-                ),
+                torch_dtype=self.get_torch_dtype(),
                 variant=self.variant.value,
             )
             assert self._pipeline is not None
@@ -1627,7 +1608,9 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
             model_class=ControlNetModel,
             model_id=self.controlnet.repo_id,
             path=self.controlnet.path,
-            variant=self.variant.value,
+            variant=(
+                self.variant.value if self.variant != ModelVariant.DEFAULT else None
+            ),
             torch_dtype=(
                 torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
             ),
@@ -1639,7 +1622,9 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
             model_id=self.model.repo_id,
             path=self.model.path,
             controlnet=controlnet,
-            variant=self.variant.value,
+            variant=(
+                self.variant.value if self.variant != ModelVariant.DEFAULT else None
+            ),
             torch_dtype=(
                 torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
             ),
@@ -1837,6 +1822,7 @@ class QwenImageEdit(HuggingFacePipelineNode):
     - Complex image transformations guided by text
     - Memory-efficient editing using GGUF quantization
     """
+
     model: HFImageToImage = Field(
         default=HFImageToImage(
             repo_id="QuantStack/Qwen-Image-Edit-2509-GGUF",
@@ -1926,7 +1912,9 @@ class QwenImageEdit(HuggingFacePipelineNode):
         ]
 
     async def _load_gguf_model(
-        self, context: ProcessingContext, torch_dtype,
+        self,
+        context: ProcessingContext,
+        torch_dtype,
     ):
         """Load Qwen-Image-Edit model with GGUF quantization."""
         # Get the cached file path

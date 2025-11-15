@@ -97,9 +97,14 @@ class StableDiffusion(StableDiffusionBaseNode):
             torch_dtype=(
                 torch.float16
                 if self.model.variant == ModelVariant.FP16
+                or self.model.variant == ModelVariant.DEFAULT
                 else torch.float32
             ),
-            variant="fp16",
+            variant=(
+                (self.variant.value if self.variant != ModelVariant.DEFAULT else None)
+                if self.variant != ModelVariant.DEFAULT
+                else None
+            ),
         )
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
@@ -137,35 +142,18 @@ class StableDiffusionXL(StableDiffusionXLBase):
 
         self._using_playground_pipeline = is_playground
 
-        if is_playground:
-            # Playground XL models need the generic DiffusionPipeline to avoid watermarking.
-            self._pipeline = await self.load_model(
-                context=context,
-                model_class=DiffusionPipeline,
-                model_id=self.model.repo_id
-                or "playgroundai/playground-v2-1024px-aesthetic",
-                path=self.model.path,
-                torch_dtype=torch.float16,
-                use_safetensors=True,
-                add_watermarker=False,
-                variant="fp16",
-            )
-        else:
-            self._pipeline = await self.load_model(
-                context=context,
-                model_class=StableDiffusionXLPAGPipeline,
-                model_id=self.model.repo_id,
-                path=self.model.path,
-                torch_dtype=(
-                    torch.float16
-                    if self.model.variant == ModelVariant.FP16
-                    else torch.float32
-                ),
-                variant=self.variant.value,
-            )
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=StableDiffusionXLPAGPipeline,
+            model_id=self.model.repo_id,
+            path=self.model.path,
+            torch_dtype=self.get_torch_dtype(),
+            variant=(
+                self.variant.value if self.variant != ModelVariant.DEFAULT else None
+            ),
+        )
         assert self._pipeline is not None
-        if not self._using_playground_pipeline:
-            self._set_scheduler(self.scheduler)
+        self._set_scheduler(self.scheduler)
 
     class OutputType(TypedDict):
         image: ImageRef | None
@@ -537,6 +525,8 @@ class Flux(HuggingFacePipelineNode):
             if detected_variant in [FluxVariant.SCHNELL, FluxVariant.DEV]
             else torch.float16
         )
+
+        log.info(f"Using torch_dtype: {torch_dtype}")
 
         # Check if this is a GGUF model based on file extension
         if self._is_gguf_model():
@@ -1288,3 +1278,29 @@ class QwenImage(HuggingFacePipelineNode):
     def required_inputs(self):
         """Return list of required inputs that must be connected."""
         return []  # No required inputs - IP adapter image is optional
+
+
+if __name__ == "__main__":
+    node = StableDiffusionXL(
+        model=HFTextToImage(
+            repo_id="stabilityai/stable-diffusion-xl-base-1.0",
+            path="sd_xl_base_1.0.safetensors",
+        ),
+        prompt="A cat holding a sign that says hello world",
+        negative_prompt="",
+        guidance_scale=7.5,
+        num_inference_steps=25,
+        width=512,
+        height=512,
+        variant=ModelVariant.FP16,
+    )
+    import asyncio
+
+    async def main():
+        context = ProcessingContext()
+        await node.preload_model(context)
+        await node.move_to_device("cuda")
+        output = await node.process(context)
+        print(output)
+
+    asyncio.run(main())

@@ -49,47 +49,22 @@ from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineN
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress
 
+import logging
 
 log = get_logger(__name__)
+log.setLevel(logging.DEBUG)
 
 
 HF_STABLE_DIFFUSION_MODELS = [
     HFTextToImage(
-        repo_id="Lykon/DreamShaper",
-        path="DreamShaper_6.2_BakedVae_pruned.safetensors"
+        repo_id="Lykon/DreamShaper", path="DreamShaper_6.2_BakedVae_pruned.safetensors"
     ),
 ]
 
 HF_STABLE_DIFFUSION_XL_MODELS = [
     HFTextToImage(
         repo_id="stabilityai/stable-diffusion-xl-base-1.0",
-        allow_patterns=[
-            "unet/**.fp16.safetensors",
-            "vae/**.fp16.safetensors",
-            "text_encoder/**.fp16.safetensors",
-            "text_encoder_2/**.fp16.safetensors",
-            "scheduler/**",
-            "tokenizer/**",
-            "tokenizer_2/**",
-            "*.json",
-            "*.yaml",
-            "*.yml",
-        ],
-    ),
-    HFTextToImage(
-        repo_id="fal-collab-models/dreamshaper-xl-1-0",
-        allow_patterns=[
-            "unet/**.fp16.safetensors",
-            "vae/**.fp16.safetensors",
-            "text_encoder/**.fp16.safetensors",
-            "text_encoder_2/**.fp16.safetensors",
-            "scheduler/**",
-            "tokenizer/**",
-            "tokenizer_2/**",
-            "*.json",
-            "*.yaml",
-            "*.yml",
-        ],
+        path="sd_xl_base_1.0.safetensors",
     ),
 ]
 
@@ -135,6 +110,7 @@ HF_CONTROL_NET_XL_MODELS: list[HFControlNet] = [
         path="diffusion_pytorch_model.fp16.safetensors",
     ),
 ]
+
 
 class StableDiffusionDetailLevel(str, Enum):
     LOW = "Low"
@@ -557,6 +533,14 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
 
 class StableDiffusionXLBase(HuggingFacePipelineNode):
 
+    def get_torch_dtype(self) -> torch.dtype:
+        if self.variant == ModelVariant.FP16:
+            return torch.float16
+        elif self.variant == ModelVariant.BF16:
+            return torch.bfloat16
+        else:
+            return torch.float32
+
     async def preload_model(self, context: ProcessingContext):
         """Preload the Stable Diffusion XL model and set up pipeline."""
         log.debug(f"Preloading Stable Diffusion XL model: {self.model.repo_id}")
@@ -824,6 +808,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         log.debug(f"Guidance scale: {self.guidance_scale}")
         log.debug(f"Dimensions: {self.width}x{self.height}")
         log.debug(f"LoRA scale: {self.lora_scale}")
+        log.debug(f"Model device: {self._pipeline.device}")
 
         def _run_pipeline_sync_xl():
             call_kwargs: dict[str, Any] = {
