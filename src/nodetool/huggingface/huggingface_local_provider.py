@@ -190,12 +190,6 @@ async def load_model(
     if model_id == "":
         raise ValueError("Please select a model")
 
-    print(f"Loading model {model_id} from {path}")
-    print(f"Skip cache: {skip_cache}")
-    print(f"Model class: {model_class.__name__}")
-    print(f"Torch dtype: {torch_dtype}")
-    print(f"Path: {path}")
-
     if not skip_cache:
         cached_model = ModelManager.get_model(model_id, model_class.__name__, path)
         if cached_model:

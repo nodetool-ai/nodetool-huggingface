@@ -66,6 +66,29 @@ HF_STABLE_DIFFUSION_XL_MODELS = [
         repo_id="stabilityai/stable-diffusion-xl-base-1.0",
         path="sd_xl_base_1.0.safetensors",
     ),
+    HFTextToImage(
+        repo_id="Lykon/dreamshaper-xl-v2-turbo",
+        path="DreamShaperXL_Turbo_v2_1.safetensors",
+    ),
+    HFTextToImage(
+        repo_id="RunDiffusion/Juggernaut-XL-v9",
+        path="Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors",
+    ),
+    HFTextToImage(
+        repo_id="dataautogpt3/ProteusV0.3",
+        path="ProteusV0.3.safetensors",
+    ),
+    HFTextToImage(
+        repo_id="John6666/prefect-illustrious-xl-v3-sdxl",
+    ),
+    HFTextToImage(
+        repo_id="cagliostrolab/animagine-xl-4.0",
+        path="animagine-xl-4.0-opt.safetensors",
+    ),
+    HFTextToImage(
+        repo_id="SG161222/RealVisXL_V5.0",
+        path="RealVisXL_V5.0_fp16.safetensors",
+    ),
 ]
 
 
