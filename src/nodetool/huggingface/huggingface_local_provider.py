@@ -46,17 +46,30 @@ from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
 from nodetool.ml.core.model_manager import ModelManager
 from huggingface_hub import hf_hub_download, try_to_load_from_cache, _CACHED_NO_EXIST
 import os
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
-from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import StableDiffusion3Pipeline
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
+    StableDiffusionPipeline,
+)
+from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
+    StableDiffusionXLPipeline,
+)
+from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import (
+    StableDiffusion3Pipeline,
+)
 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
 from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+
 # Import specific pipeline classes
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import StableDiffusionXLImg2ImgPipeline
-from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3_img2img import StableDiffusion3Img2ImgPipeline
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import (
+    StableDiffusionImg2ImgPipeline,
+)
+from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
+    StableDiffusionXLImg2ImgPipeline,
+)
+from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3_img2img import (
+    StableDiffusion3Img2ImgPipeline,
+)
 from diffusers.pipelines.flux.pipeline_flux_img2img import FluxImg2ImgPipeline
 from transformers import (
     AutoModelForSpeechSeq2Seq,
@@ -81,7 +94,7 @@ from transformers.pipelines import pipeline
 from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
 from diffusers.pipelines.wan.pipeline_wan import WanPipeline
 from nodetool.integrations.huggingface.huggingface_models import (
-    get_llamacpp_language_models_from_hf_cache
+    get_llamacpp_language_models_from_hf_cache,
 )
 from pathlib import Path
 from typing import TypeVar
@@ -149,6 +162,8 @@ async def load_pipeline(
             message=f"Loading pipeline {type(model_id) == str and model_id or pipeline_task} from HuggingFace",
         )
     )
+    if not "token" in kwargs:
+        kwargs["token"] = context.get_secret("HF_TOKEN")
     model = pipeline(
         pipeline_task,  # type: ignore
         model=model_id,
@@ -175,6 +190,12 @@ async def load_model(
     if model_id == "":
         raise ValueError("Please select a model")
 
+    print(f"Loading model {model_id} from {path}")
+    print(f"Skip cache: {skip_cache}")
+    print(f"Model class: {model_class.__name__}")
+    print(f"Torch dtype: {torch_dtype}")
+    print(f"Path: {path}")
+
     if not skip_cache:
         cached_model = ModelManager.get_model(model_id, model_class.__name__, path)
         if cached_model:
@@ -182,6 +203,7 @@ async def load_model(
 
     if path:
         cache_path = try_to_load_from_cache(model_id, path)
+        print(f"Cache path: {cache_path}")
         if not cache_path:
             context.post_message(
                 JobUpdate(
@@ -192,7 +214,9 @@ async def load_model(
             hf_hub_download(model_id, path)
             cache_path = try_to_load_from_cache(model_id, path)
             if not cache_path:
-                raise ValueError(f"Downloading model {model_id}/{path} from HuggingFace failed")
+                raise ValueError(
+                    f"Downloading model {model_id}/{path} from HuggingFace failed"
+                )
 
         log.info(f"Loading model {model_id}/{path} from {cache_path}")
         context.post_message(
@@ -225,6 +249,9 @@ async def load_model(
                 message=f"Loading model {model_id} from HuggingFace",
             )
         )
+        if not token in kwargs:
+            kwargs["token"] = context.get_secret("HF_TOKEN")
+
         model = model_class.from_pretrained(  # type: ignore
             model_id,
             torch_dtype=torch_dtype,
@@ -234,7 +261,6 @@ async def load_model(
 
     ModelManager.set_model(node_id, model_id, model_class.__name__, model, path)
     return model
-
 
 
 def _detect_cached_variant(repo_id: str) -> str | None:
@@ -333,14 +359,10 @@ async def _load_flux_gguf_pipeline(
 
     cache_path = try_to_load_from_cache(repo_id, file_path)
     if not cache_path:
-        raise ValueError(
-            f"Model {repo_id}/{file_path} must be downloaded first"
-        )
+        raise ValueError(f"Model {repo_id}/{file_path} must be downloaded first")
 
     variant = _detect_flux_variant(repo_id, file_path)
-    torch_dtype = (
-        torch.bfloat16 if variant in {"schnell", "dev"} else torch.float16
-    )
+    torch_dtype = torch.bfloat16 if variant in {"schnell", "dev"} else torch.float16
 
     transformer = await load_model(
         node_id=node_id,
@@ -383,16 +405,18 @@ async def _load_flux_gguf_pipeline(
 
 
 async def load_qwen_image_gguf_pipeline(
-    model_id: str, path: str, context: ProcessingContext, torch_dtype: torch.dtype, node_id: str | None = None,
+    model_id: str,
+    path: str,
+    context: ProcessingContext,
+    torch_dtype: torch.dtype,
+    node_id: str | None = None,
 ):
     """Load Qwen-Image model with GGUF quantization."""
     log.info(f"Loading Qwen-Image model: {model_id}/{path}")
 
     cache_path = try_to_load_from_cache(model_id, path)
     if not cache_path:
-        raise ValueError(
-            f"Model {model_id}/{path} must be downloaded first"
-        )
+        raise ValueError(f"Model {model_id}/{path} must be downloaded first")
 
     log.debug(f"Cache path: {cache_path}")
     log.debug(f"Torch dtype: {torch_dtype}")
@@ -432,7 +456,6 @@ async def load_qwen_image_gguf_pipeline(
     return pipeline
 
 
-
 @register_provider(Provider.HuggingFace)
 class HuggingFaceLocalProvider(BaseProvider):
     """Local provider for HuggingFace models using cached diffusion pipelines."""
@@ -466,6 +489,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             RuntimeError: If generation fails
         """
         from nodetool.nodes.huggingface.image_to_image import pipeline_progress_callback
+
         if context is None:
             raise ValueError(
                 "ProcessingContext is required for HuggingFace image generation"
@@ -501,20 +525,20 @@ class HuggingFaceLocalProvider(BaseProvider):
 
                 if _is_flux_gguf_model(params.model.id, params.model.path):
                     pipeline = await _load_flux_gguf_pipeline(
-                        repo_id=params.model.id, 
-                        file_path=params.model.path, 
-                        context=context, 
-                        task="text2image", 
-                        node_id=node_id
+                        repo_id=params.model.id,
+                        file_path=params.model.path,
+                        context=context,
+                        task="text2image",
+                        node_id=node_id,
                     )
                     use_cpu_offload = True
                 elif _is_qwen_image_gguf_model(params.model.id, params.model.path):
                     pipeline = await load_qwen_image_gguf_pipeline(
-                        model_id=params.model.id, 
-                        path=params.model.path, 
-                        context=context, 
+                        model_id=params.model.id,
+                        path=params.model.path,
+                        context=context,
                         torch_dtype=torch.bfloat16,
-                        node_id=node_id
+                        node_id=node_id,
                     )
                     use_cpu_offload = True
                 else:
@@ -524,30 +548,38 @@ class HuggingFaceLocalProvider(BaseProvider):
                     if "diffusers:StableDiffusionXLPipeline" in model_info.tags:
                         pipeline = StableDiffusionXLPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=torch.float16
-                            if torch.cuda.is_available()
-                            else torch.float32,
+                            torch_dtype=(
+                                torch.float16
+                                if torch.cuda.is_available()
+                                else torch.float32
+                            ),
                         )
                     elif "diffusers:StableDiffusionPipeline" in model_info.tags:
                         pipeline = StableDiffusionPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=torch.float16
-                            if torch.cuda.is_available()
-                            else torch.float32,
+                            torch_dtype=(
+                                torch.float16
+                                if torch.cuda.is_available()
+                                else torch.float32
+                            ),
                         )
                     elif "diffusers:StableDiffusion3Pipeline" in model_info.tags:
                         pipeline = StableDiffusion3Pipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=torch.float16
-                            if torch.cuda.is_available()
-                            else torch.float32,
+                            torch_dtype=(
+                                torch.float16
+                                if torch.cuda.is_available()
+                                else torch.float32
+                            ),
                         )
                     elif "flux" in model_info.tags:
                         pipeline = FluxPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=torch.bfloat16
-                            if torch.cuda.is_available()
-                            else torch.float32,
+                            torch_dtype=(
+                                torch.bfloat16
+                                if torch.cuda.is_available()
+                                else torch.float32
+                            ),
                         )
                     else:
                         raise ValueError(
@@ -557,9 +589,9 @@ class HuggingFaceLocalProvider(BaseProvider):
                 # Load pipeline from multi-file model (standard format)
                 pipeline = AutoPipelineForText2Image.from_pretrained(
                     params.model.id,
-                    torch_dtype=torch.float16
-                    if torch.cuda.is_available()
-                    else torch.float32,
+                    torch_dtype=(
+                        torch.float16 if torch.cuda.is_available() else torch.float32
+                    ),
                     variant=_detect_cached_variant(params.model.id),
                 )
 
@@ -657,16 +689,18 @@ class HuggingFaceLocalProvider(BaseProvider):
 
                 if _is_flux_gguf_model(params.model.id, params.model.path):
                     pipeline = await _load_flux_gguf_pipeline(
-                        repo_id=params.model.id, 
-                        file_path=params.model.path, 
-                        context=context, 
-                        task="image2image", 
-                        node_id=node_id
+                        repo_id=params.model.id,
+                        file_path=params.model.path,
+                        context=context,
+                        task="image2image",
+                        node_id=node_id,
                     )
                     use_cpu_offload = True
                 else:
                     # Verify the file is cached locally
-                    cache_path = try_to_load_from_cache(params.model.id, params.model.path)
+                    cache_path = try_to_load_from_cache(
+                        params.model.id, params.model.path
+                    )
                     if not cache_path:
                         raise ValueError(
                             f"Single-file model {params.model.id}/{params.model.path} must be downloaded first"
@@ -688,30 +722,38 @@ class HuggingFaceLocalProvider(BaseProvider):
                     if "diffusers:StableDiffusionPipeline" in model_info.tags:
                         pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=torch.float16
-                            if torch.cuda.is_available()
-                            else torch.float32,
+                            torch_dtype=(
+                                torch.float16
+                                if torch.cuda.is_available()
+                                else torch.float32
+                            ),
                         )
                     elif "diffusers:StableDiffusionXLPipeline" in model_info.tags:
                         pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=torch.float16
-                            if torch.cuda.is_available()
-                            else torch.float32,
+                            torch_dtype=(
+                                torch.float16
+                                if torch.cuda.is_available()
+                                else torch.float32
+                            ),
                         )
                     elif "diffusers:StableDiffusion3Pipeline" in model_info.tags:
                         pipeline = StableDiffusion3Img2ImgPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=torch.float16
-                            if torch.cuda.is_available()
-                            else torch.float32,
+                            torch_dtype=(
+                                torch.float16
+                                if torch.cuda.is_available()
+                                else torch.float32
+                            ),
                         )
                     elif "flux" in model_info.tags:
                         pipeline = FluxImg2ImgPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=torch.bfloat16
-                            if torch.cuda.is_available()
-                            else torch.float32,
+                            torch_dtype=(
+                                torch.bfloat16
+                                if torch.cuda.is_available()
+                                else torch.float32
+                            ),
                         )
                     else:
                         raise ValueError(
@@ -721,7 +763,9 @@ class HuggingFaceLocalProvider(BaseProvider):
                 # Load pipeline from multi-file model (standard format)
                 pipeline = AutoPipelineForImage2Image.from_pretrained(
                     params.model.id,
-                    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                    torch_dtype=(
+                        torch.float16 if torch.cuda.is_available() else torch.float32
+                    ),
                     variant=_detect_cached_variant(params.model.id),
                 )
 
@@ -806,6 +850,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         """
         from nodetool.nodes.huggingface.text_to_speech import KokoroTTS
         from nodetool.nodes.huggingface.text_to_speech import TextToSpeech
+
         if context is None:
             raise ValueError(
                 "ProcessingContext is required for HuggingFace TTS generation"
@@ -908,9 +953,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             RuntimeError: If transcription fails
         """
         if context is None:
-            raise ValueError(
-                "ProcessingContext is required for HuggingFace ASR"
-            )
+            raise ValueError("ProcessingContext is required for HuggingFace ASR")
 
         log.debug(f"Transcribing audio with HuggingFace Whisper model: {model}")
 
@@ -950,7 +993,9 @@ class HuggingFaceLocalProvider(BaseProvider):
             )
 
             # Cache the pipeline
-            ModelManager.set_model(cache_key, cache_key, "automatic-speech-recognition", asr_pipeline)
+            ModelManager.set_model(
+                cache_key, cache_key, "automatic-speech-recognition", asr_pipeline
+            )
 
         audio_segment = AudioSegment.from_file(BytesIO(audio))
         # Whisper expects 16kHz mono audio
@@ -1362,14 +1407,18 @@ class HuggingFaceLocalProvider(BaseProvider):
         cached_pipeline = ModelManager.get_model(cache_key, "text-generation")
 
         if not cached_pipeline:
-            cache_path = try_to_load_from_cache(repo_id, filename)  # pyright: ignore[reportArgumentType]
+            cache_path = try_to_load_from_cache(
+                repo_id, filename
+            )  # pyright: ignore[reportArgumentType]
             if not cache_path:
                 raise ValueError(f"Model {repo_id}/{filename} must be downloaded first")
 
             log.info(f"Loading GGUF model {repo_id}/{filename}")
             # Note: load_model doesn't support gguf_file parameter, so we load manually
             # but still use ModelManager for caching consistency
-            cached_model = ModelManager.get_model(repo_id, AutoModelForCausalLM.__name__, filename)
+            cached_model = ModelManager.get_model(
+                repo_id, AutoModelForCausalLM.__name__, filename
+            )
             if not cached_model:
                 hf_model = AutoModelForCausalLM.from_pretrained(
                     repo_id,
@@ -1377,10 +1426,12 @@ class HuggingFaceLocalProvider(BaseProvider):
                     device_map="auto",
                     gguf_file=filename,
                 )
-                ModelManager.set_model(repo_id, AutoModelForCausalLM.__name__, filename, hf_model)
+                ModelManager.set_model(
+                    repo_id, AutoModelForCausalLM.__name__, filename, hf_model
+                )
             else:
                 hf_model = cached_model
-            
+
             tokenizer = AutoTokenizer.from_pretrained(
                 repo_id,
                 gguf_file=filename,
@@ -1415,7 +1466,9 @@ class HuggingFaceLocalProvider(BaseProvider):
                     self.next_tokens_are_prompt = False
                     return
 
-                text = self.tokenizer.decode(value, skip_special_tokens=True)  # pyright: ignore[reportAttributeAccessIssue]
+                text = self.tokenizer.decode(
+                    value, skip_special_tokens=True
+                )  # pyright: ignore[reportAttributeAccessIssue]
                 if text:
                     self.token_queue.put(text)
 
@@ -1474,7 +1527,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         # Check cache with our key format for backward compatibility
         cache_key = f"{repo_id}:text-generation"
         cached_pipeline = ModelManager.get_model(cache_key, "text-generation")
-        
+
         # Also check with load_pipeline's cache format
         if not cached_pipeline:
             cached_pipeline = ModelManager.get_model(repo_id, "text-generation")
@@ -1488,7 +1541,9 @@ class HuggingFaceLocalProvider(BaseProvider):
                 model_id=repo_id,
             )
             # Cache with our key format for backward compatibility
-            ModelManager.set_model(cache_key, cache_key, "text-generation", cached_pipeline)
+            ModelManager.set_model(
+                cache_key, cache_key, "text-generation", cached_pipeline
+            )
 
         tokenizer = cached_pipeline.tokenizer
         if tokenizer is None:
@@ -1511,7 +1566,9 @@ class HuggingFaceLocalProvider(BaseProvider):
                     self.next_tokens_are_prompt = False
                     return
 
-                text = self.tokenizer.decode(value, skip_special_tokens=True)  # pyright: ignore[reportAttributeAccessIssue]
+                text = self.tokenizer.decode(
+                    value, skip_special_tokens=True
+                )  # pyright: ignore[reportAttributeAccessIssue]
                 if text:
                     self.token_queue.put(text)
 
@@ -1607,7 +1664,12 @@ class HuggingFaceLocalProvider(BaseProvider):
             if chunk.content:
                 full_text += chunk.content
 
-        return Message(role="assistant", content=full_text, provider=Provider.HuggingFace, model=model)
+        return Message(
+            role="assistant",
+            content=full_text,
+            provider=Provider.HuggingFace,
+            model=model,
+        )
 
     async def generate_messages(
         self,
@@ -1682,9 +1744,9 @@ class HuggingFaceLocalProvider(BaseProvider):
 
 if __name__ == "__main__":
     import asyncio
+
     # Create provider instance
     provider = HuggingFaceLocalProvider()
-
 
     async def test_generate_messages():
         """Test the generate_messages method with streaming."""
@@ -1777,7 +1839,7 @@ if __name__ == "__main__":
             context=context,
         )
         open("image.png", "wb").write(image)
-    
+
     async def test_image_to_image():
         """Test the image_to_image method."""
         models = await provider.get_available_image_models()

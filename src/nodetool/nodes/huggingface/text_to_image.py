@@ -1,4 +1,5 @@
 from enum import Enum
+import huggingface_hub
 from typing import Any, TypedDict
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
@@ -141,7 +142,8 @@ class StableDiffusionXL(StableDiffusionXLBase):
             self._pipeline = await self.load_model(
                 context=context,
                 model_class=DiffusionPipeline,
-                model_id=self.model.repo_id or "playgroundai/playground-v2-1024px-aesthetic",
+                model_id=self.model.repo_id
+                or "playgroundai/playground-v2-1024px-aesthetic",
                 path=self.model.path,
                 torch_dtype=torch.float16,
                 use_safetensors=True,
@@ -519,6 +521,13 @@ class Flux(HuggingFacePipelineNode):
         return self.model.path is not None and self.model.path.lower().endswith(".gguf")
 
     async def preload_model(self, context: ProcessingContext):
+        hf_token = await context.get_secret("HF_TOKEN")
+        if not hf_token:
+            model_url = f"https://huggingface.co/{self.get_model_id()}"
+            raise ValueError(
+                f"Flux is a gated model, please set the HF_TOKEN in Nodetool settings and accept the terms of use for the model: {model_url}"
+            )
+
         # Determine torch dtype based on variant
         # Auto-detect variant from model selection
         detected_variant = self._detect_variant_from_repo_id()
@@ -531,7 +540,7 @@ class Flux(HuggingFacePipelineNode):
 
         # Check if this is a GGUF model based on file extension
         if self._is_gguf_model():
-            await self._load_gguf_model(context, torch_dtype)
+            await self._load_gguf_model(context, torch_dtype, hf_token)
         else:
             # Load the full pipeline normally
             log.info(f"Loading FLUX pipeline from {self.get_model_id()}...")
@@ -543,29 +552,34 @@ class Flux(HuggingFacePipelineNode):
                 torch_dtype=torch_dtype,
                 variant=None,
                 device="cpu",
+                token=hf_token,
             )
 
         # Apply CPU offload if enabled
         if self._pipeline is not None and self.enable_cpu_offload:
             self._pipeline.enable_sequential_cpu_offload()
 
-    async def _load_gguf_model(self, context: ProcessingContext, torch_dtype):
+    async def _load_gguf_model(
+        self,
+        context: ProcessingContext,
+        torch_dtype: torch.dtype,
+        hf_token: str | None = None,
+    ):
         """Load FLUX model with GGUF quantization."""
         from huggingface_hub.file_download import try_to_load_from_cache
 
-        # Get the cached file path
-        assert self.model.path is not None
-        cache_path = try_to_load_from_cache(self.get_model_id(), self.model.path)
-        if not cache_path:
-            raise ValueError(
-                f"Model {self.get_model_id()}/{self.model.path} must be downloaded first"
-            )
+        if hf_token:
+            log.info(f"Using HF_TOKEN: {hf_token[:4]}...{hf_token[-4:]}")
 
         # Load the transformer with GGUF quantization
-        transformer = FluxTransformer2DModel.from_single_file(
-            cache_path,
+        transformer = await self.load_model(
+            context=context,
+            model_class=FluxTransformer2DModel,
+            model_id=self.model.repo_id,
+            path=self.model.path,
             quantization_config=GGUFQuantizationConfig(compute_dtype=torch_dtype),
             torch_dtype=torch_dtype,
+            token=hf_token,
         )
 
         # Create the pipeline with the quantized transformer
@@ -585,6 +599,7 @@ class Flux(HuggingFacePipelineNode):
             base_model_id,
             transformer=transformer,
             torch_dtype=torch_dtype,
+            token=hf_token,
         )
 
         # Apply CPU offload if enabled
@@ -1169,9 +1184,10 @@ class QwenImage(HuggingFacePipelineNode):
         if self.enable_memory_efficient_attention:
             self._pipeline.enable_attention_slicing()
 
-    
     async def _load_gguf_model(
-        self, context: ProcessingContext, torch_dtype,
+        self,
+        context: ProcessingContext,
+        torch_dtype,
     ):
         """Load Qwen-Image model with GGUF quantization."""
         # Get the cached file path

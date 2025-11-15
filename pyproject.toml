@@ -11,7 +11,7 @@ authors = [{ name = "Matthias Georgi", email = "matti.georgi@gmail.com" }]
 requires-python = ">=3.10.13"
 
 dependencies = [
-    "nodetool-core>=0.6.1,<0.7.0",
+    "nodetool-core>=0.6.2rc3,<0.7.0",
     "torch==2.8.0",
     "torchsde",
     "torchvision",
