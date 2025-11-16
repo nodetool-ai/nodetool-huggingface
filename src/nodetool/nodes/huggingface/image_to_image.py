@@ -26,6 +26,7 @@ from nodetool.workflows.base_node import BaseNode
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     HF_CONTROLNET_MODELS,
+    HF_CONTROLNET_XL_MODELS,
     ModelVariant,
     StableDiffusionBaseNode,
     StableDiffusionXLBase,
@@ -1552,16 +1553,15 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
         }
 
 
-class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
+class StableDiffusionXLControlNet(StableDiffusionXLBase):
     """
-    Transforms existing images using Stable Diffusion XL with ControlNet guidance.
-    image, generation, image-to-image, controlnet, SDXL
+    Generates images using Stable Diffusion XL with ControlNet guidance.
+    image, generation, text-to-image, controlnet, SDXL
 
     Use cases:
-    - Modify existing images with precise control over composition and structure
-    - Apply specific styles or concepts to photographs or artwork with guided transformations
-    - Create variations of existing visual content while maintaining certain features
-    - Enhance image editing capabilities with AI-guided transformations
+    - Generate images with precise control over composition and structure
+    - Create variations of existing images while maintaining specific features
+    - Artistic image generation with guided outputs
     """
 
     controlnet: HFControlNet = Field(
@@ -1570,7 +1570,7 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
     )
     control_image: ImageRef = Field(
         default=ImageRef(),
-        description="The control image to guide the transformation.",
+        description="The control image to guide the generation process.",
     )
     controlnet_conditioning_scale: float = Field(
         default=1.0,
@@ -1578,8 +1578,18 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
         ge=0.0,
         le=2.0,
     )
+    # Override default to disable attention slicing for better performance
+    # Users can enable it if they need to save VRAM
+    enable_attention_slicing: bool = Field(
+        default=False,
+        description="Enable attention slicing for the pipeline. This can reduce VRAM usage but may slow down generation.",
+    )
 
     _pipeline: StableDiffusionXLControlNetPAGPipeline | None = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return HF_CONTROLNET_XL_MODELS
 
     @classmethod
     def get_basic_fields(cls):
@@ -1596,7 +1606,13 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
     def get_title(cls):
         return "Stable Diffusion XL ControlNet"
 
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None:
+            # Move entire pipeline to device to ensure all components are on the same device
+            self._pipeline.to(device)
+
     async def preload_model(self, context: ProcessingContext):
+        await super().preload_model(context)
         # Use float32 for MPS compatibility with controlnet models
         if context.device == "mps" and self.variant != ModelVariant.FP16:
             raise ValueError(
@@ -1629,6 +1645,10 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
                 torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
             ),
         )
+        self._set_scheduler(self.scheduler)
+        # Ensure pipeline is on the correct device after loading
+        if self._pipeline is not None:
+            self._pipeline.to(context.device)
 
     class OutputType(TypedDict):
         image: ImageRef | None
@@ -1636,10 +1656,123 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
 
     async def process(self, context: ProcessingContext) -> OutputType:
         control_image = await context.image_to_pil(self.control_image)
-        init_image = None
-        if not self.init_image.is_empty():
-            init_image = await context.image_to_pil(self.init_image)
-            init_image = init_image.resize((self.width, self.height))
+        output = await self.run_pipeline(
+            context,
+            image=control_image,
+            width=control_image.width,
+            height=control_image.height,
+            controlnet_conditioning_scale=float(self.controlnet_conditioning_scale),
+        )
+        return {
+            "image": output if isinstance(output, ImageRef) else None,
+            "latent": output if isinstance(output, TorchTensor) else None,
+        }
+
+
+class StableDiffusionXLControlNetImg2ImgNode(StableDiffusionXLImg2Img):
+    """
+    Transforms existing images using Stable Diffusion XL with ControlNet guidance.
+    image, generation, image-to-image, controlnet, SDXL
+
+    Use cases:
+    - Modify existing images with precise control over composition and structure
+    - Apply specific styles or concepts to photographs or artwork with guided transformations
+    - Create variations of existing visual content while maintaining certain features
+    - Enhance image editing capabilities with AI-guided transformations
+    """
+
+    controlnet: HFControlNet = Field(
+        default=HFControlNet(),
+        description="The ControlNet model to use for guidance.",
+    )
+    control_image: ImageRef = Field(
+        default=ImageRef(),
+        description="The control image to guide the transformation.",
+    )
+    controlnet_conditioning_scale: float = Field(
+        default=1.0,
+        description="The scale for ControlNet conditioning.",
+        ge=0.0,
+        le=2.0,
+    )
+    # Override default to disable attention slicing for better performance
+    # Users can enable it if they need to save VRAM
+    enable_attention_slicing: bool = Field(
+        default=False,
+        description="Enable attention slicing for the pipeline. This can reduce VRAM usage but may slow down generation.",
+    )
+
+    _pipeline: StableDiffusionXLControlNetPAGImg2ImgPipeline | None = None
+
+    @classmethod
+    def get_basic_fields(cls):
+        return super().get_basic_fields() + [
+            "controlnet",
+            "control_image",
+            "controlnet_conditioning_scale",
+        ]
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return HF_CONTROLNET_XL_MODELS
+
+    def required_inputs(self):
+        return ["control_image", "init_image"]
+
+    @classmethod
+    def get_title(cls):
+        return "Stable Diffusion XL ControlNet (Img2Img)"
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None:
+            # Move entire pipeline to device to ensure all components are on the same device
+            self._pipeline.to(device)
+
+    async def preload_model(self, context: ProcessingContext):
+        # Use float32 for MPS compatibility with controlnet models
+        if context.device == "mps" and self.variant != ModelVariant.FP16:
+            raise ValueError(
+                "ControlNet on Apple Silicon does not support fp16, please use fp32"
+            )
+
+        controlnet = await self.load_model(
+            context=context,
+            model_class=ControlNetModel,
+            model_id=self.controlnet.repo_id,
+            path=self.controlnet.path,
+            variant=(
+                self.variant.value if self.variant != ModelVariant.DEFAULT else None
+            ),
+            torch_dtype=(
+                torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
+            ),
+        )
+        # Align pipeline dtype with controlnet dtype to avoid mismatches
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=StableDiffusionXLControlNetPAGImg2ImgPipeline,
+            model_id=self.model.repo_id,
+            path=self.model.path,
+            controlnet=controlnet,
+            variant=(
+                self.variant.value if self.variant != ModelVariant.DEFAULT else None
+            ),
+            torch_dtype=(
+                torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
+            ),
+        )
+        # Ensure pipeline is on the correct device after loading
+        if self._pipeline is not None:
+            self._pipeline.to(context.device)
+
+    class OutputType(TypedDict):
+        image: ImageRef | None
+        latent: TorchTensor | None
+
+    async def process(self, context: ProcessingContext) -> OutputType:
+        control_image = await context.image_to_pil(self.control_image)
+        init_image = await context.image_to_pil(self.init_image)
+        init_image = init_image.resize((self.width, self.height))
 
         # Set up the generator for reproducibility
         generator = torch.Generator(device="cpu")
@@ -1648,8 +1781,8 @@ class StableDiffusionXLControlNetNode(StableDiffusionXLImg2Img):
 
         result = await self.run_pipeline(
             context,
-            init_image=init_image,
-            image=control_image,
+            image=init_image,
+            control_image=control_image,
             strength=self.strength,
             controlnet_conditioning_scale=self.controlnet_conditioning_scale,
             num_inference_steps=self.num_inference_steps,

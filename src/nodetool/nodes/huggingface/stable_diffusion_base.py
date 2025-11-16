@@ -119,7 +119,7 @@ HF_CONTROLNET_MODELS: list[HFControlNet] = [
     ),
 ]
 
-HF_CONTROL_NET_XL_MODELS: list[HFControlNet] = [
+HF_CONTROLNET_XL_MODELS: list[HFControlNet] = [
     HFControlNet(
         repo_id="diffusers/controlnet-canny-sdxl-1.0",
         path="diffusion_pytorch_model.fp16.safetensors",
