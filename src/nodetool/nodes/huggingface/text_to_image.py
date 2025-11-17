@@ -23,9 +23,6 @@ import asyncio
 import logging
 
 # The QwenImage import requires optional dependencies. Keep it near top-level to surface missing deps early.
-from diffusers.quantizers.quantization_config import (
-    BitsAndBytesConfig as DiffusersBitsAndBytesConfig,
-)
 from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
 from diffusers.models.transformers.transformer_qwenimage import (
     QwenImageTransformer2DModel,
