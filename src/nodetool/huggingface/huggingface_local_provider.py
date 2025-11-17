@@ -45,6 +45,21 @@ import torch
 from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
 from nodetool.ml.core.model_manager import ModelManager
 from huggingface_hub import hf_hub_download, try_to_load_from_cache, _CACHED_NO_EXIST
+
+
+def _is_cuda_available() -> bool:
+    """Safely check if CUDA is available, handling cases where PyTorch is not compiled with CUDA support."""
+    try:
+        # Check if cuda module exists
+        if not hasattr(torch, "cuda"):
+            return False
+        # Try to check availability - this can raise RuntimeError if CUDA is not compiled
+        return torch.cuda.is_available()
+    except (RuntimeError, AttributeError):
+        # PyTorch not compiled with CUDA support or other CUDA-related error
+        return False
+
+
 import os
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
     StableDiffusionPipeline,
@@ -543,7 +558,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                             str(cache_path),
                             torch_dtype=(
                                 torch.float16
-                                if torch.cuda.is_available()
+                                if _is_cuda_available()
                                 else torch.float32
                             ),
                         )
@@ -552,7 +567,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                             str(cache_path),
                             torch_dtype=(
                                 torch.float16
-                                if torch.cuda.is_available()
+                                if _is_cuda_available()
                                 else torch.float32
                             ),
                         )
@@ -561,7 +576,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                             str(cache_path),
                             torch_dtype=(
                                 torch.float16
-                                if torch.cuda.is_available()
+                                if _is_cuda_available()
                                 else torch.float32
                             ),
                         )
@@ -570,7 +585,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                             str(cache_path),
                             torch_dtype=(
                                 torch.bfloat16
-                                if torch.cuda.is_available()
+                                if _is_cuda_available()
                                 else torch.float32
                             ),
                         )
@@ -583,7 +598,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 pipeline = AutoPipelineForText2Image.from_pretrained(
                     params.model.id,
                     torch_dtype=(
-                        torch.float16 if torch.cuda.is_available() else torch.float32
+                        torch.float16 if _is_cuda_available() else torch.float32
                     ),
                     variant=_detect_cached_variant(params.model.id),
                 )
@@ -717,7 +732,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                             str(cache_path),
                             torch_dtype=(
                                 torch.float16
-                                if torch.cuda.is_available()
+                                if _is_cuda_available()
                                 else torch.float32
                             ),
                         )
@@ -726,7 +741,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                             str(cache_path),
                             torch_dtype=(
                                 torch.float16
-                                if torch.cuda.is_available()
+                                if _is_cuda_available()
                                 else torch.float32
                             ),
                         )
@@ -735,7 +750,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                             str(cache_path),
                             torch_dtype=(
                                 torch.float16
-                                if torch.cuda.is_available()
+                                if _is_cuda_available()
                                 else torch.float32
                             ),
                         )
@@ -744,7 +759,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                             str(cache_path),
                             torch_dtype=(
                                 torch.bfloat16
-                                if torch.cuda.is_available()
+                                if _is_cuda_available()
                                 else torch.float32
                             ),
                         )
@@ -757,7 +772,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 pipeline = AutoPipelineForImage2Image.from_pretrained(
                     params.model.id,
                     torch_dtype=(
-                        torch.float16 if torch.cuda.is_available() else torch.float32
+                        torch.float16 if _is_cuda_available() else torch.float32
                     ),
                     variant=_detect_cached_variant(params.model.id),
                 )
@@ -958,7 +973,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             log.info(f"Loading automatic speech recognition pipeline: {model}")
 
             # Determine torch dtype based on device
-            torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+            torch_dtype = torch.float16 if _is_cuda_available() else torch.float32
 
             # Load model using helper
             hf_model = await load_model(
