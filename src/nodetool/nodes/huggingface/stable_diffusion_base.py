@@ -93,6 +93,7 @@ HF_STABLE_DIFFUSION_XL_MODELS = [
 
 
 HF_CONTROLNET_MODELS: list[HFControlNet] = [
+    # Original ControlNet models
     HFControlNet(
         repo_id="lllyasviel/control_v11p_sd15_canny",
         path="diffusion_pytorch_model.fp16.safetensors",
@@ -117,9 +118,24 @@ HF_CONTROLNET_MODELS: list[HFControlNet] = [
         repo_id="lllyasviel/control_v11p_sd15_openpose",
         path="diffusion_pytorch_model.fp16.safetensors",
     ),
+    # SD Control Collection - IP-Adapter SD15 models
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="ip-adapter_sd15_plus.pth",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="ip-adapter_sd15.pth",
+    ),
+    # SD Control Collection - Other SD15 models
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="ioclab_sd15_recolor.safetensors",
+    ),
 ]
 
 HF_CONTROLNET_XL_MODELS: list[HFControlNet] = [
+    # Original SDXL ControlNet models
     HFControlNet(
         repo_id="diffusers/controlnet-canny-sdxl-1.0",
         path="diffusion_pytorch_model.fp16.safetensors",
@@ -131,6 +147,211 @@ HF_CONTROLNET_XL_MODELS: list[HFControlNet] = [
     HFControlNet(
         repo_id="diffusers/controlnet-zoe-depth-sdxl-1.0",
         path="diffusion_pytorch_model.fp16.safetensors",
+    ),
+    # SD Control Collection - SDXL Canny models
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="diffusers_xl_canny_full.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="diffusers_xl_canny_mid.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="diffusers_xl_canny_small.safetensors",
+    ),
+    # SD Control Collection - SDXL Depth models
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="diffusers_xl_depth_full.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="diffusers_xl_depth_mid.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="diffusers_xl_depth_small.safetensors",
+    ),
+    # SD Control Collection - T2I Adapter Diffusers XL models
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="t2i-adapter_diffusers_xl_canny.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="t2i-adapter_diffusers_xl_depth_midas.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="t2i-adapter_diffusers_xl_depth_zoe.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="t2i-adapter_diffusers_xl_lineart.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="t2i-adapter_diffusers_xl_openpose.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="t2i-adapter_diffusers_xl_sketch.safetensors",
+    ),
+    # SD Control Collection - T2I Adapter XL models
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="t2i-adapter_xl_canny.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="t2i-adapter_xl_openpose.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="t2i-adapter_xl_sketch.safetensors",
+    ),
+    # SD Control Collection - OpenPose models
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="thibaud_xl_openpose.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="thibaud_xl_openpose_256lora.safetensors",
+    ),
+    # SD Control Collection - SargeZT Depth models
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="sargezt_xl_depth_faid_vidit.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="sargezt_xl_depth_zeed.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="sargezt_xl_depth.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="sargezt_xl_softedge.safetensors",
+    ),
+    # SD Control Collection - IP-Adapter XL models
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="ip-adapter_xl.pth",
+    ),
+    # SD Control Collection - Kohya ControlLite XL models
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="kohya_controllllite_xl_depth_anime.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="kohya_controllllite_xl_canny_anime.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="kohya_controllllite_xl_scribble_anime.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="kohya_controllllite_xl_openpose_anime.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="kohya_controllllite_xl_openpose_anime_v2.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="kohya_controllllite_xl_blur_anime_beta.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="kohya_controllllite_xl_blur.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="kohya_controllllite_xl_blur_anime.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="kohya_controllllite_xl_canny.safetensors",
+    ),
+    HFControlNet(
+        repo_id="lllyasviel/sd_control_collection",
+        path="kohya_controllllite_xl_depth.safetensors",
+    ),
+    # Qinglong ControlNet-LLLite XL models
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_canny.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_depth.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_depth_V2.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_dw_openpose.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_lineart_anime_denoise.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_mlsd_V2.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_normal.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_normal_dsine.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_recolor_luminance.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_segment_animeface.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_segment_animeface_V2.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_sketch.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_softedge.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_t2i-adapter_color_shuffle.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_tile_anime_alpha.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_tile_anime_beta.safetensors",
+    ),
+    HFControlNet(
+        repo_id="bdsqlsz/qinglong_controlnet-lllite",
+        path="bdsqlsz_controlllite_xl_tile_realistic.safetensors",
     ),
 ]
 
