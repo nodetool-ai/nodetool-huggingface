@@ -14,8 +14,7 @@ from huggingface_hub import try_to_load_from_cache
 from nodetool.metadata.types import (
     HFImageToImage,
     HFControlNet,
-    HFTextToImage,
-    HFImageToImage,
+    HFQwenImageEdit,
     HFRealESRGAN,
     HFVAE,
     TorchTensor,
@@ -652,6 +651,7 @@ class StableDiffusionControlNet(StableDiffusionBaseNode):
             torch_dtype=controlnet_dtype,
         )
         self._set_scheduler(self.scheduler)
+        self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         control_image = await context.image_to_pil(self.control_image)
@@ -722,6 +722,7 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
         )
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
+        self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         init_image = await context.image_to_pil(self.init_image)
@@ -819,6 +820,7 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
         )  # type: ignore
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
+        self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         init_image = await context.image_to_pil(self.init_image)
@@ -900,6 +902,7 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
             )
             assert self._pipeline is not None
             self._set_scheduler(self.scheduler)
+            self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         init_image = await context.image_to_pil(self.init_image)
@@ -1000,6 +1003,7 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
             config="Lykon/DreamShaper",  # workaround for missing SD15 repo
         )
         self._set_scheduler(self.scheduler)
+        self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         if self._pipeline is None:
@@ -1462,6 +1466,7 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         assert self._pipeline is not None
         self._pipeline.enable_model_cpu_offload()
         self._set_scheduler(self.scheduler)
+        self._load_ip_adapter()
 
     async def process(self, context) -> OutputType:
         init_image = await context.image_to_pil(self.init_image)
@@ -1534,6 +1539,7 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
             )
             assert self._pipeline is not None
             self._set_scheduler(self.scheduler)
+            self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         input_image = await context.image_to_pil(self.image)
@@ -1956,8 +1962,8 @@ class QwenImageEdit(HuggingFacePipelineNode):
     - Memory-efficient editing using GGUF quantization
     """
 
-    model: HFImageToImage = Field(
-        default=HFImageToImage(
+    model: HFQwenImageEdit = Field(
+        default=HFQwenImageEdit(
             repo_id="QuantStack/Qwen-Image-Edit-2509-GGUF",
             path="Qwen-Image-Edit-2509-Q4_K_M.gguf",
         ),
@@ -2032,13 +2038,13 @@ class QwenImageEdit(HuggingFacePipelineNode):
         return self.model.path is not None and self.model.path.lower().endswith(".gguf")
 
     @classmethod
-    def get_recommended_models(cls) -> list[HFTextToImage]:
+    def get_recommended_models(cls) -> list[HFQwenImageEdit]:
         return [
-            HFTextToImage(
+            HFQwenImageEdit(
                 repo_id="QuantStack/Qwen-Image-Edit-2509-GGUF",
                 path="Qwen-Image-Edit-2509-Q4_K_M.gguf",
             ),
-            HFTextToImage(
+            HFQwenImageEdit(
                 repo_id="QuantStack/Qwen-Image-Edit-2509-GGUF",
                 path="Qwen-Image-Edit-2509-Q8_0.gguf",
             ),

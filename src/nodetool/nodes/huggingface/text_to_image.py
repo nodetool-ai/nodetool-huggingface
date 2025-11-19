@@ -3,10 +3,12 @@ import huggingface_hub
 from typing import Any, TypedDict
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
+    HFFlux,
+    HFQwenImage,
+    HFStableDiffusionXL,
     HFTextToImage,
     ImageRef,
     TorchTensor,
-    HuggingFaceModel,
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.image_to_image import pipeline_progress_callback
@@ -105,6 +107,7 @@ class StableDiffusion(StableDiffusionBaseNode):
         )
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
+        self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext):
         result = await self.run_pipeline(context, width=self.width, height=self.height)
@@ -151,6 +154,7 @@ class StableDiffusionXL(StableDiffusionXLBase):
         )
         assert self._pipeline is not None
         self._set_scheduler(self.scheduler)
+        self._load_ip_adapter()
 
     class OutputType(TypedDict):
         image: ImageRef | None
@@ -379,8 +383,8 @@ class Flux(HuggingFacePipelineNode):
     - Controlled generation with Fill, Canny, or Depth variants
     """
 
-    model: HFTextToImage = Field(
-        default=HFTextToImage(),
+    model: HFFlux = Field(
+        default=HFFlux(),
         description="The FLUX model to use for text-to-image generation.",
     )
     prompt: str = Field(
@@ -432,15 +436,15 @@ class Flux(HuggingFacePipelineNode):
     _pipeline: FluxPipeline | None = None
 
     @classmethod
-    def get_recommended_models(cls) -> list[HFTextToImage]:
+    def get_recommended_models(cls) -> list[HFFlux]:
         return [
             # GGUF quantized models
-            HFTextToImage(
+            HFFlux(
                 repo_id="city96/FLUX.1-dev-gguf",
                 path="flux1-dev-Q4_K_S.gguf",
             ),
             # FLUX.1-schnell GGUF models
-            HFTextToImage(
+            HFFlux(
                 repo_id="city96/FLUX.1-schnell-gguf",
                 path="flux1-schnell-Q4_K_S.gguf",
             ),
@@ -1040,8 +1044,8 @@ class QwenImage(HuggingFacePipelineNode):
     - Works out-of-the-box with the official Qwen model
     """
 
-    model: HFTextToImage = Field(
-        default=HFTextToImage(),
+    model: HFQwenImage = Field(
+        default=HFQwenImage(),
         description="The Qwen-Image model to use for text-to-image generation.",
     )
     prompt: str = Field(
@@ -1101,13 +1105,13 @@ class QwenImage(HuggingFacePipelineNode):
     _pipeline: Any | None = None
 
     @classmethod
-    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+    def get_recommended_models(cls) -> list[HFQwenImage]:
         return [
-            HFTextToImage(
+            HFQwenImage(
                 repo_id="city96/Qwen-Image-gguf",
                 path="qwen-image-Q4_K_M.gguf",
             ),
-            HFTextToImage(
+            HFQwenImage(
                 repo_id="city96/Qwen-Image-gguf",
                 path="qwen-image-Q8_0.gguf",
             ),
@@ -1279,7 +1283,7 @@ class QwenImage(HuggingFacePipelineNode):
 
 if __name__ == "__main__":
     node = StableDiffusionXL(
-        model=HFTextToImage(
+        model=HFStableDiffusionXL(
             repo_id="stabilityai/stable-diffusion-xl-base-1.0",
             path="sd_xl_base_1.0.safetensors",
         ),
