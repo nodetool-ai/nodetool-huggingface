@@ -117,6 +117,76 @@ from typing import TypeVar
 T = TypeVar("T")
 
 log = get_logger(__name__)
+_PREFERRED_HF_DEVICE = "mps"
+
+
+def _is_mps_available() -> bool:
+    """Detect whether the Apple Metal backend is available."""
+    try:
+        return (
+            hasattr(torch, "backends")
+            and hasattr(torch.backends, "mps")
+            and torch.backends.mps.is_available()
+        )
+    except Exception:
+        return False
+
+
+def _resolve_hf_device(
+    context: ProcessingContext,
+    requested_device: str | None = None,
+) -> str:
+    """
+    Force HuggingFace workloads onto the MPS device when available.
+
+    Falls back to an explicitly requested device or CPU when Apple Metal is not
+    present so execution can continue on other platforms.
+    """
+    if _is_mps_available():
+        if requested_device and requested_device != _PREFERRED_HF_DEVICE:
+            log.debug(
+                "Ignoring requested device %s in favor of %s",
+                requested_device,
+                _PREFERRED_HF_DEVICE,
+            )
+        return _PREFERRED_HF_DEVICE
+
+    fallback = None
+    if requested_device and requested_device != _PREFERRED_HF_DEVICE:
+        fallback = requested_device
+    elif context.device and context.device != _PREFERRED_HF_DEVICE:
+        fallback = context.device
+
+    if fallback:
+        return fallback
+
+    fallback = "cuda" if _is_cuda_available() else "cpu"
+    log.warning(
+        "MPS backend unavailable; falling back to %s for HuggingFace execution",
+        fallback,
+    )
+    return fallback
+
+
+def _ensure_model_on_device(model: Any, device: str | None) -> Any:
+    """Move HF pipelines/models onto the requested device when possible."""
+    if not device:
+        return model
+
+    move_fn = getattr(model, "to", None)
+    if callable(move_fn):
+        try:
+            moved = move_fn(device)
+            if moved is not None:
+                return moved
+        except Exception as exc:
+            log.warning(
+                "Failed to move %s to %s: %s",
+                model.__class__.__name__,
+                device,
+                exc,
+            )
+    return model
 
 
 async def load_pipeline(
@@ -135,10 +205,10 @@ async def load_pipeline(
 
     cached_model = ModelManager.get_model(model_id, pipeline_task)
     if cached_model:
-        return cached_model
+        target_device = _resolve_hf_device(context, device or context.device)
+        return _ensure_model_on_device(cached_model, target_device)
 
-    if device is None:
-        device = context.device
+    target_device = _resolve_hf_device(context, device or context.device)
 
     if (
         isinstance(model_id, str)
@@ -183,9 +253,10 @@ async def load_pipeline(
         pipeline_task,  # type: ignore
         model=model_id,
         torch_dtype=torch_dtype,
-        device=device,
+        device=target_device,
         **kwargs,
     )  # type: ignore
+    model = _ensure_model_on_device(model, target_device)
     ModelManager.set_model(node_id, model_id, pipeline_task, model)
     return model  # type: ignore
 
@@ -205,10 +276,12 @@ async def load_model(
     if model_id == "":
         raise ValueError("Please select a model")
 
+    target_device = _resolve_hf_device(context, context.device)
+
     if not skip_cache:
         cached_model = ModelManager.get_model(model_id, model_class.__name__, path)
         if cached_model:
-            return cached_model
+            return _ensure_model_on_device(cached_model, target_device)
 
     if path:
         cache_path = try_to_load_from_cache(model_id, path)
@@ -267,6 +340,7 @@ async def load_model(
             **kwargs,
         )
 
+    model = _ensure_model_on_device(model, target_device)
     ModelManager.set_model(node_id, model_id, model_class.__name__, model, path)
     return model
 
@@ -635,8 +709,6 @@ class HuggingFaceLocalProvider(BaseProvider):
 
         output = await asyncio.to_thread(_run_pipeline_sync)
 
-        pipeline.to("cpu")
-
         # Get the generated image
         pil_image = output.images[0]  # pyright: ignore[reportAttributeAccessIssue]
 
@@ -809,8 +881,6 @@ class HuggingFaceLocalProvider(BaseProvider):
             )
 
         output = await asyncio.to_thread(_run_pipeline_sync)
-
-        pipeline.to("cpu")
 
         # Get the generated image
         pil_output = output.images[0]  # pyright: ignore[reportAttributeAccessIssue]
