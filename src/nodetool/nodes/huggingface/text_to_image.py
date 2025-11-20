@@ -7,6 +7,7 @@ from nodetool.metadata.types import (
     HFQwenImage,
     HFStableDiffusionXL,
     HFTextToImage,
+    HFControlNetFlux,
     ImageRef,
     TorchTensor,
 )
@@ -32,6 +33,7 @@ from diffusers.models.transformers.transformer_qwenimage import (
 from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
 from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
 from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
 from diffusers.pipelines.pag.pipeline_pag_sd import StableDiffusionPAGPipeline
 from diffusers.pipelines.pag.pipeline_pag_sd_xl import StableDiffusionXLPAGPipeline
@@ -1305,3 +1307,160 @@ if __name__ == "__main__":
         print(output)
 
     asyncio.run(main())
+
+
+class FluxControl(HuggingFacePipelineNode):
+    """
+    Generates images using FLUX Control models with depth or other control guidance.
+    image, generation, AI, text-to-image, flux, control, depth, guidance
+
+    Use cases:
+    - Generate images with depth-based control guidance
+    - Create images following structural guidance from control images
+    - High-quality controlled generation with FLUX models
+    - Depth-aware image generation
+    """
+
+    model: HFControlNetFlux = Field(
+        default=HFControlNetFlux(repo_id="black-forest-labs/FLUX.1-Depth-dev"),
+        description="The FLUX Control model to use for controlled image generation.",
+    )
+    prompt: str = Field(
+        default="A robot made of exotic candies and chocolates of different kinds. The background is filled with confetti and celebratory gifts.",
+        description="A text prompt describing the desired image.",
+    )
+    control_image: ImageRef = Field(
+        default=ImageRef(),
+        description="The control image to guide the generation process.",
+    )
+    guidance_scale: float = Field(
+        default=10.0,
+        description="The scale for classifier-free guidance.",
+        ge=0.0,
+        le=30.0,
+    )
+    width: int = Field(
+        default=1024, description="The width of the generated image.", ge=64, le=2048
+    )
+    height: int = Field(
+        default=1024, description="The height of the generated image.", ge=64, le=2048
+    )
+    num_inference_steps: int = Field(
+        default=30,
+        description="The number of denoising steps.",
+        ge=1,
+        le=100,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Enable CPU offload to reduce VRAM usage.",
+    )
+    _pipeline: FluxControlPipeline | None = None
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return [
+            "model",
+            "prompt",
+            "control_image",
+            "height",
+            "width",
+            "guidance_scale",
+            "seed",
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Flux Control"
+
+    def get_model_id(self) -> str:
+        if self.model.repo_id:
+            return self.model.repo_id
+        return "black-forest-labs/FLUX.1-Depth-dev"
+
+    def required_inputs(self):
+        return ["control_image"]
+
+    async def preload_model(self, context: ProcessingContext):
+        hf_token = await context.get_secret("HF_TOKEN")
+        if not hf_token:
+            model_url = f"https://huggingface.co/{self.get_model_id()}"
+            raise ValueError(
+                f"Flux Control is a gated model, please set the HF_TOKEN in Nodetool settings and accept the terms of use for the model: {model_url}"
+            )
+
+        log.info(f"Loading FLUX Control pipeline from {self.get_model_id()}...")
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=FluxControlPipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=torch.bfloat16,
+            device="cpu",
+        )
+
+        # Apply CPU offload if enabled
+        if self._pipeline is not None and self.enable_cpu_offload:
+            self._pipeline.enable_model_cpu_offload()
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None:
+            # If CPU offload is enabled, we need to handle device movement differently
+            if self.enable_cpu_offload:
+                # When moving to CPU, disable CPU offload and move all components to CPU
+                if device == "cpu":
+                    self._pipeline.to(device)
+                # When moving to GPU with CPU offload, re-enable CPU offload
+                elif device in ["cuda", "mps"]:
+                    self._pipeline.enable_model_cpu_offload()
+            else:
+                # Normal device movement without CPU offload
+                try:
+                    self._pipeline.to(device)
+                except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                    raise ValueError(
+                        "VRAM out of memory while moving Flux Control to device. "
+                        "Enable 'CPU offload' in the advanced node properties or reduce image size."
+                    ) from e
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        # Set up the generator for reproducibility
+        generator = torch.Generator(device=context.device)
+        if self.seed != -1:
+            generator = generator.manual_seed(self.seed)
+
+        # Load and preprocess control image
+        control_image = await context.image_to_pil(self.control_image)
+
+        # Prepare kwargs for the pipeline
+        kwargs = {
+            "prompt": self.prompt,
+            "control_image": control_image,
+            "height": self.height,
+            "width": self.width,
+            "num_inference_steps": self.num_inference_steps,
+            "guidance_scale": self.guidance_scale,
+            "generator": generator,
+            "callback_on_step_end": pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            ),
+        }
+
+        try:
+            output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
+        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            raise ValueError(
+                "VRAM out of memory while running Flux Control. "
+                "Enable 'CPU offload' in the advanced node properties (if available), "
+                "or reduce image size/steps."
+            ) from e
+        image = output.images[0]
+
+        return await context.image_from_pil(image)
