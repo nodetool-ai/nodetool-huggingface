@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 from nodetool.metadata.types import (
     HFImageClassification,
     HFZeroShotImageClassification,
@@ -6,9 +10,10 @@ from nodetool.metadata.types import (
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
 
-
 from pydantic import Field
-from transformers import ImageClassificationPipeline
+
+if TYPE_CHECKING:
+    from transformers import ImageClassificationPipeline
 
 
 class ImageClassifier(HuggingFacePipelineNode):
@@ -31,7 +36,7 @@ class ImageClassifier(HuggingFacePipelineNode):
         title="Image",
         description="The input image to classify",
     )
-    _pipeline: ImageClassificationPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFImageClassification]:

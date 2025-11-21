@@ -1,31 +1,23 @@
-import PIL.ImageDraw
-import PIL.ImageFont
-import PIL.Image
-import numpy as np
-import torch
+from __future__ import annotations
+
+import asyncio
+from typing import TYPE_CHECKING, Any
+
+from pydantic import Field
+
 from nodetool.metadata.types import (
     HFImageSegmentation,
+    HuggingFaceModel,
     ImageRef,
     ImageSegmentationResult,
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
-from typing import Any
-from pydantic import Field
 
-from nodetool.metadata.types import ImageRef, HuggingFaceModel
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
-from nodetool.workflows.processing_context import ProcessingContext
-from sam2.sam2_image_predictor import SAM2ImagePredictor
-
-
-from pydantic import Field
-from transformers import ImageSegmentationPipeline
-
-
-import asyncio
-from typing import Any
+if TYPE_CHECKING:
+    import torch
+    from transformers import ImageSegmentationPipeline
 
 
 class Segmentation(HuggingFacePipelineNode):
@@ -51,7 +43,7 @@ class Segmentation(HuggingFacePipelineNode):
         description="The input image to segment",
     )
 
-    _pipeline: ImageSegmentationPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFImageSegmentation]:
@@ -118,7 +110,7 @@ class SAM2Segmentation(HuggingFacePipelineNode):
         description="The input image to segment",
     )
 
-    _pipeline: SAM2ImagePredictor | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
@@ -136,6 +128,9 @@ class SAM2Segmentation(HuggingFacePipelineNode):
         return "SAM2 Segmentation"
 
     async def preload_model(self, context: ProcessingContext):
+        import torch
+        from sam2.sam2_image_predictor import SAM2ImagePredictor
+
         self._pipeline = await self.load_model(
             context=context,
             model_id="facebook/sam2-hiera-large",
@@ -151,6 +146,9 @@ class SAM2Segmentation(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> list[ImageRef]:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
+
+        import torch
+        import numpy as np
 
         # Convert input image to numpy array
         image = await context.image_to_numpy(self.image)
@@ -236,6 +234,11 @@ class VisualizeSegmentation(BaseNode):
         return "Visualize Segmentation"
 
     async def process(self, context: ProcessingContext) -> ImageRef:
+        import numpy as np
+        import PIL.Image
+        import PIL.ImageDraw
+        import PIL.ImageFont
+
         image = await context.image_to_pil(self.image)
         image = image.convert("RGB")
         draw = PIL.ImageDraw.Draw(image)

@@ -1,9 +1,8 @@
-from typing import Any
+from __future__ import annotations
+
+from typing import Any, TYPE_CHECKING
 from enum import Enum
-from diffusers.utils.export_utils import export_to_video
-import numpy as np
 from pydantic import Field
-from nodetool.nodes.huggingface.huggingface_node import progress_callback
 from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.metadata.types import (
@@ -12,18 +11,20 @@ from nodetool.metadata.types import (
     ImageRef,
     VideoRef,
 )
-import torch
-from diffusers.pipelines.animatediff.pipeline_animatediff import AnimateDiffPipeline
-from diffusers.schedulers.scheduling_ddim import DDIMScheduler
-from diffusers.models.unets.unet_motion_model import MotionAdapter
-from diffusers.pipelines.stable_video_diffusion.pipeline_stable_video_diffusion import (
-    StableVideoDiffusionPipeline,
-)
-from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
-from diffusers.pipelines.cogvideo.pipeline_cogvideox import CogVideoXPipeline
-from diffusers.pipelines.wan.pipeline_wan import WanPipeline
 from .huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.types import NodeProgress
+
+if TYPE_CHECKING:
+    import torch
+    from diffusers.pipelines.animatediff.pipeline_animatediff import AnimateDiffPipeline
+    from diffusers.schedulers.scheduling_ddim import DDIMScheduler
+    from diffusers.models.unets.unet_motion_model import MotionAdapter
+    from diffusers.pipelines.stable_video_diffusion.pipeline_stable_video_diffusion import (
+        StableVideoDiffusionPipeline,
+    )
+    from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
+    from diffusers.pipelines.cogvideo.pipeline_cogvideox import CogVideoXPipeline
+    from diffusers.pipelines.wan.pipeline_wan import WanPipeline
 
 
 class CogVideoX(HuggingFacePipelineNode):
@@ -107,7 +108,7 @@ class CogVideoX(HuggingFacePipelineNode):
         description="Enable VAE tiling to reduce VRAM usage for large videos.",
     )
 
-    _pipeline: CogVideoXPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
@@ -144,6 +145,9 @@ class CogVideoX(HuggingFacePipelineNode):
         return "THUDM/CogVideoX-2b"
 
     async def preload_model(self, context: ProcessingContext):
+        import torch
+        from diffusers.pipelines.cogvideo.pipeline_cogvideox import CogVideoXPipeline
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=CogVideoXPipeline,
@@ -170,6 +174,8 @@ class CogVideoX(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> VideoRef:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
+
+        import torch
 
         # Set up the generator for reproducibility
         generator = None
@@ -294,7 +300,7 @@ class Wan_T2V(HuggingFacePipelineNode):
         description="Enable VAE tiling to reduce VRAM usage for large videos.",
     )
 
-    _pipeline: WanPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
@@ -325,6 +331,10 @@ class Wan_T2V(HuggingFacePipelineNode):
         return self.model_variant.value
 
     async def preload_model(self, context: ProcessingContext):
+        import torch
+        from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
+        from diffusers.pipelines.wan.pipeline_wan import WanPipeline
+
         vae = await self.load_model(
             context=context,
             model_class=AutoencoderKLWan,
@@ -370,6 +380,8 @@ class Wan_T2V(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> VideoRef:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
+
+        import torch
 
         generator = None
         if self.seed != -1:

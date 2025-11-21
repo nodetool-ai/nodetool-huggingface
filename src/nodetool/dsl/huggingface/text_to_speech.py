@@ -127,14 +127,12 @@ class KokoroTTS(
 
 class KokoroTTSOutputs(OutputsProxy):
     @property
-    def audio(self) -> OutputHandle[nodetool.metadata.types.AudioRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.AudioRef], self["audio"]
-        )
+    def audio(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["audio"])
 
     @property
-    def chunk(self) -> OutputHandle[types.Chunk]:
-        return typing.cast(OutputHandle[types.Chunk], self["chunk"])
+    def chunk(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["chunk"])
 
 
 import typing

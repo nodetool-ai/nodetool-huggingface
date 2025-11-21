@@ -19,6 +19,222 @@ import nodetool.nodes.huggingface.image_to_image
 from nodetool.workflows.base_node import BaseNode
 
 
+class FluxFill(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
+    """
+
+    Performs image inpainting/filling using FLUX Fill models with support for GGUF quantization.
+    image, inpainting, fill, flux, quantization, mask
+
+    Use cases:
+    - Fill masked regions in images with high-quality content
+    - Remove unwanted objects from images
+    - Complete missing parts of images
+    - Memory-efficient inpainting using GGUF quantization
+    - High-quality image editing with FLUX models
+    """
+
+    model: types.HFFluxFill | OutputHandle[types.HFFluxFill] = connect_field(
+        default=types.HFFluxFill(
+            type="hf.inpainting",
+            repo_id="black-forest-labs/FLUX.1-Fill-dev",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The FLUX Fill model to use for image inpainting.",
+    )
+    prompt: str | OutputHandle[str] = connect_field(
+        default="a white paper cup",
+        description="A text prompt describing what should fill the masked area.",
+    )
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The input image to fill/inpaint",
+    )
+    mask_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The mask image indicating areas to be filled (white areas will be filled)",
+    )
+    height: int | OutputHandle[int] = connect_field(
+        default=1024, description="The height of the generated image."
+    )
+    width: int | OutputHandle[int] = connect_field(
+        default=1024, description="The width of the generated image."
+    )
+    guidance_scale: float | OutputHandle[float] = connect_field(
+        default=30.0,
+        description="Guidance scale for generation. Higher values follow the prompt more closely",
+    )
+    num_inference_steps: int | OutputHandle[int] = connect_field(
+        default=50, description="Number of denoising steps"
+    )
+    max_sequence_length: int | OutputHandle[int] = connect_field(
+        default=512, description="Maximum sequence length for the prompt."
+    )
+    seed: int | OutputHandle[int] = connect_field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+    )
+    enable_vae_tiling: bool | OutputHandle[bool] = connect_field(
+        default=False,
+        description="Enable VAE tiling to reduce VRAM usage for large images.",
+    )
+    enable_vae_slicing: bool | OutputHandle[bool] = connect_field(
+        default=False, description="Enable VAE slicing to reduce VRAM usage."
+    )
+    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
+        default=True, description="Enable CPU offload to reduce VRAM usage."
+    )
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_to_image.FluxFill
+
+    @classmethod
+    def get_node_type(cls):
+        return cls.get_node_class().get_node_type()
+
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.image_to_image
+from nodetool.workflows.base_node import BaseNode
+
+
+class FluxKontext(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
+    """
+
+    Performs image editing using FLUX Kontext models for context-aware image generation.
+    image, editing, flux, kontext, context-aware, generation
+
+    Use cases:
+    - Edit images based on reference context
+    - Add elements to images guided by prompts
+    - Context-aware image modifications
+    - High-quality image editing with FLUX models
+    """
+
+    model: types.HFFluxKontext | OutputHandle[types.HFFluxKontext] = connect_field(
+        default=types.HFFluxKontext(
+            type="hf.flux_kontext",
+            repo_id="black-forest-labs/FLUX.1-Kontext-dev",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The FLUX Kontext model to use for image editing.",
+    )
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The input image to edit",
+    )
+    prompt: str | OutputHandle[str] = connect_field(
+        default="Add a hat to the cat",
+        description="Text description of the desired edit to apply to the image",
+    )
+    guidance_scale: float | OutputHandle[float] = connect_field(
+        default=2.5,
+        description="Guidance scale for editing. Higher values follow the prompt more closely",
+    )
+    seed: int | OutputHandle[int] = connect_field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed",
+    )
+    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
+        default=True, description="Enable CPU offload to reduce VRAM usage."
+    )
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_to_image.FluxKontext
+
+    @classmethod
+    def get_node_type(cls):
+        return cls.get_node_class().get_node_type()
+
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.image_to_image
+from nodetool.workflows.base_node import BaseNode
+
+
+class FluxPriorRedux(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
+    """
+
+    Performs image transformation using FLUX Prior Redux pipeline for image-conditioned generation.
+    image, transformation, flux, redux, prior, image-conditioned, generation
+
+    Use cases:
+    - Transform images using FLUX Prior Redux for style transfer and image variations
+    - Generate images conditioned on reference images without text prompts
+    - High-quality image-to-image transformation with FLUX models
+    - Create variations of existing images with FLUX Prior Redux guidance
+    """
+
+    prior_redux_model: types.HFFluxRedux | OutputHandle[types.HFFluxRedux] = (
+        connect_field(
+            default=types.HFFluxRedux(
+                type="hf.flux_redux",
+                repo_id="black-forest-labs/FLUX.1-Redux-dev",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The FLUX Prior Redux model to use for image conditioning.",
+        )
+    )
+    flux_model: types.HFFlux | OutputHandle[types.HFFlux] = connect_field(
+        default=types.HFFlux(
+            type="hf.flux",
+            repo_id="black-forest-labs/FLUX.1-dev",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The FLUX base model to use for generation.",
+    )
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The input image to transform",
+    )
+    guidance_scale: float | OutputHandle[float] = connect_field(
+        default=2.5,
+        description="Guidance scale for generation. Higher values follow the prior more closely",
+    )
+    num_inference_steps: int | OutputHandle[int] = connect_field(
+        default=50, description="Number of denoising steps"
+    )
+    seed: int | OutputHandle[int] = connect_field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed",
+    )
+    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
+        default=True, description="Enable CPU offload to reduce VRAM usage."
+    )
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_to_image.FluxPriorRedux
+
+    @classmethod
+    def get_node_type(cls):
+        return cls.get_node_class().get_node_type()
+
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.image_to_image
+from nodetool.workflows.base_node import BaseNode
+
+
 class ImageToImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
 
@@ -287,9 +503,9 @@ class QwenImageEdit(SingleOutputGraphNode[types.ImageRef], GraphNode[types.Image
     - Memory-efficient editing using GGUF quantization
     """
 
-    model: types.HFImageToImage | OutputHandle[types.HFImageToImage] = connect_field(
-        default=types.HFImageToImage(
-            type="hf.image_to_image",
+    model: types.HFQwenImageEdit | OutputHandle[types.HFQwenImageEdit] = connect_field(
+        default=types.HFQwenImageEdit(
+            type="hf.qwen_image_edit",
             repo_id="QuantStack/Qwen-Image-Edit-2509-GGUF",
             path="Qwen-Image-Edit-2509-Q4_K_M.gguf",
             variant=None,
@@ -423,16 +639,18 @@ class StableDiffusionControlNet(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     )
 
-    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
-        default=types.HFTextToImage(
-            type="hf.text_to_image",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model to use for image generation.",
+    model: types.HFStableDiffusion | OutputHandle[types.HFStableDiffusion] = (
+        connect_field(
+            default=types.HFStableDiffusion(
+                type="hf.stable_diffusion",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model to use for image generation.",
+        )
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -465,6 +683,26 @@ class StableDiffusionControlNet(
         connect_field(
             default=[], description="The LoRA models to use for image processing"
         )
+    )
+    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
+        connect_field(
+            default=types.HFIPAdapter(
+                type="hf.ip_adapter",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The IP adapter model to use for image processing",
+        )
+    )
+    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="When provided the image will be fed into the IP adapter",
+    )
+    ip_adapter_scale: float | OutputHandle[float] = connect_field(
+        default=0.5, description="The strength of the IP adapter"
     )
     pag_scale: float | OutputHandle[float] = connect_field(
         default=3.0,
@@ -528,16 +766,12 @@ class StableDiffusionControlNet(
 
 class StableDiffusionControlNetOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -575,16 +809,18 @@ class StableDiffusionControlNetImg2ImgNode(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     )
 
-    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
-        default=types.HFTextToImage(
-            type="hf.text_to_image",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model to use for image generation.",
+    model: types.HFStableDiffusion | OutputHandle[types.HFStableDiffusion] = (
+        connect_field(
+            default=types.HFStableDiffusion(
+                type="hf.stable_diffusion",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model to use for image generation.",
+        )
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -617,6 +853,26 @@ class StableDiffusionControlNetImg2ImgNode(
         connect_field(
             default=[], description="The LoRA models to use for image processing"
         )
+    )
+    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
+        connect_field(
+            default=types.HFIPAdapter(
+                type="hf.ip_adapter",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The IP adapter model to use for image processing",
+        )
+    )
+    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="When provided the image will be fed into the IP adapter",
+    )
+    ip_adapter_scale: float | OutputHandle[float] = connect_field(
+        default=0.5, description="The strength of the IP adapter"
     )
     pag_scale: float | OutputHandle[float] = connect_field(
         default=3.0,
@@ -686,16 +942,12 @@ class StableDiffusionControlNetImg2ImgNode(
 
 class StableDiffusionControlNetImg2ImgNodeOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -735,16 +987,18 @@ class StableDiffusionControlNetInpaintNode(
         nodetool.nodes.huggingface.image_to_image.StableDiffusionControlNetModel
     )
 
-    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
-        default=types.HFTextToImage(
-            type="hf.text_to_image",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model to use for image generation.",
+    model: types.HFStableDiffusion | OutputHandle[types.HFStableDiffusion] = (
+        connect_field(
+            default=types.HFStableDiffusion(
+                type="hf.stable_diffusion",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model to use for image generation.",
+        )
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -777,6 +1031,26 @@ class StableDiffusionControlNetInpaintNode(
         connect_field(
             default=[], description="The LoRA models to use for image processing"
         )
+    )
+    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
+        connect_field(
+            default=types.HFIPAdapter(
+                type="hf.ip_adapter",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The IP adapter model to use for image processing",
+        )
+    )
+    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="When provided the image will be fed into the IP adapter",
+    )
+    ip_adapter_scale: float | OutputHandle[float] = connect_field(
+        default=0.5, description="The strength of the IP adapter"
     )
     pag_scale: float | OutputHandle[float] = connect_field(
         default=3.0,
@@ -845,16 +1119,12 @@ class StableDiffusionControlNetInpaintNode(
 
 class StableDiffusionControlNetInpaintNodeOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -892,16 +1162,18 @@ class StableDiffusionImg2ImgNode(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     )
 
-    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
-        default=types.HFTextToImage(
-            type="hf.text_to_image",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model to use for image generation.",
+    model: types.HFStableDiffusion | OutputHandle[types.HFStableDiffusion] = (
+        connect_field(
+            default=types.HFStableDiffusion(
+                type="hf.stable_diffusion",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model to use for image generation.",
+        )
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -934,6 +1206,26 @@ class StableDiffusionImg2ImgNode(
         connect_field(
             default=[], description="The LoRA models to use for image processing"
         )
+    )
+    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
+        connect_field(
+            default=types.HFIPAdapter(
+                type="hf.ip_adapter",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The IP adapter model to use for image processing",
+        )
+    )
+    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="When provided the image will be fed into the IP adapter",
+    )
+    ip_adapter_scale: float | OutputHandle[float] = connect_field(
+        default=0.5, description="The strength of the IP adapter"
     )
     pag_scale: float | OutputHandle[float] = connect_field(
         default=3.0,
@@ -987,16 +1279,12 @@ class StableDiffusionImg2ImgNode(
 
 class StableDiffusionImg2ImgNodeOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -1033,16 +1321,18 @@ class StableDiffusionInpaintNode(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     )
 
-    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
-        default=types.HFTextToImage(
-            type="hf.text_to_image",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model to use for image generation.",
+    model: types.HFStableDiffusion | OutputHandle[types.HFStableDiffusion] = (
+        connect_field(
+            default=types.HFStableDiffusion(
+                type="hf.stable_diffusion",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model to use for image generation.",
+        )
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -1075,6 +1365,26 @@ class StableDiffusionInpaintNode(
         connect_field(
             default=[], description="The LoRA models to use for image processing"
         )
+    )
+    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
+        connect_field(
+            default=types.HFIPAdapter(
+                type="hf.ip_adapter",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The IP adapter model to use for image processing",
+        )
+    )
+    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="When provided the image will be fed into the IP adapter",
+    )
+    ip_adapter_scale: float | OutputHandle[float] = connect_field(
+        default=0.5, description="The strength of the IP adapter"
     )
     pag_scale: float | OutputHandle[float] = connect_field(
         default=3.0,
@@ -1132,16 +1442,12 @@ class StableDiffusionInpaintNode(
 
 class StableDiffusionInpaintNodeOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -1270,21 +1576,20 @@ from nodetool.workflows.base_node import BaseNode
 import nodetool.nodes.huggingface.stable_diffusion_base
 
 
-class StableDiffusionXLControlNetNode(
+class StableDiffusionXLControlNet(
     GraphNode[
-        nodetool.nodes.huggingface.image_to_image.StableDiffusionXLControlNetNode.OutputType
+        nodetool.nodes.huggingface.image_to_image.StableDiffusionXLControlNet.OutputType
     ]
 ):
     """
 
-    Transforms existing images using Stable Diffusion XL with ControlNet guidance.
-    image, generation, image-to-image, controlnet, SDXL
+    Generates images using Stable Diffusion XL with ControlNet guidance.
+    image, generation, text-to-image, controlnet, SDXL
 
     Use cases:
-    - Modify existing images with precise control over composition and structure
-    - Apply specific styles or concepts to photographs or artwork with guided transformations
-    - Create variations of existing visual content while maintaining certain features
-    - Enhance image editing capabilities with AI-guided transformations
+    - Generate images with precise control over composition and structure
+    - Create variations of existing images while maintaining specific features
+    - Artistic image generation with guided outputs
     """
 
     ModelVariant: typing.ClassVar[type] = (
@@ -1297,16 +1602,18 @@ class StableDiffusionXLControlNetNode(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionOutputType
     )
 
-    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
-        default=types.HFTextToImage(
-            type="hf.text_to_image",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The Stable Diffusion XL model to use for generation.",
+    model: types.HFStableDiffusionXL | OutputHandle[types.HFStableDiffusionXL] = (
+        connect_field(
+            default=types.HFStableDiffusionXL(
+                type="hf.stable_diffusion_xl",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The Stable Diffusion XL model to use for generation.",
+        )
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -1352,9 +1659,201 @@ class StableDiffusionXLControlNetNode(
     lora_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="Strength of the LoRAs"
     )
+    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
+        connect_field(
+            default=types.HFIPAdapter(
+                type="hf.ip_adapter",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The IP adapter model to use for image processing",
+        )
+    )
+    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="When provided the image will be fed into the IP adapter",
+    )
+    ip_adapter_scale: float | OutputHandle[float] = connect_field(
+        default=0.5, description="Strength of the IP adapter image"
+    )
     enable_attention_slicing: bool | OutputHandle[bool] = connect_field(
-        default=True,
-        description="Enable attention slicing for the pipeline. This can reduce VRAM usage.",
+        default=False,
+        description="Enable attention slicing for the pipeline. This can reduce VRAM usage but may slow down generation.",
+    )
+    enable_tiling: bool | OutputHandle[bool] = connect_field(
+        default=False,
+        description="Enable tiling for the VAE. This can reduce VRAM usage.",
+    )
+    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
+        default=False,
+        description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
+    )
+    output_type: (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionOutputType
+    ) = Field(
+        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionOutputType.IMAGE,
+        description="The type of output to generate.",
+    )
+    controlnet: types.HFControlNet | OutputHandle[types.HFControlNet] = connect_field(
+        default=types.HFControlNet(
+            type="hf.controlnet",
+            repo_id="",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The ControlNet model to use for guidance.",
+    )
+    control_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The control image to guide the generation process.",
+    )
+    controlnet_conditioning_scale: float | OutputHandle[float] = connect_field(
+        default=1.0, description="The scale for ControlNet conditioning."
+    )
+
+    @property
+    def out(self) -> "StableDiffusionXLControlNetOutputs":
+        return StableDiffusionXLControlNetOutputs(self)
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_to_image.StableDiffusionXLControlNet
+
+    @classmethod
+    def get_node_type(cls):
+        return cls.get_node_class().get_node_type()
+
+
+class StableDiffusionXLControlNetOutputs(OutputsProxy):
+    @property
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
+
+    @property
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
+
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.image_to_image
+from nodetool.workflows.base_node import BaseNode
+import nodetool.nodes.huggingface.stable_diffusion_base
+
+
+class StableDiffusionXLControlNetImg2ImgNode(
+    GraphNode[
+        nodetool.nodes.huggingface.image_to_image.StableDiffusionXLControlNetImg2ImgNode.OutputType
+    ]
+):
+    """
+
+    Transforms existing images using Stable Diffusion XL with ControlNet guidance.
+    image, generation, image-to-image, controlnet, SDXL
+
+    Use cases:
+    - Modify existing images with precise control over composition and structure
+    - Apply specific styles or concepts to photographs or artwork with guided transformations
+    - Create variations of existing visual content while maintaining certain features
+    - Enhance image editing capabilities with AI-guided transformations
+    """
+
+    ModelVariant: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
+    )
+    StableDiffusionScheduler: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
+    )
+    StableDiffusionOutputType: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionOutputType
+    )
+
+    model: types.HFStableDiffusionXL | OutputHandle[types.HFStableDiffusionXL] = (
+        connect_field(
+            default=types.HFStableDiffusionXL(
+                type="hf.stable_diffusion_xl",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The Stable Diffusion XL model to use for generation.",
+        )
+    )
+    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
+        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
+        description="The variant of the model to use for generation.",
+    )
+    prompt: str | OutputHandle[str] = connect_field(
+        default="", description="The prompt for image generation."
+    )
+    negative_prompt: str | OutputHandle[str] = connect_field(
+        default="",
+        description="The negative prompt to guide what should not appear in the generated image.",
+    )
+    width: int | OutputHandle[int] = connect_field(
+        default=1024, description="Width of the generated image."
+    )
+    height: int | OutputHandle[int] = connect_field(
+        default=1024, description="Height of the generated image"
+    )
+    seed: int | OutputHandle[int] = connect_field(
+        default=-1, description="Seed for the random number generator."
+    )
+    num_inference_steps: int | OutputHandle[int] = connect_field(
+        default=25, description="Number of inference steps."
+    )
+    guidance_scale: float | OutputHandle[float] = connect_field(
+        default=7.0, description="Guidance scale for generation."
+    )
+    scheduler: (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
+    ) = Field(
+        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler.EulerDiscreteScheduler,
+        description="The scheduler to use for the diffusion process.",
+    )
+    pag_scale: float | OutputHandle[float] = connect_field(
+        default=3.0,
+        description="Scale of the Perturbed-Attention Guidance applied to the image.",
+    )
+    loras: list[types.HFLoraSDXLConfig] | OutputHandle[list[types.HFLoraSDXLConfig]] = (
+        connect_field(
+            default=[], description="The LoRA models to use for image processing"
+        )
+    )
+    lora_scale: float | OutputHandle[float] = connect_field(
+        default=0.5, description="Strength of the LoRAs"
+    )
+    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
+        connect_field(
+            default=types.HFIPAdapter(
+                type="hf.ip_adapter",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The IP adapter model to use for image processing",
+        )
+    )
+    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="When provided the image will be fed into the IP adapter",
+    )
+    ip_adapter_scale: float | OutputHandle[float] = connect_field(
+        default=0.5, description="Strength of the IP adapter image"
+    )
+    enable_attention_slicing: bool | OutputHandle[bool] = connect_field(
+        default=False,
+        description="Enable attention slicing for the pipeline. This can reduce VRAM usage but may slow down generation.",
     )
     enable_tiling: bool | OutputHandle[bool] = connect_field(
         default=False,
@@ -1398,30 +1897,28 @@ class StableDiffusionXLControlNetNode(
     )
 
     @property
-    def out(self) -> "StableDiffusionXLControlNetNodeOutputs":
-        return StableDiffusionXLControlNetNodeOutputs(self)
+    def out(self) -> "StableDiffusionXLControlNetImg2ImgNodeOutputs":
+        return StableDiffusionXLControlNetImg2ImgNodeOutputs(self)
 
     @classmethod
     def get_node_class(cls) -> type[BaseNode]:
-        return nodetool.nodes.huggingface.image_to_image.StableDiffusionXLControlNetNode
+        return (
+            nodetool.nodes.huggingface.image_to_image.StableDiffusionXLControlNetImg2ImgNode
+        )
 
     @classmethod
     def get_node_type(cls):
         return cls.get_node_class().get_node_type()
 
 
-class StableDiffusionXLControlNetNodeOutputs(OutputsProxy):
+class StableDiffusionXLControlNetImg2ImgNodeOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -1459,16 +1956,18 @@ class StableDiffusionXLImg2Img(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionOutputType
     )
 
-    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
-        default=types.HFTextToImage(
-            type="hf.text_to_image",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The Stable Diffusion XL model to use for generation.",
+    model: types.HFStableDiffusionXL | OutputHandle[types.HFStableDiffusionXL] = (
+        connect_field(
+            default=types.HFStableDiffusionXL(
+                type="hf.stable_diffusion_xl",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The Stable Diffusion XL model to use for generation.",
+        )
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -1513,6 +2012,26 @@ class StableDiffusionXLImg2Img(
     )
     lora_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="Strength of the LoRAs"
+    )
+    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
+        connect_field(
+            default=types.HFIPAdapter(
+                type="hf.ip_adapter",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The IP adapter model to use for image processing",
+        )
+    )
+    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="When provided the image will be fed into the IP adapter",
+    )
+    ip_adapter_scale: float | OutputHandle[float] = connect_field(
+        default=0.5, description="Strength of the IP adapter image"
     )
     enable_attention_slicing: bool | OutputHandle[bool] = connect_field(
         default=True,
@@ -1556,16 +2075,12 @@ class StableDiffusionXLImg2Img(
 
 class StableDiffusionXLImg2ImgOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -1602,16 +2117,18 @@ class StableDiffusionXLInpainting(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionOutputType
     )
 
-    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
-        default=types.HFTextToImage(
-            type="hf.text_to_image",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The Stable Diffusion XL model to use for generation.",
+    model: types.HFStableDiffusionXL | OutputHandle[types.HFStableDiffusionXL] = (
+        connect_field(
+            default=types.HFStableDiffusionXL(
+                type="hf.stable_diffusion_xl",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The Stable Diffusion XL model to use for generation.",
+        )
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -1656,6 +2173,26 @@ class StableDiffusionXLInpainting(
     )
     lora_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="Strength of the LoRAs"
+    )
+    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
+        connect_field(
+            default=types.HFIPAdapter(
+                type="hf.ip_adapter",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The IP adapter model to use for image processing",
+        )
+    )
+    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="When provided the image will be fed into the IP adapter",
+    )
+    ip_adapter_scale: float | OutputHandle[float] = connect_field(
+        default=0.5, description="Strength of the IP adapter image"
     )
     enable_attention_slicing: bool | OutputHandle[bool] = connect_field(
         default=True,
@@ -1703,16 +2240,12 @@ class StableDiffusionXLInpainting(
 
 class StableDiffusionXLInpaintingOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing

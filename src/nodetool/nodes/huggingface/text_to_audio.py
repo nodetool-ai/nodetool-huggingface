@@ -1,4 +1,11 @@
-import torch
+from __future__ import annotations
+
+import re
+from typing import TYPE_CHECKING, Any
+
+import numpy as np
+from pydantic import Field
+
 from nodetool.metadata.types import (
     AudioRef,
     HFTextToAudio,
@@ -6,26 +13,19 @@ from nodetool.metadata.types import (
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
-from diffusers.pipelines.audioldm2.pipeline_audioldm2 import AudioLDM2Pipeline
-from diffusers.pipelines.audioldm.pipeline_audioldm import AudioLDMPipeline
-from diffusers.pipelines.pipeline_utils import DiffusionPipeline
-from diffusers.pipelines.musicldm.pipeline_musicldm import MusicLDMPipeline
-from diffusers.pipelines.stable_audio.pipeline_stable_audio import StableAudioPipeline
-
-
-from pydantic import Field
-from transformers import AutoProcessor, MusicgenForConditionalGeneration
-
-# parler_tts has tricky dependencies, such as protobuf and a pinned transformers version
-# from parler_tts import ParlerTTSForConditionalGeneration
-from transformers import AutoTokenizer
-import torchaudio
-from transformers import AutoFeatureExtractor, set_seed
-
 from nodetool.workflows.types import NodeProgress
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
-import re
-import numpy as np
+
+if TYPE_CHECKING:
+    import torch
+    import torchaudio
+    from diffusers.pipelines.audioldm2.pipeline_audioldm2 import AudioLDM2Pipeline
+    from diffusers.pipelines.audioldm.pipeline_audioldm import AudioLDMPipeline
+    from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+    from diffusers.pipelines.musicldm.pipeline_musicldm import MusicLDMPipeline
+    from diffusers.pipelines.stable_audio.pipeline_stable_audio import StableAudioPipeline
+    from transformers import AutoProcessor, MusicgenForConditionalGeneration
+    from transformers import AutoTokenizer
+    from transformers import AutoFeatureExtractor, set_seed
 
 
 class MusicGen(HuggingFacePipelineNode):
@@ -55,8 +55,8 @@ class MusicGen(HuggingFacePipelineNode):
         description="The maximum number of tokens to generate",
     )
 
-    _processor: AutoProcessor | None = None
-    _model: MusicgenForConditionalGeneration | None = None
+    _processor: Any = None
+    _model: Any = None
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
@@ -95,6 +95,8 @@ class MusicGen(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
+        from transformers import AutoProcessor, MusicgenForConditionalGeneration
+
         if not context.is_huggingface_model_cached(self.model.repo_id):
             raise ValueError(f"Download the model {self.model.repo_id} first")
 
@@ -166,7 +168,7 @@ class MusicLDM(HuggingFacePipelineNode):
         description="The length of the generated audio in seconds",
     )
 
-    _pipeline: MusicLDMPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
@@ -182,6 +184,8 @@ class MusicLDM(HuggingFacePipelineNode):
         ]
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.musicldm.pipeline_musicldm import MusicLDMPipeline
+
         self._pipeline = await self.load_model(
             context, MusicLDMPipeline, self.model.repo_id
         )
@@ -236,7 +240,7 @@ class AudioLDM(HuggingFacePipelineNode):
         ge=-1,
     )
 
-    _pipeline: AudioLDMPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
@@ -252,6 +256,8 @@ class AudioLDM(HuggingFacePipelineNode):
         ]
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.audioldm.pipeline_audioldm import AudioLDMPipeline
+
         self._pipeline = await self.load_model(
             context, AudioLDMPipeline, "cvssp/audioldm-s-full-v2"
         )
@@ -260,12 +266,14 @@ class AudioLDM(HuggingFacePipelineNode):
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
+        import torch
+
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
 
         def progress_callback(
-            step: int, timestep: int, latents: torch.FloatTensor
+            step: int, timestep: int, latents: "torch.FloatTensor"
         ) -> None:
             context.post_message(
                 NodeProgress(
@@ -332,7 +340,7 @@ class AudioLDM2(HuggingFacePipelineNode):
         ge=-1,
     )
 
-    _pipeline: AudioLDM2Pipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
@@ -348,6 +356,8 @@ class AudioLDM2(HuggingFacePipelineNode):
         ]
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.audioldm2.pipeline_audioldm2 import AudioLDM2Pipeline
+
         self._pipeline = await self.load_model(
             context, AudioLDM2Pipeline, "cvssp/audioldm2", variant=None
         )
@@ -356,12 +366,14 @@ class AudioLDM2(HuggingFacePipelineNode):
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
+        import torch
+
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
 
         def progress_callback(
-            step: int, timestep: int, latents: torch.FloatTensor
+            step: int, timestep: int, latents: "torch.FloatTensor"
         ) -> None:
             context.post_message(
                 NodeProgress(
@@ -416,7 +428,7 @@ class DanceDiffusion(HuggingFacePipelineNode):
         ge=-1,
     )
 
-    _pipeline: DiffusionPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
@@ -432,6 +444,8 @@ class DanceDiffusion(HuggingFacePipelineNode):
         ]
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+
         self._pipeline = await self.load_model(
             context, DiffusionPipeline, "harmonai/maestro-150k"
         )
@@ -439,6 +453,8 @@ class DanceDiffusion(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> AudioRef:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
+
+        import torch
 
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
@@ -493,7 +509,7 @@ class StableAudioNode(HuggingFacePipelineNode):
         ge=-1,
     )
 
-    _pipeline: StableAudioPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
@@ -509,6 +525,10 @@ class StableAudioNode(HuggingFacePipelineNode):
         ]
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.stable_audio.pipeline_stable_audio import (
+            StableAudioPipeline,
+        )
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=StableAudioPipeline,
@@ -520,13 +540,15 @@ class StableAudioNode(HuggingFacePipelineNode):
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
+        import torch
+
         generator = torch.Generator(device="cpu")
 
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
 
         def progress_callback(
-            step: int, timestep: int, latents: torch.FloatTensor
+            step: int, timestep: int, latents: "torch.FloatTensor"
         ) -> None:
             context.post_message(
                 NodeProgress(

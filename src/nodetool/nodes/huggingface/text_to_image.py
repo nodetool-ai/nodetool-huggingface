@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 from enum import Enum
+import asyncio
+import logging
 import huggingface_hub
-from typing import Any, TypedDict
+from typing import Any, TypedDict, TYPE_CHECKING
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
     HFFlux,
@@ -20,35 +24,48 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
 )
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress, Notification, LogUpdate
-
-import torch
-import asyncio
-import logging
-
-# The QwenImage import requires optional dependencies. Keep it near top-level to surface missing deps early.
-from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
-from diffusers.models.transformers.transformer_qwenimage import (
-    QwenImageTransformer2DModel,
-)
-from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
-from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
-from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
-from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
-from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
-from diffusers.pipelines.pag.pipeline_pag_sd import StableDiffusionPAGPipeline
-from diffusers.pipelines.pag.pipeline_pag_sd_xl import StableDiffusionXLPAGPipeline
-from diffusers.pipelines.pipeline_utils import DiffusionPipeline
-from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
-from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
-from diffusers.schedulers.scheduling_dpmsolver_multistep import (
-    DPMSolverMultistepScheduler,
-)
 from pydantic import Field
-from diffusers.models.transformers.transformer_qwenimage import (
-    QwenImageTransformer2DModel,
-)
-from transformers import T5EncoderModel
-from transformers.models.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
+
+if TYPE_CHECKING:
+    import torch
+    from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
+    from diffusers.models.transformers.transformer_qwenimage import (
+        QwenImageTransformer2DModel,
+    )
+    from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
+    from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
+    from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+    from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
+    from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
+    from diffusers.pipelines.pag.pipeline_pag_sd import StableDiffusionPAGPipeline
+    from diffusers.pipelines.pag.pipeline_pag_sd_xl import StableDiffusionXLPAGPipeline
+    from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+    from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
+    from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
+    from diffusers.schedulers.scheduling_dpmsolver_multistep import (
+        DPMSolverMultistepScheduler,
+    )
+    from transformers import T5EncoderModel
+    from transformers.models.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
+    from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
+    from diffusers.models.transformers.transformer_qwenimage import (
+        QwenImageTransformer2DModel,
+    )
+    from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
+    from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
+    from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+    from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
+    from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
+    from diffusers.pipelines.pag.pipeline_pag_sd import StableDiffusionPAGPipeline
+    from diffusers.pipelines.pag.pipeline_pag_sd_xl import StableDiffusionXLPAGPipeline
+    from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+    from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
+    from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
+    from diffusers.schedulers.scheduling_dpmsolver_multistep import (
+        DPMSolverMultistepScheduler,
+    )
+    from transformers import T5EncoderModel
+    from transformers.models.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
 
 
 log = get_logger(__name__)
@@ -72,7 +89,7 @@ class StableDiffusion(StableDiffusionBaseNode):
     height: int = Field(
         default=512, ge=256, le=1024, description="Height of the generated image"
     )
-    _pipeline: StableDiffusionPAGPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -87,6 +104,11 @@ class StableDiffusion(StableDiffusionBaseNode):
         latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
+        import torch
+        from diffusers.pipelines.pag.pipeline_pag_sd import (
+            StableDiffusionPAGPipeline,
+        )
+
         await super().preload_model(context)
         self._pipeline = await self.load_model(
             context=context,
@@ -111,7 +133,7 @@ class StableDiffusion(StableDiffusionBaseNode):
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
 
-    async def process(self, context: ProcessingContext):
+    async def process(self, context: ProcessingContext) -> OutputType:
         result = await self.run_pipeline(context, width=self.width, height=self.height)
         return {
             "image": result if isinstance(result, ImageRef) else None,
@@ -131,7 +153,7 @@ class StableDiffusionXL(StableDiffusionXLBase):
     - Visualizing interior design concepts for clients
     """
 
-    _pipeline: StableDiffusionXLPAGPipeline | DiffusionPipeline | None = None
+    _pipeline: Any = None
     _using_playground_pipeline: bool = False
 
     @classmethod
@@ -139,6 +161,11 @@ class StableDiffusionXL(StableDiffusionXLBase):
         return "Stable Diffusion XL"
 
     async def preload_model(self, context: ProcessingContext):
+        import torch
+        from diffusers.pipelines.pag.pipeline_pag_sd_xl import (
+            StableDiffusionXLPAGPipeline,
+        )
+
         repo_id = (self.model.repo_id or "").lower()
         is_playground = "playground" in repo_id
 
@@ -277,7 +304,7 @@ class Text2Image(HuggingFacePipelineNode):
         ge=-1,
     )
 
-    _pipeline: AutoPipelineForText2Image | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_title(cls) -> str:
@@ -287,6 +314,9 @@ class Text2Image(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
+        import torch
+        from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
+
         self._pipeline = await self.load_model(
             context=context,
             model_id=self.get_model_id(),
@@ -305,6 +335,8 @@ class Text2Image(HuggingFacePipelineNode):
         )
 
     async def move_to_device(self, device: str):
+        import torch
+
         if self._pipeline is not None:
             try:
                 self._pipeline.to(device)
@@ -321,6 +353,8 @@ class Text2Image(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> OutputType:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
+
+        import torch
 
         # Set up the generator for reproducibility
         generator = None
@@ -435,7 +469,7 @@ class Flux(HuggingFacePipelineNode):
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _pipeline: FluxPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFFlux]:
@@ -512,6 +546,9 @@ class Flux(HuggingFacePipelineNode):
         return self.model.path is not None and self.model.path.lower().endswith(".gguf")
 
     async def preload_model(self, context: ProcessingContext):
+        import torch
+        from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+
         hf_token = await context.get_secret("HF_TOKEN")
         if not hf_token:
             model_url = f"https://huggingface.co/{self.get_model_id()}"
@@ -558,6 +595,13 @@ class Flux(HuggingFacePipelineNode):
         torch_dtype: torch.dtype,
         hf_token: str | None = None,
     ):
+        import torch
+        from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+        from diffusers.models.transformers.transformer_flux import (
+            FluxTransformer2DModel,
+        )
+        from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
+
         """Load FLUX model with GGUF quantization."""
         from huggingface_hub.file_download import try_to_load_from_cache
 
@@ -756,7 +800,7 @@ class Kolors(HuggingFacePipelineNode):
         description="Whether to use DPMSolverMultistepScheduler with Karras sigmas for better quality.",
     )
 
-    _pipeline: KolorsPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFTextToImage]:
@@ -780,6 +824,12 @@ class Kolors(HuggingFacePipelineNode):
         return "Kwai-Kolors/Kolors-diffusers"
 
     async def preload_model(self, context: ProcessingContext):
+        import torch
+        from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
+        from diffusers.schedulers.scheduling_dpmsolver_multistep import (
+            DPMSolverMultistepScheduler,
+        )
+
         self._pipeline = await self.load_model(
             context=context,
             model_id=self.get_model_id(),
@@ -801,6 +851,8 @@ class Kolors(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
+
+        import torch
 
         # Set up the generator for reproducibility
         generator = None
@@ -918,7 +970,7 @@ class Chroma(HuggingFacePipelineNode):
         description="Enable attention slicing to reduce memory usage.",
     )
 
-    _pipeline: ChromaPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFTextToImage]:
@@ -942,6 +994,9 @@ class Chroma(HuggingFacePipelineNode):
         return "lodestones/Chroma"
 
     async def preload_model(self, context: ProcessingContext):
+        import torch
+        from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
+
         # Load the pipeline with bfloat16 as recommended
         self._pipeline = await self.load_model(
             context=context,
@@ -951,6 +1006,8 @@ class Chroma(HuggingFacePipelineNode):
         )
 
     async def move_to_device(self, device: str):
+        import torch
+
         if self._pipeline is not None:
             # Handle CPU offload case
             if self.enable_cpu_offload:
@@ -990,6 +1047,8 @@ class Chroma(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
+
+        import torch
 
         # Set up the generator for reproducibility
         generator = None
@@ -1104,7 +1163,7 @@ class QwenImage(HuggingFacePipelineNode):
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _pipeline: Any | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFQwenImage]:
@@ -1144,6 +1203,8 @@ class QwenImage(HuggingFacePipelineNode):
         return self.model.path is not None and self.model.path.lower().endswith(".gguf")
 
     async def preload_model(self, context: ProcessingContext):
+        import torch
+
         # Handle GGUF models separately to maintain existing behaviour
         if self._is_gguf_model():
             await self._load_gguf_model(context, torch.bfloat16)
@@ -1151,6 +1212,9 @@ class QwenImage(HuggingFacePipelineNode):
             await self._load_full_precision_pipeline(context)
 
     async def _load_full_precision_pipeline(self, context: ProcessingContext):
+        import torch
+        from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
+
         log.info(
             f"Loading Qwen-Image pipeline from {self.get_model_id()} without quantization..."
         )
@@ -1182,6 +1246,13 @@ class QwenImage(HuggingFacePipelineNode):
         context: ProcessingContext,
         torch_dtype,
     ):
+        import torch
+        from diffusers.models.transformers.transformer_qwenimage import (
+            QwenImageTransformer2DModel,
+        )
+        from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+        from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
+
         """Load Qwen-Image model with GGUF quantization."""
         # Get the cached file path
         assert self.model.path is not None
@@ -1225,6 +1296,8 @@ class QwenImage(HuggingFacePipelineNode):
             self._pipeline.enable_attention_slicing()
 
     async def move_to_device(self, device: str):
+        import torch
+
         if self._pipeline is not None:
             # Handle CPU offload case
             if self.enable_cpu_offload:
@@ -1247,6 +1320,8 @@ class QwenImage(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
+
+        import torch
 
         # Set up the generator for reproducibility
         generator = None
@@ -1360,7 +1435,7 @@ class FluxControl(HuggingFacePipelineNode):
         default=True,
         description="Enable CPU offload to reduce VRAM usage.",
     )
-    _pipeline: FluxControlPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
@@ -1387,6 +1462,9 @@ class FluxControl(HuggingFacePipelineNode):
         return ["control_image"]
 
     async def preload_model(self, context: ProcessingContext):
+        import torch
+        from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
+
         hf_token = await context.get_secret("HF_TOKEN")
         if not hf_token:
             model_url = f"https://huggingface.co/{self.get_model_id()}"
@@ -1408,6 +1486,8 @@ class FluxControl(HuggingFacePipelineNode):
             self._pipeline.enable_model_cpu_offload()
 
     async def move_to_device(self, device: str):
+        import torch
+
         if self._pipeline is not None:
             # If CPU offload is enabled, we need to handle device movement differently
             if self.enable_cpu_offload:
@@ -1430,6 +1510,8 @@ class FluxControl(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
+
+        import torch
 
         # Set up the generator for reproducibility
         generator = torch.Generator(device=context.device)

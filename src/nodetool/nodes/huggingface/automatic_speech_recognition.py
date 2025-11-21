@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import datetime
-import torch
 import logging
-from typing import TypedDict
+from typing import TYPE_CHECKING, TypedDict, Any
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
     AudioRef,
@@ -14,14 +15,14 @@ from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
 
 from pydantic import Field
-from transformers import (
-    AutoModelForSpeechSeq2Seq,
-    AutoProcessor,
-)
-from transformers.pipelines.automatic_speech_recognition import (
-    AutomaticSpeechRecognitionPipeline,
-)
 from enum import Enum
+
+if TYPE_CHECKING:
+    import torch
+    from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor
+    from transformers.pipelines.automatic_speech_recognition import (
+        AutomaticSpeechRecognitionPipeline,
+    )
 
 logger = get_logger(__name__)
 
@@ -29,6 +30,8 @@ logger = get_logger(__name__)
 def _is_cuda_available() -> bool:
     """Safely check if CUDA is available, handling cases where PyTorch is not compiled with CUDA support."""
     try:
+        import torch
+
         # Check if cuda module exists
         if not hasattr(torch, "cuda"):
             return False
@@ -166,7 +169,7 @@ class Whisper(HuggingFacePipelineNode):
         description="The type of timestamps to return for the generated text.",
     )
 
-    _pipeline: AutomaticSpeechRecognitionPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -210,6 +213,9 @@ class Whisper(HuggingFacePipelineNode):
 
     async def preload_model(self, context: ProcessingContext):
         logger.info("Initializing Whisper model...")
+        import torch
+        from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor
+
         torch_dtype = torch.float16 if _is_cuda_available() else torch.float32
 
         model = await self.load_model(

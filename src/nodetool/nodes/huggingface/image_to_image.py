@@ -1,14 +1,12 @@
+from __future__ import annotations
+
 from enum import Enum
 import platform
 import re
 import asyncio
-from typing import Any, TypedDict
-from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
-from diffusers.models.autoencoders.vae import DecoderOutput
-from diffusers.models.modeling_outputs import AutoencoderKLOutput
+from typing import Any, TypedDict, TYPE_CHECKING
 from nodetool.config.logging_config import get_logger
 from nodetool.workflows.types import NodeProgress
-import torch
 from RealESRGAN import RealESRGAN
 from huggingface_hub import try_to_load_from_cache
 from nodetool.metadata.types import (
@@ -36,56 +34,66 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
 )
 from nodetool.nodes.huggingface.huggingface_node import progress_callback
 from nodetool.workflows.processing_context import ProcessingContext
-
-from diffusers.pipelines.omnigen.pipeline_omnigen import OmniGenPipeline
-from diffusers.pipelines.pipeline_utils import DiffusionPipeline
-from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
-from diffusers.pipelines.auto_pipeline import AutoPipelineForInpainting
-from diffusers.models.controlnets.controlnet import ControlNetModel
-from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import QwenImageEditPipeline
-from diffusers.models.transformers.transformer_qwenimage import (
-    QwenImageTransformer2DModel,
-)
-from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
-from diffusers.pipelines.flux.pipeline_flux_fill import FluxFillPipeline
-from diffusers.pipelines.flux.pipeline_flux_kontext import FluxKontextPipeline
-from diffusers.pipelines.flux.pipeline_flux_prior_redux import FluxPriorReduxPipeline
-from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
-from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
-from diffusers.pipelines.pag.pipeline_pag_controlnet_sd import (
-    StableDiffusionControlNetPAGPipeline,
-)
-from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl_img2img import (
-    StableDiffusionXLControlNetPAGImg2ImgPipeline,
-)
-from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_inpaint import (
-    StableDiffusionControlNetPAGInpaintPipeline,
-)
-from diffusers.pipelines.pag.pipeline_pag_sd_img2img import (
-    StableDiffusionPAGImg2ImgPipeline,
-)
-from diffusers.pipelines.pag.pipeline_pag_sd_inpaint import (
-    StableDiffusionPAGInpaintPipeline,
-)
-from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl import (
-    StableDiffusionXLControlNetPAGPipeline,
-)
-from diffusers.pipelines.pag.pipeline_pag_sd_xl_img2img import (
-    StableDiffusionXLPAGImg2ImgPipeline,
-)
-from diffusers.pipelines.pag.pipeline_pag_sd_xl_inpaint import (
-    StableDiffusionXLPAGInpaintPipeline,
-)
-from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import (
-    StableDiffusionControlNetImg2ImgPipeline,
-)
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_upscale import (
-    StableDiffusionUpscalePipeline,
-)
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upscale import (
-    StableDiffusionLatentUpscalePipeline,
-)
 from pydantic import Field
+import torch
+
+if TYPE_CHECKING:
+    import torch
+    from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
+    from diffusers.models.autoencoders.vae import DecoderOutput
+    from diffusers.models.modeling_outputs import AutoencoderKLOutput
+    from diffusers.models.controlnets.controlnet import ControlNetModel
+    from diffusers.models.transformers.transformer_qwenimage import (
+        QwenImageTransformer2DModel,
+    )
+    from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
+    from diffusers.pipelines.omnigen.pipeline_omnigen import OmniGenPipeline
+    from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+    from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
+    from diffusers.pipelines.auto_pipeline import AutoPipelineForInpainting
+    from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import (
+        QwenImageEditPipeline,
+    )
+    from diffusers.pipelines.flux.pipeline_flux_fill import FluxFillPipeline
+    from diffusers.pipelines.flux.pipeline_flux_kontext import FluxKontextPipeline
+    from diffusers.pipelines.flux.pipeline_flux_prior_redux import (
+        FluxPriorReduxPipeline,
+    )
+    from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+    from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
+    from diffusers.pipelines.pag.pipeline_pag_controlnet_sd import (
+        StableDiffusionControlNetPAGPipeline,
+    )
+    from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl_img2img import (
+        StableDiffusionXLControlNetPAGImg2ImgPipeline,
+    )
+    from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_inpaint import (
+        StableDiffusionControlNetPAGInpaintPipeline,
+    )
+    from diffusers.pipelines.pag.pipeline_pag_sd_img2img import (
+        StableDiffusionPAGImg2ImgPipeline,
+    )
+    from diffusers.pipelines.pag.pipeline_pag_sd_inpaint import (
+        StableDiffusionPAGInpaintPipeline,
+    )
+    from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl import (
+        StableDiffusionXLControlNetPAGPipeline,
+    )
+    from diffusers.pipelines.pag.pipeline_pag_sd_xl_img2img import (
+        StableDiffusionXLPAGImg2ImgPipeline,
+    )
+    from diffusers.pipelines.pag.pipeline_pag_sd_xl_inpaint import (
+        StableDiffusionXLPAGInpaintPipeline,
+    )
+    from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import (
+        StableDiffusionControlNetImg2ImgPipeline,
+    )
+    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_upscale import (
+        StableDiffusionUpscalePipeline,
+    )
+    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upscale import (
+        StableDiffusionLatentUpscalePipeline,
+    )
 
 log = get_logger(__name__)
 
@@ -378,7 +386,7 @@ class ImageToImage(HuggingFacePipelineNode):
         ge=-1,
     )
 
-    _pipeline: AutoPipelineForImage2Image | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -508,7 +516,7 @@ class Inpaint(HuggingFacePipelineNode):
         ge=-1,
     )
 
-    _pipeline: AutoPipelineForInpainting | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -601,7 +609,7 @@ class StableDiffusionControlNet(StableDiffusionBaseNode):
         le=2.0,
     )
 
-    _pipeline: StableDiffusionControlNetPAGPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -695,7 +703,7 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
         le=1.0,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: StableDiffusionPAGImg2ImgPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -780,7 +788,7 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
         le=2.0,
     )
 
-    _pipeline: StableDiffusionControlNetPAGInpaintPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -875,7 +883,7 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
         default=ModelVariant.FP16,
         description="The variant of the model to use for Image-to-Image generation.",
     )
-    _pipeline: StableDiffusionPAGInpaintPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -957,7 +965,7 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
         description="The control image to guide the transformation.",
     )
 
-    _pipeline: StableDiffusionControlNetImg2ImgPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1092,7 +1100,7 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
     def get_title(cls):
         return "Stable Diffusion 4x Upscale"
 
-    _pipeline: StableDiffusionUpscalePipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls):
@@ -1197,7 +1205,7 @@ class StableDiffusionLatentUpscaler(HuggingFacePipelineNode):
         description="Low-resolution latents tensor to upscale.",
     )
 
-    _pipeline: StableDiffusionLatentUpscalePipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1276,7 +1284,7 @@ class VAEEncode(HuggingFacePipelineNode):
         description="Scaling factor applied to latents (e.g., 0.18215 for SD15)",
     )
 
-    _vae: AutoencoderKL | None = None
+    _vae: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1299,6 +1307,8 @@ class VAEEncode(HuggingFacePipelineNode):
         return "VAE Encode"
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
+
         dtype = torch.float32 if context.device == "mps" else torch.float16
         self._vae = await self.load_model(
             context=context,
@@ -1318,6 +1328,8 @@ class VAEEncode(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> TorchTensor:
         if self._vae is None:
             raise ValueError("VAE not initialized")
+
+        from diffusers.models.modeling_outputs import AutoencoderKLOutput
 
         # Convert to tensor HWC in [0,1]
         img = await context.image_to_tensor(self.image)
@@ -1355,7 +1367,7 @@ class VAEDecode(HuggingFacePipelineNode):
         description="Scaling factor used for encoding (inverse is applied before decode)",
     )
 
-    _vae: AutoencoderKL | None = None
+    _vae: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1378,6 +1390,8 @@ class VAEDecode(HuggingFacePipelineNode):
         return "VAE Decode"
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
+
         dtype = torch.float32 if context.device == "mps" else torch.float16
         self._vae = await self.load_model(
             context=context,
@@ -1397,6 +1411,8 @@ class VAEDecode(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._vae is None:
             raise ValueError("VAE not initialized")
+
+        from diffusers.models.autoencoders.vae import DecoderOutput
 
         latents = self.latents.to_tensor().to(context.device)
         vae_dtype = next(self._vae.parameters()).dtype
@@ -1439,7 +1455,7 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         le=1.0,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: StableDiffusionXLPAGImg2ImgPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1510,7 +1526,7 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
         le=1.0,
         description="Strength for inpainting. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: StableDiffusionXLPAGInpaintPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1596,7 +1612,7 @@ class StableDiffusionXLControlNet(StableDiffusionXLBase):
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage but may slow down generation.",
     )
 
-    _pipeline: StableDiffusionXLControlNetPAGPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFControlNet]:
@@ -1713,7 +1729,7 @@ class StableDiffusionXLControlNetImg2ImgNode(StableDiffusionXLImg2Img):
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage but may slow down generation.",
     )
 
-    _pipeline: StableDiffusionXLControlNetPAGImg2ImgPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1869,7 +1885,7 @@ class OmniGenNode(HuggingFacePipelineNode):
         description="Enable CPU offload to reduce memory usage when using multiple images.",
     )
 
-    _pipeline: Any | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -2020,7 +2036,7 @@ class QwenImageEdit(HuggingFacePipelineNode):
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _pipeline: QwenImageEditPipeline | DiffusionPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -2272,7 +2288,7 @@ class FluxFill(HuggingFacePipelineNode):
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _pipeline: FluxFillPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFFluxFill]:
@@ -2512,7 +2528,7 @@ class FluxKontext(HuggingFacePipelineNode):
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _pipeline: FluxKontextPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -2653,8 +2669,8 @@ class FluxPriorRedux(HuggingFacePipelineNode):
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _prior_pipeline: FluxPriorReduxPipeline | None = None
-    _pipeline: FluxPipeline | None = None
+    _prior_pipeline: Any = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):

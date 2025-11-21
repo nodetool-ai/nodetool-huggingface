@@ -150,9 +150,9 @@ class Whisper(
 
 class WhisperOutputs(OutputsProxy):
     @property
-    def text(self) -> OutputHandle[str]:
-        return typing.cast(OutputHandle[str], self["text"])
+    def text(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["text"])
 
     @property
-    def chunks(self) -> OutputHandle[list[types.AudioChunk]]:
-        return typing.cast(OutputHandle[list[types.AudioChunk]], self["chunks"])
+    def chunks(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["chunks"])

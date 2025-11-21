@@ -5,19 +5,13 @@ import logging
 from nodetool.metadata.types import Provider, ImageRef, AudioRef, VideoRef, NPArray
 from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
-from typing import Any, Type, get_origin
-import torch
+from typing import TYPE_CHECKING, Any, Type, get_origin
 from nodetool.workflows.types import NodeProgress, NodeUpdate, LogUpdate
 
+if TYPE_CHECKING:
+    import torch
+
 from nodetool.nodes.huggingface.prediction import run_huggingface
-
-try:
-    from transformers.utils import logging as hf_logging
-    from diffusers.utils import logging as diffusers_logging
-
-    HF_LOGGING_AVAILABLE = True
-except ImportError:
-    HF_LOGGING_AVAILABLE = False
 
 
 class HuggingFaceLogHandler(logging.Handler):
@@ -59,8 +53,8 @@ def setup_hf_logging(
     context: ProcessingContext, node_id: str, node_name: str = ""
 ) -> HuggingFaceLogHandler | None:
     """Set up HuggingFace logging to redirect to LogUpdate events."""
-    if not HF_LOGGING_AVAILABLE:
-        return None
+    from transformers.utils import logging as hf_logging
+    from diffusers.utils import logging as diffusers_logging
 
     # Create custom handler
     handler = HuggingFaceLogHandler(context, node_id, node_name)
@@ -111,7 +105,7 @@ def setup_hf_logging(
 
 
 def progress_callback(node_id: str, total_steps: int, context: ProcessingContext):
-    def callback(step: int, timestep: int, latents: torch.FloatTensor) -> None:
+    def callback(step: int, timestep: int, latents: "torch.FloatTensor") -> None:
         context.post_message(
             NodeProgress(
                 node_id=node_id,

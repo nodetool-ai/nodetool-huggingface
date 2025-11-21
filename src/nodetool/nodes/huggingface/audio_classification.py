@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from nodetool.metadata.types import (
     AudioRef,
     HFAudioClassification,
@@ -7,13 +9,15 @@ from nodetool.metadata.types import (
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
 
-
-import torch
+from typing import TYPE_CHECKING, Any
 from pydantic import Field
-from transformers import (
-    AudioClassificationPipeline,
-    ZeroShotAudioClassificationPipeline,
-)
+
+if TYPE_CHECKING:
+    import torch
+    from transformers import (
+        AudioClassificationPipeline,
+        ZeroShotAudioClassificationPipeline,
+    )
 
 
 class AudioClassifier(HuggingFacePipelineNode):
@@ -47,7 +51,7 @@ class AudioClassifier(HuggingFacePipelineNode):
         title="Top K",
         description="The number of top results to return",
     )
-    _pipeline: AudioClassificationPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
@@ -66,6 +70,8 @@ class AudioClassifier(HuggingFacePipelineNode):
         return ["audio"]
 
     async def preload_model(self, context: ProcessingContext):
+        import torch
+
         self._pipeline = await self.load_pipeline(
             context=context,
             pipeline_task="audio-classification",
@@ -113,7 +119,7 @@ class ZeroShotAudioClassifier(HuggingFacePipelineNode):
         description="The candidate labels to classify the audio against, separated by commas",
     )
 
-    _pipeline: ZeroShotAudioClassificationPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
@@ -135,6 +141,8 @@ class ZeroShotAudioClassifier(HuggingFacePipelineNode):
         return "zero-shot-audio-classification"
 
     async def preload_model(self, context: ProcessingContext):
+        from transformers import ZeroShotAudioClassificationPipeline
+
         self._pipeline = await self.load_model(
             context, ZeroShotAudioClassificationPipeline, self.model.repo_id
         )

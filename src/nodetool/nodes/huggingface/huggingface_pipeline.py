@@ -1,17 +1,21 @@
+from __future__ import annotations
+
 from nodetool.workflows.graph import BaseNode
-import torch
 import asyncio
 from nodetool.config.logging_config import get_logger
 from nodetool.nodes.huggingface.huggingface_node import (
     setup_hf_logging,
 )
 from nodetool.workflows.processing_context import ProcessingContext
-from transformers.pipelines.base import Pipeline
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 from nodetool.huggingface.huggingface_local_provider import (
     load_pipeline,
     load_model,
 )
+
+if TYPE_CHECKING:
+    import torch
+    from transformers.pipelines.base import Pipeline
 
 T = TypeVar("T")
 
@@ -29,7 +33,7 @@ class HuggingFacePipelineNode(BaseNode):
         setup_hf_logging(context, self.id, self.get_title())
         # Call parent implementation
 
-    _pipeline: Pipeline | None = None
+    _pipeline: Any = None
 
     def should_skip_cache(self):
         return False

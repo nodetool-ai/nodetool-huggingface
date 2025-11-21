@@ -1,11 +1,14 @@
-from typing import List
-import torch
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, List, Any
 from pydantic import Field
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from nodetool.metadata.types import HFReranker
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
+
+if TYPE_CHECKING:
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 
 class Reranker(HuggingFacePipelineNode):
@@ -35,8 +38,8 @@ class Reranker(HuggingFacePipelineNode):
         description="List of candidate texts to rank",
     )
 
-    _model: AutoModelForSequenceClassification | None = None
-    _tokenizer: AutoTokenizer | None = None
+    _model: Any = None
+    _tokenizer: Any = None
 
     @classmethod
     def get_recommended_models(cls):
@@ -57,6 +60,8 @@ class Reranker(HuggingFacePipelineNode):
 
     async def preload_model(self, context: ProcessingContext):
 
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
         self._tokenizer = await self.load_model(
             context=context,
             model_class=AutoTokenizer,
@@ -73,6 +78,8 @@ class Reranker(HuggingFacePipelineNode):
         self._model.to(device)  # type: ignore
 
     async def process(self, context: ProcessingContext) -> dict[str, float]:
+        import torch
+
         pairs = [[self.query, candidate] for candidate in self.candidates]
 
         with torch.no_grad():

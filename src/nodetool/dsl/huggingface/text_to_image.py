@@ -103,9 +103,9 @@ class Flux(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     - Controlled generation with Fill, Canny, or Depth variants
     """
 
-    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
-        default=types.HFTextToImage(
-            type="hf.text_to_image",
+    model: types.HFFlux | OutputHandle[types.HFFlux] = connect_field(
+        default=types.HFFlux(
+            type="hf.flux",
             repo_id="",
             path=None,
             variant=None,
@@ -148,12 +148,82 @@ class Flux(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
         default=False, description="Enable VAE slicing to reduce VRAM usage."
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
-        default=False, description="Enable CPU offload to reduce VRAM usage."
+        default=True, description="Enable CPU offload to reduce VRAM usage."
     )
 
     @classmethod
     def get_node_class(cls) -> type[BaseNode]:
         return nodetool.nodes.huggingface.text_to_image.Flux
+
+    @classmethod
+    def get_node_type(cls):
+        return cls.get_node_class().get_node_type()
+
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.text_to_image
+from nodetool.workflows.base_node import BaseNode
+
+
+class FluxControl(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
+    """
+
+    Generates images using FLUX Control models with depth or other control guidance.
+    image, generation, AI, text-to-image, flux, control, depth, guidance
+
+    Use cases:
+    - Generate images with depth-based control guidance
+    - Create images following structural guidance from control images
+    - High-quality controlled generation with FLUX models
+    - Depth-aware image generation
+    """
+
+    model: types.HFControlNetFlux | OutputHandle[types.HFControlNetFlux] = (
+        connect_field(
+            default=types.HFControlNetFlux(
+                type="hf.controlnet_flux",
+                repo_id="black-forest-labs/FLUX.1-Depth-dev",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The FLUX Control model to use for controlled image generation.",
+        )
+    )
+    prompt: str | OutputHandle[str] = connect_field(
+        default="A robot made of exotic candies and chocolates of different kinds. The background is filled with confetti and celebratory gifts.",
+        description="A text prompt describing the desired image.",
+    )
+    control_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The control image to guide the generation process.",
+    )
+    guidance_scale: float | OutputHandle[float] = connect_field(
+        default=10.0, description="The scale for classifier-free guidance."
+    )
+    width: int | OutputHandle[int] = connect_field(
+        default=1024, description="The width of the generated image."
+    )
+    height: int | OutputHandle[int] = connect_field(
+        default=1024, description="The height of the generated image."
+    )
+    num_inference_steps: int | OutputHandle[int] = connect_field(
+        default=30, description="The number of denoising steps."
+    )
+    seed: int | OutputHandle[int] = connect_field(
+        default=-1,
+        description="Seed for the random number generator. Use -1 for a random seed.",
+    )
+    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
+        default=True, description="Enable CPU offload to reduce VRAM usage."
+    )
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.text_to_image.FluxControl
 
     @classmethod
     def get_node_type(cls):
@@ -283,9 +353,9 @@ class QwenImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]
     - Works out-of-the-box with the official Qwen model
     """
 
-    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
-        default=types.HFTextToImage(
-            type="hf.text_to_image",
+    model: types.HFQwenImage | OutputHandle[types.HFQwenImage] = connect_field(
+        default=types.HFQwenImage(
+            type="hf.qwen_image",
             repo_id="",
             path=None,
             variant=None,
@@ -374,16 +444,18 @@ class StableDiffusion(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionOutputType
     )
 
-    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
-        default=types.HFTextToImage(
-            type="hf.text_to_image",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The model to use for image generation.",
+    model: types.HFStableDiffusion | OutputHandle[types.HFStableDiffusion] = (
+        connect_field(
+            default=types.HFStableDiffusion(
+                type="hf.stable_diffusion",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The model to use for image generation.",
+        )
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -416,6 +488,26 @@ class StableDiffusion(
         connect_field(
             default=[], description="The LoRA models to use for image processing"
         )
+    )
+    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
+        connect_field(
+            default=types.HFIPAdapter(
+                type="hf.ip_adapter",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The IP adapter model to use for image processing",
+        )
+    )
+    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="When provided the image will be fed into the IP adapter",
+    )
+    ip_adapter_scale: float | OutputHandle[float] = connect_field(
+        default=0.5, description="The strength of the IP adapter"
     )
     pag_scale: float | OutputHandle[float] = connect_field(
         default=3.0,
@@ -467,16 +559,12 @@ class StableDiffusion(
 
 class StableDiffusionOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -512,16 +600,18 @@ class StableDiffusionXL(
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionOutputType
     )
 
-    model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
-        default=types.HFTextToImage(
-            type="hf.text_to_image",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The Stable Diffusion XL model to use for generation.",
+    model: types.HFStableDiffusionXL | OutputHandle[types.HFStableDiffusionXL] = (
+        connect_field(
+            default=types.HFStableDiffusionXL(
+                type="hf.stable_diffusion_xl",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The Stable Diffusion XL model to use for generation.",
+        )
     )
     variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
@@ -567,6 +657,26 @@ class StableDiffusionXL(
     lora_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="Strength of the LoRAs"
     )
+    ip_adapter_model: types.HFIPAdapter | OutputHandle[types.HFIPAdapter] = (
+        connect_field(
+            default=types.HFIPAdapter(
+                type="hf.ip_adapter",
+                repo_id="",
+                path=None,
+                variant=None,
+                allow_patterns=None,
+                ignore_patterns=None,
+            ),
+            description="The IP adapter model to use for image processing",
+        )
+    )
+    ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="When provided the image will be fed into the IP adapter",
+    )
+    ip_adapter_scale: float | OutputHandle[float] = connect_field(
+        default=0.5, description="Strength of the IP adapter image"
+    )
     enable_attention_slicing: bool | OutputHandle[bool] = connect_field(
         default=True,
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage.",
@@ -601,16 +711,12 @@ class StableDiffusionXL(
 
 class StableDiffusionXLOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -689,13 +795,9 @@ class Text2Image(
 
 class Text2ImageOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])

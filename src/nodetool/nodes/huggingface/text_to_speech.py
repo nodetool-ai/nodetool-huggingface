@@ -1,18 +1,20 @@
+from __future__ import annotations
+
 import base64
 from enum import Enum
-from kokoro.pipeline import KPipeline
 from nodetool.workflows.types import Chunk
-import torch
 from nodetool.metadata.types import AudioRef, HFTextToSpeech, HuggingFaceModel
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
 
-
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Mapping, TypedDict
 from pydantic import Field
-import numpy as np
-from typing import Any, AsyncGenerator, Mapping, TypedDict
-from transformers.pipelines.text_to_audio import TextToAudioPipeline
-from transformers.pipelines.base import Pipeline
+
+if TYPE_CHECKING:
+    import numpy as np
+    from kokoro.pipeline import KPipeline
+    from transformers.pipelines.text_to_audio import TextToAudioPipeline
+    from transformers.pipelines.base import Pipeline
 
 
 class Bark(HuggingFacePipelineNode):
@@ -36,7 +38,7 @@ class Bark(HuggingFacePipelineNode):
         title="Inputs",
         description="The input text to the model",
     )
-    _pipeline: TextToAudioPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
@@ -209,7 +211,7 @@ class KokoroTTS(HuggingFacePipelineNode):
         description="Speech speed multiplier (0.5–2.0)",
     )
 
-    _kpipeline: KPipeline | None = None
+    _kpipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
@@ -406,7 +408,7 @@ class TextToSpeech(HuggingFacePipelineNode):
         title="Input Text",
         description="The text to convert to speech",
     )
-    _pipeline: Pipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
@@ -433,6 +435,8 @@ class TextToSpeech(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
+        import torch
+
         self._pipeline = await self.load_pipeline(
             context,
             "text-to-speech",

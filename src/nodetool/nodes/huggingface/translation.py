@@ -1,14 +1,18 @@
-import torch
+from __future__ import annotations
+
 from nodetool.metadata.types import HFTranslation
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.config.logging_config import get_logger
 from pydantic import Field
-from enum import Enum
-from transformers import PreTrainedModel, Pipeline
 import logging
-from typing import List, Optional, Union, Iterable
+from enum import Enum
+from typing import TYPE_CHECKING, List, Optional, Union, Iterable, Any
 from collections.abc import Generator
+
+if TYPE_CHECKING:
+    import torch
+    from transformers import PreTrainedModel, Pipeline
 
 logger = get_logger(__name__)
 
@@ -85,7 +89,7 @@ class Translation(HuggingFacePipelineNode):
         description="The target language code (e.g., 'fr' for French)",
     )
 
-    _pipeline: Optional[Pipeline] = None  # Type annotation for the pipeline
+    _pipeline: Any = None  # Type annotation for the pipeline
 
     @classmethod
     def get_recommended_models(cls) -> List[HFTranslation]:
@@ -179,6 +183,9 @@ class Translation(HuggingFacePipelineNode):
         Args:
             target_device_str (str): The target device (e.g., "cpu", "cuda", "cuda:0").
         """
+        import torch
+        from transformers import PreTrainedModel
+
         if self._pipeline is None:
             raise ValueError("Pipeline is not initialized.")
 

@@ -1,13 +1,13 @@
+from __future__ import annotations
+
 from enum import Enum
 import os
 from random import randint
 import asyncio
+from typing import Any, TYPE_CHECKING
 
 from huggingface_hub import try_to_load_from_cache
 from pydantic import Field
-from typing import Any
-
-import torch
 
 from nodetool.config.environment import Environment
 from nodetool.config.logging_config import get_logger
@@ -24,34 +24,15 @@ from nodetool.metadata.types import (
     ImageRef,
     TorchTensor,
 )
-from diffusers.schedulers.scheduling_dpmsolver_sde import DPMSolverSDEScheduler
-from diffusers.schedulers.scheduling_euler_discrete import EulerDiscreteScheduler
-from diffusers.schedulers.scheduling_lms_discrete import LMSDiscreteScheduler
-from diffusers.schedulers.scheduling_ddim import DDIMScheduler
-from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
-from diffusers.schedulers.scheduling_heun_discrete import HeunDiscreteScheduler
-from diffusers.schedulers.scheduling_dpmsolver_multistep import (
-    DPMSolverMultistepScheduler,
-)
-from diffusers.schedulers.scheduling_deis_multistep import DEISMultistepScheduler
-from diffusers.schedulers.scheduling_pndm import PNDMScheduler
-from diffusers.schedulers.scheduling_euler_ancestral_discrete import (
-    EulerAncestralDiscreteScheduler,
-)
-from diffusers.schedulers.scheduling_unipc_multistep import UniPCMultistepScheduler
-from diffusers.schedulers.scheduling_k_dpm_2_discrete import KDPM2DiscreteScheduler
-from diffusers.schedulers.scheduling_dpmsolver_singlestep import (
-    DPMSolverSinglestepScheduler,
-)
-from diffusers.schedulers.scheduling_k_dpm_2_ancestral_discrete import (
-    KDPM2AncestralDiscreteScheduler,
-)
 
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress
 
 import logging
+
+if TYPE_CHECKING:
+    import torch
 
 log = get_logger(__name__)
 log.setLevel(logging.DEBUG)
@@ -440,6 +421,8 @@ def upscale_latents(latents: torch.Tensor, scale_factor: int = 2) -> torch.Tenso
     Returns:
         Upscaled latents tensor
     """
+    import torch
+
     log.debug(f"Upscaling latents with scale factor: {scale_factor}")
 
     # Ensure input is on correct device
@@ -506,6 +489,31 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
 
     @classmethod
     def get_scheduler_class(cls, scheduler: StableDiffusionScheduler):
+        from diffusers.schedulers.scheduling_dpmsolver_sde import DPMSolverSDEScheduler
+        from diffusers.schedulers.scheduling_euler_discrete import EulerDiscreteScheduler
+        from diffusers.schedulers.scheduling_lms_discrete import LMSDiscreteScheduler
+        from diffusers.schedulers.scheduling_ddim import DDIMScheduler
+        from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
+        from diffusers.schedulers.scheduling_heun_discrete import HeunDiscreteScheduler
+        from diffusers.schedulers.scheduling_dpmsolver_multistep import (
+            DPMSolverMultistepScheduler,
+        )
+        from diffusers.schedulers.scheduling_deis_multistep import DEISMultistepScheduler
+        from diffusers.schedulers.scheduling_pndm import PNDMScheduler
+        from diffusers.schedulers.scheduling_euler_ancestral_discrete import (
+            EulerAncestralDiscreteScheduler,
+        )
+        from diffusers.schedulers.scheduling_unipc_multistep import (
+            UniPCMultistepScheduler,
+        )
+        from diffusers.schedulers.scheduling_k_dpm_2_discrete import KDPM2DiscreteScheduler
+        from diffusers.schedulers.scheduling_dpmsolver_singlestep import (
+            DPMSolverSinglestepScheduler,
+        )
+        from diffusers.schedulers.scheduling_k_dpm_2_ancestral_discrete import (
+            KDPM2AncestralDiscreteScheduler,
+        )
+
         if scheduler == cls.StableDiffusionScheduler.DPMSolverSDEScheduler:
             return DPMSolverSDEScheduler
         elif scheduler == cls.StableDiffusionScheduler.EulerDiscreteScheduler:
@@ -711,6 +719,8 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             log.debug("No pipeline to move to device")
 
     def _setup_generator(self):
+        import torch
+
         log.debug("Setting up generator")
         log.debug(f"Current seed value: {self.seed}")
         generator = torch.Generator(device="cpu")
@@ -878,6 +888,8 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
 class StableDiffusionXLBase(HuggingFacePipelineNode):
 
     def get_torch_dtype(self) -> torch.dtype:
+        import torch
+
         if self.variant == ModelVariant.FP16:
             return torch.float16
         elif self.variant == ModelVariant.BF16:
@@ -911,6 +923,31 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
 
     @classmethod
     def get_scheduler_class(cls, scheduler: StableDiffusionScheduler):
+        from diffusers.schedulers.scheduling_dpmsolver_sde import DPMSolverSDEScheduler
+        from diffusers.schedulers.scheduling_euler_discrete import EulerDiscreteScheduler
+        from diffusers.schedulers.scheduling_lms_discrete import LMSDiscreteScheduler
+        from diffusers.schedulers.scheduling_ddim import DDIMScheduler
+        from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
+        from diffusers.schedulers.scheduling_heun_discrete import HeunDiscreteScheduler
+        from diffusers.schedulers.scheduling_dpmsolver_multistep import (
+            DPMSolverMultistepScheduler,
+        )
+        from diffusers.schedulers.scheduling_deis_multistep import DEISMultistepScheduler
+        from diffusers.schedulers.scheduling_pndm import PNDMScheduler
+        from diffusers.schedulers.scheduling_euler_ancestral_discrete import (
+            EulerAncestralDiscreteScheduler,
+        )
+        from diffusers.schedulers.scheduling_unipc_multistep import (
+            UniPCMultistepScheduler,
+        )
+        from diffusers.schedulers.scheduling_k_dpm_2_discrete import KDPM2DiscreteScheduler
+        from diffusers.schedulers.scheduling_dpmsolver_singlestep import (
+            DPMSolverSinglestepScheduler,
+        )
+        from diffusers.schedulers.scheduling_k_dpm_2_ancestral_discrete import (
+            KDPM2AncestralDiscreteScheduler,
+        )
+
         if scheduler == cls.StableDiffusionScheduler.DPMSolverSDEScheduler:
             return DPMSolverSDEScheduler
         elif scheduler == cls.StableDiffusionScheduler.EulerDiscreteScheduler:
@@ -1143,6 +1180,8 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             log.debug("No pipeline to move to device")
 
     def _setup_generator(self):
+        import torch
+
         log.debug("Setting up generator (XL)")
         log.debug(f"Current seed value: {self.seed}")
         generator = torch.Generator(device="cpu")
