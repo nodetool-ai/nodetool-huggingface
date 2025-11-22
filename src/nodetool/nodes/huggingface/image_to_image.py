@@ -1,9 +1,7 @@
 from enum import Enum
-import importlib.util
 import platform
 import re
 import asyncio
-from functools import lru_cache
 from typing import Any, TypedDict
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 from diffusers.models.autoencoders.vae import DecoderOutput
@@ -33,6 +31,7 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
     HF_CONTROLNET_MODELS,
     HF_CONTROLNET_XL_MODELS,
     ModelVariant,
+    _select_diffusion_dtype,
     StableDiffusionBaseNode,
     StableDiffusionXLBase,
 )
@@ -54,32 +53,26 @@ from diffusers.pipelines.flux.pipeline_flux_kontext import FluxKontextPipeline
 from diffusers.pipelines.flux.pipeline_flux_prior_redux import FluxPriorReduxPipeline
 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
-from diffusers.pipelines.pag.pipeline_pag_controlnet_sd import (
-    StableDiffusionControlNetPAGPipeline,
-)
-from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl_img2img import (
-    StableDiffusionXLControlNetPAGImg2ImgPipeline,
-)
-from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_inpaint import (
-    StableDiffusionControlNetPAGInpaintPipeline,
-)
-from diffusers.pipelines.pag.pipeline_pag_sd_img2img import (
-    StableDiffusionPAGImg2ImgPipeline,
-)
-from diffusers.pipelines.pag.pipeline_pag_sd_inpaint import (
-    StableDiffusionPAGInpaintPipeline,
-)
-from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl import (
-    StableDiffusionXLControlNetPAGPipeline,
-)
-from diffusers.pipelines.pag.pipeline_pag_sd_xl_img2img import (
-    StableDiffusionXLPAGImg2ImgPipeline,
-)
-from diffusers.pipelines.pag.pipeline_pag_sd_xl_inpaint import (
-    StableDiffusionXLPAGInpaintPipeline,
+from diffusers.pipelines.controlnet.pipeline_controlnet import (
+    StableDiffusionControlNetPipeline,
 )
 from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import (
     StableDiffusionControlNetImg2ImgPipeline,
+)
+from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint import (
+    StableDiffusionControlNetInpaintPipeline,
+)
+from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl import (
+    StableDiffusionXLControlNetPipeline,
+)
+from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl_img2img import (
+    StableDiffusionXLControlNetImg2ImgPipeline,
+)
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import (
+    StableDiffusionImg2ImgPipeline,
+)
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import (
+    StableDiffusionInpaintPipeline,
 )
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_upscale import (
     StableDiffusionUpscalePipeline,
@@ -87,47 +80,40 @@ from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_upscale impo
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upscale import (
     StableDiffusionLatentUpscalePipeline,
 )
+from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
+    StableDiffusionXLPipeline,
+)
+from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
+    StableDiffusionXLImg2ImgPipeline,
+)
+from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_inpaint import (
+    StableDiffusionXLInpaintPipeline,
+)
 from pydantic import Field
 
 log = get_logger(__name__)
 
 
-@lru_cache(maxsize=1)
-def _is_xformers_available() -> bool:
-    try:
-        return importlib.util.find_spec("xformers") is not None
-    except Exception:
-        return False
-
-
-def _enable_xformers_if_available(pipeline: Any, enabled: bool = True):
-    """Best-effort enabling of memory-efficient attention (xformers -> SDPA fallback)."""
+def _enable_pytorch2_attention(pipeline: Any, enabled: bool = True):
+    """Enable PyTorch 2 scaled dot product attention to speed up inference."""
     if not enabled or pipeline is None:
         return
 
-    enable_xformers = getattr(pipeline, "enable_xformers_memory_efficient_attention", None)
     enable_sdpa = getattr(pipeline, "enable_sdpa", None)
-
-    if callable(enable_xformers) and _is_xformers_available():
-        try:
-            enable_xformers()
-            log.debug("Enabled xformers memory efficient attention")
-            return
-        except Exception as e:
-            log.warning("Failed to enable xformers memory efficient attention: %s", e)
-    elif not _is_xformers_available():
-        log.debug("xformers not available; will try SDPA if present")
 
     if callable(enable_sdpa):
         try:
             enable_sdpa()
-            log.debug("Enabled scaled dot product attention (SDPA)")
+            pipeline_name = type(pipeline).__name__
+            log.info("Enabled PyTorch 2 scaled dot product attention for %s", pipeline_name)
         except Exception as e:
-            log.warning("Failed to enable SDPA attention: %s", e)
+            log.warning("Failed to enable scaled dot product attention: %s", e)
+    else:
+        log.info("Scaled dot product attention not available on this pipeline")
 
 
 def _apply_vae_optimizations(pipeline: Any):
-    """Apply VAE memory optimizations and channels_last layout when available."""
+    """Apply VAE slicing and channels_last layout when available."""
     if pipeline is None:
         return
 
@@ -141,13 +127,6 @@ def _apply_vae_optimizations(pipeline: Any):
             log.debug("Enabled VAE slicing")
         except Exception as e:
             log.warning("Failed to enable VAE slicing: %s", e)
-
-    if hasattr(vae, "enable_tiling"):
-        try:
-            vae.enable_tiling()
-            log.debug("Enabled VAE tiling")
-        except Exception as e:
-            log.warning("Failed to enable VAE tiling: %s", e)
 
     try:
         vae.to(memory_format=torch.channels_last)
@@ -187,7 +166,7 @@ class BaseImageToImage(HuggingFacePipelineNode):
         self._pipeline = await self.load_pipeline(
             context, "image-to-image", self.get_model_id(), device=context.device
         )
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
     async def move_to_device(self, device: str):
@@ -348,29 +327,21 @@ class LoadImageToImageModel(HuggingFacePipelineNode):
         description="The repository ID of the model to use for image-to-image generation.",
     )
 
-    variant: ModelVariant = Field(
-        default=ModelVariant.FP16,
-        description="The variant of the model to use for image-to-image generation.",
-    )
-
     async def preload_model(self, context: ProcessingContext):
+        torch_dtype = _select_diffusion_dtype()
         await self.load_model(
             context=context,
             model_id=self.repo_id,
             model_class=AutoPipelineForImage2Image,
-            torch_dtype=torch.float16,
+            torch_dtype=torch_dtype,
             use_safetensors=True,
-            variant=(
-                self.variant.value if self.variant != ModelVariant.DEFAULT else None
-            ),
+            variant=None,
         )
 
     async def process(self, context: ProcessingContext) -> HFImageToImage:
         return HFImageToImage(
             repo_id=self.repo_id,
-            variant=(
-                self.variant.value if self.variant != ModelVariant.DEFAULT else None
-            ),
+            variant=None,
         )
 
 
@@ -463,14 +434,15 @@ class ImageToImage(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
+        torch_dtype = _select_diffusion_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_id=self.model.repo_id,
             path=self.model.path,
             model_class=AutoPipelineForImage2Image,
-            torch_dtype=torch.float16,
+            torch_dtype=torch_dtype,
         )
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
     async def move_to_device(self, device: str):
@@ -595,16 +567,17 @@ class Inpaint(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
+        torch_dtype = _select_diffusion_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_id=self.model.repo_id,
             path=self.model.path,
             model_class=AutoPipelineForInpainting,
-            torch_dtype=torch.float16,
+            torch_dtype=torch_dtype,
             use_safetensors=True,
             variant=self.model.variant,
         )
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
     async def move_to_device(self, device: str):
@@ -673,7 +646,7 @@ class StableDiffusionControlNet(StableDiffusionBaseNode):
         le=2.0,
     )
 
-    _pipeline: StableDiffusionControlNetPAGPipeline | None = None
+    _pipeline: StableDiffusionControlNetPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -707,27 +680,26 @@ class StableDiffusionControlNet(StableDiffusionBaseNode):
 
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
-        # Use float32 for MPS compatibility with controlnet models
-        controlnet_dtype = torch.float32 if context.device == "mps" else torch.float16
-        controlnet_variant = None if context.device == "mps" else "fp16"
+        # Use PyTorch 2 attention optimizations while keeping MPS/controlnet compatibility
+        controlnet_dtype = torch.float32 if context.device == "mps" else _select_diffusion_dtype()
         controlnet = await self.load_model(
             context=context,
             model_class=ControlNetModel,
             model_id=self.controlnet.repo_id,
             torch_dtype=controlnet_dtype,
-            variant=controlnet_variant,
+            variant=None,
         )
         # Align pipeline dtype with controlnet dtype to avoid mismatches
         self._pipeline = await self.load_model(
             context=context,
-            model_class=StableDiffusionControlNetPAGPipeline,
+            model_class=StableDiffusionControlNetPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             controlnet=controlnet,
             config="Lykon/DreamShaper",  # workaround for missing SD15 repo
             torch_dtype=controlnet_dtype,
         )
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
@@ -769,7 +741,7 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
         le=1.0,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: StableDiffusionPAGImg2ImgPipeline | None = None
+    _pipeline: StableDiffusionImg2ImgPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -790,17 +762,15 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
         await super().preload_model(context)
         self._pipeline = await self.load_model(
             context=context,
-            model_class=StableDiffusionPAGImg2ImgPipeline,
+            model_class=StableDiffusionImg2ImgPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             safety_checker=None,
             config="Lykon/DreamShaper",
-            torch_dtype=(
-                torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
-            ),
+            torch_dtype=_select_diffusion_dtype(),
         )
         assert self._pipeline is not None
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
@@ -856,7 +826,7 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
         le=2.0,
     )
 
-    _pipeline: StableDiffusionControlNetPAGInpaintPipeline | None = None
+    _pipeline: StableDiffusionControlNetInpaintPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -880,8 +850,7 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
 
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
-        # Use float32 for MPS compatibility with controlnet models
-        controlnet_dtype = torch.float32 if context.device == "mps" else torch.float16
+        controlnet_dtype = torch.float32 if context.device == "mps" else _select_diffusion_dtype()
         controlnet = await self.load_pipeline(
             context,
             "controlnet",
@@ -892,7 +861,7 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
         # Align pipeline dtype with controlnet dtype to avoid mismatches
         self._pipeline = await self.load_model(
             context,
-            model_class=StableDiffusionControlNetPAGInpaintPipeline,
+            model_class=StableDiffusionControlNetInpaintPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             controlnet=controlnet,
@@ -900,7 +869,7 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
             torch_dtype=controlnet_dtype,
         )  # type: ignore
         assert self._pipeline is not None
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
@@ -949,11 +918,7 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
         le=1.0,
         description="Strength for inpainting. Higher values allow for more deviation from the original image.",
     )
-    variant: ModelVariant = Field(
-        default=ModelVariant.FP16,
-        description="The variant of the model to use for Image-to-Image generation.",
-    )
-    _pipeline: StableDiffusionPAGInpaintPipeline | None = None
+    _pipeline: StableDiffusionInpaintPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -975,16 +940,16 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
         if self._pipeline is None:
             self._pipeline = await self.load_model(
                 context=context,
-                model_class=StableDiffusionPAGInpaintPipeline,
+                model_class=StableDiffusionInpaintPipeline,
                 model_id=self.model.repo_id,
                 path=self.model.path,
                 safety_checker=None,
                 config="Lykon/DreamShaper",
-                torch_dtype=torch.float16,
-                variant=self.variant.value,
+                torch_dtype=_select_diffusion_dtype(),
+                variant=None,
             )
             assert self._pipeline is not None
-            _enable_xformers_if_available(self._pipeline)
+            _enable_pytorch2_attention(self._pipeline)
             _apply_vae_optimizations(self._pipeline)
             self._set_scheduler(self.scheduler)
             self._load_ip_adapter()
@@ -1068,8 +1033,8 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
             raise ValueError(f"Model {self.model.repo_id} must be downloaded first")
 
         # Use float32 for MPS compatibility with controlnet models
-        controlnet_dtype = torch.float32 if context.device == "mps" else torch.float16
-        controlnet_variant = None if context.device == "mps" else "fp16"
+        controlnet_dtype = torch.float32 if context.device == "mps" else _select_diffusion_dtype()
+        controlnet_variant = None
         controlnet = await self.load_model(
             context=context,
             model_class=ControlNetModel,
@@ -1087,7 +1052,7 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
             torch_dtype=controlnet_dtype,
             config="Lykon/DreamShaper",  # workaround for missing SD15 repo
         )
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
@@ -1194,7 +1159,7 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
             model_id="stabilityai/stable-diffusion-x4-upscaler",
         )
         assert self._pipeline is not None
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
 
@@ -1300,10 +1265,10 @@ class StableDiffusionLatentUpscaler(HuggingFacePipelineNode):
             model_class=StableDiffusionLatentUpscalePipeline,
             model_id="stabilityai/sd-x2-latent-upscaler",
             variant=None,
-            torch_dtype=torch.float16,
+            torch_dtype=_select_diffusion_dtype(),
         )
         assert self._pipeline is not None
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._pipeline.to(context.device)
 
@@ -1519,7 +1484,7 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         le=1.0,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: StableDiffusionXLPAGImg2ImgPipeline | None = None
+    _pipeline: StableDiffusionXLImg2ImgPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1539,17 +1504,15 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
     async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_model(
             context=context,
-            model_class=StableDiffusionXLPAGImg2ImgPipeline,
+            model_class=StableDiffusionXLImg2ImgPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             safety_checker=None,
-            torch_dtype=(
-                torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
-            ),
-            variant=self.variant.value,
+            torch_dtype=_select_diffusion_dtype(),
+            variant=None,
         )
         assert self._pipeline is not None
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._pipeline.enable_model_cpu_offload()
         self._set_scheduler(self.scheduler)
@@ -1592,7 +1555,7 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
         le=1.0,
         description="Strength for inpainting. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: StableDiffusionXLPAGInpaintPipeline | None = None
+    _pipeline: StableDiffusionXLInpaintPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1613,19 +1576,15 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
         if self._pipeline is None:
             self._pipeline = await self.load_model(
                 context=context,
-                model_class=StableDiffusionXLPAGInpaintPipeline,
+                model_class=StableDiffusionXLInpaintPipeline,
                 model_id=self.model.repo_id,
                 path=self.model.path,
                 safety_checker=None,
-                torch_dtype=(
-                    torch.float16
-                    if self.variant == ModelVariant.FP16
-                    else torch.float32
-                ),
-                variant=self.variant.value,
+                torch_dtype=_select_diffusion_dtype(),
+                variant=None,
             )
             assert self._pipeline is not None
-            _enable_xformers_if_available(self._pipeline)
+            _enable_pytorch2_attention(self._pipeline)
             _apply_vae_optimizations(self._pipeline)
             self._set_scheduler(self.scheduler)
             self._load_ip_adapter()
@@ -1680,7 +1639,7 @@ class StableDiffusionXLControlNet(StableDiffusionXLBase):
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage but may slow down generation.",
     )
 
-    _pipeline: StableDiffusionXLControlNetPAGPipeline | None = None
+    _pipeline: StableDiffusionXLControlNetPipeline | None = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFControlNet]:
@@ -1708,39 +1667,28 @@ class StableDiffusionXLControlNet(StableDiffusionXLBase):
 
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
-        # Use float32 for MPS compatibility with controlnet models
-        if context.device == "mps" and self.variant != ModelVariant.FP16:
-            raise ValueError(
-                "ControlNet on Apple Silicon does not support fp16, please use fp32"
-            )
+        controlnet_dtype = torch.float32 if context.device == "mps" else _select_diffusion_dtype()
+        controlnet_variant = None
 
         controlnet = await self.load_model(
             context=context,
             model_class=ControlNetModel,
             model_id=self.controlnet.repo_id,
             path=self.controlnet.path,
-            variant=(
-                self.variant.value if self.variant != ModelVariant.DEFAULT else None
-            ),
-            torch_dtype=(
-                torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
-            ),
+            variant=controlnet_variant,
+            torch_dtype=controlnet_dtype,
         )
         # Align pipeline dtype with controlnet dtype to avoid mismatches
         self._pipeline = await self.load_model(
             context=context,
-            model_class=StableDiffusionXLControlNetPAGPipeline,
+            model_class=StableDiffusionXLControlNetPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             controlnet=controlnet,
-            variant=(
-                self.variant.value if self.variant != ModelVariant.DEFAULT else None
-            ),
-            torch_dtype=(
-                torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
-            ),
+            variant=controlnet_variant,
+            torch_dtype=controlnet_dtype,
         )
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         # Ensure pipeline is on the correct device after loading
@@ -1799,7 +1747,7 @@ class StableDiffusionXLControlNetImg2ImgNode(StableDiffusionXLImg2Img):
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage but may slow down generation.",
     )
 
-    _pipeline: StableDiffusionXLControlNetPAGImg2ImgPipeline | None = None
+    _pipeline: StableDiffusionXLControlNetImg2ImgPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1826,40 +1774,29 @@ class StableDiffusionXLControlNetImg2ImgNode(StableDiffusionXLImg2Img):
             self._pipeline.to(device)
 
     async def preload_model(self, context: ProcessingContext):
-        # Use float32 for MPS compatibility with controlnet models
-        if context.device == "mps" and self.variant != ModelVariant.FP16:
-            raise ValueError(
-                "ControlNet on Apple Silicon does not support fp16, please use fp32"
-            )
+        controlnet_dtype = torch.float32 if context.device == "mps" else _select_diffusion_dtype()
+        controlnet_variant = None
 
         controlnet = await self.load_model(
             context=context,
             model_class=ControlNetModel,
             model_id=self.controlnet.repo_id,
             path=self.controlnet.path,
-            variant=(
-                self.variant.value if self.variant != ModelVariant.DEFAULT else None
-            ),
-            torch_dtype=(
-                torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
-            ),
+            variant=controlnet_variant,
+            torch_dtype=controlnet_dtype,
         )
         # Align pipeline dtype with controlnet dtype to avoid mismatches
         self._pipeline = await self.load_model(
             context=context,
-            model_class=StableDiffusionXLControlNetPAGImg2ImgPipeline,
+            model_class=StableDiffusionXLControlNetImg2ImgPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             controlnet=controlnet,
-            variant=(
-                self.variant.value if self.variant != ModelVariant.DEFAULT else None
-            ),
-            torch_dtype=(
-                torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
-            ),
+            variant=controlnet_variant,
+            torch_dtype=controlnet_dtype,
         )
         # Ensure pipeline is on the correct device after loading
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         if self._pipeline is not None:
             self._pipeline.to(context.device)
@@ -1984,15 +1921,16 @@ class OmniGenNode(HuggingFacePipelineNode):
         return "Shitao/OmniGen-v1-diffusers"
 
     async def preload_model(self, context: ProcessingContext):
+        torch_dtype = _select_diffusion_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_id="Shitao/OmniGen-v1-diffusers",
             model_class=OmniGenPipeline,
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch_dtype,
             variant=None,
         )
 
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
         if self.enable_model_cpu_offload and self._pipeline is not None:
@@ -2173,7 +2111,7 @@ class QwenImageEdit(HuggingFacePipelineNode):
         )
 
         # Apply memory optimizations after loading
-        _enable_xformers_if_available(
+        _enable_pytorch2_attention(
             self._pipeline, self.enable_memory_efficient_attention
         )
         _apply_vae_optimizations(self._pipeline)
@@ -2189,17 +2127,18 @@ class QwenImageEdit(HuggingFacePipelineNode):
             f"Loading Qwen-Image-Edit pipeline from {self.get_model_id()} without quantization..."
         )
 
+        torch_dtype = _select_diffusion_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_class=QwenImageEditPipeline,
             model_id=self.get_model_id(),
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch_dtype,
             device="cpu",  # Load on CPU first, then move to GPU in workflow runner
         )
         assert self._pipeline is not None
 
         # Apply memory optimizations after loading
-        _enable_xformers_if_available(
+        _enable_pytorch2_attention(
             self._pipeline, self.enable_memory_efficient_attention
         )
         _apply_vae_optimizations(self._pipeline)
@@ -2212,7 +2151,7 @@ class QwenImageEdit(HuggingFacePipelineNode):
     async def preload_model(self, context: ProcessingContext):
         # Handle GGUF models separately to maintain existing behaviour
         if self._is_gguf_model():
-            await self._load_gguf_model(context, torch.bfloat16)
+            await self._load_gguf_model(context, _select_diffusion_dtype())
         else:
             await self._load_full_precision_pipeline(context)
 
@@ -2435,7 +2374,7 @@ class FluxFill(HuggingFacePipelineNode):
             torch_dtype=torch_dtype,
         )
 
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
     async def preload_model(self, context: ProcessingContext):
@@ -2458,7 +2397,7 @@ class FluxFill(HuggingFacePipelineNode):
                 device="cpu",
             )
 
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
         # Apply CPU offload if enabled
@@ -2606,16 +2545,17 @@ class FluxKontext(HuggingFacePipelineNode):
             )
 
         log.info(f"Loading FLUX Kontext pipeline from {self.get_model_id()}...")
+        torch_dtype = _select_diffusion_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_class=FluxKontextPipeline,
             model_id=self.get_model_id(),
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch_dtype,
             device="cpu",
         )
 
         # Apply CPU offload if enabled
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         if self._pipeline is not None and self.enable_cpu_offload:
             self._pipeline.enable_model_cpu_offload()
 
@@ -2763,14 +2703,15 @@ class FluxPriorRedux(HuggingFacePipelineNode):
         log.info(
             f"Loading FLUX Prior Redux pipeline from {self.get_prior_model_id()}..."
         )
+        torch_dtype = _select_diffusion_dtype()
         self._prior_pipeline = await self.load_model(
             context=context,
             model_class=FluxPriorReduxPipeline,
             model_id=self.get_prior_model_id(),
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch_dtype,
             device="cpu",
         )
-        _enable_xformers_if_available(self._prior_pipeline)
+        _enable_pytorch2_attention(self._prior_pipeline)
         _apply_vae_optimizations(self._prior_pipeline)
 
         log.info(f"Loading FLUX pipeline from {self.get_flux_model_id()}...")
@@ -2780,10 +2721,10 @@ class FluxPriorRedux(HuggingFacePipelineNode):
             model_id=self.get_flux_model_id(),
             text_encoder=None,
             text_encoder_2=None,
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch_dtype,
             device="cpu",
         )
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
         # Apply CPU offload if enabled

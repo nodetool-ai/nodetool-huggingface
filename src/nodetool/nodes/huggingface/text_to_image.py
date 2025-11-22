@@ -1,7 +1,5 @@
 from enum import Enum
-import importlib.util
 import huggingface_hub
-from functools import lru_cache
 from typing import Any, TypedDict
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
@@ -17,6 +15,7 @@ from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineN
 from nodetool.nodes.huggingface.image_to_image import pipeline_progress_callback
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     ModelVariant,
+    _select_diffusion_dtype,
     StableDiffusionBaseNode,
     StableDiffusionXLBase,
 )
@@ -37,8 +36,12 @@ from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
 from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
-from diffusers.pipelines.pag.pipeline_pag_sd import StableDiffusionPAGPipeline
-from diffusers.pipelines.pag.pipeline_pag_sd_xl import StableDiffusionXLPAGPipeline
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
+    StableDiffusionPipeline,
+)
+from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
+    StableDiffusionXLPipeline,
+)
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
 from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
@@ -56,42 +59,26 @@ from transformers.models.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
 log = get_logger(__name__)
 
 
-@lru_cache(maxsize=1)
-def _is_xformers_available() -> bool:
-    try:
-        return importlib.util.find_spec("xformers") is not None
-    except Exception:
-        return False
-
-
-def _enable_xformers_if_available(pipeline: Any, enabled: bool = True):
-    """Best-effort enabling of memory-efficient attention (xformers -> SDPA fallback)."""
+def _enable_pytorch2_attention(pipeline: Any, enabled: bool = True):
+    """Enable PyTorch 2 scaled dot product attention to speed up inference."""
     if not enabled or pipeline is None:
         return
 
-    enable_xformers = getattr(pipeline, "enable_xformers_memory_efficient_attention", None)
     enable_sdpa = getattr(pipeline, "enable_sdpa", None)
-
-    if callable(enable_xformers) and _is_xformers_available():
-        try:
-            enable_xformers()
-            log.debug("Enabled xformers memory efficient attention")
-            return
-        except Exception as e:
-            log.warning("Failed to enable xformers memory efficient attention: %s", e)
-    elif not _is_xformers_available():
-        log.debug("xformers not available; will try SDPA if present")
 
     if callable(enable_sdpa):
         try:
             enable_sdpa()
-            log.debug("Enabled scaled dot product attention (SDPA)")
+            pipeline_name = type(pipeline).__name__
+            log.info("Enabled PyTorch 2 scaled dot product attention for %s", pipeline_name)
         except Exception as e:
-            log.warning("Failed to enable SDPA attention: %s", e)
+            log.warning("Failed to enable scaled dot product attention: %s", e)
+    else:
+        log.info("Scaled dot product attention not available on this pipeline")
 
 
 def _apply_vae_optimizations(pipeline: Any):
-    """Apply VAE memory optimizations and channels_last layout when available."""
+    """Apply VAE slicing and channels_last layout when available."""
     if pipeline is None:
         return
 
@@ -105,13 +92,6 @@ def _apply_vae_optimizations(pipeline: Any):
             log.debug("Enabled VAE slicing")
         except Exception as e:
             log.warning("Failed to enable VAE slicing: %s", e)
-
-    if hasattr(vae, "enable_tiling"):
-        try:
-            vae.enable_tiling()
-            log.debug("Enabled VAE tiling")
-        except Exception as e:
-            log.warning("Failed to enable VAE tiling: %s", e)
 
     try:
         vae.to(memory_format=torch.channels_last)
@@ -138,7 +118,7 @@ class StableDiffusion(StableDiffusionBaseNode):
     height: int = Field(
         default=512, ge=256, le=1024, description="Height of the generated image"
     )
-    _pipeline: StableDiffusionPAGPipeline | None = None
+    _pipeline: StableDiffusionPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -156,25 +136,15 @@ class StableDiffusion(StableDiffusionBaseNode):
         await super().preload_model(context)
         self._pipeline = await self.load_model(
             context=context,
-            model_class=StableDiffusionPAGPipeline,
+            model_class=StableDiffusionPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             config="Lykon/DreamShaper",
-            pag_scale=self.pag_scale,
-            torch_dtype=(
-                torch.float16
-                if self.model.variant == ModelVariant.FP16
-                or self.model.variant == ModelVariant.DEFAULT
-                else torch.float32
-            ),
-            variant=(
-                (self.variant.value if self.variant != ModelVariant.DEFAULT else None)
-                if self.variant != ModelVariant.DEFAULT
-                else None
-            ),
+            torch_dtype=self.get_torch_dtype(),
+            variant=None,
         )
         assert self._pipeline is not None
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
@@ -199,7 +169,7 @@ class StableDiffusionXL(StableDiffusionXLBase):
     - Visualizing interior design concepts for clients
     """
 
-    _pipeline: StableDiffusionXLPAGPipeline | DiffusionPipeline | None = None
+    _pipeline: StableDiffusionXLPipeline | DiffusionPipeline | None = None
     _using_playground_pipeline: bool = False
 
     @classmethod
@@ -214,16 +184,14 @@ class StableDiffusionXL(StableDiffusionXLBase):
 
         self._pipeline = await self.load_model(
             context=context,
-            model_class=StableDiffusionXLPAGPipeline,
+            model_class=StableDiffusionXLPipeline,
             model_id=self.model.repo_id,
             path=self.model.path,
             torch_dtype=self.get_torch_dtype(),
-            variant=(
-                self.variant.value if self.variant != ModelVariant.DEFAULT else None
-            ),
+            variant=None,
         )
         assert self._pipeline is not None
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
@@ -254,21 +222,15 @@ class LoadTextToImageModel(HuggingFacePipelineNode):
         description="The repository ID of the model to use for image-to-image generation.",
     )
 
-    variant: ModelVariant = Field(
-        default=ModelVariant.FP16,
-        description="The variant of the model to use for text-to-image generation.",
-    )
-
     async def preload_model(self, context: ProcessingContext):
+        torch_dtype = _select_diffusion_dtype()
         await self.load_model(
             context=context,
             model_id=self.repo_id,
             model_class=AutoPipelineForText2Image,
-            torch_dtype=torch.float16,
+            torch_dtype=torch_dtype,
             use_safetensors=True,
-            variant=(
-                self.variant.value if self.variant != ModelVariant.DEFAULT else None
-            ),
+            variant=None,
         )
 
     @classmethod
@@ -280,9 +242,7 @@ class LoadTextToImageModel(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> HFTextToImage:
         return HFTextToImage(
             repo_id=self.repo_id,
-            variant=(
-                self.variant.value if self.variant != ModelVariant.DEFAULT else None
-            ),
+            variant=None,
         )
 
 
@@ -335,12 +295,6 @@ class Text2Image(HuggingFacePipelineNode):
         ge=64,
         le=2048,
     )
-    pag_scale: float = Field(
-        default=3.0,
-        description="Scale of the Perturbed-Attention Guidance applied to the image.",
-        ge=0.0,
-        le=10.0,
-    )
     seed: int = Field(
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
@@ -357,23 +311,15 @@ class Text2Image(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
+        torch_dtype = _select_diffusion_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_id=self.get_model_id(),
             model_class=AutoPipelineForText2Image,
-            torch_dtype=(
-                torch.float16
-                if self.model.variant == ModelVariant.FP16
-                else torch.float32
-            ),
-            variant=(
-                self.model.variant
-                if self.model.variant != ModelVariant.DEFAULT
-                else None
-            ),
-            enable_pag=self.pag_scale > 0.0,
+            torch_dtype=torch_dtype,
+            variant=None,
         )
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
     async def move_to_device(self, device: str):
@@ -401,19 +347,19 @@ class Text2Image(HuggingFacePipelineNode):
 
         # Generate the image off the event loop
         def _run_pipeline_sync():
-            return self._pipeline(
-                prompt=self.prompt,
-                negative_prompt=self.negative_prompt,
-                num_inference_steps=self.num_inference_steps,
-                guidance_scale=self.guidance_scale,
-                width=self.width,
-                height=self.height,
-                generator=generator,
-                pag_scale=self.pag_scale,
-                callback_on_step_end=pipeline_progress_callback(
+            call_kwargs = {
+                "prompt": self.prompt,
+                "negative_prompt": self.negative_prompt,
+                "num_inference_steps": self.num_inference_steps,
+                "guidance_scale": self.guidance_scale,
+                "width": self.width,
+                "height": self.height,
+                "generator": generator,
+                "callback_on_step_end": pipeline_progress_callback(
                     self.id, self.num_inference_steps, context
                 ),
-            )  # type: ignore
+            }
+            return self._pipeline(**call_kwargs)  # type: ignore
 
         output = await asyncio.to_thread(_run_pipeline_sync)
 
@@ -612,7 +558,7 @@ class Flux(HuggingFacePipelineNode):
                 token=hf_token,
             )
 
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
         # Apply CPU offload if enabled
@@ -662,7 +608,7 @@ class Flux(HuggingFacePipelineNode):
             token=hf_token,
         )
 
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
         if self.enable_cpu_offload and self._pipeline is not None:
@@ -843,15 +789,16 @@ class Kolors(HuggingFacePipelineNode):
         return "Kwai-Kolors/Kolors-diffusers"
 
     async def preload_model(self, context: ProcessingContext):
+        torch_dtype = _select_diffusion_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_id=self.get_model_id(),
             model_class=KolorsPipeline,
-            torch_dtype=torch.float16,
-            variant="fp16",
+            torch_dtype=torch_dtype,
+            variant="fp16" if torch_dtype == torch.float16 else None,
         )
 
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
         # Set up the scheduler as recommended in the docs
@@ -1000,14 +947,15 @@ class Chroma(HuggingFacePipelineNode):
         return "lodestones/Chroma"
 
     async def preload_model(self, context: ProcessingContext):
-        # Load the pipeline with bfloat16 as recommended
+        torch_dtype = _select_diffusion_dtype()
+        # Load the pipeline with reduced precision when available
         self._pipeline = await self.load_model(
             context=context,
             model_id=self.get_model_id(),
             model_class=ChromaPipeline,
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch_dtype,
         )
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
     async def move_to_device(self, device: str):
@@ -1190,7 +1138,7 @@ class QwenImage(HuggingFacePipelineNode):
     async def preload_model(self, context: ProcessingContext):
         # Handle GGUF models separately to maintain existing behaviour
         if self._is_gguf_model():
-            await self._load_gguf_model(context, torch.bfloat16)
+            await self._load_gguf_model(context, _select_diffusion_dtype())
         else:
             await self._load_full_precision_pipeline(context)
 
@@ -1199,17 +1147,19 @@ class QwenImage(HuggingFacePipelineNode):
             f"Loading Qwen-Image pipeline from {self.get_model_id()} without quantization..."
         )
 
+        torch_dtype = _select_diffusion_dtype()
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=QwenImagePipeline,
             model_id=self.get_model_id(),
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch_dtype,
             device="cpu",  # Load on CPU first, then move to GPU in workflow runner
         )
         assert self._pipeline is not None
 
         # Apply memory optimizations after loading
-        _enable_xformers_if_available(
+        _enable_pytorch2_attention(
             self._pipeline, self.enable_memory_efficient_attention
         )
         _apply_vae_optimizations(self._pipeline)
@@ -1255,7 +1205,7 @@ class QwenImage(HuggingFacePipelineNode):
         )
 
         # Apply memory optimizations after loading
-        _enable_xformers_if_available(
+        _enable_pytorch2_attention(
             self._pipeline, self.enable_memory_efficient_attention
         )
         _apply_vae_optimizations(self._pipeline)
@@ -1437,16 +1387,17 @@ class FluxControl(HuggingFacePipelineNode):
             )
 
         log.info(f"Loading FLUX Control pipeline from {self.get_model_id()}...")
+        torch_dtype = _select_diffusion_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_class=FluxControlPipeline,
             model_id=self.get_model_id(),
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch_dtype,
             device="cpu",
         )
 
         # Apply CPU offload if enabled
-        _enable_xformers_if_available(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         if self._pipeline is not None and self.enable_cpu_offload:
             self._pipeline.enable_model_cpu_offload()

@@ -12,6 +12,10 @@ from nodetool.metadata.types import (
     VideoRef,
 )
 from .huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.stable_diffusion_base import (
+    ModelVariant,
+    _select_diffusion_dtype,
+)
 from nodetool.workflows.types import NodeProgress
 
 if TYPE_CHECKING:
@@ -148,11 +152,12 @@ class CogVideoX(HuggingFacePipelineNode):
         import torch
         from diffusers.pipelines.cogvideo.pipeline_cogvideox import CogVideoXPipeline
 
+        torch_dtype = _select_diffusion_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_class=CogVideoXPipeline,
             model_id=self.get_model_id(),
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch_dtype,
             device="cpu",
         )
 
@@ -347,11 +352,12 @@ class Wan_T2V(HuggingFacePipelineNode):
             low_cpu_mem_usage=False,
             ignore_mismatched_sizes=True,
         )
+        torch_dtype = _select_diffusion_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_class=WanPipeline,
             model_id=self.get_model_id(),
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch_dtype,
             device="cpu",
             vae=vae,
         )

@@ -4,7 +4,7 @@ from enum import Enum
 import os
 from random import randint
 import asyncio
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, ClassVar
 
 from huggingface_hub import try_to_load_from_cache
 from pydantic import Field
@@ -457,7 +457,37 @@ class ModelVariant(Enum):
     BF16 = "bf16"
 
 
+def _select_diffusion_dtype(variant: ModelVariant | None = None) -> "torch.dtype":
+    import torch
+
+    if variant == ModelVariant.FP32:
+        return torch.float32
+    if variant == ModelVariant.FP16:
+        return torch.float16
+    if variant == ModelVariant.BF16:
+        return torch.bfloat16
+
+    # Prefer BF16 on capable GPUs (PyTorch 2 optimization path), otherwise fall back.
+    try:
+        if torch.cuda.is_available():
+            is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
+            if callable(is_bf16_supported) and is_bf16_supported():
+                return torch.bfloat16
+            return torch.float16
+        if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+            return torch.float16
+    except Exception:
+        pass
+
+    return torch.float32
+
+
 class StableDiffusionBaseNode(HuggingFacePipelineNode):
+
+    variant: ClassVar[ModelVariant] = ModelVariant.DEFAULT
+
+    def get_torch_dtype(self) -> "torch.dtype":
+        return _select_diffusion_dtype()
 
     async def preload_model(self, context: ProcessingContext):
         """Preload the Stable Diffusion model and set up pipeline."""
@@ -547,10 +577,6 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         default=HFStableDiffusion(),
         description="The model to use for image generation.",
     )
-    variant: ModelVariant = Field(
-        default=ModelVariant.FP16,
-        description="The variant of the model to use for generation.",
-    )
     prompt: str = Field(default="", description="The prompt for image generation.")
     negative_prompt: str = Field(
         default="",
@@ -590,12 +616,6 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         le=1.0,
         description="The strength of the IP adapter",
     )
-    pag_scale: float = Field(
-        default=3.0,
-        ge=0.0,
-        le=10.0,
-        description="Scale of the Perturbed-Attention Guidance applied to the image.",
-    )
     latents: TorchTensor = Field(
         default=TorchTensor(),
         description="Optional initial latents to start generation from.",
@@ -605,8 +625,8 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage.",
     )
     enable_tiling: bool = Field(
-        default=True,
-        description="Enable tiling for the VAE. This can reduce VRAM usage.",
+        default=False,
+        description="Legacy VAE tiling flag (disabled in favor of PyTorch 2 attention optimizations).",
     )
     enable_cpu_offload: bool = Field(
         default=True,
@@ -760,13 +780,6 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             log.error("Pipeline not initialized")
             raise ValueError("Pipeline not initialized")
 
-        log.debug(f"Enable tiling: {self.enable_tiling}")
-        if self.enable_tiling and hasattr(self._pipeline, "vae"):
-            log.debug("Enabling VAE tiling")
-            vae = getattr(self._pipeline, "vae", None)
-            if vae is not None and hasattr(vae, "enable_tiling"):
-                vae.enable_tiling()
-
         log.debug(f"Enable CPU offload: {self.enable_cpu_offload}")
         if self.enable_cpu_offload and hasattr(
             self._pipeline, "enable_model_cpu_offload"
@@ -831,7 +844,6 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         )
         log.debug(f"Inference steps: {self.num_inference_steps}")
         log.debug(f"Guidance scale: {self.guidance_scale}")
-        log.debug(f"PAG scale: {self.pag_scale}")
         log.debug(f"Output type: {self.output_type.value}")
 
         def _run_pipeline_sync():
@@ -852,7 +864,6 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                 "callback_on_step_end": self.progress_callback(
                     context, 0, self.num_inference_steps
                 ),
-                "pag_scale": self.pag_scale,
                 "output_type": self.output_type.value,
             }
 
@@ -887,15 +898,10 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
 
 class StableDiffusionXLBase(HuggingFacePipelineNode):
 
-    def get_torch_dtype(self) -> torch.dtype:
-        import torch
+    variant: ClassVar[ModelVariant] = ModelVariant.DEFAULT
 
-        if self.variant == ModelVariant.FP16:
-            return torch.float16
-        elif self.variant == ModelVariant.BF16:
-            return torch.bfloat16
-        else:
-            return torch.float32
+    def get_torch_dtype(self) -> torch.dtype:
+        return _select_diffusion_dtype()
 
     async def preload_model(self, context: ProcessingContext):
         """Preload the Stable Diffusion XL model and set up pipeline."""
@@ -981,10 +987,6 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         default=HFStableDiffusionXL(),
         description="The Stable Diffusion XL model to use for generation.",
     )
-    variant: ModelVariant = Field(
-        default=ModelVariant.FP16,
-        description="The variant of the model to use for generation.",
-    )
     prompt: str = Field(default="", description="The prompt for image generation.")
     negative_prompt: str = Field(
         default="",
@@ -1011,12 +1013,6 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
     scheduler: StableDiffusionScheduler = Field(
         default=StableDiffusionScheduler.EulerDiscreteScheduler,
         description="The scheduler to use for the diffusion process.",
-    )
-    pag_scale: float = Field(
-        default=3.0,
-        ge=0.0,
-        le=10.0,
-        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     loras: list[HFLoraSDXLConfig] = Field(
         default=[],
@@ -1048,7 +1044,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
     )
     enable_tiling: bool = Field(
         default=False,
-        description="Enable tiling for the VAE. This can reduce VRAM usage.",
+        description="Legacy VAE tiling flag (disabled in favor of PyTorch 2 attention optimizations).",
     )
     enable_cpu_offload: bool = Field(
         default=False,
@@ -1222,13 +1218,6 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         ):
             log.debug("Enabling attention slicing")
             self._pipeline.enable_attention_slicing()
-
-        log.debug(f"Enable tiling: {self.enable_tiling}")
-        if self.enable_tiling and hasattr(self._pipeline, "vae"):
-            log.debug("Enabling VAE tiling (XL)")
-            vae = getattr(self._pipeline, "vae", None)
-            if vae is not None and hasattr(vae, "enable_tiling"):
-                vae.enable_tiling()
 
         log.debug(f"Enable CPU offload: {self.enable_cpu_offload}")
         if self.enable_cpu_offload and hasattr(

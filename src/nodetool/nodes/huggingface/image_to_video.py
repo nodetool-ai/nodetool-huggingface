@@ -2,6 +2,10 @@ from typing import Any
 from enum import Enum
 from pydantic import Field
 import torch
+from nodetool.nodes.huggingface.stable_diffusion_base import (
+    ModelVariant,
+    _select_diffusion_dtype,
+)
 from transformers import CLIPVisionModel
 from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
 from diffusers.pipelines.wan.pipeline_wan_i2v import WanImageToVideoPipeline
@@ -188,11 +192,12 @@ class Wan_I2V(HuggingFacePipelineNode):
             subfolder="vae",
             torch_dtype=torch.float32,
         )
+        torch_dtype = _select_diffusion_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_class=WanImageToVideoPipeline,
             model_id=model_id,
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch_dtype,
             device="cpu",
             vae=vae,
             image_encoder=image_encoder,
