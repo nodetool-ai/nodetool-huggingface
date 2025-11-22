@@ -847,6 +847,8 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         log.debug(f"Output type: {self.output_type.value}")
 
         def _run_pipeline_sync():
+            import torch
+
             latents = None
             if self.latents.is_set():
                 latents = self.latents.to_tensor().to(device=context.device)
@@ -874,7 +876,8 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                 call_kwargs["cross_attention_kwargs"] = {"scale": 1.0}
 
             call_kwargs.update(kwargs)
-            return self._pipeline(**call_kwargs)
+            with torch.inference_mode():
+                return self._pipeline(**call_kwargs)
 
         output = await asyncio.to_thread(_run_pipeline_sync)
         image = output.images[0]
@@ -1262,6 +1265,8 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         log.debug(f"Model device: {self._pipeline.device}")
 
         def _run_pipeline_sync_xl():
+            import torch
+
             call_kwargs: dict[str, Any] = {
                 "prompt": self.prompt,
                 "negative_prompt": self.negative_prompt,
@@ -1280,7 +1285,8 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
                 call_kwargs["ip_adapter_image"] = ip_adapter_image
 
             call_kwargs.update(kwargs)
-            return self._pipeline(**call_kwargs)
+            with torch.inference_mode():
+                return self._pipeline(**call_kwargs)
 
         output = await asyncio.to_thread(_run_pipeline_sync_xl)
         image = output.images[0]

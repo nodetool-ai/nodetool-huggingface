@@ -174,8 +174,9 @@ class BaseImageToImage(HuggingFacePipelineNode):
             self._pipeline.model.to(device)  # type: ignore
 
     async def process(self, context: ProcessingContext) -> ImageRef:
+        assert self._pipeline is not None
         image = await context.image_to_pil(self.image)
-        result = self._pipeline(image, prompt=self.prompt)  # type: ignore
+        result = await self.run_pipeline_in_thread(image, prompt=self.prompt)  # type: ignore
         return await context.image_from_pil(result)  # type: ignore
 
 
@@ -259,7 +260,13 @@ class RealESRGANNode(BaseNode):
         assert self._model is not None, "Model not initialized"
         assert self.image is not None, "Image not set"
         image = await context.image_to_pil(self.image)
-        sr_image = self._model.predict(image)
+        import torch
+
+        def _predict():
+            with torch.inference_mode():
+                return self._model.predict(image)
+
+        sr_image = await asyncio.to_thread(_predict)
         return await context.image_from_pil(sr_image)
 
 
@@ -1188,16 +1195,21 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
 
-        upscaled_image = self._pipeline(
-            prompt=self.prompt,
-            negative_prompt=self.negative_prompt,
-            image=input_image,
-            num_inference_steps=self.num_inference_steps,
-            guidance_scale=self.guidance_scale,
-            callback=progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
-        ).images[  # type: ignore
-            0
-        ]
+        def _run_pipeline_sync():
+            with torch.inference_mode():
+                return self._pipeline(
+                    prompt=self.prompt,
+                    negative_prompt=self.negative_prompt,
+                    image=input_image,
+                    num_inference_steps=self.num_inference_steps,
+                    guidance_scale=self.guidance_scale,
+                    callback=progress_callback(
+                        self.id, self.num_inference_steps, context
+                    ),  # type: ignore
+                )
+
+        output = await asyncio.to_thread(_run_pipeline_sync)
+        upscaled_image = output.images[0]  # type: ignore
 
         return await context.image_from_pil(upscaled_image)
 
@@ -1290,17 +1302,24 @@ class StableDiffusionLatentUpscaler(HuggingFacePipelineNode):
         low_res_latents = low_res_latents.to(context.device)
 
         # Run latent upscaler with progress callback
-        upscaled = self._pipeline(
-            prompt=self.prompt,
-            negative_prompt=self.negative_prompt,
-            image=low_res_latents,
-            num_inference_steps=self.num_inference_steps,
-            guidance_scale=self.guidance_scale,
-            generator=generator,
-            output_type="latent",
-            callback=progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
-            callback_steps=1,
-        ).images  # type: ignore
+        def _run_pipeline_sync():
+            with torch.inference_mode():
+                return self._pipeline(
+                    prompt=self.prompt,
+                    negative_prompt=self.negative_prompt,
+                    image=low_res_latents,
+                    num_inference_steps=self.num_inference_steps,
+                    guidance_scale=self.guidance_scale,
+                    generator=generator,
+                    output_type="latent",
+                    callback=progress_callback(
+                        self.id, self.num_inference_steps, context
+                    ),  # type: ignore
+                    callback_steps=1,
+                )
+
+        output = await asyncio.to_thread(_run_pipeline_sync)
+        upscaled = output.images  # type: ignore
 
         # Convert back to TorchTensor
         return TorchTensor.from_tensor(upscaled)
@@ -1373,7 +1392,7 @@ class VAEEncode(HuggingFacePipelineNode):
         # Normalize to [-1, 1]
         img = img * 2.0 - 1.0
 
-        with torch.no_grad():
+        with torch.inference_mode():
             posterior = self._vae.encode(img)
             assert isinstance(posterior, AutoencoderKLOutput)
             latents = posterior.latent_dist.sample()
@@ -1450,7 +1469,7 @@ class VAEDecode(HuggingFacePipelineNode):
         if self.scale_factor > 0:
             latents = latents / self.scale_factor
 
-        with torch.no_grad():
+        with torch.inference_mode():
             output = self._vae.decode(latents)
             assert isinstance(output, DecoderOutput)
             decoded = output.sample

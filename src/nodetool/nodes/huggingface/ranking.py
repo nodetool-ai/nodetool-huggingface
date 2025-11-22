@@ -82,7 +82,7 @@ class Reranker(HuggingFacePipelineNode):
 
         pairs = [[self.query, candidate] for candidate in self.candidates]
 
-        with torch.no_grad():
+        with torch.inference_mode():
             inputs = self._tokenizer(
                 pairs,
                 padding=True,

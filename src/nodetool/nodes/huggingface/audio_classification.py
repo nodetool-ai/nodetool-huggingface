@@ -6,7 +6,10 @@ from nodetool.metadata.types import (
     HFZeroShotAudioClassification,
     HuggingFaceModel,
 )
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.huggingface_pipeline import (
+    HuggingFacePipelineNode,
+    select_inference_dtype,
+)
 from nodetool.workflows.processing_context import ProcessingContext
 
 from typing import TYPE_CHECKING, Any
@@ -70,13 +73,11 @@ class AudioClassifier(HuggingFacePipelineNode):
         return ["audio"]
 
     async def preload_model(self, context: ProcessingContext):
-        import torch
-
         self._pipeline = await self.load_pipeline(
             context=context,
             pipeline_task="audio-classification",
             model_id=self.model.repo_id,
-            torch_dtype=torch.float32,
+            torch_dtype=select_inference_dtype(),
         )  # type: ignore
 
     async def move_to_device(self, device: str):
@@ -144,7 +145,10 @@ class ZeroShotAudioClassifier(HuggingFacePipelineNode):
         from transformers import ZeroShotAudioClassificationPipeline
 
         self._pipeline = await self.load_model(
-            context, ZeroShotAudioClassificationPipeline, self.model.repo_id
+            context,
+            ZeroShotAudioClassificationPipeline,
+            self.model.repo_id,
+            torch_dtype=select_inference_dtype(),
         )
 
     def get_params(self):

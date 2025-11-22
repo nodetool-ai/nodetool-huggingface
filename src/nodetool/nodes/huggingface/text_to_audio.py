@@ -116,6 +116,8 @@ class MusicGen(HuggingFacePipelineNode):
         if self._model is None:
             raise ValueError("Model not initialized")
 
+        import torch
+
         inputs = self._processor(
             text=[self.prompt],
             padding=True,
@@ -125,9 +127,10 @@ class MusicGen(HuggingFacePipelineNode):
         inputs["input_ids"] = inputs["input_ids"].to(context.device)
         inputs["attention_mask"] = inputs["attention_mask"].to(context.device)
 
-        audio_values = self._model.generate(
-            **inputs, max_new_tokens=self.max_new_tokens
-        )
+        with torch.inference_mode():
+            audio_values = self._model.generate(
+                **inputs, max_new_tokens=self.max_new_tokens
+            )
         sampling_rate = self._model.config.audio_encoder.sampling_rate
 
         return await context.audio_from_numpy(

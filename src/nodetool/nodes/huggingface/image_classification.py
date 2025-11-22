@@ -7,7 +7,10 @@ from nodetool.metadata.types import (
     HFZeroShotImageClassification,
     ImageRef,
 )
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.huggingface_pipeline import (
+    HuggingFacePipelineNode,
+    select_inference_dtype,
+)
 from nodetool.workflows.processing_context import ProcessingContext
 
 from pydantic import Field
@@ -95,6 +98,7 @@ class ImageClassifier(HuggingFacePipelineNode):
             pipeline_task="image-classification",
             model_id=self.get_model_id(),
             device=context.device,
+            torch_dtype=select_inference_dtype(),
         )  # type: ignore
 
     async def process(self, context: ProcessingContext) -> dict[str, float]:
@@ -163,6 +167,7 @@ class ZeroShotImageClassifier(HuggingFacePipelineNode):
             pipeline_task="zero-shot-image-classification",
             model_id=self.get_model_id(),
             device=context.device,
+            torch_dtype=select_inference_dtype(),
         )
 
     async def move_to_device(self, device: str):

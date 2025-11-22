@@ -1,7 +1,9 @@
 from nodetool.metadata.types import HFTextClassification, HFZeroShotClassification
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.huggingface_pipeline import (
+    HuggingFacePipelineNode,
+    select_inference_dtype,
+)
 from nodetool.workflows.processing_context import ProcessingContext
-
 
 from pydantic import Field
 
@@ -37,7 +39,10 @@ class TextClassifier(HuggingFacePipelineNode):
 
     async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
-            context, "text-classification", self.model.repo_id
+            context,
+            "text-classification",
+            self.model.repo_id,
+            torch_dtype=select_inference_dtype(),
         )
 
     async def move_to_device(self, device: str):
@@ -122,6 +127,7 @@ class ZeroShotTextClassifier(HuggingFacePipelineNode):
             model_id=self.model.repo_id,
             pipeline_task="zero-shot-classification",
             device=context.device,
+            torch_dtype=select_inference_dtype(),
         )
 
     async def move_to_device(self, device: str):

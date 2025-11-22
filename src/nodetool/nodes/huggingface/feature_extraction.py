@@ -1,7 +1,9 @@
 from nodetool.metadata.types import HFFeatureExtraction, NPArray
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.huggingface_pipeline import (
+    HuggingFacePipelineNode,
+    select_inference_dtype,
+)
 from nodetool.workflows.processing_context import ProcessingContext
-
 
 from pydantic import Field
 
@@ -51,6 +53,7 @@ class FeatureExtraction(HuggingFacePipelineNode):
             context=context,
             pipeline_task="feature-extraction",
             model_id=self.model.repo_id,
+            torch_dtype=select_inference_dtype(),
         )
 
     async def move_to_device(self, device: str):

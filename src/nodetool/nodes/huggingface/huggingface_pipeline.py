@@ -22,6 +22,25 @@ T = TypeVar("T")
 log = get_logger(__name__)
 
 
+def select_inference_dtype() -> "torch.dtype":
+    """
+    Prefer bfloat16 when supported; otherwise fall back to float16 on GPUs and
+    float32 on CPU. Keeps pipelines on a safe dtype for the current hardware.
+    """
+    import torch
+
+    if torch.cuda.is_available():
+        is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
+        if callable(is_bf16_supported) and is_bf16_supported():
+            return torch.bfloat16
+        return torch.float16
+
+    if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+        return torch.float16
+
+    return torch.float32
+
+
 class HuggingFacePipelineNode(BaseNode):
     @classmethod
     def is_visible(cls) -> bool:
@@ -98,7 +117,10 @@ class HuggingFacePipelineNode(BaseNode):
         pipeline = self._pipeline
 
         def _call():
-            return pipeline(*args, **kwargs)
+            import torch
+
+            with torch.inference_mode():
+                return pipeline(*args, **kwargs)
 
         return await asyncio.to_thread(_call)
 

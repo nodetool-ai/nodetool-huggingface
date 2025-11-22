@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 from nodetool.metadata.types import HFTranslation
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.huggingface_pipeline import (
+    HuggingFacePipelineNode,
+    select_inference_dtype,
+)
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.config.logging_config import get_logger
 from pydantic import Field
 import logging
 from enum import Enum
+import torch
 from typing import TYPE_CHECKING, List, Optional, Union, Iterable, Any
 from collections.abc import Generator
 
@@ -114,7 +118,10 @@ class Translation(HuggingFacePipelineNode):
         """
         try:
             self._pipeline = await self.load_pipeline(
-                context, self.pipeline_task, self.model.repo_id
+                context,
+                self.pipeline_task,
+                self.model.repo_id,
+                torch_dtype=select_inference_dtype(),
             )
             logger.info(f"Pipeline loaded with model {self.model.repo_id}")
         except Exception as e:

@@ -5,10 +5,12 @@ from nodetool.metadata.types import (
     ImageRef,
     ObjectDetectionResult,
 )
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.huggingface_pipeline import (
+    HuggingFacePipelineNode,
+    select_inference_dtype,
+)
 from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
-
 
 from pydantic import Field
 
@@ -95,7 +97,11 @@ class ObjectDetection(HuggingFacePipelineNode):
 
     async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
-            context, "object-detection", self.get_model_id(), device=context.device
+            context,
+            "object-detection",
+            self.get_model_id(),
+            device=context.device,
+            torch_dtype=select_inference_dtype(),
         )
 
     async def move_to_device(self, device: str):
@@ -284,6 +290,7 @@ class ZeroShotObjectDetection(HuggingFacePipelineNode):
             "zero-shot-object-detection",
             self.get_model_id(),
             device=context.device,
+            torch_dtype=select_inference_dtype(),
         )
 
     async def move_to_device(self, device: str):

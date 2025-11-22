@@ -359,7 +359,8 @@ class Text2Image(HuggingFacePipelineNode):
                     self.id, self.num_inference_steps, context
                 ),
             }
-            return self._pipeline(**call_kwargs)  # type: ignore
+            with torch.inference_mode():
+                return self._pipeline(**call_kwargs)  # type: ignore
 
         output = await asyncio.to_thread(_run_pipeline_sync)
 
@@ -678,17 +679,18 @@ class Flux(HuggingFacePipelineNode):
 
         # Generate the image off the event loop
         def _run_pipeline_sync():
-            return self._pipeline(
-                prompt=self.prompt,
-                guidance_scale=guidance_scale,
-                height=self.height,
-                width=self.width,
-                num_inference_steps=num_inference_steps,
-                max_sequence_length=max_sequence_length,
-                generator=generator,
-                callback_on_step_end=progress_callback,  # type: ignore
-                callback_on_step_end_tensor_inputs=["latents"],
-            )
+            with torch.inference_mode():
+                return self._pipeline(
+                    prompt=self.prompt,
+                    guidance_scale=guidance_scale,
+                    height=self.height,
+                    width=self.width,
+                    num_inference_steps=num_inference_steps,
+                    max_sequence_length=max_sequence_length,
+                    generator=generator,
+                    callback_on_step_end=progress_callback,  # type: ignore
+                    callback_on_step_end_tensor_inputs=["latents"],
+                )
 
         try:
             output = await asyncio.to_thread(_run_pipeline_sync)
@@ -822,18 +824,19 @@ class Kolors(HuggingFacePipelineNode):
 
         # Generate the image off the event loop
         def _run_pipeline_sync():
-            return self._pipeline(
-                prompt=self.prompt,
-                negative_prompt=self.negative_prompt,
-                guidance_scale=self.guidance_scale,
-                num_inference_steps=self.num_inference_steps,
-                height=self.height,
-                width=self.width,
-                generator=generator,
-                max_sequence_length=self.max_sequence_length,
-                callback_on_step_end=pipeline_progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
-                callback_on_step_end_tensor_inputs=["latents"],
-            )
+            with torch.inference_mode():
+                return self._pipeline(
+                    prompt=self.prompt,
+                    negative_prompt=self.negative_prompt,
+                    guidance_scale=self.guidance_scale,
+                    num_inference_steps=self.num_inference_steps,
+                    height=self.height,
+                    width=self.width,
+                    generator=generator,
+                    max_sequence_length=self.max_sequence_length,
+                    callback_on_step_end=pipeline_progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
+                    callback_on_step_end_tensor_inputs=["latents"],
+                )
 
         try:
             output = await asyncio.to_thread(_run_pipeline_sync)
@@ -1015,7 +1018,8 @@ class Chroma(HuggingFacePipelineNode):
         assert pipeline is not None
 
         def _run_pipeline_sync():
-            return pipeline(**pipeline_kwargs)
+            with torch.inference_mode():
+                return pipeline(**pipeline_kwargs)
 
         output = await asyncio.to_thread(_run_pipeline_sync)
 
@@ -1262,7 +1266,8 @@ class QwenImage(HuggingFacePipelineNode):
 
         # Generate the image off the event loop
         def _run_pipeline_sync():
-            return self._pipeline(**pipeline_kwargs)  # type: ignore
+            with torch.inference_mode():
+                return self._pipeline(**pipeline_kwargs)  # type: ignore
 
         output = await asyncio.to_thread(_run_pipeline_sync)
 
