@@ -1,10 +1,8 @@
-from __future__ import annotations
-
 from enum import Enum
-import asyncio
-import logging
+import importlib.util
 import huggingface_hub
-from typing import Any, TypedDict, TYPE_CHECKING
+from functools import lru_cache
+from typing import Any, TypedDict
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
     HFFlux,
@@ -24,51 +22,102 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
 )
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress, Notification, LogUpdate
-from pydantic import Field
 
-if TYPE_CHECKING:
-    import torch
-    from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
-    from diffusers.models.transformers.transformer_qwenimage import (
-        QwenImageTransformer2DModel,
-    )
-    from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
-    from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
-    from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
-    from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
-    from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
-    from diffusers.pipelines.pag.pipeline_pag_sd import StableDiffusionPAGPipeline
-    from diffusers.pipelines.pag.pipeline_pag_sd_xl import StableDiffusionXLPAGPipeline
-    from diffusers.pipelines.pipeline_utils import DiffusionPipeline
-    from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
-    from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
-    from diffusers.schedulers.scheduling_dpmsolver_multistep import (
-        DPMSolverMultistepScheduler,
-    )
-    from transformers import T5EncoderModel
-    from transformers.models.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
-    from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
-    from diffusers.models.transformers.transformer_qwenimage import (
-        QwenImageTransformer2DModel,
-    )
-    from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
-    from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
-    from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
-    from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
-    from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
-    from diffusers.pipelines.pag.pipeline_pag_sd import StableDiffusionPAGPipeline
-    from diffusers.pipelines.pag.pipeline_pag_sd_xl import StableDiffusionXLPAGPipeline
-    from diffusers.pipelines.pipeline_utils import DiffusionPipeline
-    from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
-    from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
-    from diffusers.schedulers.scheduling_dpmsolver_multistep import (
-        DPMSolverMultistepScheduler,
-    )
-    from transformers import T5EncoderModel
-    from transformers.models.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
+import torch
+import asyncio
+import logging
+
+# The QwenImage import requires optional dependencies. Keep it near top-level to surface missing deps early.
+from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
+from diffusers.models.transformers.transformer_qwenimage import (
+    QwenImageTransformer2DModel,
+)
+from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
+from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
+from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
+from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
+from diffusers.pipelines.pag.pipeline_pag_sd import StableDiffusionPAGPipeline
+from diffusers.pipelines.pag.pipeline_pag_sd_xl import StableDiffusionXLPAGPipeline
+from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
+from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
+from diffusers.schedulers.scheduling_dpmsolver_multistep import (
+    DPMSolverMultistepScheduler,
+)
+from pydantic import Field
+from diffusers.models.transformers.transformer_qwenimage import (
+    QwenImageTransformer2DModel,
+)
+from transformers import T5EncoderModel
+from transformers.models.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
 
 
 log = get_logger(__name__)
+
+
+@lru_cache(maxsize=1)
+def _is_xformers_available() -> bool:
+    try:
+        return importlib.util.find_spec("xformers") is not None
+    except Exception:
+        return False
+
+
+def _enable_xformers_if_available(pipeline: Any, enabled: bool = True):
+    """Best-effort enabling of memory-efficient attention (xformers -> SDPA fallback)."""
+    if not enabled or pipeline is None:
+        return
+
+    enable_xformers = getattr(pipeline, "enable_xformers_memory_efficient_attention", None)
+    enable_sdpa = getattr(pipeline, "enable_sdpa", None)
+
+    if callable(enable_xformers) and _is_xformers_available():
+        try:
+            enable_xformers()
+            log.debug("Enabled xformers memory efficient attention")
+            return
+        except Exception as e:
+            log.warning("Failed to enable xformers memory efficient attention: %s", e)
+    elif not _is_xformers_available():
+        log.debug("xformers not available; will try SDPA if present")
+
+    if callable(enable_sdpa):
+        try:
+            enable_sdpa()
+            log.debug("Enabled scaled dot product attention (SDPA)")
+        except Exception as e:
+            log.warning("Failed to enable SDPA attention: %s", e)
+
+
+def _apply_vae_optimizations(pipeline: Any):
+    """Apply VAE memory optimizations and channels_last layout when available."""
+    if pipeline is None:
+        return
+
+    vae = getattr(pipeline, "vae", None)
+    if vae is None:
+        return
+
+    if hasattr(vae, "enable_slicing"):
+        try:
+            vae.enable_slicing()
+            log.debug("Enabled VAE slicing")
+        except Exception as e:
+            log.warning("Failed to enable VAE slicing: %s", e)
+
+    if hasattr(vae, "enable_tiling"):
+        try:
+            vae.enable_tiling()
+            log.debug("Enabled VAE tiling")
+        except Exception as e:
+            log.warning("Failed to enable VAE tiling: %s", e)
+
+    try:
+        vae.to(memory_format=torch.channels_last)
+        log.debug("Set VAE to channels_last memory format")
+    except Exception as e:
+        log.warning("Failed to set VAE channels_last memory format: %s", e)
 
 
 class StableDiffusion(StableDiffusionBaseNode):
@@ -89,7 +138,7 @@ class StableDiffusion(StableDiffusionBaseNode):
     height: int = Field(
         default=512, ge=256, le=1024, description="Height of the generated image"
     )
-    _pipeline: Any = None
+    _pipeline: StableDiffusionPAGPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -104,11 +153,6 @@ class StableDiffusion(StableDiffusionBaseNode):
         latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
-        import torch
-        from diffusers.pipelines.pag.pipeline_pag_sd import (
-            StableDiffusionPAGPipeline,
-        )
-
         await super().preload_model(context)
         self._pipeline = await self.load_model(
             context=context,
@@ -130,6 +174,8 @@ class StableDiffusion(StableDiffusionBaseNode):
             ),
         )
         assert self._pipeline is not None
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
 
@@ -153,7 +199,7 @@ class StableDiffusionXL(StableDiffusionXLBase):
     - Visualizing interior design concepts for clients
     """
 
-    _pipeline: Any = None
+    _pipeline: StableDiffusionXLPAGPipeline | DiffusionPipeline | None = None
     _using_playground_pipeline: bool = False
 
     @classmethod
@@ -161,11 +207,6 @@ class StableDiffusionXL(StableDiffusionXLBase):
         return "Stable Diffusion XL"
 
     async def preload_model(self, context: ProcessingContext):
-        import torch
-        from diffusers.pipelines.pag.pipeline_pag_sd_xl import (
-            StableDiffusionXLPAGPipeline,
-        )
-
         repo_id = (self.model.repo_id or "").lower()
         is_playground = "playground" in repo_id
 
@@ -182,6 +223,8 @@ class StableDiffusionXL(StableDiffusionXLBase):
             ),
         )
         assert self._pipeline is not None
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
 
@@ -304,7 +347,7 @@ class Text2Image(HuggingFacePipelineNode):
         ge=-1,
     )
 
-    _pipeline: Any = None
+    _pipeline: AutoPipelineForText2Image | None = None
 
     @classmethod
     def get_title(cls) -> str:
@@ -314,9 +357,6 @@ class Text2Image(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
-        import torch
-        from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
-
         self._pipeline = await self.load_model(
             context=context,
             model_id=self.get_model_id(),
@@ -333,10 +373,10 @@ class Text2Image(HuggingFacePipelineNode):
             ),
             enable_pag=self.pag_scale > 0.0,
         )
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
 
     async def move_to_device(self, device: str):
-        import torch
-
         if self._pipeline is not None:
             try:
                 self._pipeline.to(device)
@@ -353,8 +393,6 @@ class Text2Image(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> OutputType:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
-
-        import torch
 
         # Set up the generator for reproducibility
         generator = None
@@ -456,20 +494,12 @@ class Flux(HuggingFacePipelineNode):
         description="Seed for the random number generator. Use -1 for a random seed.",
         ge=-1,
     )
-    enable_vae_tiling: bool = Field(
-        default=False,
-        description="Enable VAE tiling to reduce VRAM usage for large images.",
-    )
-    enable_vae_slicing: bool = Field(
-        default=False,
-        description="Enable VAE slicing to reduce VRAM usage.",
-    )
     enable_cpu_offload: bool = Field(
         default=True,
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _pipeline: Any = None
+    _pipeline: FluxPipeline | None = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFFlux]:
@@ -546,9 +576,6 @@ class Flux(HuggingFacePipelineNode):
         return self.model.path is not None and self.model.path.lower().endswith(".gguf")
 
     async def preload_model(self, context: ProcessingContext):
-        import torch
-        from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
-
         hf_token = await context.get_secret("HF_TOKEN")
         if not hf_token:
             model_url = f"https://huggingface.co/{self.get_model_id()}"
@@ -585,6 +612,9 @@ class Flux(HuggingFacePipelineNode):
                 token=hf_token,
             )
 
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
+
         # Apply CPU offload if enabled
         if self._pipeline is not None and self.enable_cpu_offload:
             self._pipeline.enable_sequential_cpu_offload()
@@ -595,13 +625,6 @@ class Flux(HuggingFacePipelineNode):
         torch_dtype: torch.dtype,
         hf_token: str | None = None,
     ):
-        import torch
-        from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
-        from diffusers.models.transformers.transformer_flux import (
-            FluxTransformer2DModel,
-        )
-        from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
-
         """Load FLUX model with GGUF quantization."""
         from huggingface_hub.file_download import try_to_load_from_cache
 
@@ -639,8 +662,10 @@ class Flux(HuggingFacePipelineNode):
             token=hf_token,
         )
 
-        # Apply CPU offload if enabled
-        if self.enable_cpu_offload:
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
+
+        if self.enable_cpu_offload and self._pipeline is not None:
             self._pipeline.enable_sequential_cpu_offload()
 
     async def move_to_device(self, device: str):
@@ -671,13 +696,7 @@ class Flux(HuggingFacePipelineNode):
                         "Try enabling 'CPU offload' in the advanced node properties, reduce image size, or lower steps."
                     ) from e
 
-            # Apply memory optimizations only when on GPU
-            if device != "cpu":
-                if self.enable_vae_slicing:
-                    self._pipeline.enable_vae_slicing()
-
-                if self.enable_vae_tiling:
-                    self._pipeline.enable_vae_tiling()
+            _apply_vae_optimizations(self._pipeline)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
@@ -800,7 +819,7 @@ class Kolors(HuggingFacePipelineNode):
         description="Whether to use DPMSolverMultistepScheduler with Karras sigmas for better quality.",
     )
 
-    _pipeline: Any = None
+    _pipeline: KolorsPipeline | None = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFTextToImage]:
@@ -824,12 +843,6 @@ class Kolors(HuggingFacePipelineNode):
         return "Kwai-Kolors/Kolors-diffusers"
 
     async def preload_model(self, context: ProcessingContext):
-        import torch
-        from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
-        from diffusers.schedulers.scheduling_dpmsolver_multistep import (
-            DPMSolverMultistepScheduler,
-        )
-
         self._pipeline = await self.load_model(
             context=context,
             model_id=self.get_model_id(),
@@ -837,6 +850,9 @@ class Kolors(HuggingFacePipelineNode):
             torch_dtype=torch.float16,
             variant="fp16",
         )
+
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
 
         # Set up the scheduler as recommended in the docs
         if self._pipeline is not None and self.use_dpm_solver:
@@ -851,8 +867,6 @@ class Kolors(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
-
-        import torch
 
         # Set up the generator for reproducibility
         generator = None
@@ -957,20 +971,12 @@ class Chroma(HuggingFacePipelineNode):
         default=True,
         description="Enable CPU offload to reduce VRAM usage.",
     )
-    enable_vae_slicing: bool = Field(
-        default=True,
-        description="Enable VAE slicing to reduce VRAM usage.",
-    )
-    enable_vae_tiling: bool = Field(
-        default=True,
-        description="Enable VAE tiling to reduce VRAM usage for large images.",
-    )
     enable_attention_slicing: bool = Field(
         default=True,
         description="Enable attention slicing to reduce memory usage.",
     )
 
-    _pipeline: Any = None
+    _pipeline: ChromaPipeline | None = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFTextToImage]:
@@ -994,9 +1000,6 @@ class Chroma(HuggingFacePipelineNode):
         return "lodestones/Chroma"
 
     async def preload_model(self, context: ProcessingContext):
-        import torch
-        from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
-
         # Load the pipeline with bfloat16 as recommended
         self._pipeline = await self.load_model(
             context=context,
@@ -1004,10 +1007,10 @@ class Chroma(HuggingFacePipelineNode):
             model_class=ChromaPipeline,
             torch_dtype=torch.bfloat16,
         )
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
 
     async def move_to_device(self, device: str):
-        import torch
-
         if self._pipeline is not None:
             # Handle CPU offload case
             if self.enable_cpu_offload:
@@ -1033,22 +1036,12 @@ class Chroma(HuggingFacePipelineNode):
                         "Try enabling 'CPU offload' in the advanced node properties, reduce image size, or lower steps."
                     ) from e
 
-            # Apply memory optimizations only when on GPU
-            if device != "cpu":
-                if self.enable_vae_slicing:
-                    self._pipeline.enable_vae_slicing()
-
-                if self.enable_vae_tiling:
-                    self._pipeline.enable_vae_tiling()
-
-                if self.enable_attention_slicing:
-                    self._pipeline.enable_attention_slicing()
+            if self.enable_attention_slicing and device != "cpu":
+                self._pipeline.enable_attention_slicing()
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
-
-        import torch
 
         # Set up the generator for reproducibility
         generator = None
@@ -1150,20 +1143,12 @@ class QwenImage(HuggingFacePipelineNode):
         default=True,
         description="Enable memory efficient attention to reduce VRAM usage.",
     )
-    enable_vae_tiling: bool = Field(
-        default=False,
-        description="Enable VAE tiling to reduce VRAM usage for large images.",
-    )
-    enable_vae_slicing: bool = Field(
-        default=False,
-        description="Enable VAE slicing to reduce VRAM usage.",
-    )
     enable_cpu_offload: bool = Field(
         default=True,
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _pipeline: Any = None
+    _pipeline: Any | None = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFQwenImage]:
@@ -1203,8 +1188,6 @@ class QwenImage(HuggingFacePipelineNode):
         return self.model.path is not None and self.model.path.lower().endswith(".gguf")
 
     async def preload_model(self, context: ProcessingContext):
-        import torch
-
         # Handle GGUF models separately to maintain existing behaviour
         if self._is_gguf_model():
             await self._load_gguf_model(context, torch.bfloat16)
@@ -1212,9 +1195,6 @@ class QwenImage(HuggingFacePipelineNode):
             await self._load_full_precision_pipeline(context)
 
     async def _load_full_precision_pipeline(self, context: ProcessingContext):
-        import torch
-        from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
-
         log.info(
             f"Loading Qwen-Image pipeline from {self.get_model_id()} without quantization..."
         )
@@ -1229,14 +1209,13 @@ class QwenImage(HuggingFacePipelineNode):
         assert self._pipeline is not None
 
         # Apply memory optimizations after loading
+        _enable_xformers_if_available(
+            self._pipeline, self.enable_memory_efficient_attention
+        )
+        _apply_vae_optimizations(self._pipeline)
+
         if self.enable_cpu_offload:
             self._pipeline.enable_model_cpu_offload()
-
-        if self.enable_vae_slicing and hasattr(self._pipeline, "vae"):
-            self._pipeline.vae.enable_slicing()
-
-        if self.enable_vae_tiling and hasattr(self._pipeline, "vae"):
-            self._pipeline.vae.enable_tiling()
 
         if self.enable_memory_efficient_attention:
             self._pipeline.enable_attention_slicing()
@@ -1246,13 +1225,6 @@ class QwenImage(HuggingFacePipelineNode):
         context: ProcessingContext,
         torch_dtype,
     ):
-        import torch
-        from diffusers.models.transformers.transformer_qwenimage import (
-            QwenImageTransformer2DModel,
-        )
-        from diffusers.pipelines.pipeline_utils import DiffusionPipeline
-        from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
-
         """Load Qwen-Image model with GGUF quantization."""
         # Get the cached file path
         assert self.model.path is not None
@@ -1283,21 +1255,18 @@ class QwenImage(HuggingFacePipelineNode):
         )
 
         # Apply memory optimizations after loading
+        _enable_xformers_if_available(
+            self._pipeline, self.enable_memory_efficient_attention
+        )
+        _apply_vae_optimizations(self._pipeline)
+
         if self.enable_cpu_offload:
             self._pipeline.enable_model_cpu_offload()
-
-        if self.enable_vae_slicing:
-            self._pipeline.vae.enable_slicing()
-
-        if self.enable_vae_tiling:
-            self._pipeline.vae.enable_tiling()
 
         if self.enable_memory_efficient_attention:
             self._pipeline.enable_attention_slicing()
 
     async def move_to_device(self, device: str):
-        import torch
-
         if self._pipeline is not None:
             # Handle CPU offload case
             if self.enable_cpu_offload:
@@ -1320,8 +1289,6 @@ class QwenImage(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
-
-        import torch
 
         # Set up the generator for reproducibility
         generator = None
@@ -1435,7 +1402,7 @@ class FluxControl(HuggingFacePipelineNode):
         default=True,
         description="Enable CPU offload to reduce VRAM usage.",
     )
-    _pipeline: Any = None
+    _pipeline: FluxControlPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
@@ -1462,9 +1429,6 @@ class FluxControl(HuggingFacePipelineNode):
         return ["control_image"]
 
     async def preload_model(self, context: ProcessingContext):
-        import torch
-        from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
-
         hf_token = await context.get_secret("HF_TOKEN")
         if not hf_token:
             model_url = f"https://huggingface.co/{self.get_model_id()}"
@@ -1482,12 +1446,12 @@ class FluxControl(HuggingFacePipelineNode):
         )
 
         # Apply CPU offload if enabled
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
         if self._pipeline is not None and self.enable_cpu_offload:
             self._pipeline.enable_model_cpu_offload()
 
     async def move_to_device(self, device: str):
-        import torch
-
         if self._pipeline is not None:
             # If CPU offload is enabled, we need to handle device movement differently
             if self.enable_cpu_offload:
@@ -1510,8 +1474,6 @@ class FluxControl(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
-
-        import torch
 
         # Set up the generator for reproducibility
         generator = torch.Generator(device=context.device)

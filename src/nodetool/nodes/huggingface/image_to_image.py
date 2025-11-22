@@ -1,12 +1,16 @@
-from __future__ import annotations
-
 from enum import Enum
+import importlib.util
 import platform
 import re
 import asyncio
-from typing import Any, TypedDict, TYPE_CHECKING
+from functools import lru_cache
+from typing import Any, TypedDict
+from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
+from diffusers.models.autoencoders.vae import DecoderOutput
+from diffusers.models.modeling_outputs import AutoencoderKLOutput
 from nodetool.config.logging_config import get_logger
 from nodetool.workflows.types import NodeProgress
+import torch
 from RealESRGAN import RealESRGAN
 from huggingface_hub import try_to_load_from_cache
 from nodetool.metadata.types import (
@@ -34,68 +38,122 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
 )
 from nodetool.nodes.huggingface.huggingface_node import progress_callback
 from nodetool.workflows.processing_context import ProcessingContext
-from pydantic import Field
-import torch
 
-if TYPE_CHECKING:
-    import torch
-    from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
-    from diffusers.models.autoencoders.vae import DecoderOutput
-    from diffusers.models.modeling_outputs import AutoencoderKLOutput
-    from diffusers.models.controlnets.controlnet import ControlNetModel
-    from diffusers.models.transformers.transformer_qwenimage import (
-        QwenImageTransformer2DModel,
-    )
-    from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
-    from diffusers.pipelines.omnigen.pipeline_omnigen import OmniGenPipeline
-    from diffusers.pipelines.pipeline_utils import DiffusionPipeline
-    from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
-    from diffusers.pipelines.auto_pipeline import AutoPipelineForInpainting
-    from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import (
-        QwenImageEditPipeline,
-    )
-    from diffusers.pipelines.flux.pipeline_flux_fill import FluxFillPipeline
-    from diffusers.pipelines.flux.pipeline_flux_kontext import FluxKontextPipeline
-    from diffusers.pipelines.flux.pipeline_flux_prior_redux import (
-        FluxPriorReduxPipeline,
-    )
-    from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
-    from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
-    from diffusers.pipelines.pag.pipeline_pag_controlnet_sd import (
-        StableDiffusionControlNetPAGPipeline,
-    )
-    from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl_img2img import (
-        StableDiffusionXLControlNetPAGImg2ImgPipeline,
-    )
-    from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_inpaint import (
-        StableDiffusionControlNetPAGInpaintPipeline,
-    )
-    from diffusers.pipelines.pag.pipeline_pag_sd_img2img import (
-        StableDiffusionPAGImg2ImgPipeline,
-    )
-    from diffusers.pipelines.pag.pipeline_pag_sd_inpaint import (
-        StableDiffusionPAGInpaintPipeline,
-    )
-    from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl import (
-        StableDiffusionXLControlNetPAGPipeline,
-    )
-    from diffusers.pipelines.pag.pipeline_pag_sd_xl_img2img import (
-        StableDiffusionXLPAGImg2ImgPipeline,
-    )
-    from diffusers.pipelines.pag.pipeline_pag_sd_xl_inpaint import (
-        StableDiffusionXLPAGInpaintPipeline,
-    )
-    from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import (
-        StableDiffusionControlNetImg2ImgPipeline,
-    )
-    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_upscale import (
-        StableDiffusionUpscalePipeline,
-    )
-    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upscale import (
-        StableDiffusionLatentUpscalePipeline,
-    )
+from diffusers.pipelines.omnigen.pipeline_omnigen import OmniGenPipeline
+from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
+from diffusers.pipelines.auto_pipeline import AutoPipelineForInpainting
+from diffusers.models.controlnets.controlnet import ControlNetModel
+from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import QwenImageEditPipeline
+from diffusers.models.transformers.transformer_qwenimage import (
+    QwenImageTransformer2DModel,
+)
+from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
+from diffusers.pipelines.flux.pipeline_flux_fill import FluxFillPipeline
+from diffusers.pipelines.flux.pipeline_flux_kontext import FluxKontextPipeline
+from diffusers.pipelines.flux.pipeline_flux_prior_redux import FluxPriorReduxPipeline
+from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
+from diffusers.pipelines.pag.pipeline_pag_controlnet_sd import (
+    StableDiffusionControlNetPAGPipeline,
+)
+from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl_img2img import (
+    StableDiffusionXLControlNetPAGImg2ImgPipeline,
+)
+from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_inpaint import (
+    StableDiffusionControlNetPAGInpaintPipeline,
+)
+from diffusers.pipelines.pag.pipeline_pag_sd_img2img import (
+    StableDiffusionPAGImg2ImgPipeline,
+)
+from diffusers.pipelines.pag.pipeline_pag_sd_inpaint import (
+    StableDiffusionPAGInpaintPipeline,
+)
+from diffusers.pipelines.pag.pipeline_pag_controlnet_sd_xl import (
+    StableDiffusionXLControlNetPAGPipeline,
+)
+from diffusers.pipelines.pag.pipeline_pag_sd_xl_img2img import (
+    StableDiffusionXLPAGImg2ImgPipeline,
+)
+from diffusers.pipelines.pag.pipeline_pag_sd_xl_inpaint import (
+    StableDiffusionXLPAGInpaintPipeline,
+)
+from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import (
+    StableDiffusionControlNetImg2ImgPipeline,
+)
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_upscale import (
+    StableDiffusionUpscalePipeline,
+)
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upscale import (
+    StableDiffusionLatentUpscalePipeline,
+)
+from pydantic import Field
 
 log = get_logger(__name__)
+
+
+@lru_cache(maxsize=1)
+def _is_xformers_available() -> bool:
+    try:
+        return importlib.util.find_spec("xformers") is not None
+    except Exception:
+        return False
+
+
+def _enable_xformers_if_available(pipeline: Any, enabled: bool = True):
+    """Best-effort enabling of memory-efficient attention (xformers -> SDPA fallback)."""
+    if not enabled or pipeline is None:
+        return
+
+    enable_xformers = getattr(pipeline, "enable_xformers_memory_efficient_attention", None)
+    enable_sdpa = getattr(pipeline, "enable_sdpa", None)
+
+    if callable(enable_xformers) and _is_xformers_available():
+        try:
+            enable_xformers()
+            log.debug("Enabled xformers memory efficient attention")
+            return
+        except Exception as e:
+            log.warning("Failed to enable xformers memory efficient attention: %s", e)
+    elif not _is_xformers_available():
+        log.debug("xformers not available; will try SDPA if present")
+
+    if callable(enable_sdpa):
+        try:
+            enable_sdpa()
+            log.debug("Enabled scaled dot product attention (SDPA)")
+        except Exception as e:
+            log.warning("Failed to enable SDPA attention: %s", e)
+
+
+def _apply_vae_optimizations(pipeline: Any):
+    """Apply VAE memory optimizations and channels_last layout when available."""
+    if pipeline is None:
+        return
+
+    vae = getattr(pipeline, "vae", None)
+    if vae is None:
+        return
+
+    if hasattr(vae, "enable_slicing"):
+        try:
+            vae.enable_slicing()
+            log.debug("Enabled VAE slicing")
+        except Exception as e:
+            log.warning("Failed to enable VAE slicing: %s", e)
+
+    if hasattr(vae, "enable_tiling"):
+        try:
+            vae.enable_tiling()
+            log.debug("Enabled VAE tiling")
+        except Exception as e:
+            log.warning("Failed to enable VAE tiling: %s", e)
+
+    try:
+        vae.to(memory_format=torch.channels_last)
+        log.debug("Set VAE to channels_last memory format")
+    except Exception as e:
+        log.warning("Failed to set VAE channels_last memory format: %s", e)
 
 
 class BaseImageToImage(HuggingFacePipelineNode):
@@ -129,6 +187,8 @@ class BaseImageToImage(HuggingFacePipelineNode):
         self._pipeline = await self.load_pipeline(
             context, "image-to-image", self.get_model_id(), device=context.device
         )
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
@@ -386,7 +446,7 @@ class ImageToImage(HuggingFacePipelineNode):
         ge=-1,
     )
 
-    _pipeline: Any = None
+    _pipeline: AutoPipelineForImage2Image | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -410,6 +470,8 @@ class ImageToImage(HuggingFacePipelineNode):
             model_class=AutoPipelineForImage2Image,
             torch_dtype=torch.float16,
         )
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
@@ -516,7 +578,7 @@ class Inpaint(HuggingFacePipelineNode):
         ge=-1,
     )
 
-    _pipeline: Any = None
+    _pipeline: AutoPipelineForInpainting | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -542,6 +604,8 @@ class Inpaint(HuggingFacePipelineNode):
             use_safetensors=True,
             variant=self.model.variant,
         )
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
@@ -609,7 +673,7 @@ class StableDiffusionControlNet(StableDiffusionBaseNode):
         le=2.0,
     )
 
-    _pipeline: Any = None
+    _pipeline: StableDiffusionControlNetPAGPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -663,6 +727,8 @@ class StableDiffusionControlNet(StableDiffusionBaseNode):
             config="Lykon/DreamShaper",  # workaround for missing SD15 repo
             torch_dtype=controlnet_dtype,
         )
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
 
@@ -703,7 +769,7 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
         le=1.0,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: Any = None
+    _pipeline: StableDiffusionPAGImg2ImgPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -734,6 +800,8 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
             ),
         )
         assert self._pipeline is not None
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
 
@@ -788,7 +856,7 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
         le=2.0,
     )
 
-    _pipeline: Any = None
+    _pipeline: StableDiffusionControlNetPAGInpaintPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -832,6 +900,8 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
             torch_dtype=controlnet_dtype,
         )  # type: ignore
         assert self._pipeline is not None
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
 
@@ -883,7 +953,7 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
         default=ModelVariant.FP16,
         description="The variant of the model to use for Image-to-Image generation.",
     )
-    _pipeline: Any = None
+    _pipeline: StableDiffusionPAGInpaintPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -914,6 +984,8 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
                 variant=self.variant.value,
             )
             assert self._pipeline is not None
+            _enable_xformers_if_available(self._pipeline)
+            _apply_vae_optimizations(self._pipeline)
             self._set_scheduler(self.scheduler)
             self._load_ip_adapter()
 
@@ -965,7 +1037,7 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
         description="The control image to guide the transformation.",
     )
 
-    _pipeline: Any = None
+    _pipeline: StableDiffusionControlNetImg2ImgPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1015,6 +1087,8 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
             torch_dtype=controlnet_dtype,
             config="Lykon/DreamShaper",  # workaround for missing SD15 repo
         )
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
 
@@ -1084,10 +1158,6 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
         le=2**32 - 1,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
-    enable_tiling: bool = Field(
-        default=False,
-        description="Enable tiling to save VRAM",
-    )
 
     @classmethod
     def get_basic_fields(cls):
@@ -1100,7 +1170,7 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
     def get_title(cls):
         return "Stable Diffusion 4x Upscale"
 
-    _pipeline: Any = None
+    _pipeline: StableDiffusionUpscalePipeline | None = None
 
     @classmethod
     def get_recommended_models(cls):
@@ -1124,6 +1194,8 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
             model_id="stabilityai/stable-diffusion-x4-upscaler",
         )
         assert self._pipeline is not None
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
 
     def _set_scheduler(
@@ -1136,8 +1208,6 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
             self._pipeline.scheduler = scheduler_class.from_config(
                 self._pipeline.scheduler.config
             )
-            if self.enable_tiling:
-                self._pipeline.vae.enable_tiling()
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
@@ -1205,7 +1275,7 @@ class StableDiffusionLatentUpscaler(HuggingFacePipelineNode):
         description="Low-resolution latents tensor to upscale.",
     )
 
-    _pipeline: Any = None
+    _pipeline: StableDiffusionLatentUpscalePipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1233,6 +1303,8 @@ class StableDiffusionLatentUpscaler(HuggingFacePipelineNode):
             torch_dtype=torch.float16,
         )
         assert self._pipeline is not None
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
         self._pipeline.to(context.device)
 
     async def move_to_device(self, device: str):
@@ -1284,7 +1356,7 @@ class VAEEncode(HuggingFacePipelineNode):
         description="Scaling factor applied to latents (e.g., 0.18215 for SD15)",
     )
 
-    _vae: Any = None
+    _vae: AutoencoderKL | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1307,8 +1379,6 @@ class VAEEncode(HuggingFacePipelineNode):
         return "VAE Encode"
 
     async def preload_model(self, context: ProcessingContext):
-        from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
-
         dtype = torch.float32 if context.device == "mps" else torch.float16
         self._vae = await self.load_model(
             context=context,
@@ -1328,8 +1398,6 @@ class VAEEncode(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> TorchTensor:
         if self._vae is None:
             raise ValueError("VAE not initialized")
-
-        from diffusers.models.modeling_outputs import AutoencoderKLOutput
 
         # Convert to tensor HWC in [0,1]
         img = await context.image_to_tensor(self.image)
@@ -1367,7 +1435,7 @@ class VAEDecode(HuggingFacePipelineNode):
         description="Scaling factor used for encoding (inverse is applied before decode)",
     )
 
-    _vae: Any = None
+    _vae: AutoencoderKL | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1390,8 +1458,6 @@ class VAEDecode(HuggingFacePipelineNode):
         return "VAE Decode"
 
     async def preload_model(self, context: ProcessingContext):
-        from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
-
         dtype = torch.float32 if context.device == "mps" else torch.float16
         self._vae = await self.load_model(
             context=context,
@@ -1411,8 +1477,6 @@ class VAEDecode(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._vae is None:
             raise ValueError("VAE not initialized")
-
-        from diffusers.models.autoencoders.vae import DecoderOutput
 
         latents = self.latents.to_tensor().to(context.device)
         vae_dtype = next(self._vae.parameters()).dtype
@@ -1455,7 +1519,7 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         le=1.0,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: Any = None
+    _pipeline: StableDiffusionXLPAGImg2ImgPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1485,6 +1549,8 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
             variant=self.variant.value,
         )
         assert self._pipeline is not None
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
         self._pipeline.enable_model_cpu_offload()
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
@@ -1526,7 +1592,7 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
         le=1.0,
         description="Strength for inpainting. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: Any = None
+    _pipeline: StableDiffusionXLPAGInpaintPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1559,6 +1625,8 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
                 variant=self.variant.value,
             )
             assert self._pipeline is not None
+            _enable_xformers_if_available(self._pipeline)
+            _apply_vae_optimizations(self._pipeline)
             self._set_scheduler(self.scheduler)
             self._load_ip_adapter()
 
@@ -1612,7 +1680,7 @@ class StableDiffusionXLControlNet(StableDiffusionXLBase):
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage but may slow down generation.",
     )
 
-    _pipeline: Any = None
+    _pipeline: StableDiffusionXLControlNetPAGPipeline | None = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFControlNet]:
@@ -1672,6 +1740,8 @@ class StableDiffusionXLControlNet(StableDiffusionXLBase):
                 torch.float16 if self.variant == ModelVariant.FP16 else torch.float32
             ),
         )
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         # Ensure pipeline is on the correct device after loading
         if self._pipeline is not None:
@@ -1729,7 +1799,7 @@ class StableDiffusionXLControlNetImg2ImgNode(StableDiffusionXLImg2Img):
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage but may slow down generation.",
     )
 
-    _pipeline: Any = None
+    _pipeline: StableDiffusionXLControlNetPAGImg2ImgPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1789,6 +1859,8 @@ class StableDiffusionXLControlNetImg2ImgNode(StableDiffusionXLImg2Img):
             ),
         )
         # Ensure pipeline is on the correct device after loading
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
         if self._pipeline is not None:
             self._pipeline.to(context.device)
 
@@ -1885,7 +1957,7 @@ class OmniGenNode(HuggingFacePipelineNode):
         description="Enable CPU offload to reduce memory usage when using multiple images.",
     )
 
-    _pipeline: Any = None
+    _pipeline: Any | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1919,6 +1991,9 @@ class OmniGenNode(HuggingFacePipelineNode):
             torch_dtype=torch.bfloat16,
             variant=None,
         )
+
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
 
         if self.enable_model_cpu_offload and self._pipeline is not None:
             self._pipeline.enable_model_cpu_offload()
@@ -2023,20 +2098,12 @@ class QwenImageEdit(HuggingFacePipelineNode):
         default=True,
         description="Enable memory efficient attention to reduce VRAM usage.",
     )
-    enable_vae_tiling: bool = Field(
-        default=False,
-        description="Enable VAE tiling to reduce VRAM usage for large images.",
-    )
-    enable_vae_slicing: bool = Field(
-        default=False,
-        description="Enable VAE slicing to reduce VRAM usage.",
-    )
     enable_cpu_offload: bool = Field(
         default=True,
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _pipeline: Any = None
+    _pipeline: QwenImageEditPipeline | DiffusionPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -2106,15 +2173,13 @@ class QwenImageEdit(HuggingFacePipelineNode):
         )
 
         # Apply memory optimizations after loading
+        _enable_xformers_if_available(
+            self._pipeline, self.enable_memory_efficient_attention
+        )
+        _apply_vae_optimizations(self._pipeline)
         if self._pipeline is not None:
             if self.enable_cpu_offload:
                 self._pipeline.enable_model_cpu_offload()
-
-            if self.enable_vae_slicing:
-                self._pipeline.vae.enable_slicing()
-
-            if self.enable_vae_tiling:
-                self._pipeline.vae.enable_tiling()
 
             if self.enable_memory_efficient_attention:
                 self._pipeline.enable_attention_slicing()
@@ -2134,14 +2199,12 @@ class QwenImageEdit(HuggingFacePipelineNode):
         assert self._pipeline is not None
 
         # Apply memory optimizations after loading
+        _enable_xformers_if_available(
+            self._pipeline, self.enable_memory_efficient_attention
+        )
+        _apply_vae_optimizations(self._pipeline)
         if self.enable_cpu_offload:
             self._pipeline.enable_model_cpu_offload()
-
-        if self.enable_vae_slicing and hasattr(self._pipeline, "vae"):
-            self._pipeline.vae.enable_slicing()
-
-        if self.enable_vae_tiling and hasattr(self._pipeline, "vae"):
-            self._pipeline.vae.enable_tiling()
 
         if self.enable_memory_efficient_attention:
             self._pipeline.enable_attention_slicing()
@@ -2275,20 +2338,12 @@ class FluxFill(HuggingFacePipelineNode):
         description="Seed for the random number generator. Use -1 for a random seed.",
         ge=-1,
     )
-    enable_vae_tiling: bool = Field(
-        default=False,
-        description="Enable VAE tiling to reduce VRAM usage for large images.",
-    )
-    enable_vae_slicing: bool = Field(
-        default=False,
-        description="Enable VAE slicing to reduce VRAM usage.",
-    )
     enable_cpu_offload: bool = Field(
         default=True,
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _pipeline: Any = None
+    _pipeline: FluxFillPipeline | None = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFFluxFill]:
@@ -2380,9 +2435,8 @@ class FluxFill(HuggingFacePipelineNode):
             torch_dtype=torch_dtype,
         )
 
-        # Apply CPU offload if enabled
-        if self.enable_cpu_offload:
-            self._pipeline.enable_sequential_cpu_offload()
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
 
     async def preload_model(self, context: ProcessingContext):
         # Use bfloat16 for FLUX Fill models
@@ -2403,6 +2457,9 @@ class FluxFill(HuggingFacePipelineNode):
                 variant=None,
                 device="cpu",
             )
+
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
 
         # Apply CPU offload if enabled
         if self._pipeline is not None and self.enable_cpu_offload:
@@ -2436,13 +2493,7 @@ class FluxFill(HuggingFacePipelineNode):
                         "Try enabling 'CPU offload' in the advanced node properties, reduce image size, or lower steps."
                     ) from e
 
-            # Apply memory optimizations only when on GPU
-            if device != "cpu":
-                if self.enable_vae_slicing:
-                    self._pipeline.enable_vae_slicing()
-
-                if self.enable_vae_tiling:
-                    self._pipeline.enable_vae_tiling()
+            _apply_vae_optimizations(self._pipeline)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
@@ -2528,7 +2579,7 @@ class FluxKontext(HuggingFacePipelineNode):
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _pipeline: Any = None
+    _pipeline: FluxKontextPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -2564,6 +2615,7 @@ class FluxKontext(HuggingFacePipelineNode):
         )
 
         # Apply CPU offload if enabled
+        _enable_xformers_if_available(self._pipeline)
         if self._pipeline is not None and self.enable_cpu_offload:
             self._pipeline.enable_model_cpu_offload()
 
@@ -2669,8 +2721,8 @@ class FluxPriorRedux(HuggingFacePipelineNode):
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _prior_pipeline: Any = None
-    _pipeline: Any = None
+    _prior_pipeline: FluxPriorReduxPipeline | None = None
+    _pipeline: FluxPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -2718,6 +2770,8 @@ class FluxPriorRedux(HuggingFacePipelineNode):
             torch_dtype=torch.bfloat16,
             device="cpu",
         )
+        _enable_xformers_if_available(self._prior_pipeline)
+        _apply_vae_optimizations(self._prior_pipeline)
 
         log.info(f"Loading FLUX pipeline from {self.get_flux_model_id()}...")
         self._pipeline = await self.load_model(
@@ -2729,6 +2783,8 @@ class FluxPriorRedux(HuggingFacePipelineNode):
             torch_dtype=torch.bfloat16,
             device="cpu",
         )
+        _enable_xformers_if_available(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
 
         # Apply CPU offload if enabled
         if self._prior_pipeline is not None and self.enable_cpu_offload:
