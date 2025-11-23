@@ -1,5 +1,6 @@
 from enum import Enum
 import huggingface_hub
+from huggingface_hub import hf_hub_download, try_to_load_from_cache
 from typing import Any, TypedDict
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
@@ -25,6 +26,9 @@ from nodetool.workflows.types import NodeProgress, Notification, LogUpdate
 import torch
 import asyncio
 import logging
+from pathlib import Path
+from nunchaku import NunchakuFluxTransformer2dModel
+from nunchaku.utils import get_precision as get_nunchaku_precision
 
 # The QwenImage import requires optional dependencies. Keep it near top-level to surface missing deps early.
 from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
@@ -451,6 +455,22 @@ class Flux(HuggingFacePipelineNode):
     @classmethod
     def get_recommended_models(cls) -> list[HFFlux]:
         return [
+            # Original Flux repos
+            HFFlux(
+                repo_id="black-forest-labs/FLUX.1-dev",
+            ),
+            HFFlux(
+                repo_id="black-forest-labs/FLUX.1-schnell",
+            ),
+            # Nunchaku SVDQ transformers (auto-detected precision)
+            HFFlux(
+                repo_id="nunchaku-tech/nunchaku-flux.1-dev",
+                path="svdq-int4_r32-flux.1-dev.safetensors",
+            ),
+            HFFlux(
+                repo_id="nunchaku-tech/nunchaku-flux.1-dev",
+                path="svdq-fp4_r32-flux.1-dev.safetensors",
+            ),
             # GGUF quantized models
             HFFlux(
                 repo_id="city96/FLUX.1-dev-gguf",
@@ -477,11 +497,7 @@ class Flux(HuggingFacePipelineNode):
             "seed",
         ]
 
-    def get_model_id(self) -> str:
-        if self.model.repo_id:
-            return self.model.repo_id
-        # Fallback to detected variant
-        detected_variant = self._detect_variant_from_repo_id()
+    def _get_base_model_id(self, variant: FluxVariant) -> str:
         model_mapping = {
             FluxVariant.SCHNELL: "black-forest-labs/FLUX.1-schnell",
             FluxVariant.DEV: "black-forest-labs/FLUX.1-dev",
@@ -489,7 +505,14 @@ class Flux(HuggingFacePipelineNode):
             FluxVariant.CANNY_DEV: "black-forest-labs/FLUX.1-Canny-dev",
             FluxVariant.DEPTH_DEV: "black-forest-labs/FLUX.1-Depth-dev",
         }
-        return model_mapping[detected_variant]
+        return model_mapping.get(variant, "black-forest-labs/FLUX.1-dev")
+
+    def get_model_id(self) -> str:
+        if self.model.repo_id:
+            return self.model.repo_id
+        # Fallback to detected variant
+        detected_variant = self._detect_variant_from_repo_id()
+        return self._get_base_model_id(detected_variant)
 
     def _detect_variant_from_repo_id(self) -> FluxVariant:
         """Detect FLUX variant from the selected repo_id or path."""
@@ -522,6 +545,12 @@ class Flux(HuggingFacePipelineNode):
         """Check if the model is a GGUF model based on file extension."""
         return self.model.path is not None and self.model.path.lower().endswith(".gguf")
 
+    def _is_nunchaku_model(self) -> bool:
+        """Detect Nunchaku SVDQ transformers via repo or filename."""
+        repo_has_svdq = self.model.repo_id and "svdq" in self.model.repo_id.lower()
+        path_has_svdq = self.model.path and "svdq" in self.model.path.lower()
+        return bool(repo_has_svdq or path_has_svdq)
+
     async def preload_model(self, context: ProcessingContext):
         hf_token = await context.get_secret("HF_TOKEN")
         if not hf_token:
@@ -545,6 +574,13 @@ class Flux(HuggingFacePipelineNode):
         # Check if this is a GGUF model based on file extension
         if self._is_gguf_model():
             await self._load_gguf_model(context, torch_dtype, hf_token)
+        elif self._is_nunchaku_model():
+            await self._load_nunchaku_model(
+                context=context,
+                torch_dtype=torch_dtype,
+                detected_variant=detected_variant,
+                hf_token=hf_token,
+            )
         else:
             # Load the full pipeline normally
             log.info(f"Loading FLUX pipeline from {self.get_model_id()}...")
@@ -614,6 +650,95 @@ class Flux(HuggingFacePipelineNode):
 
         if self.enable_cpu_offload and self._pipeline is not None:
             self._pipeline.enable_sequential_cpu_offload()
+
+    async def _load_nunchaku_model(
+        self,
+        context: ProcessingContext,
+        torch_dtype: torch.dtype,
+        detected_variant: FluxVariant,
+        hf_token: str | None = None,
+    ):
+        """Load FLUX pipeline using a Nunchaku SVDQ transformer file."""
+        repo_id_lower = (self.model.repo_id or "").lower()
+        transformer_repo_id = self.model.repo_id or "nunchaku-tech/nunchaku-flux.1-dev"
+        if "svdq" not in repo_id_lower and "nunchaku" not in repo_id_lower:
+            transformer_repo_id = "nunchaku-tech/nunchaku-flux.1-dev"
+
+        precision = get_nunchaku_precision()
+        transformer_path = (
+            self.model.path
+            or f"svdq-{precision}_r32-flux.1-dev.safetensors"
+        )
+
+        if "svdq" not in transformer_path.lower():
+            raise ValueError(
+                "Nunchaku Flux requires a transformer filename containing 'svdq'."
+            )
+
+        log.info(
+            "Loading Nunchaku transformer from %s/%s (precision=%s)",
+            transformer_repo_id,
+            transformer_path,
+            precision,
+        )
+
+        transformer_file = Path(transformer_path).expanduser()
+        cache_path: str | None = None
+
+        if transformer_file.is_file():
+            transformer_identifier = str(transformer_file)
+        else:
+            cache_path = try_to_load_from_cache(transformer_repo_id, transformer_path)
+            if not cache_path:
+                log.info(
+                    "Downloading Nunchaku transformer %s/%s to cache",
+                    transformer_repo_id,
+                    transformer_path,
+                )
+                hf_hub_download(
+                    transformer_repo_id,
+                    transformer_path,
+                    token=hf_token,
+                )
+                cache_path = try_to_load_from_cache(
+                    transformer_repo_id,
+                    transformer_path,
+                )
+                if not cache_path:
+                    raise ValueError(
+                        f"Downloading model {transformer_repo_id}/{transformer_path} from HuggingFace failed"
+                    )
+
+            transformer_identifier = cache_path or f"{transformer_repo_id}/{transformer_path}"
+
+        transformer = await asyncio.to_thread(
+            NunchakuFluxTransformer2dModel.from_pretrained,
+            transformer_identifier,
+            config=transformer_repo_id,
+            torch_dtype=torch_dtype,
+            token=hf_token,
+        )
+
+        base_model_id = self._get_base_model_id(detected_variant)
+        log.info(
+            "Creating FLUX pipeline from %s with Nunchaku transformer %s/%s",
+            base_model_id,
+            transformer_repo_id,
+            transformer_path,
+        )
+
+        try:
+            self._pipeline = FluxPipeline.from_pretrained(
+                base_model_id,
+                transformer=transformer,
+                torch_dtype=torch_dtype,
+                token=hf_token,
+            )
+        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            raise ValueError(
+                "VRAM out of memory while loading Flux with the Nunchaku transformer. "
+                "Try enabling CPU offload or reduce image size/steps."
+            ) from e
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
@@ -704,6 +829,7 @@ class Flux(HuggingFacePipelineNode):
         image = output.images[0]  # type: ignore
 
         return await context.image_from_pil(image)
+
 
 
 class Kolors(HuggingFacePipelineNode):

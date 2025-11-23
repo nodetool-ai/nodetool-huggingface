@@ -278,6 +278,8 @@ async def load_model(
 
     target_device = _resolve_hf_device(context, context.device)
 
+    log.info(f"Loading model {model_id}/{path} from {target_device}")
+
     if not skip_cache:
         cached_model = ModelManager.get_model(model_id, model_class.__name__, path)
         if cached_model:

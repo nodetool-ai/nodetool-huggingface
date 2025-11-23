@@ -13,6 +13,12 @@ requires-python = ">=3.10.13"
 dependencies = [
     "nodetool-core==0.6.2-rc.6",
     "torch==2.8.0",
+    "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2%2Btorch2.8-cp310-cp310-linux_x86_64.whl ; platform_system == 'Linux' and python_version >= '3.10' and python_version < '3.11'",
+    "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2%2Btorch2.8-cp311-cp311-linux_x86_64.whl ; platform_system == 'Linux' and python_version >= '3.11' and python_version < '3.12'",
+    "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2%2Btorch2.8-cp312-cp312-linux_x86_64.whl ; platform_system == 'Linux' and python_version >= '3.12' and python_version < '3.13'",
+    "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2%2Btorch2.8-cp310-cp310-win_amd64.whl ; platform_system == 'Windows' and python_version >= '3.10' and python_version < '3.11'",
+    "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2%2Btorch2.8-cp311-cp311-win_amd64.whl ; platform_system == 'Windows' and python_version >= '3.11' and python_version < '3.12'",
+    "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2%2Btorch2.8-cp312-cp312-win_amd64.whl ; platform_system == 'Windows' and python_version >= '3.12' and python_version < '3.13'",
     "torchsde",
     "torchvision",
     "torchaudio",
