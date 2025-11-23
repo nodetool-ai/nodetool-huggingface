@@ -27,14 +27,15 @@ import torch
 import asyncio
 import logging
 from pathlib import Path
-from nunchaku import NunchakuFluxTransformer2dModel
-from nunchaku.utils import get_precision as get_nunchaku_precision
+from nunchaku import (
+    NunchakuFluxTransformer2dModel,
+    NunchakuQwenImageTransformer2DModel,
+)
+from nunchaku.models.unets.unet_sdxl import NunchakuSDXLUNet2DConditionModel
+from nunchaku.utils import get_gpu_memory, get_precision as get_nunchaku_precision
 
 # The QwenImage import requires optional dependencies. Keep it near top-level to surface missing deps early.
 from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
-from diffusers.models.transformers.transformer_qwenimage import (
-    QwenImageTransformer2DModel,
-)
 from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
 from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
@@ -53,9 +54,6 @@ from diffusers.schedulers.scheduling_dpmsolver_multistep import (
     DPMSolverMultistepScheduler,
 )
 from pydantic import Field
-from diffusers.models.transformers.transformer_qwenimage import (
-    QwenImageTransformer2DModel,
-)
 from transformers import T5EncoderModel
 from transformers.models.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
 
@@ -63,11 +61,8 @@ from transformers.models.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
 log = get_logger(__name__)
 
 
-def _enable_pytorch2_attention(pipeline: Any, enabled: bool = True):
+def _enable_pytorch2_attention(pipeline: Any):
     """Enable PyTorch 2 scaled dot product attention to speed up inference."""
-    if not enabled or pipeline is None:
-        return
-
     enable_sdpa = getattr(pipeline, "enable_sdpa", None)
 
     if callable(enable_sdpa):
@@ -153,6 +148,7 @@ class StableDiffusion(StableDiffusionBaseNode):
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
 
+
     async def process(self, context: ProcessingContext) -> OutputType:
         result = await self.run_pipeline(context, width=self.width, height=self.height)
         return {
@@ -186,19 +182,147 @@ class StableDiffusionXL(StableDiffusionXLBase):
 
         self._using_playground_pipeline = is_playground
 
+        torch_dtype = self.get_torch_dtype()
+        pipeline_model_id = self._resolve_sdxl_pipeline_model_id()
+
+        if self._is_nunchaku_model():
+            await self._load_nunchaku_model(context, torch_dtype)
+        else:
+            self._pipeline = await self.load_model(
+                context=context,
+                model_class=StableDiffusionXLPipeline,
+                model_id=pipeline_model_id,
+                path=self.model.path,
+                torch_dtype=torch_dtype,
+                variant=None,
+            )
+            _enable_pytorch2_attention(self._pipeline)
+            _apply_vae_optimizations(self._pipeline)
+
+        assert self._pipeline is not None
+        self._set_scheduler(self.scheduler)
+        self._load_ip_adapter()
+
+    def _is_nunchaku_model(self) -> bool:
+        repo_has_svdq = self.model.repo_id and "svdq" in self.model.repo_id.lower()
+        path_has_svdq = self.model.path and "svdq" in self.model.path.lower()
+        return bool(repo_has_svdq or path_has_svdq)
+
+    def _resolve_sdxl_pipeline_model_id(self) -> str:
+        if not self.model.repo_id:
+            return "stabilityai/stable-diffusion-xl-base-1.0"
+        repo_id_lower = self.model.repo_id.lower()
+        if "nunchaku" in repo_id_lower and "sdxl" in repo_id_lower:
+            return "stabilityai/stable-diffusion-xl-base-1.0"
+        return self.model.repo_id
+
+    async def _load_nunchaku_model(
+        self,
+        context: ProcessingContext,
+        torch_dtype: torch.dtype,
+    ):
+        hf_token = await context.get_secret("HF_TOKEN")
+        repo_id_lower = (self.model.repo_id or "").lower()
+        transformer_repo_id = (
+            self.model.repo_id
+            if self.model.repo_id and "nunchaku" in repo_id_lower and "sdxl" in repo_id_lower
+            else "nunchaku-tech/nunchaku-sdxl"
+        )
+
+        try:
+            precision = get_nunchaku_precision()
+        except Exception as exc:
+            log.warning(
+                "Failed to detect Nunchaku SDXL precision; defaulting to int4: %s", exc
+            )
+            precision = "int4"
+
+        transformer_precision = precision
+        if transformer_precision.startswith("nv"):
+            transformer_precision = transformer_precision[2:]
+
+        default_transformer_path = (
+            self.model.path
+            or f"svdq-{transformer_precision}_r32-sdxl.safetensors"
+        )
+        transformer_path = default_transformer_path.strip()
+
+        transformer_file = Path(transformer_path).expanduser()
+        transformer_identifier: str | None = None
+        transformer_filename = transformer_path
+
+        if transformer_file.is_file():
+            transformer_identifier = str(transformer_file)
+            transformer_filename = transformer_file.name
+        else:
+            repo_from_path: str | None = None
+            if not transformer_path.startswith(("/", "~")):
+                path_parts = transformer_path.split("/")
+                if len(path_parts) >= 3:
+                    repo_from_path = "/".join(path_parts[:2])
+                    transformer_filename = "/".join(path_parts[2:])
+
+            if repo_from_path:
+                transformer_repo_id = repo_from_path
+
+            if "svdq" not in transformer_filename.lower():
+                raise ValueError(
+                    "Nunchaku SDXL requires a transformer filename containing 'svdq'."
+                )
+
+            cache_path = try_to_load_from_cache(transformer_repo_id, transformer_filename)
+            if not cache_path:
+                log.info(
+                    "Downloading Nunchaku SDXL transformer %s/%s (precision=%s)",
+                    transformer_repo_id,
+                    transformer_filename,
+                    precision,
+                )
+                hf_hub_download(
+                    transformer_repo_id,
+                    transformer_filename,
+                    token=hf_token,
+                )
+                cache_path = try_to_load_from_cache(
+                    transformer_repo_id,
+                    transformer_filename,
+                )
+                if not cache_path:
+                    raise ValueError(
+                        f"Downloading model {transformer_repo_id}/{transformer_filename} failed"
+                    )
+
+            transformer_identifier = cache_path
+
+        assert transformer_identifier is not None
+
+        log.info(
+            "Loading Nunchaku SDXL UNet from %s/%s (precision=%s)",
+            transformer_repo_id,
+            transformer_filename,
+            precision,
+        )
+        unet = await asyncio.to_thread(
+            NunchakuSDXLUNet2DConditionModel.from_pretrained,
+            transformer_identifier,
+            torch_dtype=torch_dtype,
+            device="cpu",
+        )
+
+        pipeline_model_id = self._resolve_sdxl_pipeline_model_id()
+        log.info(
+            "Creating StableDiffusionXL pipeline from %s with Nunchaku UNet",
+            pipeline_model_id,
+        )
         self._pipeline = await self.load_model(
             context=context,
             model_class=StableDiffusionXLPipeline,
-            model_id=self.model.repo_id,
-            path=self.model.path,
-            torch_dtype=self.get_torch_dtype(),
-            variant=None,
+            model_id=pipeline_model_id,
+            torch_dtype=torch_dtype,
+            unet=unet,
+            use_safetensors=True,
+            token=hf_token,
         )
-        assert self._pipeline is not None
-        _enable_pytorch2_attention(self._pipeline)
-        _apply_vae_optimizations(self._pipeline)
-        self._set_scheduler(self.scheduler)
-        self._load_ip_adapter()
 
     class OutputType(TypedDict):
         image: ImageRef | None
@@ -594,9 +718,9 @@ class Flux(HuggingFacePipelineNode):
                 device="cpu",
                 token=hf_token,
             )
+            _enable_pytorch2_attention(self._pipeline)
+            _apply_vae_optimizations(self._pipeline)
 
-        _enable_pytorch2_attention(self._pipeline)
-        _apply_vae_optimizations(self._pipeline)
 
         # Apply CPU offload if enabled
         if self._pipeline is not None and self.enable_cpu_offload:
@@ -1217,12 +1341,8 @@ class QwenImage(HuggingFacePipelineNode):
         description="Seed for the random number generator. Use -1 for a random seed.",
         ge=-1,
     )
-    enable_memory_efficient_attention: bool = Field(
-        default=True,
-        description="Enable memory efficient attention to reduce VRAM usage.",
-    )
     enable_cpu_offload: bool = Field(
-        default=True,
+        default=False,
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
@@ -1231,6 +1351,16 @@ class QwenImage(HuggingFacePipelineNode):
     @classmethod
     def get_recommended_models(cls) -> list[HFQwenImage]:
         return [
+            # Nunchaku SVDQ transformers (auto-detected precision)
+            HFQwenImage(
+                repo_id="nunchaku-tech/nunchaku-qwen-image",
+                path="svdq-int4_r32-qwen-image.safetensors",
+            ),
+            HFQwenImage(
+                repo_id="nunchaku-tech/nunchaku-qwen-image",
+                path="svdq-fp4_r32-qwen-image.safetensors",
+            ),
+            # GGUF quantized models
             HFQwenImage(
                 repo_id="city96/Qwen-Image-gguf",
                 path="qwen-image-Q4_K_M.gguf",
@@ -1265,10 +1395,18 @@ class QwenImage(HuggingFacePipelineNode):
         """Check if the model is a GGUF model based on file extension."""
         return self.model.path is not None and self.model.path.lower().endswith(".gguf")
 
+    def _is_nunchaku_model(self) -> bool:
+        """Detect Nunchaku SVDQ transformers via repo or filename."""
+        repo_has_svdq = self.model.repo_id and "svdq" in self.model.repo_id.lower()
+        path_has_svdq = self.model.path and "svdq" in self.model.path.lower()
+        return bool(repo_has_svdq or path_has_svdq)
+
     async def preload_model(self, context: ProcessingContext):
         # Handle GGUF models separately to maintain existing behaviour
         if self._is_gguf_model():
             await self._load_gguf_model(context, _select_diffusion_dtype())
+        elif self._is_nunchaku_model():
+            await self._load_nunchaku_model(context, _select_diffusion_dtype())
         else:
             await self._load_full_precision_pipeline(context)
 
@@ -1289,16 +1427,127 @@ class QwenImage(HuggingFacePipelineNode):
         assert self._pipeline is not None
 
         # Apply memory optimizations after loading
-        _enable_pytorch2_attention(
-            self._pipeline, self.enable_memory_efficient_attention
-        )
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
-        if self.enable_cpu_offload:
-            self._pipeline.enable_model_cpu_offload()
+        self._pipeline.enable_model_cpu_offload()
 
-        if self.enable_memory_efficient_attention:
-            self._pipeline.enable_attention_slicing()
+    async def _load_nunchaku_model(
+        self,
+        context: ProcessingContext,
+        torch_dtype,
+    ):
+        """Load Qwen-Image pipeline using a Nunchaku SVDQ transformer file."""
+        repo_id_lower = (self.model.repo_id or "").lower()
+        transformer_repo_id = self.model.repo_id or "nunchaku-tech/nunchaku-qwen-image"
+        if "svdq" not in repo_id_lower and "nunchaku" not in repo_id_lower:
+            transformer_repo_id = "nunchaku-tech/nunchaku-qwen-image"
+
+        precision = get_nunchaku_precision()
+        transformer_path = self.model.path or f"svdq-{precision}_r32-qwen-image.safetensors"
+
+        if "svdq" not in transformer_path.lower():
+            raise ValueError(
+                "Nunchaku Qwen-Image requires a transformer filename containing 'svdq'."
+            )
+
+        log.info(
+            "Loading Nunchaku Qwen-Image transformer from %s/%s (precision=%s)",
+            transformer_repo_id,
+            transformer_path,
+            precision,
+        )
+
+        transformer_file = Path(transformer_path).expanduser()
+        cache_path: str | None = None
+
+        if transformer_file.is_file():
+            transformer_identifier = str(transformer_file)
+        else:
+            cache_path = try_to_load_from_cache(transformer_repo_id, transformer_path)
+            if not cache_path:
+                log.info(
+                    "Downloading Nunchaku Qwen-Image transformer %s/%s to cache",
+                    transformer_repo_id,
+                    transformer_path,
+                )
+                hf_token = await context.get_secret("HF_TOKEN")
+                hf_hub_download(
+                    transformer_repo_id,
+                    transformer_path,
+                    token=hf_token,
+                )
+                cache_path = try_to_load_from_cache(
+                    transformer_repo_id,
+                    transformer_path,
+                )
+                if not cache_path:
+                    raise ValueError(
+                        f"Downloading model {transformer_repo_id}/{transformer_path} from HuggingFace failed"
+                    )
+
+            transformer_identifier = cache_path or f"{transformer_repo_id}/{transformer_path}"
+
+        hf_token = await context.get_secret("HF_TOKEN")
+
+        transformer = await asyncio.to_thread(
+            NunchakuQwenImageTransformer2DModel.from_pretrained,
+            transformer_identifier,
+            config="Qwen/Qwen-Image",
+            torch_dtype=torch_dtype,
+            token=hf_token,
+        )
+
+        log.info(
+            "Creating Qwen-Image pipeline from Qwen/Qwen-Image with Nunchaku transformer %s/%s",
+            transformer_repo_id,
+            transformer_path,
+        )
+
+        try:
+            self._pipeline = QwenImagePipeline.from_pretrained(
+                "Qwen/Qwen-Image",
+                transformer=transformer,
+                torch_dtype=torch_dtype,
+                token=hf_token,
+            )
+        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            raise ValueError(
+                "VRAM out of memory while loading Qwen-Image with the Nunchaku transformer. "
+                "Try enabling CPU offload or reduce image size/steps."
+            ) from e
+
+        # Apply memory and offload optimizations
+        _enable_pytorch2_attention(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
+
+        if self.enable_cpu_offload and self._pipeline is not None:
+            try:
+                gpu_mem_gb = get_gpu_memory()
+            except Exception as e:  # pragma: no cover - GPU utility may not be available in all envs
+                log.warning(
+                    "Failed to query GPU memory for Nunchaku Qwen-Image: %s. "
+                    "Falling back to standard model CPU offload.",
+                    e,
+                )
+                self._pipeline.enable_model_cpu_offload()
+            else:
+                if gpu_mem_gb > 18:
+                    # High VRAM: offload entire pipeline to CPU with automatic GPU placement.
+                    self._pipeline.enable_model_cpu_offload()
+                else:
+                    # Low VRAM: per-layer offloading requires ~3–4GB of VRAM.
+                    try:
+                        transformer.set_offload(True, use_pin_memory=False, num_blocks_on_gpu=1)
+                    except Exception as e:
+                        log.warning(
+                            "Failed to enable per-layer offload on Nunchaku Qwen-Image transformer: %s",
+                            e,
+                        )
+                    exclude = getattr(self._pipeline, "_exclude_from_cpu_offload", None)
+                    if isinstance(exclude, list):
+                        exclude.append("transformer")
+                    self._pipeline.enable_sequential_cpu_offload()
 
     async def _load_gguf_model(
         self,
@@ -1335,27 +1584,26 @@ class QwenImage(HuggingFacePipelineNode):
         )
 
         # Apply memory optimizations after loading
-        _enable_pytorch2_attention(
-            self._pipeline, self.enable_memory_efficient_attention
-        )
+        _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
-        if self.enable_cpu_offload:
-            self._pipeline.enable_model_cpu_offload()
-
-        if self.enable_memory_efficient_attention:
-            self._pipeline.enable_attention_slicing()
+        self._pipeline.enable_model_cpu_offload()
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
             # Handle CPU offload case
             if self.enable_cpu_offload:
-                # When moving to CPU, disable CPU offload and move all components to CPU
+                # When moving to CPU, force all components to CPU
                 if device == "cpu":
-                    self._pipeline.to(device)
-                # When moving to GPU with CPU offload, re-enable CPU offload
-                elif device in ["cuda", "mps"]:
-                    self._pipeline.enable_model_cpu_offload()
+                    try:
+                        self._pipeline.to(device)
+                    except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                        raise ValueError(
+                            "VRAM out of memory while moving Qwen-Image pipeline to CPU. "
+                            "Reduce image size/steps."
+                        ) from e
+                # For GPU devices, rely on the offload configuration set up at load time
+                # (model or sequential CPU offload) instead of reconfiguring here.
             else:
                 # Normal device movement without CPU offload
                 try:
@@ -1404,33 +1652,6 @@ class QwenImage(HuggingFacePipelineNode):
     def required_inputs(self):
         """Return list of required inputs that must be connected."""
         return []  # No required inputs - IP adapter image is optional
-
-
-if __name__ == "__main__":
-    node = StableDiffusionXL(
-        model=HFStableDiffusionXL(
-            repo_id="stabilityai/stable-diffusion-xl-base-1.0",
-            path="sd_xl_base_1.0.safetensors",
-        ),
-        prompt="A cat holding a sign that says hello world",
-        negative_prompt="",
-        guidance_scale=7.5,
-        num_inference_steps=25,
-        width=512,
-        height=512,
-        variant=ModelVariant.FP16,
-    )
-    import asyncio
-
-    async def main():
-        context = ProcessingContext()
-        await node.preload_model(context)
-        await node.move_to_device("cuda")
-        output = await node.process(context)
-        print(output)
-
-    asyncio.run(main())
-
 
 class FluxControl(HuggingFacePipelineNode):
     """

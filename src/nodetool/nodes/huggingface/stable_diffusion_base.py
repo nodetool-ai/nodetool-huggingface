@@ -87,6 +87,14 @@ HF_STABLE_DIFFUSION_XL_MODELS = [
         repo_id="SG161222/RealVisXL_V5.0",
         path="RealVisXL_V5.0_fp16.safetensors",
     ),
+    HFStableDiffusionXL(
+        repo_id="nunchaku-tech/nunchaku-sdxl",
+        path="svdq-int4_r32-sdxl.safetensors",
+    ),
+    HFStableDiffusionXL(
+        repo_id="nunchaku-tech/nunchaku-sdxl",
+        path="svdq-fp4_r32-sdxl.safetensors",
+    ),
 ]
 
 
