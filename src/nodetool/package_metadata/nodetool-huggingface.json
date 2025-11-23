@@ -9156,6 +9156,116 @@
           "name": "output"
         }
       ],
+      "recommended_models": [
+        {
+          "id": "black-forest-labs/FLUX.1-Kontext-dev",
+          "type": "hf.flux_kontext",
+          "name": "black-forest-labs/FLUX.1-Kontext-dev",
+          "repo_id": "black-forest-labs/FLUX.1-Kontext-dev",
+          "size_on_disk": 57890836779,
+          "pipeline_tag": "image-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "image-generation",
+            "flux",
+            "diffusion-single-file",
+            "image-to-image",
+            "en",
+            "arxiv:2506.15742",
+            "license:other",
+            "diffusers:FluxKontextPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 315384,
+          "likes": 2438
+        },
+        {
+          "id": "nunchaku-tech/nunchaku-flux.1-kontext-dev:svdq-int4_r32-flux.1-kontext-dev.safetensors",
+          "type": "hf.flux_kontext",
+          "name": "nunchaku-tech/nunchaku-flux.1-kontext-dev",
+          "repo_id": "nunchaku-tech/nunchaku-flux.1-kontext-dev",
+          "path": "svdq-int4_r32-flux.1-kontext-dev.safetensors",
+          "size_on_disk": 6768310048,
+          "pipeline_tag": "image-to-image",
+          "tags": [
+            "diffusers",
+            "image-to-image",
+            "SVDQuant",
+            "FLUX.1-Kontext-dev",
+            "FLUX.1",
+            "Diffusion",
+            "Quantization",
+            "ICLR2025",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:black-forest-labs/FLUX.1-Kontext-dev",
+            "base_model:quantized:black-forest-labs/FLUX.1-Kontext-dev",
+            "license:other",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 44675,
+          "likes": 54
+        },
+        {
+          "id": "nunchaku-tech/nunchaku-flux.1-kontext-dev:svdq-fp4_r32-flux.1-kontext-dev.safetensors",
+          "type": "hf.flux_kontext",
+          "name": "nunchaku-tech/nunchaku-flux.1-kontext-dev",
+          "repo_id": "nunchaku-tech/nunchaku-flux.1-kontext-dev",
+          "path": "svdq-fp4_r32-flux.1-kontext-dev.safetensors",
+          "size_on_disk": 7038707104,
+          "pipeline_tag": "image-to-image",
+          "tags": [
+            "diffusers",
+            "image-to-image",
+            "SVDQuant",
+            "FLUX.1-Kontext-dev",
+            "FLUX.1",
+            "Diffusion",
+            "Quantization",
+            "ICLR2025",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:black-forest-labs/FLUX.1-Kontext-dev",
+            "base_model:quantized:black-forest-labs/FLUX.1-Kontext-dev",
+            "license:other",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 44675,
+          "likes": 54
+        },
+        {
+          "id": "mit-han-lab/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
+          "type": "hf.model",
+          "name": "mit-han-lab/nunchaku-t5",
+          "repo_id": "mit-han-lab/nunchaku-t5",
+          "path": "awq-int4-flux.1-t5xxl.safetensors",
+          "size_on_disk": 2986819952,
+          "pipeline_tag": "text-generation",
+          "tags": [
+            "transformers",
+            "text-generation",
+            "AWQ",
+            "Quantization",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:google/t5-v1_1-xxl",
+            "base_model:quantized:google/t5-v1_1-xxl",
+            "license:apache-2.0",
+            "endpoints_compatible",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 2,
+          "likes": 19
+        }
+      ],
       "basic_fields": [
         "model",
         "image",
@@ -17092,6 +17202,32 @@
           "has_model_index": false,
           "downloads": 34355,
           "likes": 287
+        },
+        {
+          "id": "mit-han-lab/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
+          "type": "hf.model",
+          "name": "mit-han-lab/nunchaku-t5",
+          "repo_id": "mit-han-lab/nunchaku-t5",
+          "path": "awq-int4-flux.1-t5xxl.safetensors",
+          "size_on_disk": 2986819952,
+          "pipeline_tag": "text-generation",
+          "tags": [
+            "transformers",
+            "text-generation",
+            "AWQ",
+            "Quantization",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:google/t5-v1_1-xxl",
+            "base_model:quantized:google/t5-v1_1-xxl",
+            "license:apache-2.0",
+            "endpoints_compatible",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 2,
+          "likes": 19
         }
       ],
       "basic_fields": [
@@ -17217,6 +17353,194 @@
             "type": "image"
           },
           "name": "output"
+        }
+      ],
+      "recommended_models": [
+        {
+          "id": "black-forest-labs/FLUX.1-Depth-dev",
+          "type": "hf.controlnet_flux",
+          "name": "black-forest-labs/FLUX.1-Depth-dev",
+          "repo_id": "black-forest-labs/FLUX.1-Depth-dev",
+          "size_on_disk": 67823838679,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "image-generation",
+            "flux",
+            "diffusion-single-file",
+            "en",
+            "license:other",
+            "diffusers:FluxControlPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 5455,
+          "likes": 228
+        },
+        {
+          "id": "black-forest-labs/FLUX.1-Canny-dev",
+          "type": "hf.controlnet_flux",
+          "name": "black-forest-labs/FLUX.1-Canny-dev",
+          "repo_id": "black-forest-labs/FLUX.1-Canny-dev",
+          "size_on_disk": 67823838991,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "image-generation",
+            "flux",
+            "diffusion-single-file",
+            "en",
+            "license:other",
+            "diffusers:FluxControlPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 2051,
+          "likes": 231
+        },
+        {
+          "id": "nunchaku-tech/nunchaku-flux.1-depth-dev:svdq-int4_r32-flux.1-depth-dev.safetensors",
+          "type": "hf.controlnet_flux",
+          "name": "nunchaku-tech/nunchaku-flux.1-depth-dev",
+          "repo_id": "nunchaku-tech/nunchaku-flux.1-depth-dev",
+          "path": "svdq-int4_r32-flux.1-depth-dev.safetensors",
+          "size_on_disk": 6768703136,
+          "pipeline_tag": "image-to-image",
+          "tags": [
+            "diffusers",
+            "image-to-image",
+            "SVDQuant",
+            "FLUX.1-Depth-dev",
+            "FLUX.1",
+            "Diffusion",
+            "Quantization",
+            "ICLR2025",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:black-forest-labs/FLUX.1-Depth-dev",
+            "base_model:quantized:black-forest-labs/FLUX.1-Depth-dev",
+            "license:other",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 871,
+          "likes": 4
+        },
+        {
+          "id": "nunchaku-tech/nunchaku-flux.1-depth-dev:svdq-fp4_r32-flux.1-depth-dev.safetensors",
+          "type": "hf.controlnet_flux",
+          "name": "nunchaku-tech/nunchaku-flux.1-depth-dev",
+          "repo_id": "nunchaku-tech/nunchaku-flux.1-depth-dev",
+          "path": "svdq-fp4_r32-flux.1-depth-dev.safetensors",
+          "size_on_disk": 7039100192,
+          "pipeline_tag": "image-to-image",
+          "tags": [
+            "diffusers",
+            "image-to-image",
+            "SVDQuant",
+            "FLUX.1-Depth-dev",
+            "FLUX.1",
+            "Diffusion",
+            "Quantization",
+            "ICLR2025",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:black-forest-labs/FLUX.1-Depth-dev",
+            "base_model:quantized:black-forest-labs/FLUX.1-Depth-dev",
+            "license:other",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 871,
+          "likes": 4
+        },
+        {
+          "id": "nunchaku-tech/nunchaku-flux.1-canny-dev:svdq-int4_r32-flux.1-canny-dev.safetensors",
+          "type": "hf.controlnet_flux",
+          "name": "nunchaku-tech/nunchaku-flux.1-canny-dev",
+          "repo_id": "nunchaku-tech/nunchaku-flux.1-canny-dev",
+          "path": "svdq-int4_r32-flux.1-canny-dev.safetensors",
+          "size_on_disk": 6768703136,
+          "pipeline_tag": "image-to-image",
+          "tags": [
+            "diffusers",
+            "image-to-image",
+            "SVDQuant",
+            "FLUX.1-Canny-dev",
+            "FLUX.1",
+            "Diffusion",
+            "Quantization",
+            "ICLR2025",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:black-forest-labs/FLUX.1-Canny-dev",
+            "base_model:quantized:black-forest-labs/FLUX.1-Canny-dev",
+            "license:other",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 712,
+          "likes": 5
+        },
+        {
+          "id": "nunchaku-tech/nunchaku-flux.1-canny-dev:svdq-fp4_r32-flux.1-canny-dev.safetensors",
+          "type": "hf.controlnet_flux",
+          "name": "nunchaku-tech/nunchaku-flux.1-canny-dev",
+          "repo_id": "nunchaku-tech/nunchaku-flux.1-canny-dev",
+          "path": "svdq-fp4_r32-flux.1-canny-dev.safetensors",
+          "size_on_disk": 7039100192,
+          "pipeline_tag": "image-to-image",
+          "tags": [
+            "diffusers",
+            "image-to-image",
+            "SVDQuant",
+            "FLUX.1-Canny-dev",
+            "FLUX.1",
+            "Diffusion",
+            "Quantization",
+            "ICLR2025",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:black-forest-labs/FLUX.1-Canny-dev",
+            "base_model:quantized:black-forest-labs/FLUX.1-Canny-dev",
+            "license:other",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 712,
+          "likes": 5
+        },
+        {
+          "id": "mit-han-lab/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
+          "type": "hf.model",
+          "name": "mit-han-lab/nunchaku-t5",
+          "repo_id": "mit-han-lab/nunchaku-t5",
+          "path": "awq-int4-flux.1-t5xxl.safetensors",
+          "size_on_disk": 2986819952,
+          "pipeline_tag": "text-generation",
+          "tags": [
+            "transformers",
+            "text-generation",
+            "AWQ",
+            "Quantization",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:google/t5-v1_1-xxl",
+            "base_model:quantized:google/t5-v1_1-xxl",
+            "license:apache-2.0",
+            "endpoints_compatible",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 2,
+          "likes": 19
         }
       ],
       "basic_fields": [
@@ -17495,20 +17819,11 @@
           "min": -1.0
         },
         {
-          "name": "enable_memory_efficient_attention",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Memory Efficient Attention",
-          "description": "Enable memory efficient attention to reduce VRAM usage."
-        },
-        {
           "name": "enable_cpu_offload",
           "type": {
             "type": "bool"
           },
-          "default": true,
+          "default": false,
           "title": "Enable Cpu Offload",
           "description": "Enable CPU offload to reduce VRAM usage."
         }
