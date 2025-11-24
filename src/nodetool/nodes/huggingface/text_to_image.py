@@ -16,11 +16,11 @@ from nodetool.metadata.types import (
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.image_to_image import pipeline_progress_callback
-from nodetool.integrations.huggingface.nunchaku_utils import (
+from nodetool.huggingface.nunchaku_utils import (
     get_nunchaku_text_encoder,
+    get_nunchaku_transformer,
 )
 from nodetool.nodes.huggingface.stable_diffusion_base import (
-    ModelVariant,
     _select_diffusion_dtype,
     StableDiffusionBaseNode,
     StableDiffusionXLBase,
@@ -101,23 +101,6 @@ def _apply_vae_optimizations(pipeline: Any):
         log.debug("Set VAE to channels_last memory format")
     except Exception as e:
         log.warning("Failed to set VAE channels_last memory format: %s", e)
-
-
-async def _get_nunchaku_text_encoder_kwargs(model_repo_id: str) -> dict[str, Any]:
-    """Return pipeline kwargs for loading a Nunchaku text encoder, if cached."""
-    try:
-        text_encoder = await get_nunchaku_text_encoder(model_repo_id)
-    except Exception as exc:
-        log.warning(
-            "Unable to load Nunchaku text encoder for %s: %s", model_repo_id, exc
-        )
-        return {}
-
-    if text_encoder is None:
-        return {}
-
-    return {"text_encoder_2": text_encoder}
-
 
 class StableDiffusion(StableDiffusionBaseNode):
     """
@@ -322,9 +305,10 @@ class StableDiffusionXL(StableDiffusionXLBase):
             transformer_filename,
             precision,
         )
-        unet = await asyncio.to_thread(
-            NunchakuSDXLUNet2DConditionModel.from_pretrained,
-            transformer_identifier,
+        unet = await self.load_model(
+            context=context,
+            model_id=transformer_identifier,
+            model_class=NunchakuSDXLUNet2DConditionModel,
             torch_dtype=torch_dtype,
             device="cpu",
         )
@@ -740,84 +724,22 @@ class Flux(HuggingFacePipelineNode):
         detected_variant: FluxVariant,
         hf_token: str | None = None,
     ):
-        """Load FLUX pipeline using a Nunchaku SVDQ transformer file."""
-        repo_id_lower = (self.model.repo_id or "").lower()
-        transformer_repo_id = self.model.repo_id or "nunchaku-tech/nunchaku-flux.1-dev"
-        if "svdq" not in repo_id_lower and "nunchaku" not in repo_id_lower:
-            transformer_repo_id = "nunchaku-tech/nunchaku-flux.1-dev"
-
-        precision = get_nunchaku_precision()
-        transformer_path = (
-            self.model.path
-            or f"svdq-{precision}_r32-flux.1-dev.safetensors"
+        transformer = await get_nunchaku_transformer(
+            context=context,
+            model_class=NunchakuFluxTransformer2dModel,
+            node_id=self.id,
+            repo_id=self.model.repo_id,
+            path=self.model.path or "",
         )
-
-        if "svdq" not in transformer_path.lower():
-            raise ValueError(
-                "Nunchaku Flux requires a transformer filename containing 'svdq'."
-            )
-
-        log.info(
-            "Loading Nunchaku transformer from %s/%s (precision=%s)",
-            transformer_repo_id,
-            transformer_path,
-            precision,
-        )
-
-        transformer_file = Path(transformer_path).expanduser()
-        cache_path: str | None = None
-
-        if transformer_file.is_file():
-            transformer_identifier = str(transformer_file)
-        else:
-            cache_path = try_to_load_from_cache(transformer_repo_id, transformer_path)
-            if not cache_path:
-                log.info(
-                    "Downloading Nunchaku transformer %s/%s to cache",
-                    transformer_repo_id,
-                    transformer_path,
-                )
-                hf_hub_download(
-                    transformer_repo_id,
-                    transformer_path,
-                    token=hf_token,
-                )
-                cache_path = try_to_load_from_cache(
-                    transformer_repo_id,
-                    transformer_path,
-                )
-                if not cache_path:
-                    raise ValueError(
-                        f"Downloading model {transformer_repo_id}/{transformer_path} from HuggingFace failed"
-                    )
-
-            transformer_identifier = cache_path or f"{transformer_repo_id}/{transformer_path}"
-
-        transformer = await asyncio.to_thread(
-            NunchakuFluxTransformer2dModel.from_pretrained,
-            transformer_identifier,
-            config=transformer_repo_id,
-            torch_dtype=torch_dtype,
-            token=hf_token,
-        )
-
-        base_model_id = self._get_base_model_id(detected_variant)
-        log.info(
-            "Creating FLUX pipeline from %s with Nunchaku transformer %s/%s",
-            base_model_id,
-            transformer_repo_id,
-            transformer_path,
-        )
-
-        text_encoder_kwargs = await _get_nunchaku_text_encoder_kwargs(transformer_repo_id)
+        text_encoder = await get_nunchaku_text_encoder(context, self.id)
 
         try:
             self._pipeline = FluxPipeline.from_pretrained(
-                base_model_id,
+                self._get_base_model_id(detected_variant),
                 transformer=transformer,
                 torch_dtype=torch_dtype,
                 token=hf_token,
-                **text_encoder_kwargs,
+                text_encoder_2=text_encoder,
             )
         except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
             raise ValueError(
@@ -1383,73 +1305,16 @@ class QwenImage(HuggingFacePipelineNode):
         torch_dtype,
     ):
         """Load Qwen-Image pipeline using a Nunchaku SVDQ transformer file."""
-        repo_id_lower = (self.model.repo_id or "").lower()
-        transformer_repo_id = self.model.repo_id or "nunchaku-tech/nunchaku-qwen-image"
-        if "svdq" not in repo_id_lower and "nunchaku" not in repo_id_lower:
-            transformer_repo_id = "nunchaku-tech/nunchaku-qwen-image"
-
-        precision = get_nunchaku_precision()
-        transformer_path = self.model.path or f"svdq-{precision}_r32-qwen-image.safetensors"
-
-        if "svdq" not in transformer_path.lower():
-            raise ValueError(
-                "Nunchaku Qwen-Image requires a transformer filename containing 'svdq'."
-            )
-
-        log.info(
-            "Loading Nunchaku Qwen-Image transformer from %s/%s (precision=%s)",
-            transformer_repo_id,
-            transformer_path,
-            precision,
-        )
-
-        transformer_file = Path(transformer_path).expanduser()
-        cache_path: str | None = None
-
-        if transformer_file.is_file():
-            transformer_identifier = str(transformer_file)
-        else:
-            cache_path = try_to_load_from_cache(transformer_repo_id, transformer_path)
-            if not cache_path:
-                log.info(
-                    "Downloading Nunchaku Qwen-Image transformer %s/%s to cache",
-                    transformer_repo_id,
-                    transformer_path,
-                )
-                hf_token = await context.get_secret("HF_TOKEN")
-                hf_hub_download(
-                    transformer_repo_id,
-                    transformer_path,
-                    token=hf_token,
-                )
-                cache_path = try_to_load_from_cache(
-                    transformer_repo_id,
-                    transformer_path,
-                )
-                if not cache_path:
-                    raise ValueError(
-                        f"Downloading model {transformer_repo_id}/{transformer_path} from HuggingFace failed"
-                    )
-
-            transformer_identifier = cache_path or f"{transformer_repo_id}/{transformer_path}"
-
-        hf_token = await context.get_secret("HF_TOKEN")
-
-        transformer = await asyncio.to_thread(
-            NunchakuQwenImageTransformer2DModel.from_pretrained,
-            transformer_identifier,
-            config="Qwen/Qwen-Image",
-            torch_dtype=torch_dtype,
-            token=hf_token,
-        )
-
-        log.info(
-            "Creating Qwen-Image pipeline from Qwen/Qwen-Image with Nunchaku transformer %s/%s",
-            transformer_repo_id,
-            transformer_path,
+        transformer = await get_nunchaku_transformer(
+            context=context,
+            model_class=NunchakuQwenImageTransformer2DModel,
+            node_id=self.id,
+            repo_id=self.model.repo_id,
+            path=self.model.path or "",
         )
 
         try:
+            hf_token = await context.get_secret("HF_TOKEN")
             self._pipeline = QwenImagePipeline.from_pretrained(
                 "Qwen/Qwen-Image",
                 transformer=transformer,
@@ -1624,7 +1489,7 @@ class FluxControl(HuggingFacePipelineNode):
         ]
 
     @classmethod
-    def get_recommended_models(cls) -> list[HFControlNetFlux]:
+    def get_recommended_models(cls) -> list[HFControlNetFlux | HFT5]:
         return [
             HFControlNetFlux(repo_id="black-forest-labs/FLUX.1-Depth-dev"),
             HFControlNetFlux(repo_id="black-forest-labs/FLUX.1-Canny-dev"),
@@ -1644,7 +1509,7 @@ class FluxControl(HuggingFacePipelineNode):
                 repo_id="nunchaku-tech/nunchaku-flux.1-canny-dev",
                 path="svdq-fp4_r32-flux.1-canny-dev.safetensors",
             ),
-            HuggingFaceModel(
+            HFT5(
                 repo_id="mit-han-lab/nunchaku-t5",
                 path="awq-int4-flux.1-t5xxl.safetensors",
             ),
@@ -1714,80 +1579,14 @@ class FluxControl(HuggingFacePipelineNode):
     ):
         variant_suffix, base_model_id = self._detect_flux_control_variant()
 
-        repo_id_lower = (self.model.repo_id or "").lower()
-        if "nunchaku" in repo_id_lower:
-            transformer_repo_id = self.model.repo_id
-        else:
-            transformer_repo_id = f"nunchaku-tech/nunchaku-flux.1-{variant_suffix}"
-
-        precision = get_nunchaku_precision()
-        transformer_path = (
-            self.model.path
-            or f"svdq-{precision}_r32-flux.1-{variant_suffix}.safetensors"
+        transformer = await get_nunchaku_transformer(
+            context=context,
+            model_class=NunchakuFluxTransformer2dModel,
+            node_id=self.id,
+            repo_id=self.model.repo_id,
+            path=self.model.path or "",
         )
-
-        if "svdq" not in transformer_path.lower():
-            raise ValueError(
-                "Nunchaku Flux Control requires a transformer filename containing 'svdq'."
-            )
-
-        log.info(
-            "Loading Nunchaku Flux Control transformer from %s/%s (precision=%s)",
-            transformer_repo_id,
-            transformer_path,
-            precision,
-        )
-
-        transformer_file = Path(transformer_path).expanduser()
-        transformer_identifier: str | None = None
-        transformer_filename = transformer_path
-
-        if transformer_file.is_file():
-            transformer_identifier = str(transformer_file)
-            transformer_filename = transformer_file.name
-        else:
-            cache_path = try_to_load_from_cache(transformer_repo_id, transformer_path)
-            if not cache_path:
-                log.info(
-                    "Downloading Nunchaku Flux Control transformer %s/%s",
-                    transformer_repo_id,
-                    transformer_path,
-                )
-                hf_hub_download(
-                    transformer_repo_id,
-                    transformer_path,
-                    token=hf_token,
-                )
-                cache_path = try_to_load_from_cache(
-                    transformer_repo_id,
-                    transformer_path,
-                )
-                if not cache_path:
-                    raise ValueError(
-                        f"Downloading model {transformer_repo_id}/{transformer_path} "
-                        "from HuggingFace failed"
-                    )
-
-            transformer_identifier = cache_path or f"{transformer_repo_id}/{transformer_path}"
-
-        assert transformer_identifier is not None
-
-        transformer = await asyncio.to_thread(
-            NunchakuFluxTransformer2dModel.from_pretrained,
-            transformer_identifier,
-            config=transformer_repo_id,
-            torch_dtype=torch_dtype,
-            token=hf_token,
-        )
-
-        log.info(
-            "Creating FLUX Control pipeline from %s with Nunchaku transformer %s/%s",
-            base_model_id,
-            transformer_repo_id,
-            transformer_filename,
-        )
-
-        text_encoder_kwargs = await _get_nunchaku_text_encoder_kwargs(transformer_repo_id)
+        text_encoder = await get_nunchaku_text_encoder(context, self.id)
 
         try:
             self._pipeline = FluxControlPipeline.from_pretrained(
@@ -1795,7 +1594,7 @@ class FluxControl(HuggingFacePipelineNode):
                 transformer=transformer,
                 torch_dtype=torch_dtype,
                 token=hf_token,
-                **text_encoder_kwargs,
+                text_encoder_2=text_encoder,
             )
         except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
             raise ValueError(

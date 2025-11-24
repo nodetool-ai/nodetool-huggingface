@@ -74,6 +74,11 @@ from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
 from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+from nodetool.huggingface.nunchaku_utils import (
+    get_nunchaku_text_encoder,
+    get_nunchaku_transformer,
+)
+from nunchaku import NunchakuFluxTransformer2dModel
 
 # Import specific pipeline classes
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import (
@@ -432,6 +437,69 @@ def _flux_variant_to_base_model_id(variant: str) -> str:
     return mapping.get(variant, "black-forest-labs/FLUX.1-dev")
 
 
+def _is_nunchaku_transformer(repo_id: str, file_path: str | None) -> bool:
+    """Detect Nunchaku FLUX transformer files."""
+    if not file_path:
+        return False
+    repo_lower = repo_id.lower()
+    return (
+        "nunchaku" in repo_lower
+        and "flux" in repo_lower
+        and "svdq" in file_path.lower()
+    )
+
+
+def _node_identifier(node_id: str | None, repo_id: str) -> str:
+    """Derive a unique identifier for caching based on node ID or repo."""
+    return node_id or repo_id
+
+
+async def _load_nunchaku_flux_pipeline(
+    context: ProcessingContext,
+    repo_id: str,
+    transformer_path: str,
+    node_id: str | None,
+) -> FluxPipeline:
+    """Load a FLUX pipeline with a Nunchaku transformer/text encoder pair."""
+    variant = _detect_flux_variant(repo_id, transformer_path)
+    base_model_id = _flux_variant_to_base_model_id(variant)
+    hf_token = await context.get_secret("HF_TOKEN")
+    if not hf_token:
+        raise ValueError(
+            "Flux is a gated model, please set the HF_TOKEN in Nodetool settings and accept the terms of use for the model: "
+            f"https://huggingface.co/{base_model_id}"
+        )
+
+    torch_dtype = torch.bfloat16 if variant in ["schnell", "dev"] else torch.float16
+    node_key = _node_identifier(node_id, repo_id)
+
+    transformer = await get_nunchaku_transformer(
+        context=context,
+        model_class=NunchakuFluxTransformer2dModel,
+        node_id=node_key,
+        repo_id=repo_id,
+        path=transformer_path,
+    )
+
+    text_encoder = await get_nunchaku_text_encoder(context, node_key)
+
+    pipeline_kwargs: dict[str, Any] = {
+        "transformer": transformer,
+        "torch_dtype": torch_dtype,
+        "token": hf_token,
+    }
+    if text_encoder is not None:
+        pipeline_kwargs["text_encoder_2"] = text_encoder
+
+    try:
+        return FluxPipeline.from_pretrained(base_model_id, **pipeline_kwargs)
+    except torch.OutOfMemoryError as exc:  # type: ignore[attr-defined]
+        raise ValueError(
+            "VRAM out of memory while loading Flux with the Nunchaku transformer. "
+            "Try enabling 'CPU offload' or reduce image size/steps."
+        ) from exc
+
+
 async def _load_flux_gguf_pipeline(
     repo_id: str,
     file_path: str,
@@ -607,7 +675,14 @@ class HuggingFaceLocalProvider(BaseProvider):
                 if not model_info.tags:
                     raise ValueError(f"Model {params.model.id} has no tags")
 
-                if _is_flux_gguf_model(params.model.id, params.model.path):
+                if _is_nunchaku_transformer(params.model.id, params.model.path):
+                    pipeline = await _load_nunchaku_flux_pipeline(
+                        context=context,
+                        repo_id=params.model.id,
+                        transformer_path=params.model.path,
+                        node_id=node_id,
+                    )
+                elif _is_flux_gguf_model(params.model.id, params.model.path):
                     pipeline = await _load_flux_gguf_pipeline(
                         repo_id=params.model.id,
                         file_path=params.model.path,
@@ -769,7 +844,14 @@ class HuggingFaceLocalProvider(BaseProvider):
                         f"Single-file model {params.model.id}/{params.model.path} must be downloaded first"
                     )
 
-                if _is_flux_gguf_model(params.model.id, params.model.path):
+                if _is_nunchaku_transformer(params.model.id, params.model.path):
+                    pipeline = await _load_nunchaku_flux_pipeline(
+                        context=context,
+                        repo_id=params.model.id,
+                        transformer_path=params.model.path,
+                        node_id=node_id,
+                    )
+                elif _is_flux_gguf_model(params.model.id, params.model.path):
                     pipeline = await _load_flux_gguf_pipeline(
                         repo_id=params.model.id,
                         file_path=params.model.path,
@@ -1172,6 +1254,8 @@ class HuggingFaceLocalProvider(BaseProvider):
             ValueError: If required parameters are missing or context not provided
             RuntimeError: If generation fails
         """
+        from nodetool.nodes.huggingface.text_to_video import AutoencoderKLWan, WanPipeline
+        from nodetool.nodes.huggingface.text_to_video import pipeline_progress_callback
         if context is None:
             raise ValueError(
                 "ProcessingContext is required for HuggingFace text-to-video generation"
@@ -1948,15 +2032,33 @@ if __name__ == "__main__":
         models = await provider.get_available_language_models()
         print(models)
 
+    async def test_available_image_models():
+        """Test the available_image_models method."""
+        provider = HuggingFaceLocalProvider()
+        models = await provider.get_available_image_models()
+        print(models)
+
+    async def test_available_tts_models():
+        """Test the available_tts_models method."""
+        provider = HuggingFaceLocalProvider()
+        models = await provider.get_available_tts_models()
+        print(models)
+
+    async def test_available_asr_models():
+        """Test the available_asr_models method."""
+        provider = HuggingFaceLocalProvider()
+        models = await provider.get_available_asr_models()
+        print(models)
+
     # Run tests
     print("=" * 50)
     print("Testing HuggingFace Local Provider")
     print("=" * 50)
 
-    # asyncio.run(test_available_language_models())
+    asyncio.run(test_available_image_models())
 
     # # Test streaming
-    asyncio.run(test_generate_messages())
+    # asyncio.run(test_generate_messages())
 
     # # Test non-streaming
     # asyncio.run(test_generate_message())

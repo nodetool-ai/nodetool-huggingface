@@ -8959,86 +8959,6 @@
       ],
       "recommended_models": [
         {
-          "id": "YarvixPA/FLUX.1-Fill-dev-GGUF:flux1-fill-dev-Q4_K_S.gguf",
-          "type": "hf.inpainting",
-          "name": "YarvixPA/FLUX.1-Fill-dev-GGUF",
-          "repo_id": "YarvixPA/FLUX.1-Fill-dev-GGUF",
-          "path": "flux1-fill-dev-Q4_K_S.gguf",
-          "size_on_disk": 6809920800,
-          "tags": [
-            "gguf",
-            "flux",
-            "image-generation",
-            "base_model:black-forest-labs/FLUX.1-Fill-dev",
-            "base_model:quantized:black-forest-labs/FLUX.1-Fill-dev",
-            "license:other",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 10254,
-          "likes": 124
-        },
-        {
-          "id": "YarvixPA/FLUX.1-Fill-dev-GGUF:flux1-fill-dev-Q5_K_S.gguf",
-          "type": "hf.inpainting",
-          "name": "YarvixPA/FLUX.1-Fill-dev-GGUF",
-          "repo_id": "YarvixPA/FLUX.1-Fill-dev-GGUF",
-          "path": "flux1-fill-dev-Q5_K_S.gguf",
-          "size_on_disk": 8289199392,
-          "tags": [
-            "gguf",
-            "flux",
-            "image-generation",
-            "base_model:black-forest-labs/FLUX.1-Fill-dev",
-            "base_model:quantized:black-forest-labs/FLUX.1-Fill-dev",
-            "license:other",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 10254,
-          "likes": 124
-        },
-        {
-          "id": "YarvixPA/FLUX.1-Fill-dev-GGUF:flux1-fill-dev-Q6_K.gguf",
-          "type": "hf.inpainting",
-          "name": "YarvixPA/FLUX.1-Fill-dev-GGUF",
-          "repo_id": "YarvixPA/FLUX.1-Fill-dev-GGUF",
-          "path": "flux1-fill-dev-Q6_K.gguf",
-          "size_on_disk": 9860932896,
-          "tags": [
-            "gguf",
-            "flux",
-            "image-generation",
-            "base_model:black-forest-labs/FLUX.1-Fill-dev",
-            "base_model:quantized:black-forest-labs/FLUX.1-Fill-dev",
-            "license:other",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 10254,
-          "likes": 124
-        },
-        {
-          "id": "YarvixPA/FLUX.1-Fill-dev-GGUF:flux1-fill-dev-Q8_0.gguf",
-          "type": "hf.inpainting",
-          "name": "YarvixPA/FLUX.1-Fill-dev-GGUF",
-          "repo_id": "YarvixPA/FLUX.1-Fill-dev-GGUF",
-          "path": "flux1-fill-dev-Q8_0.gguf",
-          "size_on_disk": 12727035168,
-          "tags": [
-            "gguf",
-            "flux",
-            "image-generation",
-            "base_model:black-forest-labs/FLUX.1-Fill-dev",
-            "base_model:quantized:black-forest-labs/FLUX.1-Fill-dev",
-            "license:other",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 10254,
-          "likes": 124
-        },
-        {
           "id": "black-forest-labs/FLUX.1-Fill-dev",
           "type": "hf.inpainting",
           "name": "black-forest-labs/FLUX.1-Fill-dev",
@@ -9810,7 +9730,7 @@
     },
     {
       "title": "Qwen Image Edit",
-      "description": "Performs image editing using the Qwen Image Edit model with support for GGUF quantization.\n    image, editing, semantic, appearance, qwen, multimodal, quantization\n\n    Use cases:\n    - Semantic editing (object rotation, style transfer)\n    - Appearance editing (adding/removing elements)\n    - Precise text modifications in images\n    - Background and clothing changes\n    - Complex image transformations guided by text\n    - Memory-efficient editing using GGUF quantization",
+      "description": "Performs image editing using the Qwen Image Edit model with support for Nunchaku quantization.\n    image, editing, semantic, appearance, qwen, multimodal, quantization\n\n    Use cases:\n    - Semantic editing (object rotation, style transfer)\n    - Appearance editing (adding/removing elements)\n    - Precise text modifications in images\n    - Background and clothing changes\n    - Complex image transformations guided by text\n    - Memory-efficient editing using Nunchaku quantization",
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.QwenImageEdit",
       "properties": [
@@ -9821,8 +9741,8 @@
           },
           "default": {
             "type": "hf.qwen_image_edit",
-            "repo_id": "QuantStack/Qwen-Image-Edit-2509-GGUF",
-            "path": "Qwen-Image-Edit-2509-Q4_K_M.gguf",
+            "repo_id": "mit-han-lab/nunchaku-qwen-image-edit",
+            "path": "awq-int4-qwen-image-edit.safetensors",
             "variant": null,
             "allow_patterns": null,
             "ignore_patterns": null
@@ -9923,48 +9843,11 @@
       ],
       "recommended_models": [
         {
-          "id": "QuantStack/Qwen-Image-Edit-2509-GGUF:Qwen-Image-Edit-2509-Q4_K_M.gguf",
+          "id": "mit-han-lab/nunchaku-qwen-image-edit:awq-int4-qwen-image-edit.safetensors",
           "type": "hf.qwen_image_edit",
-          "name": "QuantStack/Qwen-Image-Edit-2509-GGUF",
-          "repo_id": "QuantStack/Qwen-Image-Edit-2509-GGUF",
-          "path": "Qwen-Image-Edit-2509-Q4_K_M.gguf",
-          "size_on_disk": 13065746976,
-          "pipeline_tag": "image-to-image",
-          "tags": [
-            "gguf",
-            "image-to-image",
-            "en",
-            "zh",
-            "base_model:Qwen/Qwen-Image-Edit-2509",
-            "base_model:quantized:Qwen/Qwen-Image-Edit-2509",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 158873,
-          "likes": 260
-        },
-        {
-          "id": "QuantStack/Qwen-Image-Edit-2509-GGUF:Qwen-Image-Edit-2509-Q8_0.gguf",
-          "type": "hf.qwen_image_edit",
-          "name": "QuantStack/Qwen-Image-Edit-2509-GGUF",
-          "repo_id": "QuantStack/Qwen-Image-Edit-2509-GGUF",
-          "path": "Qwen-Image-Edit-2509-Q8_0.gguf",
-          "size_on_disk": 21761817120,
-          "pipeline_tag": "image-to-image",
-          "tags": [
-            "gguf",
-            "image-to-image",
-            "en",
-            "zh",
-            "base_model:Qwen/Qwen-Image-Edit-2509",
-            "base_model:quantized:Qwen/Qwen-Image-Edit-2509",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 158873,
-          "likes": 260
+          "name": "mit-han-lab/nunchaku-qwen-image-edit",
+          "repo_id": "mit-han-lab/nunchaku-qwen-image-edit",
+          "path": "awq-int4-qwen-image-edit.safetensors"
         }
       ],
       "basic_fields": [
@@ -16942,7 +16825,7 @@
     },
     {
       "title": "Flux",
-      "description": "Generates images using FLUX models with support for GGUF quantization for memory efficiency.\n    image, generation, AI, text-to-image, flux, quantization\n\n    Use cases:\n    - High-quality image generation with FLUX models\n    - Memory-efficient generation using GGUF quantization\n    - Fast generation with FLUX.1-schnell\n    - High-fidelity generation with FLUX.1-dev\n    - Controlled generation with Fill, Canny, or Depth variants",
+      "description": "Generates images using FLUX models with support for Nunchaku quantization.\n    image, generation, AI, text-to-image, flux, quantization\n\n    Use cases:\n    - High-quality image generation with FLUX models\n    - Memory-efficient generation using Nunchaku quantization\n    - Fast generation with FLUX.1-schnell\n    - High-fidelity generation with FLUX.1-dev\n    - Controlled generation with Fill, Canny, or Depth variants",
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.Flux",
       "properties": [
@@ -17160,52 +17043,65 @@
           "likes": 39
         },
         {
-          "id": "city96/FLUX.1-dev-gguf:flux1-dev-Q4_K_S.gguf",
+          "id": "mit-han-lab/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
           "type": "hf.flux",
-          "name": "city96/FLUX.1-dev-gguf",
-          "repo_id": "city96/FLUX.1-dev-gguf",
-          "path": "flux1-dev-Q4_K_S.gguf",
-          "size_on_disk": 6805988640,
+          "name": "mit-han-lab/nunchaku-flux.1-schnell",
+          "repo_id": "mit-han-lab/nunchaku-flux.1-schnell",
+          "path": "svdq-int4_r32-flux.1-schnell.safetensors",
+          "size_on_disk": 6747849760,
           "pipeline_tag": "text-to-image",
           "tags": [
-            "gguf",
+            "diffusers",
             "text-to-image",
-            "image-generation",
-            "flux",
-            "base_model:black-forest-labs/FLUX.1-dev",
-            "base_model:quantized:black-forest-labs/FLUX.1-dev",
-            "license:other",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 65827,
-          "likes": 1237
-        },
-        {
-          "id": "city96/FLUX.1-schnell-gguf:flux1-schnell-Q4_K_S.gguf",
-          "type": "hf.flux",
-          "name": "city96/FLUX.1-schnell-gguf",
-          "repo_id": "city96/FLUX.1-schnell-gguf",
-          "path": "flux1-schnell-Q4_K_S.gguf",
-          "size_on_disk": 6783943712,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "gguf",
-            "text-to-image",
-            "image-generation",
-            "flux",
+            "SVDQuant",
+            "FLUX.1-schnell",
+            "FLUX.1",
+            "Diffusion",
+            "Quantization",
+            "ICLR2025",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
             "base_model:black-forest-labs/FLUX.1-schnell",
             "base_model:quantized:black-forest-labs/FLUX.1-schnell",
             "license:apache-2.0",
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 34355,
-          "likes": 287
+          "downloads": 601,
+          "likes": 8
+        },
+        {
+          "id": "mit-han-lab/nunchaku-flux.1-dev:svdq-fp4_r32-flux.1-schnell.safetensors",
+          "type": "hf.flux",
+          "name": "mit-han-lab/nunchaku-flux.1-dev",
+          "repo_id": "mit-han-lab/nunchaku-flux.1-dev",
+          "path": "svdq-fp4_r32-flux.1-schnell.safetensors",
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "text-to-image",
+            "SVDQuant",
+            "FLUX.1-dev",
+            "FLUX.1",
+            "Diffusion",
+            "Quantization",
+            "ICLR2025",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:black-forest-labs/FLUX.1-dev",
+            "base_model:quantized:black-forest-labs/FLUX.1-dev",
+            "license:other",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 13611,
+          "likes": 59
         },
         {
           "id": "mit-han-lab/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
-          "type": "hf.model",
+          "type": "hf.t5",
           "name": "mit-han-lab/nunchaku-t5",
           "repo_id": "mit-han-lab/nunchaku-t5",
           "path": "awq-int4-flux.1-t5xxl.safetensors",
@@ -17726,7 +17622,7 @@
     },
     {
       "title": "Qwen-Image",
-      "description": "Generates images from text prompts using Qwen-Image with support for GGUF quantization.\n    image, generation, AI, text-to-image, qwen, quantization\n\n    Use cases:\n    - High-quality, general-purpose text-to-image generation\n    - Memory-efficient generation using GGUF quantization\n    - Quick prototyping leveraging AutoPipeline\n    - Works out-of-the-box with the official Qwen model",
+      "description": "Generates images from text prompts using Qwen-Image with support for Nunchaku quantization.\n    image, generation, AI, text-to-image, qwen, quantization\n\n    Use cases:\n    - High-quality, general-purpose text-to-image generation\n    - Memory-efficient generation using Nunchaku quantization\n    - Quick prototyping leveraging AutoPipeline\n    - Works out-of-the-box with the official Qwen model",
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.QwenImage",
       "properties": [
@@ -17892,50 +17788,6 @@
           "has_model_index": false,
           "downloads": 69955,
           "likes": 229
-        },
-        {
-          "id": "city96/Qwen-Image-gguf:qwen-image-Q4_K_M.gguf",
-          "type": "hf.qwen_image",
-          "name": "city96/Qwen-Image-gguf",
-          "repo_id": "city96/Qwen-Image-gguf",
-          "path": "qwen-image-Q4_K_M.gguf",
-          "size_on_disk": 13065746976,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "gguf",
-            "text-to-image",
-            "en",
-            "zh",
-            "base_model:Qwen/Qwen-Image",
-            "base_model:quantized:Qwen/Qwen-Image",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 60970,
-          "likes": 269
-        },
-        {
-          "id": "city96/Qwen-Image-gguf:qwen-image-Q8_0.gguf",
-          "type": "hf.qwen_image",
-          "name": "city96/Qwen-Image-gguf",
-          "repo_id": "city96/Qwen-Image-gguf",
-          "path": "qwen-image-Q8_0.gguf",
-          "size_on_disk": 21761817120,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "gguf",
-            "text-to-image",
-            "en",
-            "zh",
-            "base_model:Qwen/Qwen-Image",
-            "base_model:quantized:Qwen/Qwen-Image",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 60970,
-          "likes": 269
         }
       ],
       "basic_fields": [

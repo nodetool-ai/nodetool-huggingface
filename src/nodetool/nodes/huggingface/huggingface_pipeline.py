@@ -62,8 +62,6 @@ class HuggingFacePipelineNode(BaseNode):
         context: ProcessingContext,
         pipeline_task: str,
         model_id: Any,
-        device: str | None = None,
-        torch_dtype: torch.dtype | None = None,
         **kwargs: Any,
     ):
         """Load a HuggingFace pipeline model (instance method wrapper)."""
@@ -72,8 +70,6 @@ class HuggingFacePipelineNode(BaseNode):
             context,
             pipeline_task,
             model_id,
-            device=device,
-            torch_dtype=torch_dtype,
             skip_cache=self.should_skip_cache(),
             **kwargs,
         )
@@ -83,9 +79,6 @@ class HuggingFacePipelineNode(BaseNode):
         context: ProcessingContext,
         model_class: type[T],
         model_id: str,
-        variant: str | None = None,
-        torch_dtype: torch.dtype | None = None,
-        path: str | None = None,
         skip_cache: bool = False,
         **kwargs: Any,
     ) -> T:
@@ -95,9 +88,6 @@ class HuggingFacePipelineNode(BaseNode):
             context,
             model_class,
             model_id,
-            variant=variant,
-            torch_dtype=torch_dtype,
-            path=path,
             skip_cache=skip_cache or self.should_skip_cache(),
             **kwargs,
         )

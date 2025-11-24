@@ -7,8 +7,9 @@ from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 from diffusers.models.autoencoders.vae import DecoderOutput
 from diffusers.models.modeling_outputs import AutoencoderKLOutput
 from nodetool.config.logging_config import get_logger
-from nodetool.integrations.huggingface.nunchaku_utils import (
+from nodetool.huggingface.nunchaku_utils import (
     get_nunchaku_text_encoder,
+    get_nunchaku_transformer,
 )
 from nodetool.workflows.types import NodeProgress
 import torch
@@ -98,10 +99,12 @@ from pydantic import Field
 log = get_logger(__name__)
 
 
-async def _get_nunchaku_text_encoder_kwargs(model_repo_id: str) -> dict[str, Any]:
+async def _get_nunchaku_text_encoder_kwargs(
+    context: ProcessingContext, node_id: str, model_repo_id: str
+) -> dict[str, Any]:
     """Return kwargs for Flux pipelines when a Nunchaku text encoder is available."""
     try:
-        text_encoder = await get_nunchaku_text_encoder(model_repo_id)
+        text_encoder = await get_nunchaku_text_encoder(context, node_id)
     except Exception as exc:
         log.warning(
             "Unable to load Nunchaku text encoder for %s: %s", model_repo_id, exc
@@ -2573,55 +2576,25 @@ class FluxKontext(HuggingFacePipelineNode):
             precision,
         )
 
-        transformer_file = Path(transformer_path).expanduser()
-        transformer_identifier: str | None = None
-        transformer_filename = transformer_path
-
-        if transformer_file.is_file():
-            transformer_identifier = str(transformer_file)
-            transformer_filename = transformer_file.name
-        else:
-            cache_path = try_to_load_from_cache(transformer_repo_id, transformer_path)
-            if not cache_path:
-                log.info(
-                    "Downloading Nunchaku Flux Kontext transformer %s/%s",
-                    transformer_repo_id,
-                    transformer_path,
-                )
-                hf_hub_download(
-                    transformer_repo_id,
-                    transformer_path,
-                    token=hf_token,
-                )
-                cache_path = try_to_load_from_cache(
-                    transformer_repo_id,
-                    transformer_path,
-                )
-                if not cache_path:
-                    raise ValueError(
-                        f"Downloading model {transformer_repo_id}/{transformer_path} "
-                        "from HuggingFace failed"
-                    )
-
-            transformer_identifier = cache_path or f"{transformer_repo_id}/{transformer_path}"
-
-        assert transformer_identifier is not None
-
-        transformer = await asyncio.to_thread(
-            NunchakuFluxTransformer2dModel.from_pretrained,
-            transformer_identifier,
-            config=transformer_repo_id,
-            torch_dtype=torch_dtype,
-            token=hf_token,
+        transformer = await get_nunchaku_transformer(
+            context=context,
+            model_class=NunchakuFluxTransformer2dModel,
+            node_id=self.id,
+            repo_id=transformer_repo_id,
+            path=transformer_path,
         )
 
         log.info(
             "Creating FLUX Kontext pipeline from %s with Nunchaku transformer %s/%s",
             "black-forest-labs/FLUX.1-Kontext-dev",
             transformer_repo_id,
-            transformer_filename,
+            transformer_path,
         )
-        text_encoder_kwargs = await _get_nunchaku_text_encoder_kwargs(transformer_repo_id)
+        text_encoder_kwargs = await _get_nunchaku_text_encoder_kwargs(
+            context,
+            self.id,
+            transformer_repo_id,
+        )
         try:
             self._pipeline = FluxKontextPipeline.from_pretrained(
                 "black-forest-labs/FLUX.1-Kontext-dev",
