@@ -274,16 +274,13 @@ class QwenImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]
     - Works out-of-the-box with the official Qwen model
     """
 
-    model: types.HFQwenImage | OutputHandle[types.HFQwenImage] = connect_field(
-        default=types.HFQwenImage(
-            type="hf.qwen_image",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The Qwen-Image model to use for text-to-image generation.",
+    QwenQuantization: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.text_to_image.QwenQuantization
+    )
+
+    quantization: nodetool.nodes.huggingface.text_to_image.QwenQuantization = Field(
+        default=nodetool.nodes.huggingface.text_to_image.QwenQuantization.INT4,
+        description="The quantization level to use.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="A cat holding a sign that says hello world",

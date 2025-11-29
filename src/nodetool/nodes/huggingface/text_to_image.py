@@ -1078,6 +1078,12 @@ class Chroma(HuggingFacePipelineNode):
         ]
 
 
+class QwenQuantization(Enum):
+    FP16 = "fp16"
+    FP4 = "fp4"
+    INT4 = "int4"
+
+
 # TODO: Wait for diffusers release
 class QwenImage(HuggingFacePipelineNode):
     """
@@ -1091,9 +1097,9 @@ class QwenImage(HuggingFacePipelineNode):
     - Works out-of-the-box with the official Qwen model
     """
 
-    model: HFQwenImage = Field(
-        default=HFQwenImage(),
-        description="The Qwen-Image model to use for text-to-image generation.",
+    quantization: QwenQuantization = Field(
+        default=QwenQuantization.INT4,
+        description="The quantization level to use.",
     )
     prompt: str = Field(
         default="A cat holding a sign that says hello world",
@@ -1132,17 +1138,25 @@ class QwenImage(HuggingFacePipelineNode):
         description="Seed for the random number generator. Use -1 for a random seed.",
         ge=-1,
     )
-    enable_cpu_offload: bool = Field(
-        default=False,
-        description="Enable CPU offload to reduce VRAM usage.",
-    )
 
     _pipeline: Any | None = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFQwenImage]:
+        allow_patterns = [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "tokenizer/*",
+            "tokenizer_2/*",
+        ]
         return [
-            # Nunchaku SVDQ transformers (auto-detected precision)
+            HFQwenImage(
+                repo_id="Qwen/Qwen-Image",
+                allow_patterns=allow_patterns,
+            ),
             HFQwenImage(
                 repo_id="nunchaku-tech/nunchaku-qwen-image",
                 path="svdq-int4_r32-qwen-image.safetensors",
@@ -1160,7 +1174,7 @@ class QwenImage(HuggingFacePipelineNode):
     @classmethod
     def get_basic_fields(cls) -> list[str]:
         return [
-            "model",
+            "quantization",
             "prompt",
             "negative_prompt",
             "height",
@@ -1168,15 +1182,29 @@ class QwenImage(HuggingFacePipelineNode):
             "num_inference_steps",
         ]
 
+    def _resolve_model_config(self) -> HFQwenImage:
+        if self.quantization == QwenQuantization.FP4:
+            return HFQwenImage(
+                repo_id="nunchaku-tech/nunchaku-qwen-image",
+                path="svdq-fp4_r32-qwen-image.safetensors",
+            )
+        elif self.quantization == QwenQuantization.INT4:
+            return HFQwenImage(
+                repo_id="nunchaku-tech/nunchaku-qwen-image",
+                path="svdq-int4_r32-qwen-image.safetensors",
+            )
+        else:
+            return HFQwenImage(repo_id="Qwen/Qwen-Image")
+
     def get_model_id(self) -> str:
-        if self.model.repo_id:
-            return self.model.repo_id
-        return "Qwen/Qwen-Image"
+        model = self._resolve_model_config()
+        return model.repo_id
 
     def _is_nunchaku_model(self) -> bool:
         """Detect Nunchaku SVDQ transformers via repo or filename."""
-        repo_has_svdq = self.model.repo_id and "svdq" in self.model.repo_id.lower()
-        path_has_svdq = self.model.path and "svdq" in self.model.path.lower()
+        model = self._resolve_model_config()
+        repo_has_svdq = model.repo_id and "svdq" in model.repo_id.lower()
+        path_has_svdq = model.path and "svdq" in model.path.lower()
         return bool(repo_has_svdq or path_has_svdq)
 
     async def preload_model(self, context: ProcessingContext):
@@ -1192,6 +1220,10 @@ class QwenImage(HuggingFacePipelineNode):
 
         torch_dtype = _select_diffusion_dtype()
 
+        # Ensure model is present in cache
+        if not try_to_load_from_cache(self.get_model_id(), "model_index.json"):
+            raise ValueError(f"Model {self.get_model_id()} must be downloaded")
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=QwenImagePipeline,
@@ -1205,20 +1237,24 @@ class QwenImage(HuggingFacePipelineNode):
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
-        self._pipeline.enable_model_cpu_offload()
-
     async def _load_nunchaku_model(
         self,
         context: ProcessingContext,
         torch_dtype,
     ):
         """Load Qwen-Image pipeline using a Nunchaku SVDQ transformer file."""
+        model = self._resolve_model_config()
+        
+        # Ensure model is present in cache
+        if not try_to_load_from_cache(model.repo_id, model.path):
+            raise ValueError(f"Transformer model {model.repo_id}/{model.path} must be downloaded")
+
         transformer = await get_nunchaku_transformer(
             context=context,
             model_class=NunchakuQwenImageTransformer2DModel,
             node_id=self.id,
-            repo_id=self.model.repo_id,
-            path=self.model.path or "",
+            repo_id=model.repo_id,
+            path=model.path or "",
         )
 
         try:
@@ -1229,68 +1265,23 @@ class QwenImage(HuggingFacePipelineNode):
                 torch_dtype=torch_dtype,
                 token=hf_token,
             )
+            if get_gpu_memory() > 18:
+                self._pipeline.enable_model_cpu_offload()
+            else:
+                # use per-layer offloading for low VRAM. This only requires 3-4GB of VRAM.
+                transformer.set_offload(
+                    True, use_pin_memory=False, num_blocks_on_gpu=1
+                )  # increase num_blocks_on_gpu if you have more VRAM
+                self._pipeline._exclude_from_cpu_offload.append("transformer")
+                self._pipeline.enable_sequential_cpu_offload()
         except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
             raise ValueError(
                 "VRAM out of memory while loading Qwen-Image with the Nunchaku transformer. "
                 "Try enabling CPU offload or reduce image size/steps."
             ) from e
 
-        # Apply memory and offload optimizations
-        _enable_pytorch2_attention(self._pipeline)
-        _apply_vae_optimizations(self._pipeline)
-
-        if self.enable_cpu_offload and self._pipeline is not None:
-            try:
-                gpu_mem_gb = get_gpu_memory()
-            except Exception as e:  # pragma: no cover - GPU utility may not be available in all envs
-                log.warning(
-                    "Failed to query GPU memory for Nunchaku Qwen-Image: %s. "
-                    "Falling back to standard model CPU offload.",
-                    e,
-                )
-                self._pipeline.enable_model_cpu_offload()
-            else:
-                if gpu_mem_gb > 18:
-                    # High VRAM: offload entire pipeline to CPU with automatic GPU placement.
-                    self._pipeline.enable_model_cpu_offload()
-                else:
-                    # Low VRAM: per-layer offloading requires ~3–4GB of VRAM.
-                    try:
-                        transformer.set_offload(True, use_pin_memory=False, num_blocks_on_gpu=1)
-                    except Exception as e:
-                        log.warning(
-                            "Failed to enable per-layer offload on Nunchaku Qwen-Image transformer: %s",
-                            e,
-                        )
-                    exclude = getattr(self._pipeline, "_exclude_from_cpu_offload", None)
-                    if isinstance(exclude, list):
-                        exclude.append("transformer")
-                    self._pipeline.enable_sequential_cpu_offload()
-
     async def move_to_device(self, device: str):
-        if self._pipeline is not None:
-            # Handle CPU offload case
-            if self.enable_cpu_offload:
-                # When moving to CPU, force all components to CPU
-                if device == "cpu":
-                    try:
-                        self._pipeline.to(device)
-                    except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
-                        raise ValueError(
-                            "VRAM out of memory while moving Qwen-Image pipeline to CPU. "
-                            "Reduce image size/steps."
-                        ) from e
-                # For GPU devices, rely on the offload configuration set up at load time
-                # (model or sequential CPU offload) instead of reconfiguring here.
-            else:
-                # Normal device movement without CPU offload
-                try:
-                    self._pipeline.to(device)
-                except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
-                    raise ValueError(
-                        "VRAM out of memory while moving Qwen-Image pipeline to device. "
-                        "Enable 'CPU offload' in advanced node properties or reduce image size/steps."
-                    ) from e
+        pass
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:

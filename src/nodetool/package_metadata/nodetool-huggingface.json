@@ -17520,20 +17520,19 @@
       "node_type": "huggingface.text_to_image.QwenImage",
       "properties": [
         {
-          "name": "model",
+          "name": "quantization",
           "type": {
-            "type": "hf.qwen_image"
+            "type": "enum",
+            "values": [
+              "fp16",
+              "fp4",
+              "int4"
+            ],
+            "type_name": "nodetool.nodes.huggingface.text_to_image.QwenQuantization"
           },
-          "default": {
-            "type": "hf.qwen_image",
-            "repo_id": "",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Model",
-          "description": "The Qwen-Image model to use for text-to-image generation."
+          "default": "int4",
+          "title": "Quantization",
+          "description": "The quantization level to use."
         },
         {
           "name": "prompt",
@@ -17627,6 +17626,38 @@
       ],
       "recommended_models": [
         {
+          "id": "Qwen/Qwen-Image",
+          "type": "hf.qwen_image",
+          "name": "Qwen/Qwen-Image",
+          "repo_id": "Qwen/Qwen-Image",
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "tokenizer/*",
+            "tokenizer_2/*"
+          ],
+          "size_on_disk": 16843547133,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "text-to-image",
+            "en",
+            "zh",
+            "arxiv:2508.02324",
+            "license:apache-2.0",
+            "diffusers:QwenImagePipeline",
+            "deploy:azure",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 244342,
+          "likes": 2227
+        },
+        {
           "id": "nunchaku-tech/nunchaku-qwen-image:svdq-int4_r32-qwen-image.safetensors",
           "type": "hf.qwen_image",
           "name": "nunchaku-tech/nunchaku-qwen-image",
@@ -17684,7 +17715,7 @@
         }
       ],
       "basic_fields": [
-        "model",
+        "quantization",
         "prompt",
         "negative_prompt",
         "height",
