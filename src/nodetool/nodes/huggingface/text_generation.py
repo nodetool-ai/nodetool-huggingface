@@ -101,6 +101,7 @@ class TextGeneration(HuggingFacePipelineNode):
             top_p=self.top_p,
             do_sample=self.do_sample,
             context=context,
+            node_id=self.id,
         ):
             if not isinstance(item, Chunk):
                 continue

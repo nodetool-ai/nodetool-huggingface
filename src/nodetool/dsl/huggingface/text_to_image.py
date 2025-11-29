@@ -62,13 +62,6 @@ class Chroma(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=True, description="Enable CPU offload to reduce VRAM usage."
     )
-    enable_vae_slicing: bool | OutputHandle[bool] = connect_field(
-        default=True, description="Enable VAE slicing to reduce VRAM usage."
-    )
-    enable_vae_tiling: bool | OutputHandle[bool] = connect_field(
-        default=True,
-        description="Enable VAE tiling to reduce VRAM usage for large images.",
-    )
     enable_attention_slicing: bool | OutputHandle[bool] = connect_field(
         default=True, description="Enable attention slicing to reduce memory usage."
     )
@@ -92,27 +85,35 @@ from nodetool.workflows.base_node import BaseNode
 class Flux(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
 
-    Generates images using FLUX models with support for GGUF quantization for memory efficiency.
+    Generates images using FLUX models with support for Nunchaku quantization.
     image, generation, AI, text-to-image, flux, quantization
 
     Use cases:
     - High-quality image generation with FLUX models
-    - Memory-efficient generation using GGUF quantization
+    - Memory-efficient generation using Nunchaku quantization
     - Fast generation with FLUX.1-schnell
     - High-fidelity generation with FLUX.1-dev
     - Controlled generation with Fill, Canny, or Depth variants
     """
 
-    model: types.HFFlux | OutputHandle[types.HFFlux] = connect_field(
-        default=types.HFFlux(
-            type="hf.flux",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The FLUX model to use for text-to-image generation.",
+    FluxVariant: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.text_to_image.FluxVariant
+    )
+    FluxQuantization: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.text_to_image.FluxQuantization
+    )
+
+    variant: nodetool.nodes.huggingface.text_to_image.FluxVariant = Field(
+        default=nodetool.nodes.huggingface.text_to_image.FluxVariant.DEV,
+        description="The FLUX variant to use.",
+    )
+    quantization: nodetool.nodes.huggingface.text_to_image.FluxQuantization = Field(
+        default=nodetool.nodes.huggingface.text_to_image.FluxQuantization.INT4,
+        description="The quantization level to use.",
+    )
+    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
+        default=True,
+        description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="A cat holding a sign that says hello world",
@@ -139,16 +140,6 @@ class Flux(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     seed: int | OutputHandle[int] = connect_field(
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
-    )
-    enable_vae_tiling: bool | OutputHandle[bool] = connect_field(
-        default=False,
-        description="Enable VAE tiling to reduce VRAM usage for large images.",
-    )
-    enable_vae_slicing: bool | OutputHandle[bool] = connect_field(
-        default=False, description="Enable VAE slicing to reduce VRAM usage."
-    )
-    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
-        default=True, description="Enable CPU offload to reduce VRAM usage."
     )
 
     @classmethod
@@ -237,68 +228,6 @@ import nodetool.nodes.huggingface.text_to_image
 from nodetool.workflows.base_node import BaseNode
 
 
-class Kolors(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
-    """
-
-    Generates images from text prompts using Kolors, a large-scale text-to-image generation model.
-    image, generation, AI, text-to-image, kolors, chinese, english
-
-    Use cases:
-    - Generate high-quality photorealistic images from text descriptions
-    - Create images with Chinese text understanding and rendering
-    - Produce images with complex semantic accuracy
-    - Generate images with both Chinese and English text support
-    - Create detailed images with strong text rendering capabilities
-    """
-
-    prompt: str | OutputHandle[str] = connect_field(
-        default='A ladybug photo, macro, zoom, high quality, film, holding a sign that says "可图"',
-        description="A text prompt describing the desired image. Supports both Chinese and English.",
-    )
-    negative_prompt: str | OutputHandle[str] = connect_field(
-        default="", description="A text prompt describing what to avoid in the image."
-    )
-    guidance_scale: float | OutputHandle[float] = connect_field(
-        default=6.5, description="The scale for classifier-free guidance."
-    )
-    num_inference_steps: int | OutputHandle[int] = connect_field(
-        default=25, description="The number of denoising steps."
-    )
-    width: int | OutputHandle[int] = connect_field(
-        default=1024, description="The width of the generated image."
-    )
-    height: int | OutputHandle[int] = connect_field(
-        default=1024, description="The height of the generated image."
-    )
-    seed: int | OutputHandle[int] = connect_field(
-        default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
-    )
-    max_sequence_length: int | OutputHandle[int] = connect_field(
-        default=256, description="Maximum sequence length for the prompt."
-    )
-    use_dpm_solver: bool | OutputHandle[bool] = connect_field(
-        default=True,
-        description="Whether to use DPMSolverMultistepScheduler with Karras sigmas for better quality.",
-    )
-
-    @classmethod
-    def get_node_class(cls) -> type[BaseNode]:
-        return nodetool.nodes.huggingface.text_to_image.Kolors
-
-    @classmethod
-    def get_node_type(cls):
-        return cls.get_node_class().get_node_type()
-
-
-import typing
-from pydantic import Field
-from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
-import nodetool.nodes.huggingface.text_to_image
-from nodetool.workflows.base_node import BaseNode
-import nodetool.nodes.huggingface.stable_diffusion_base
-
-
 class LoadTextToImageModel(
     SingleOutputGraphNode[types.HFTextToImage], GraphNode[types.HFTextToImage]
 ):
@@ -311,17 +240,9 @@ class LoadTextToImageModel(
     - Used for AutoPipelineForImage2Image
     """
 
-    ModelVariant: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
-    )
-
     repo_id: str | OutputHandle[str] = connect_field(
         default="",
         description="The repository ID of the model to use for image-to-image generation.",
-    )
-    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
-        description="The variant of the model to use for text-to-image generation.",
     )
 
     @classmethod
@@ -343,12 +264,12 @@ from nodetool.workflows.base_node import BaseNode
 class QwenImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
 
-    Generates images from text prompts using Qwen-Image with support for GGUF quantization.
+    Generates images from text prompts using Qwen-Image with support for Nunchaku quantization.
     image, generation, AI, text-to-image, qwen, quantization
 
     Use cases:
     - High-quality, general-purpose text-to-image generation
-    - Memory-efficient generation using GGUF quantization
+    - Memory-efficient generation using Nunchaku quantization
     - Quick prototyping leveraging AutoPipeline
     - Works out-of-the-box with the official Qwen model
     """
@@ -387,19 +308,8 @@ class QwenImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
-    enable_memory_efficient_attention: bool | OutputHandle[bool] = connect_field(
-        default=True,
-        description="Enable memory efficient attention to reduce VRAM usage.",
-    )
-    enable_vae_tiling: bool | OutputHandle[bool] = connect_field(
-        default=False,
-        description="Enable VAE tiling to reduce VRAM usage for large images.",
-    )
-    enable_vae_slicing: bool | OutputHandle[bool] = connect_field(
-        default=False, description="Enable VAE slicing to reduce VRAM usage."
-    )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
-        default=True, description="Enable CPU offload to reduce VRAM usage."
+        default=False, description="Enable CPU offload to reduce VRAM usage."
     )
 
     @classmethod
@@ -434,9 +344,6 @@ class StableDiffusion(
     - Exploring AI-generated art for personal or professional use
     """
 
-    ModelVariant: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
-    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionScheduler
     )
@@ -456,10 +363,6 @@ class StableDiffusion(
             ),
             description="The model to use for image generation.",
         )
-    )
-    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
-        description="The variant of the model to use for generation.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
@@ -509,10 +412,6 @@ class StableDiffusion(
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="The strength of the IP adapter"
     )
-    pag_scale: float | OutputHandle[float] = connect_field(
-        default=3.0,
-        description="Scale of the Perturbed-Attention Guidance applied to the image.",
-    )
     latents: types.TorchTensor | OutputHandle[types.TorchTensor] = connect_field(
         default=types.TorchTensor(
             type="torch_tensor", value=None, dtype="<i8", shape=(1,)
@@ -524,8 +423,8 @@ class StableDiffusion(
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage.",
     )
     enable_tiling: bool | OutputHandle[bool] = connect_field(
-        default=True,
-        description="Enable tiling for the VAE. This can reduce VRAM usage.",
+        default=False,
+        description="Legacy VAE tiling flag (disabled in favor of PyTorch 2 attention optimizations).",
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=True,
@@ -559,12 +458,16 @@ class StableDiffusion(
 
 class StableDiffusionOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["image"])
+    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
+        )
 
     @property
-    def latent(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["latent"])
+    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
+        )
 
 
 import typing
@@ -590,9 +493,6 @@ class StableDiffusionXL(
     - Visualizing interior design concepts for clients
     """
 
-    ModelVariant: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
-    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
     )
@@ -612,10 +512,6 @@ class StableDiffusionXL(
             ),
             description="The Stable Diffusion XL model to use for generation.",
         )
-    )
-    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
-        description="The variant of the model to use for generation.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
@@ -644,10 +540,6 @@ class StableDiffusionXL(
     ) = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler.EulerDiscreteScheduler,
         description="The scheduler to use for the diffusion process.",
-    )
-    pag_scale: float | OutputHandle[float] = connect_field(
-        default=3.0,
-        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     loras: list[types.HFLoraSDXLConfig] | OutputHandle[list[types.HFLoraSDXLConfig]] = (
         connect_field(
@@ -683,7 +575,7 @@ class StableDiffusionXL(
     )
     enable_tiling: bool | OutputHandle[bool] = connect_field(
         default=False,
-        description="Enable tiling for the VAE. This can reduce VRAM usage.",
+        description="Legacy VAE tiling flag (disabled in favor of PyTorch 2 attention optimizations).",
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=False,
@@ -711,12 +603,16 @@ class StableDiffusionXL(
 
 class StableDiffusionXLOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["image"])
+    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
+        )
 
     @property
-    def latent(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["latent"])
+    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
+        )
 
 
 import typing
@@ -771,10 +667,6 @@ class Text2Image(
     height: int | OutputHandle[int] = connect_field(
         default=512, description="The height of the generated image."
     )
-    pag_scale: float | OutputHandle[float] = connect_field(
-        default=3.0,
-        description="Scale of the Perturbed-Attention Guidance applied to the image.",
-    )
     seed: int | OutputHandle[int] = connect_field(
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
@@ -795,9 +687,13 @@ class Text2Image(
 
 class Text2ImageOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["image"])
+    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
+        )
 
     @property
-    def latent(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["latent"])
+    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
+        )

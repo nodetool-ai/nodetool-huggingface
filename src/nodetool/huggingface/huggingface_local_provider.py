@@ -118,11 +118,15 @@ from nodetool.integrations.huggingface.huggingface_models import (
 )
 from pathlib import Path
 from typing import TypeVar
+import os
+
+ALLOW_DOWNLOAD_ENV = "NODETOOL_HF_ALLOW_DOWNLOAD"
 
 T = TypeVar("T")
 
 log = get_logger(__name__)
 _PREFERRED_HF_DEVICE = "mps"
+_ALLOW_DOWNLOAD_VALUES = {"1", "true", "yes", "on"}
 
 
 def _is_mps_available() -> bool:
@@ -171,6 +175,47 @@ def _resolve_hf_device(
         fallback,
     )
     return fallback
+
+
+def _allow_downloads() -> bool:
+    """Whether automatic Hugging Face downloads are permitted."""
+    return os.getenv(ALLOW_DOWNLOAD_ENV, "").lower() in _ALLOW_DOWNLOAD_VALUES
+
+
+def _ensure_file_cached(
+    repo_id: str,
+    file_path: str,
+    *,
+    revision: str | None = None,
+    cache_dir: str | None = None,
+) -> str:
+    """
+    Guarantee a file exists locally, optionally downloading when allowed.
+    Raises ValueError if downloads are blocked and the file is missing.
+    """
+    cache_path = try_to_load_from_cache(
+        repo_id,
+        file_path,
+        revision=revision,
+        cache_dir=cache_dir,
+    )
+    if cache_path:
+        return cache_path
+
+    if _allow_downloads():
+        log.info(
+            "Downloading %s/%s because NODETOOL_HF_ALLOW_DOWNLOAD is enabled",
+            repo_id,
+            file_path,
+        )
+        return hf_hub_download(
+            repo_id,
+            file_path,
+            revision=revision,
+            cache_dir=cache_dir,
+        )
+
+    raise ValueError(f"Model {repo_id}/{file_path} must be downloaded first")
 
 
 def _ensure_model_on_device(model: Any, device: str | None) -> Any:
@@ -230,7 +275,7 @@ async def load_pipeline(
         cache_checked = False
         for candidate in ("model_index.json", "config.json"):
             try:
-                cache_path = try_to_load_from_cache(
+                cache_path = _ensure_file_cached(
                     repo_id_for_cache,
                     candidate,
                     revision=revision,
@@ -244,7 +289,12 @@ async def load_pipeline(
                 break
 
         if not cache_checked:
-            raise ValueError(f"Model {model_id} must be downloaded first")
+            _ensure_file_cached(
+                repo_id_for_cache,
+                "config.json",
+                revision=revision,
+                cache_dir=cache_dir,
+            )
 
     context.post_message(
         JobUpdate(
@@ -252,8 +302,8 @@ async def load_pipeline(
             message=f"Loading pipeline {type(model_id) == str and model_id or pipeline_task} from HuggingFace",
         )
     )
-    if not "token" in kwargs:
-        kwargs["token"] = context.get_secret("HF_TOKEN")
+    if "token" not in kwargs:
+        kwargs["token"] = await context.get_secret("HF_TOKEN")
     model = pipeline(
         pipeline_task,  # type: ignore
         model=model_id,
@@ -296,17 +346,17 @@ async def load_model(
             context.post_message(
                 JobUpdate(
                     status="running",
-                    message=f"Downloading model {model_id}/{path} from HuggingFace",
+                    message=f"Downloading model {model_id} from HuggingFace",
                 )
             )
             hf_hub_download(model_id, path)
             cache_path = try_to_load_from_cache(model_id, path)
             if not cache_path:
                 raise ValueError(
-                    f"Downloading model {model_id}/{path} from HuggingFace failed"
+                    f"Downloading model {model_id} from HuggingFace failed"
                 )
 
-        log.info(f"Loading model {model_id}/{path} from {cache_path}")
+        log.info(f"Loading model {model_id} from {cache_path}")
         context.post_message(
             JobUpdate(
                 status="running",
@@ -337,8 +387,8 @@ async def load_model(
                 message=f"Loading model {model_id} from HuggingFace",
             )
         )
-        if not "token" in kwargs:
-            kwargs["token"] = context.get_secret("HF_TOKEN")
+        if "token" not in kwargs:
+            kwargs["token"] = await context.get_secret("HF_TOKEN")
 
         model = model_class.from_pretrained(  # type: ignore
             model_id,
@@ -511,7 +561,12 @@ async def _load_flux_gguf_pipeline(
 
     cache_path = try_to_load_from_cache(repo_id, file_path)
     if not cache_path:
-        raise ValueError(f"Model {repo_id}/{file_path} must be downloaded first")
+        _ensure_file_cached(
+            repo_id,
+            file_path,
+            revision=revision,
+            cache_dir=kwargs.get("cache_dir"),
+        )
 
     variant = _detect_flux_variant(repo_id, file_path)
     torch_dtype = torch.bfloat16 if variant in {"schnell", "dev"} else torch.float16
@@ -568,7 +623,12 @@ async def load_qwen_image_gguf_pipeline(
 
     cache_path = try_to_load_from_cache(model_id, path)
     if not cache_path:
-        raise ValueError(f"Model {model_id}/{path} must be downloaded first")
+        _ensure_file_cached(
+            model_id,
+            path,
+            revision=kwargs.get("revision"),
+            cache_dir=kwargs.get("cache_dir"),
+        )
 
     log.debug(f"Cache path: {cache_path}")
     log.debug(f"Torch dtype: {torch_dtype}")
@@ -660,7 +720,12 @@ class HuggingFaceLocalProvider(BaseProvider):
                 cache_path = try_to_load_from_cache(params.model.id, params.model.path)
                 if not cache_path:
                     raise ValueError(
-                        f"Single-file model {params.model.id}/{params.model.path} must be downloaded first"
+                        _ensure_file_cached(
+                            params.model.id,
+                            params.model.path,
+                            revision=params.revision,
+                            cache_dir=params.cache_dir,
+                        )
                     )
 
                 model_info = await fetch_model_info(params.model.id)
@@ -841,7 +906,12 @@ class HuggingFaceLocalProvider(BaseProvider):
                 cache_path = try_to_load_from_cache(params.model.id, params.model.path)
                 if not cache_path:
                     raise ValueError(
-                        f"Single-file model {params.model.id}/{params.model.path} must be downloaded first"
+                        _ensure_file_cached(
+                            params.model.id,
+                            params.model.path,
+                            revision=params.revision,
+                            cache_dir=params.cache_dir,
+                        )
                     )
 
                 if _is_nunchaku_transformer(params.model.id, params.model.path):
@@ -867,7 +937,12 @@ class HuggingFaceLocalProvider(BaseProvider):
                     )
                     if not cache_path:
                         raise ValueError(
-                            f"Single-file model {params.model.id}/{params.model.path} must be downloaded first"
+                            _ensure_file_cached(
+                                params.model.id,
+                                params.model.path,
+                                revision=params.revision,
+                                cache_dir=params.cache_dir,
+                            )
                         )
 
                     model_info = await fetch_model_info(params.model.id)
@@ -1575,7 +1650,10 @@ class HuggingFaceLocalProvider(BaseProvider):
                 repo_id, filename
             )  # pyright: ignore[reportArgumentType]
             if not cache_path:
-                raise ValueError(f"Model {repo_id}/{filename} must be downloaded first")
+                _ensure_file_cached(
+                    repo_id,
+                    filename,
+                )
 
             log.info(f"Loading GGUF model {repo_id}/{filename}")
             # Note: load_model doesn't support gguf_file parameter, so we load manually
@@ -1875,6 +1953,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         temperature = kwargs.get("temperature", 1.0)
         top_p = kwargs.get("top_p", 1.0)
         do_sample = kwargs.get("do_sample", True)
+        node_id = kwargs.get("node_id")
 
         repo_id, filename, is_gguf = self._parse_model_spec(model)
 

@@ -18,6 +18,8 @@ log = get_logger(__name__)
 async def get_nunchaku_text_encoder(
     context: ProcessingContext,
     node_id: str,
+    repo_id: str | None = None,
+    path: str | None = None,
 ) -> Any | None:
     """
     Get text encoder kwargs when using a nunchaku model.
@@ -28,6 +30,8 @@ async def get_nunchaku_text_encoder(
     Args:
         context: The context object
         node_id: The node ID
+        repo_id: Optional repo_id override
+        path: Optional path override
 
     Returns:
         dict: Pipeline kwargs with text_encoder_2 if nunchaku T5 encoder is found
@@ -39,8 +43,10 @@ async def get_nunchaku_text_encoder(
         load_model,
     )
 
-    repo_id = "mit-han-lab/nunchaku-t5"
-    path = f"awq-{get_precision()}-flux.1-t5xxl.safetensors"
+    if repo_id is None:
+        repo_id = "mit-han-lab/nunchaku-t5"
+    if path is None:
+        path = f"awq-{get_precision()}-flux.1-t5xxl.safetensors"
 
     # Try to find nunchaku T5 encoder
     cache_path = try_to_load_from_cache(repo_id, path)

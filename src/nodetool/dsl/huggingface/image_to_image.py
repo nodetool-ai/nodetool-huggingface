@@ -76,13 +76,6 @@ class FluxFill(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef])
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
-    enable_vae_tiling: bool | OutputHandle[bool] = connect_field(
-        default=False,
-        description="Enable VAE tiling to reduce VRAM usage for large images.",
-    )
-    enable_vae_slicing: bool | OutputHandle[bool] = connect_field(
-        default=False, description="Enable VAE slicing to reduce VRAM usage."
-    )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=True, description="Enable CPU offload to reduce VRAM usage."
     )
@@ -371,7 +364,6 @@ from pydantic import Field
 from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
 import nodetool.nodes.huggingface.image_to_image
 from nodetool.workflows.base_node import BaseNode
-import nodetool.nodes.huggingface.stable_diffusion_base
 
 
 class LoadImageToImageModel(
@@ -386,17 +378,9 @@ class LoadImageToImageModel(
     - Used for ImageToImage node
     """
 
-    ModelVariant: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
-    )
-
     repo_id: str | OutputHandle[str] = connect_field(
         default="",
         description="The repository ID of the model to use for image-to-image generation.",
-    )
-    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
-        description="The variant of the model to use for image-to-image generation.",
     )
 
     @classmethod
@@ -491,7 +475,7 @@ from nodetool.workflows.base_node import BaseNode
 class QwenImageEdit(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
 
-    Performs image editing using the Qwen Image Edit model with support for GGUF quantization.
+    Performs image editing using the Qwen Image Edit model with support for Nunchaku quantization.
     image, editing, semantic, appearance, qwen, multimodal, quantization
 
     Use cases:
@@ -500,14 +484,14 @@ class QwenImageEdit(SingleOutputGraphNode[types.ImageRef], GraphNode[types.Image
     - Precise text modifications in images
     - Background and clothing changes
     - Complex image transformations guided by text
-    - Memory-efficient editing using GGUF quantization
+    - Memory-efficient editing using Nunchaku quantization
     """
 
     model: types.HFQwenImageEdit | OutputHandle[types.HFQwenImageEdit] = connect_field(
         default=types.HFQwenImageEdit(
             type="hf.qwen_image_edit",
-            repo_id="QuantStack/Qwen-Image-Edit-2509-GGUF",
-            path="Qwen-Image-Edit-2509-Q4_K_M.gguf",
+            repo_id="mit-han-lab/nunchaku-qwen-image-edit",
+            path="awq-int4-qwen-image-edit.safetensors",
             variant=None,
             allow_patterns=None,
             ignore_patterns=None,
@@ -540,13 +524,6 @@ class QwenImageEdit(SingleOutputGraphNode[types.ImageRef], GraphNode[types.Image
     enable_memory_efficient_attention: bool | OutputHandle[bool] = connect_field(
         default=True,
         description="Enable memory efficient attention to reduce VRAM usage.",
-    )
-    enable_vae_tiling: bool | OutputHandle[bool] = connect_field(
-        default=False,
-        description="Enable VAE tiling to reduce VRAM usage for large images.",
-    )
-    enable_vae_slicing: bool | OutputHandle[bool] = connect_field(
-        default=False, description="Enable VAE slicing to reduce VRAM usage."
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=True, description="Enable CPU offload to reduce VRAM usage."
@@ -629,9 +606,6 @@ class StableDiffusionControlNet(
     - Artistic image generation with guided outputs
     """
 
-    ModelVariant: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
-    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionScheduler
     )
@@ -651,10 +625,6 @@ class StableDiffusionControlNet(
             ),
             description="The model to use for image generation.",
         )
-    )
-    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
-        description="The variant of the model to use for generation.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
@@ -704,10 +674,6 @@ class StableDiffusionControlNet(
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="The strength of the IP adapter"
     )
-    pag_scale: float | OutputHandle[float] = connect_field(
-        default=3.0,
-        description="Scale of the Perturbed-Attention Guidance applied to the image.",
-    )
     latents: types.TorchTensor | OutputHandle[types.TorchTensor] = connect_field(
         default=types.TorchTensor(
             type="torch_tensor", value=None, dtype="<i8", shape=(1,)
@@ -719,8 +685,8 @@ class StableDiffusionControlNet(
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage.",
     )
     enable_tiling: bool | OutputHandle[bool] = connect_field(
-        default=True,
-        description="Enable tiling for the VAE. This can reduce VRAM usage.",
+        default=False,
+        description="Legacy VAE tiling flag (disabled in favor of PyTorch 2 attention optimizations).",
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=True,
@@ -766,12 +732,16 @@ class StableDiffusionControlNet(
 
 class StableDiffusionControlNetOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["image"])
+    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
+        )
 
     @property
-    def latent(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["latent"])
+    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
+        )
 
 
 import typing
@@ -799,9 +769,6 @@ class StableDiffusionControlNetImg2ImgNode(
     - Enhance image editing capabilities with AI-guided transformations
     """
 
-    ModelVariant: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
-    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionScheduler
     )
@@ -821,10 +788,6 @@ class StableDiffusionControlNetImg2ImgNode(
             ),
             description="The model to use for image generation.",
         )
-    )
-    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
-        description="The variant of the model to use for generation.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
@@ -874,10 +837,6 @@ class StableDiffusionControlNetImg2ImgNode(
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="The strength of the IP adapter"
     )
-    pag_scale: float | OutputHandle[float] = connect_field(
-        default=3.0,
-        description="Scale of the Perturbed-Attention Guidance applied to the image.",
-    )
     latents: types.TorchTensor | OutputHandle[types.TorchTensor] = connect_field(
         default=types.TorchTensor(
             type="torch_tensor", value=None, dtype="<i8", shape=(1,)
@@ -889,8 +848,8 @@ class StableDiffusionControlNetImg2ImgNode(
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage.",
     )
     enable_tiling: bool | OutputHandle[bool] = connect_field(
-        default=True,
-        description="Enable tiling for the VAE. This can reduce VRAM usage.",
+        default=False,
+        description="Legacy VAE tiling flag (disabled in favor of PyTorch 2 attention optimizations).",
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=True,
@@ -942,12 +901,16 @@ class StableDiffusionControlNetImg2ImgNode(
 
 class StableDiffusionControlNetImg2ImgNodeOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["image"])
+    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
+        )
 
     @property
-    def latent(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["latent"])
+    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
+        )
 
 
 import typing
@@ -974,9 +937,6 @@ class StableDiffusionControlNetInpaintNode(
     - Modify specific areas of images while preserving the rest and maintaining structure
     """
 
-    ModelVariant: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
-    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionScheduler
     )
@@ -999,10 +959,6 @@ class StableDiffusionControlNetInpaintNode(
             ),
             description="The model to use for image generation.",
         )
-    )
-    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
-        description="The variant of the model to use for generation.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
@@ -1052,10 +1008,6 @@ class StableDiffusionControlNetInpaintNode(
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="The strength of the IP adapter"
     )
-    pag_scale: float | OutputHandle[float] = connect_field(
-        default=3.0,
-        description="Scale of the Perturbed-Attention Guidance applied to the image.",
-    )
     latents: types.TorchTensor | OutputHandle[types.TorchTensor] = connect_field(
         default=types.TorchTensor(
             type="torch_tensor", value=None, dtype="<i8", shape=(1,)
@@ -1067,8 +1019,8 @@ class StableDiffusionControlNetInpaintNode(
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage.",
     )
     enable_tiling: bool | OutputHandle[bool] = connect_field(
-        default=True,
-        description="Enable tiling for the VAE. This can reduce VRAM usage.",
+        default=False,
+        description="Legacy VAE tiling flag (disabled in favor of PyTorch 2 attention optimizations).",
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=True,
@@ -1119,12 +1071,16 @@ class StableDiffusionControlNetInpaintNode(
 
 class StableDiffusionControlNetInpaintNodeOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["image"])
+    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
+        )
 
     @property
-    def latent(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["latent"])
+    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
+        )
 
 
 import typing
@@ -1152,9 +1108,6 @@ class StableDiffusionImg2ImgNode(
     - Applying text-guided edits to images
     """
 
-    ModelVariant: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
-    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionScheduler
     )
@@ -1174,10 +1127,6 @@ class StableDiffusionImg2ImgNode(
             ),
             description="The model to use for image generation.",
         )
-    )
-    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
-        description="The variant of the model to use for generation.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
@@ -1227,10 +1176,6 @@ class StableDiffusionImg2ImgNode(
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="The strength of the IP adapter"
     )
-    pag_scale: float | OutputHandle[float] = connect_field(
-        default=3.0,
-        description="Scale of the Perturbed-Attention Guidance applied to the image.",
-    )
     latents: types.TorchTensor | OutputHandle[types.TorchTensor] = connect_field(
         default=types.TorchTensor(
             type="torch_tensor", value=None, dtype="<i8", shape=(1,)
@@ -1242,8 +1187,8 @@ class StableDiffusionImg2ImgNode(
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage.",
     )
     enable_tiling: bool | OutputHandle[bool] = connect_field(
-        default=True,
-        description="Enable tiling for the VAE. This can reduce VRAM usage.",
+        default=False,
+        description="Legacy VAE tiling flag (disabled in favor of PyTorch 2 attention optimizations).",
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=True,
@@ -1279,12 +1224,16 @@ class StableDiffusionImg2ImgNode(
 
 class StableDiffusionImg2ImgNodeOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["image"])
+    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
+        )
 
     @property
-    def latent(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["latent"])
+    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
+        )
 
 
 import typing
@@ -1311,9 +1260,6 @@ class StableDiffusionInpaintNode(
     - Modify specific areas of images while preserving the rest
     """
 
-    ModelVariant: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
-    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionBaseNode.StableDiffusionScheduler
     )
@@ -1333,10 +1279,6 @@ class StableDiffusionInpaintNode(
             ),
             description="The model to use for image generation.",
         )
-    )
-    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
-        description="The variant of the model to use for Image-to-Image generation.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
@@ -1386,10 +1328,6 @@ class StableDiffusionInpaintNode(
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
         default=0.5, description="The strength of the IP adapter"
     )
-    pag_scale: float | OutputHandle[float] = connect_field(
-        default=3.0,
-        description="Scale of the Perturbed-Attention Guidance applied to the image.",
-    )
     latents: types.TorchTensor | OutputHandle[types.TorchTensor] = connect_field(
         default=types.TorchTensor(
             type="torch_tensor", value=None, dtype="<i8", shape=(1,)
@@ -1401,8 +1339,8 @@ class StableDiffusionInpaintNode(
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage.",
     )
     enable_tiling: bool | OutputHandle[bool] = connect_field(
-        default=True,
-        description="Enable tiling for the VAE. This can reduce VRAM usage.",
+        default=False,
+        description="Legacy VAE tiling flag (disabled in favor of PyTorch 2 attention optimizations).",
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=True,
@@ -1442,12 +1380,16 @@ class StableDiffusionInpaintNode(
 
 class StableDiffusionInpaintNodeOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["image"])
+    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
+        )
 
     @property
-    def latent(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["latent"])
+    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
+        )
 
 
 import typing
@@ -1555,9 +1497,6 @@ class StableDiffusionUpscale(
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
-    enable_tiling: bool | OutputHandle[bool] = connect_field(
-        default=False, description="Enable tiling to save VRAM"
-    )
 
     @classmethod
     def get_node_class(cls) -> type[BaseNode]:
@@ -1592,9 +1531,6 @@ class StableDiffusionXLControlNet(
     - Artistic image generation with guided outputs
     """
 
-    ModelVariant: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
-    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
     )
@@ -1614,10 +1550,6 @@ class StableDiffusionXLControlNet(
             ),
             description="The Stable Diffusion XL model to use for generation.",
         )
-    )
-    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
-        description="The variant of the model to use for generation.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
@@ -1646,10 +1578,6 @@ class StableDiffusionXLControlNet(
     ) = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler.EulerDiscreteScheduler,
         description="The scheduler to use for the diffusion process.",
-    )
-    pag_scale: float | OutputHandle[float] = connect_field(
-        default=3.0,
-        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     loras: list[types.HFLoraSDXLConfig] | OutputHandle[list[types.HFLoraSDXLConfig]] = (
         connect_field(
@@ -1685,7 +1613,7 @@ class StableDiffusionXLControlNet(
     )
     enable_tiling: bool | OutputHandle[bool] = connect_field(
         default=False,
-        description="Enable tiling for the VAE. This can reduce VRAM usage.",
+        description="Legacy VAE tiling flag (disabled in favor of PyTorch 2 attention optimizations).",
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=False,
@@ -1731,12 +1659,16 @@ class StableDiffusionXLControlNet(
 
 class StableDiffusionXLControlNetOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["image"])
+    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
+        )
 
     @property
-    def latent(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["latent"])
+    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
+        )
 
 
 import typing
@@ -1764,9 +1696,6 @@ class StableDiffusionXLControlNetImg2ImgNode(
     - Enhance image editing capabilities with AI-guided transformations
     """
 
-    ModelVariant: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
-    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
     )
@@ -1786,10 +1715,6 @@ class StableDiffusionXLControlNetImg2ImgNode(
             ),
             description="The Stable Diffusion XL model to use for generation.",
         )
-    )
-    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
-        description="The variant of the model to use for generation.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
@@ -1818,10 +1743,6 @@ class StableDiffusionXLControlNetImg2ImgNode(
     ) = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler.EulerDiscreteScheduler,
         description="The scheduler to use for the diffusion process.",
-    )
-    pag_scale: float | OutputHandle[float] = connect_field(
-        default=3.0,
-        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     loras: list[types.HFLoraSDXLConfig] | OutputHandle[list[types.HFLoraSDXLConfig]] = (
         connect_field(
@@ -1857,7 +1778,7 @@ class StableDiffusionXLControlNetImg2ImgNode(
     )
     enable_tiling: bool | OutputHandle[bool] = connect_field(
         default=False,
-        description="Enable tiling for the VAE. This can reduce VRAM usage.",
+        description="Legacy VAE tiling flag (disabled in favor of PyTorch 2 attention optimizations).",
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=False,
@@ -1913,12 +1834,16 @@ class StableDiffusionXLControlNetImg2ImgNode(
 
 class StableDiffusionXLControlNetImg2ImgNodeOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["image"])
+    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
+        )
 
     @property
-    def latent(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["latent"])
+    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
+        )
 
 
 import typing
@@ -1946,9 +1871,6 @@ class StableDiffusionXLImg2Img(
     - Applying text-guided edits to images
     """
 
-    ModelVariant: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
-    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
     )
@@ -1968,10 +1890,6 @@ class StableDiffusionXLImg2Img(
             ),
             description="The Stable Diffusion XL model to use for generation.",
         )
-    )
-    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
-        description="The variant of the model to use for generation.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
@@ -2000,10 +1918,6 @@ class StableDiffusionXLImg2Img(
     ) = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler.EulerDiscreteScheduler,
         description="The scheduler to use for the diffusion process.",
-    )
-    pag_scale: float | OutputHandle[float] = connect_field(
-        default=3.0,
-        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     loras: list[types.HFLoraSDXLConfig] | OutputHandle[list[types.HFLoraSDXLConfig]] = (
         connect_field(
@@ -2039,7 +1953,7 @@ class StableDiffusionXLImg2Img(
     )
     enable_tiling: bool | OutputHandle[bool] = connect_field(
         default=False,
-        description="Enable tiling for the VAE. This can reduce VRAM usage.",
+        description="Legacy VAE tiling flag (disabled in favor of PyTorch 2 attention optimizations).",
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=False,
@@ -2075,12 +1989,16 @@ class StableDiffusionXLImg2Img(
 
 class StableDiffusionXLImg2ImgOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["image"])
+    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
+        )
 
     @property
-    def latent(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["latent"])
+    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
+        )
 
 
 import typing
@@ -2107,9 +2025,6 @@ class StableDiffusionXLInpainting(
     - Modify specific areas of images while preserving the rest
     """
 
-    ModelVariant: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant
-    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
     )
@@ -2129,10 +2044,6 @@ class StableDiffusionXLInpainting(
             ),
             description="The Stable Diffusion XL model to use for generation.",
         )
-    )
-    variant: nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant = Field(
-        default=nodetool.nodes.huggingface.stable_diffusion_base.ModelVariant.FP16,
-        description="The variant of the model to use for generation.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
@@ -2161,10 +2072,6 @@ class StableDiffusionXLInpainting(
     ) = Field(
         default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler.EulerDiscreteScheduler,
         description="The scheduler to use for the diffusion process.",
-    )
-    pag_scale: float | OutputHandle[float] = connect_field(
-        default=3.0,
-        description="Scale of the Perturbed-Attention Guidance applied to the image.",
     )
     loras: list[types.HFLoraSDXLConfig] | OutputHandle[list[types.HFLoraSDXLConfig]] = (
         connect_field(
@@ -2200,7 +2107,7 @@ class StableDiffusionXLInpainting(
     )
     enable_tiling: bool | OutputHandle[bool] = connect_field(
         default=False,
-        description="Enable tiling for the VAE. This can reduce VRAM usage.",
+        description="Legacy VAE tiling flag (disabled in favor of PyTorch 2 attention optimizations).",
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=False,
@@ -2240,12 +2147,16 @@ class StableDiffusionXLInpainting(
 
 class StableDiffusionXLInpaintingOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["image"])
+    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
+        )
 
     @property
-    def latent(self) -> OutputHandle[typing.Any]:
-        return typing.cast(OutputHandle[typing.Any], self["latent"])
+    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
+        return typing.cast(
+            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
+        )
 
 
 import typing

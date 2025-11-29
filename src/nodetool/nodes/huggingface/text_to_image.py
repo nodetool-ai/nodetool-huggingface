@@ -1,6 +1,6 @@
 from enum import Enum
 import huggingface_hub
-from huggingface_hub import hf_hub_download, try_to_load_from_cache
+from huggingface_hub import hf_hub_download, try_to_load_from_cache, snapshot_download
 from typing import Any, TypedDict
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
@@ -45,7 +45,6 @@ from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
 from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
-from diffusers.pipelines.kolors.pipeline_kolors import KolorsPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
     StableDiffusionPipeline,
 )
@@ -460,7 +459,7 @@ class Text2Image(HuggingFacePipelineNode):
                 self._pipeline.to(device)
             except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
                 raise ValueError(
-                    "VRAM out of memory while moving Kolors pipeline to device. "
+                    "VRAM out of memory while moving TextToImage pipeline to device. "
                     "Enable 'CPU offload' in advanced node properties or reduce image size/steps."
                 ) from e
 
@@ -523,6 +522,12 @@ class FluxVariant(Enum):
     DEPTH_DEV = "depth-dev"
 
 
+class FluxQuantization(Enum):
+    FP16 = "fp16"
+    FP4 = "fp4"
+    INT4 = "int4"
+
+
 class Flux(HuggingFacePipelineNode):
     """
     Generates images using FLUX models with support for Nunchaku quantization.
@@ -536,9 +541,17 @@ class Flux(HuggingFacePipelineNode):
     - Controlled generation with Fill, Canny, or Depth variants
     """
 
-    model: HFFlux = Field(
-        default=HFFlux(),
-        description="The FLUX model to use for text-to-image generation.",
+    variant: FluxVariant = Field(
+        default=FluxVariant.DEV,
+        description="The FLUX variant to use.",
+    )
+    quantization: FluxQuantization = Field(
+        default=FluxQuantization.INT4,
+        description="The quantization level to use.",
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
     )
     prompt: str = Field(
         default="A cat holding a sign that says hello world",
@@ -548,13 +561,19 @@ class Flux(HuggingFacePipelineNode):
         default=3.5,
         description="The scale for classifier-free guidance. Use 0.0 for schnell, 3.5 for dev.",
         ge=0.0,
-        le=30.0,
+        le=20.0,
     )
     width: int = Field(
-        default=1024, description="The width of the generated image.", ge=64, le=2048
+        default=1024,
+        description="The width of the generated image.",
+        ge=64,
+        le=2048,
     )
     height: int = Field(
-        default=1024, description="The height of the generated image.", ge=64, le=2048
+        default=1024,
+        description="The height of the generated image.",
+        ge=64,
+        le=2048,
     )
     num_inference_steps: int = Field(
         default=20,
@@ -573,45 +592,8 @@ class Flux(HuggingFacePipelineNode):
         description="Seed for the random number generator. Use -1 for a random seed.",
         ge=-1,
     )
-    enable_cpu_offload: bool = Field(
-        default=True,
-        description="Enable CPU offload to reduce VRAM usage.",
-    )
 
     _pipeline: FluxPipeline | None = None
-
-    @classmethod
-    def get_recommended_models(cls) -> list[HFFlux | HFT5]:
-        return [
-            # Original Flux repos
-            HFFlux(
-                repo_id="black-forest-labs/FLUX.1-dev",
-            ),
-            HFFlux(
-                repo_id="black-forest-labs/FLUX.1-schnell",
-            ),
-            # Nunchaku SVDQ transformers (auto-detected precision)
-            HFFlux(
-                repo_id="nunchaku-tech/nunchaku-flux.1-dev",
-                path="svdq-int4_r32-flux.1-dev.safetensors",
-            ),
-            HFFlux(
-                repo_id="nunchaku-tech/nunchaku-flux.1-dev",
-                path="svdq-fp4_r32-flux.1-dev.safetensors",
-            ),
-            HFFlux(
-                repo_id="mit-han-lab/nunchaku-flux.1-schnell",
-                path="svdq-int4_r32-flux.1-schnell.safetensors",
-            ),
-            HFFlux(
-                repo_id="mit-han-lab/nunchaku-flux.1-dev",
-                path="svdq-fp4_r32-flux.1-schnell.safetensors"
-            ),
-            HFT5(
-                repo_id="mit-han-lab/nunchaku-t5",
-                path="awq-int4-flux.1-t5xxl.safetensors",
-            ),
-        ]
 
     @classmethod
     def get_title(cls) -> str:
@@ -620,132 +602,214 @@ class Flux(HuggingFacePipelineNode):
     @classmethod
     def get_basic_fields(cls) -> list[str]:
         return [
-            "model",
+            "variant",
+            "quantization",
             "prompt",
             "height",
             "width",
             "seed",
         ]
 
-    def _get_base_model_id(self, variant: FluxVariant) -> str:
+    def _get_base_model(self, variant: FluxVariant) -> HFFlux:
         model_mapping = {
-            FluxVariant.SCHNELL: "black-forest-labs/FLUX.1-schnell",
-            FluxVariant.DEV: "black-forest-labs/FLUX.1-dev",
-            FluxVariant.FILL_DEV: "black-forest-labs/FLUX.1-Fill-dev",
-            FluxVariant.CANNY_DEV: "black-forest-labs/FLUX.1-Canny-dev",
-            FluxVariant.DEPTH_DEV: "black-forest-labs/FLUX.1-Depth-dev",
+            FluxVariant.SCHNELL: HFFlux(
+                repo_id="black-forest-labs/FLUX.1-schnell",
+                path="svdq-int4_r32-flux.1-schnell.safetensors",
+            ),
+            FluxVariant.DEV: HFFlux(
+                repo_id="black-forest-labs/FLUX.1-dev",
+                path="svdq-int4_r32-flux.1-dev.safetensors",
+            ),
         }
-        return model_mapping.get(variant, "black-forest-labs/FLUX.1-dev")
+        model = model_mapping.get(variant)
+        if model is None:
+            raise ValueError(f"Unknown variant: {variant}")
+        return model
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HFFlux]:
+        allow_patterns = [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "tokenizer/*",
+            "tokenizer_2/*",
+        ]
+        return [
+            HFFlux(
+                repo_id="black-forest-labs/FLUX.1-schnell",
+                allow_patterns=allow_patterns,
+            ),
+            HFFlux(
+                repo_id="black-forest-labs/FLUX.1-dev",
+                allow_patterns=allow_patterns,
+            ),
+            HFFlux(
+                repo_id="nunchaku-tech/nunchaku-flux.1-schnell",
+                path="svdq-int4_r32-flux.1-schnell.safetensors",
+            ),
+            HFFlux(
+                repo_id="nunchaku-tech/nunchaku-flux.1-schnell",
+                path="svdq-fp4_r32-flux.1-schnell.safetensors",
+            ),
+            HFFlux(
+                repo_id="nunchaku-tech/nunchaku-flux.1-dev",
+                path="svdq-int4_r32-flux.1-dev.safetensors",
+            ),
+            HFFlux(
+                repo_id="nunchaku-tech/nunchaku-flux.1-dev",
+                path="svdq-fp4_r32-flux.1-dev.safetensors",
+            ),
+            HFT5(
+                repo_id="mit-han-lab/nunchaku-t5",
+                path="awq-int4-flux.1-t5xxl.safetensors",
+            ),  
+        ]
+
+    def _resolve_model_config(self) -> tuple[HFFlux, HFT5]:
+        """
+        Resolve repo_id, transformer_path, and text_encoder_path based on variant and quantization.
+        Returns: (repo_id, transformer_path, text_encoder_path)
+        """
+        if self.quantization == FluxQuantization.FP4:
+            if self.variant == FluxVariant.SCHNELL:
+                return (
+                    HFFlux(
+                        repo_id="nunchaku-tech/nunchaku-flux.1-schnell",
+                        path="svdq-fp4_r32-flux.1-schnell.safetensors",
+                    ),
+                    HFT5(
+                        repo_id="mit-han-lab/nunchaku-t5",
+                        path="awq-int4-flux.1-t5xxl.safetensors",
+                    ),
+                )
+            else:  
+                return (
+                    HFFlux(
+                        repo_id="nunchaku-tech/nunchaku-flux.1-dev",
+                        path="svdq-fp4_r32-flux.1-dev.safetensors",
+                    ),
+                    HFT5(
+                        repo_id="mit-han-lab/nunchaku-t5",
+                        path="awq-int4-flux.1-t5xxl.safetensors",
+                    ),
+                )
+        elif self.quantization == FluxQuantization.INT4:
+            if self.variant == FluxVariant.SCHNELL:
+                return (
+                    HFFlux(
+                        repo_id="nunchaku-tech/nunchaku-flux.1-schnell",
+                        path="svdq-int4_r32-flux.1-schnell.safetensors",
+                    ),
+                    HFT5(
+                        repo_id="mit-han-lab/nunchaku-t5",
+                        path="awq-int4-flux.1-t5xxl.safetensors",
+                    ),
+                )
+            else: 
+                return (
+                    HFFlux(
+                        repo_id="nunchaku-tech/nunchaku-flux.1-dev",
+                        path="svdq-int4_r32-flux.1-dev.safetensors",
+                    ),
+                    HFT5(
+                        repo_id="mit-han-lab/nunchaku-t5",
+                        path="awq-int4-flux.1-t5xxl.safetensors",
+                    ),
+                )
+        else:
+            # FP16
+            base_model = self._get_base_model(self.variant)
+            return base_model, None
 
     def get_model_id(self) -> str:
-        if self.model.repo_id:
-            return self.model.repo_id
-        # Fallback to detected variant
-        detected_variant = self._detect_variant_from_repo_id()
-        return self._get_base_model_id(detected_variant)
-
-    def _detect_variant_from_repo_id(self) -> FluxVariant:
-        """Detect FLUX variant from the selected repo_id or path."""
-        # Check repo_id first
-        if self.model.repo_id:
-            repo_id_lower = self.model.repo_id.lower()
-            if "schnell" in repo_id_lower:
-                return FluxVariant.SCHNELL
-            elif "fill" in repo_id_lower:
-                return FluxVariant.FILL_DEV
-            elif "canny" in repo_id_lower:
-                return FluxVariant.CANNY_DEV
-            elif "depth" in repo_id_lower:
-                return FluxVariant.DEPTH_DEV
-            elif "dev" in repo_id_lower:
-                return FluxVariant.DEV
-
-        # Default fallback
-        return FluxVariant.DEV
-
-    def _is_nunchaku_model(self) -> bool:
-        """Detect Nunchaku SVDQ transformers via repo or filename."""
-        repo_has_svdq = self.model.repo_id and "svdq" in self.model.repo_id.lower()
-        path_has_svdq = self.model.path and "svdq" in self.model.path.lower()
-        return bool(repo_has_svdq or path_has_svdq)
+        repo_id, _, _ = self._resolve_model_config()
+        return repo_id
 
     async def preload_model(self, context: ProcessingContext):
         hf_token = await context.get_secret("HF_TOKEN")
         if not hf_token:
-            model_url = f"https://huggingface.co/{self.get_model_id()}"
             raise ValueError(
-                f"Flux is a gated model, please set the HF_TOKEN in Nodetool settings and accept the terms of use for the model: {model_url}"
+                "Flux is a gated model, please set the HF_TOKEN in Nodetool settings and accept the terms of use for the model"
             )
 
-        # Determine torch dtype based on variant
-        # Auto-detect variant from model selection
-        detected_variant = self._detect_variant_from_repo_id()
+        transformer_model, text_encoder_model = self._resolve_model_config()
 
         torch_dtype = (
             torch.bfloat16
-            if detected_variant in [FluxVariant.SCHNELL, FluxVariant.DEV]
+            if self.variant in [FluxVariant.SCHNELL, FluxVariant.DEV]
             else torch.float16
         )
 
         log.info(f"Using torch_dtype: {torch_dtype}")
 
-        if self._is_nunchaku_model():
-            await self._load_nunchaku_model(
+        if self.quantization == FluxQuantization.INT4 or self.quantization == FluxQuantization.FP4:
+            assert transformer_model is not None
+            assert text_encoder_model is not None
+
+            # Ensure models are present in cache
+            if not try_to_load_from_cache(transformer_model.repo_id, transformer_model.path):
+                raise ValueError(f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded")
+            
+            if not try_to_load_from_cache(text_encoder_model.repo_id, text_encoder_model.path):
+                raise ValueError(f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded")
+
+            transformer = await get_nunchaku_transformer(
                 context=context,
-                torch_dtype=torch_dtype,
-                detected_variant=detected_variant,
-                hf_token=hf_token,
+                model_class=NunchakuFluxTransformer2dModel,
+                node_id=self.id,
+                repo_id=transformer_model.repo_id,
+                path=transformer_model.path,
             )
+            
+            text_encoder_2 = await get_nunchaku_text_encoder(
+                context=context,
+                node_id=self.id,
+                repo_id=text_encoder_model.repo_id,
+                path=text_encoder_model.path,
+            )
+
+            base_model = self._get_base_model(self.variant)
+
+            try:
+                self._pipeline = FluxPipeline.from_pretrained(
+                    base_model.repo_id,
+                    transformer=transformer,
+                    text_encoder_2=text_encoder_2,
+                    torch_dtype=torch_dtype,
+                    token=hf_token,
+                )
+            except torch.OutOfMemoryError as e:
+                raise ValueError(
+                    "VRAM out of memory while loading Flux. "
+                    "Try enabling CPU offload or reduce image size/steps."
+                ) from e
+
         else:
-            # Load the full pipeline normally
-            log.info(f"Loading FLUX pipeline from {self.get_model_id()}...")
+            # Standard loading
+            # Ensure model is present in cache
+            if not try_to_load_from_cache(repo_id, "model_index.json"):
+                raise ValueError(f"Model {repo_id} must be downloaded")
+
+            log.info(f"Loading FLUX pipeline from {repo_id}...")
             self._pipeline = await self.load_model(
                 context=context,
-                model_id=self.get_model_id(),
-                path=self.model.path,
+                model_id=repo_id,
                 model_class=FluxPipeline,
                 torch_dtype=torch_dtype,
                 variant=None,
                 device="cpu",
                 token=hf_token,
             )
+        
             _enable_pytorch2_attention(self._pipeline)
             _apply_vae_optimizations(self._pipeline)
-
 
         # Apply CPU offload if enabled
         if self._pipeline is not None and self.enable_cpu_offload:
             self._pipeline.enable_sequential_cpu_offload()
-
-    async def _load_nunchaku_model(
-        self,
-        context: ProcessingContext,
-        torch_dtype: torch.dtype,
-        detected_variant: FluxVariant,
-        hf_token: str | None = None,
-    ):
-        transformer = await get_nunchaku_transformer(
-            context=context,
-            model_class=NunchakuFluxTransformer2dModel,
-            node_id=self.id,
-            repo_id=self.model.repo_id,
-            path=self.model.path or "",
-        )
-        text_encoder = await get_nunchaku_text_encoder(context, self.id)
-
-        try:
-            self._pipeline = FluxPipeline.from_pretrained(
-                self._get_base_model_id(detected_variant),
-                transformer=transformer,
-                torch_dtype=torch_dtype,
-                token=hf_token,
-                text_encoder_2=text_encoder,
-            )
-        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
-            raise ValueError(
-                "VRAM out of memory while loading Flux with the Nunchaku transformer. "
-                "Try enabling CPU offload or reduce image size/steps."
-            ) from e
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
@@ -787,15 +851,15 @@ class Flux(HuggingFacePipelineNode):
             generator = torch.Generator(device="cpu").manual_seed(self.seed)
 
         # Adjust parameters based on detected variant
-        detected_variant = self._detect_variant_from_repo_id()
         guidance_scale = self.guidance_scale
         num_inference_steps = self.num_inference_steps
         max_sequence_length = self.max_sequence_length
 
-        if detected_variant == FluxVariant.SCHNELL:
+        if self.variant == FluxVariant.SCHNELL:
             guidance_scale = 0.0
             max_sequence_length = 256
             num_inference_steps = 4
+        max_sequence_length = self.max_sequence_length
 
         def progress_callback(
             pipeline: Any, step: int, timestep: int, callback_kwargs: dict
@@ -837,162 +901,6 @@ class Flux(HuggingFacePipelineNode):
 
         return await context.image_from_pil(image)
 
-
-
-class Kolors(HuggingFacePipelineNode):
-    """
-    Generates images from text prompts using Kolors, a large-scale text-to-image generation model.
-    image, generation, AI, text-to-image, kolors, chinese, english
-
-    Use cases:
-    - Generate high-quality photorealistic images from text descriptions
-    - Create images with Chinese text understanding and rendering
-    - Produce images with complex semantic accuracy
-    - Generate images with both Chinese and English text support
-    - Create detailed images with strong text rendering capabilities
-    """
-
-    prompt: str = Field(
-        default='A ladybug photo, macro, zoom, high quality, film, holding a sign that says "可图"',
-        description="A text prompt describing the desired image. Supports both Chinese and English.",
-    )
-    negative_prompt: str = Field(
-        default="",
-        description="A text prompt describing what to avoid in the image.",
-    )
-    guidance_scale: float = Field(
-        default=6.5,
-        description="The scale for classifier-free guidance.",
-        ge=1.0,
-        le=20.0,
-    )
-    num_inference_steps: int = Field(
-        default=25,
-        description="The number of denoising steps.",
-        ge=1,
-        le=100,
-    )
-    width: int = Field(
-        default=1024,
-        description="The width of the generated image.",
-        ge=64,
-        le=2048,
-    )
-    height: int = Field(
-        default=1024,
-        description="The height of the generated image.",
-        ge=64,
-        le=2048,
-    )
-    seed: int = Field(
-        default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
-        ge=-1,
-    )
-    max_sequence_length: int = Field(
-        default=256,
-        description="Maximum sequence length for the prompt.",
-        ge=1,
-        le=512,
-    )
-    use_dpm_solver: bool = Field(
-        default=True,
-        description="Whether to use DPMSolverMultistepScheduler with Karras sigmas for better quality.",
-    )
-
-    _pipeline: KolorsPipeline | None = None
-
-    @classmethod
-    def get_recommended_models(cls) -> list[HFTextToImage]:
-        return [
-            HFTextToImage(
-                repo_id="Kwai-Kolors/Kolors-diffusers",
-                allow_patterns=[
-                    "**/*.safetensors",
-                    "**/*.json",
-                    "**/*.txt",
-                    "*.json",
-                ],
-            ),
-        ]
-
-    @classmethod
-    def get_title(cls) -> str:
-        return "Kolors Text2Image"
-
-    def get_model_id(self) -> str:
-        return "Kwai-Kolors/Kolors-diffusers"
-
-    async def preload_model(self, context: ProcessingContext):
-        torch_dtype = _select_diffusion_dtype()
-        self._pipeline = await self.load_model(
-            context=context,
-            model_id=self.get_model_id(),
-            model_class=KolorsPipeline,
-            torch_dtype=torch_dtype,
-            variant="fp16" if torch_dtype == torch.float16 else None,
-        )
-
-        _enable_pytorch2_attention(self._pipeline)
-        _apply_vae_optimizations(self._pipeline)
-
-        # Set up the scheduler as recommended in the docs
-        if self._pipeline is not None and self.use_dpm_solver:
-            self._pipeline.scheduler = DPMSolverMultistepScheduler.from_config(
-                self._pipeline.scheduler.config, use_karras_sigmas=True
-            )
-
-    async def move_to_device(self, device: str):
-        if self._pipeline is not None:
-            self._pipeline.to(device)
-
-    async def process(self, context: ProcessingContext) -> ImageRef:
-        if self._pipeline is None:
-            raise ValueError("Pipeline not initialized")
-
-        # Set up the generator for reproducibility
-        generator = None
-        if self.seed != -1:
-            generator = torch.Generator(device="cpu").manual_seed(self.seed)
-
-        # Generate the image off the event loop
-        def _run_pipeline_sync():
-            with torch.inference_mode():
-                return self._pipeline(
-                    prompt=self.prompt,
-                    negative_prompt=self.negative_prompt,
-                    guidance_scale=self.guidance_scale,
-                    num_inference_steps=self.num_inference_steps,
-                    height=self.height,
-                    width=self.width,
-                    generator=generator,
-                    max_sequence_length=self.max_sequence_length,
-                    callback_on_step_end=pipeline_progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
-                    callback_on_step_end_tensor_inputs=["latents"],
-                )
-
-        try:
-            output = await asyncio.to_thread(_run_pipeline_sync)
-        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
-            raise ValueError(
-                "VRAM out of memory while running Qwen-Image. "
-                "Enable 'CPU offload' in the advanced node properties (Enable CPU offload), "
-                "or reduce image size/steps."
-            ) from e
-
-        image = output.images[0]  # type: ignore
-
-        return await context.image_from_pil(image)
-
-    @classmethod
-    def get_basic_fields(cls) -> list[str]:
-        return [
-            "model",
-            "prompt",
-            "height",
-            "width",
-            "seed",
-        ]
 
 
 class Chroma(HuggingFacePipelineNode):

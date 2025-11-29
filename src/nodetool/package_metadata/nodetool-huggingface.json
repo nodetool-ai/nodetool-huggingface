@@ -16830,20 +16830,45 @@
       "node_type": "huggingface.text_to_image.Flux",
       "properties": [
         {
-          "name": "model",
+          "name": "variant",
           "type": {
-            "type": "hf.flux"
+            "type": "enum",
+            "values": [
+              "schnell",
+              "dev",
+              "fill-dev",
+              "canny-dev",
+              "depth-dev"
+            ],
+            "type_name": "nodetool.nodes.huggingface.text_to_image.FluxVariant"
           },
-          "default": {
-            "type": "hf.flux",
-            "repo_id": "",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
+          "default": "dev",
+          "title": "Variant",
+          "description": "The FLUX variant to use."
+        },
+        {
+          "name": "quantization",
+          "type": {
+            "type": "enum",
+            "values": [
+              "fp16",
+              "fp4",
+              "int4"
+            ],
+            "type_name": "nodetool.nodes.huggingface.text_to_image.FluxQuantization"
           },
-          "title": "Model",
-          "description": "The FLUX model to use for text-to-image generation."
+          "default": "int4",
+          "title": "Quantization",
+          "description": "The quantization level to use."
+        },
+        {
+          "name": "enable_cpu_offload",
+          "type": {
+            "type": "bool"
+          },
+          "default": true,
+          "title": "Enable Cpu Offload",
+          "description": "Enable CPU offload for the pipeline. This can reduce VRAM usage."
         },
         {
           "name": "prompt",
@@ -16863,7 +16888,7 @@
           "title": "Guidance Scale",
           "description": "The scale for classifier-free guidance. Use 0.0 for schnell, 3.5 for dev.",
           "min": 0.0,
-          "max": 30.0
+          "max": 20.0
         },
         {
           "name": "width",
@@ -16918,15 +16943,6 @@
           "title": "Seed",
           "description": "Seed for the random number generator. Use -1 for a random seed.",
           "min": -1.0
-        },
-        {
-          "name": "enable_cpu_offload",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Cpu Offload",
-          "description": "Enable CPU offload to reduce VRAM usage."
         }
       ],
       "outputs": [
@@ -16939,11 +16955,52 @@
       ],
       "recommended_models": [
         {
+          "id": "black-forest-labs/FLUX.1-schnell",
+          "type": "hf.flux",
+          "name": "black-forest-labs/FLUX.1-schnell",
+          "repo_id": "black-forest-labs/FLUX.1-schnell",
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "tokenizer/*",
+            "tokenizer_2/*"
+          ],
+          "size_on_disk": 418780386,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "text-to-image",
+            "image-generation",
+            "flux",
+            "en",
+            "license:apache-2.0",
+            "endpoints_compatible",
+            "diffusers:FluxPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 836664,
+          "likes": 4416
+        },
+        {
           "id": "black-forest-labs/FLUX.1-dev",
           "type": "hf.flux",
           "name": "black-forest-labs/FLUX.1-dev",
           "repo_id": "black-forest-labs/FLUX.1-dev",
-          "size_on_disk": 57885946690,
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "tokenizer/*",
+            "tokenizer_2/*"
+          ],
+          "size_on_disk": 418780928,
           "pipeline_tag": "text-to-image",
           "tags": [
             "diffusers",
@@ -16962,27 +17019,62 @@
           "likes": 11862
         },
         {
-          "id": "black-forest-labs/FLUX.1-schnell",
+          "id": "nunchaku-tech/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
           "type": "hf.flux",
-          "name": "black-forest-labs/FLUX.1-schnell",
-          "repo_id": "black-forest-labs/FLUX.1-schnell",
-          "size_on_disk": 57845410538,
+          "name": "nunchaku-tech/nunchaku-flux.1-schnell",
+          "repo_id": "nunchaku-tech/nunchaku-flux.1-schnell",
+          "path": "svdq-int4_r32-flux.1-schnell.safetensors",
+          "size_on_disk": 6747849760,
           "pipeline_tag": "text-to-image",
           "tags": [
             "diffusers",
-            "safetensors",
             "text-to-image",
-            "image-generation",
-            "flux",
+            "SVDQuant",
+            "FLUX.1-schnell",
+            "FLUX.1",
+            "Diffusion",
+            "Quantization",
+            "ICLR2025",
             "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:black-forest-labs/FLUX.1-schnell",
+            "base_model:quantized:black-forest-labs/FLUX.1-schnell",
             "license:apache-2.0",
-            "endpoints_compatible",
-            "diffusers:FluxPipeline",
             "region:us"
           ],
-          "has_model_index": true,
-          "downloads": 836664,
-          "likes": 4416
+          "has_model_index": false,
+          "downloads": 2503,
+          "likes": 9
+        },
+        {
+          "id": "nunchaku-tech/nunchaku-flux.1-schnell:svdq-fp4_r32-flux.1-schnell.safetensors",
+          "type": "hf.flux",
+          "name": "nunchaku-tech/nunchaku-flux.1-schnell",
+          "repo_id": "nunchaku-tech/nunchaku-flux.1-schnell",
+          "path": "svdq-fp4_r32-flux.1-schnell.safetensors",
+          "size_on_disk": 7018246824,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "text-to-image",
+            "SVDQuant",
+            "FLUX.1-schnell",
+            "FLUX.1",
+            "Diffusion",
+            "Quantization",
+            "ICLR2025",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:black-forest-labs/FLUX.1-schnell",
+            "base_model:quantized:black-forest-labs/FLUX.1-schnell",
+            "license:apache-2.0",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 2503,
+          "likes": 9
         },
         {
           "id": "nunchaku-tech/nunchaku-flux.1-dev:svdq-int4_r32-flux.1-dev.safetensors",
@@ -17043,63 +17135,6 @@
           "likes": 39
         },
         {
-          "id": "mit-han-lab/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
-          "type": "hf.flux",
-          "name": "mit-han-lab/nunchaku-flux.1-schnell",
-          "repo_id": "mit-han-lab/nunchaku-flux.1-schnell",
-          "path": "svdq-int4_r32-flux.1-schnell.safetensors",
-          "size_on_disk": 6747849760,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "text-to-image",
-            "SVDQuant",
-            "FLUX.1-schnell",
-            "FLUX.1",
-            "Diffusion",
-            "Quantization",
-            "ICLR2025",
-            "en",
-            "dataset:mit-han-lab/svdquant-datasets",
-            "arxiv:2411.05007",
-            "base_model:black-forest-labs/FLUX.1-schnell",
-            "base_model:quantized:black-forest-labs/FLUX.1-schnell",
-            "license:apache-2.0",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 601,
-          "likes": 8
-        },
-        {
-          "id": "mit-han-lab/nunchaku-flux.1-dev:svdq-fp4_r32-flux.1-schnell.safetensors",
-          "type": "hf.flux",
-          "name": "mit-han-lab/nunchaku-flux.1-dev",
-          "repo_id": "mit-han-lab/nunchaku-flux.1-dev",
-          "path": "svdq-fp4_r32-flux.1-schnell.safetensors",
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "text-to-image",
-            "SVDQuant",
-            "FLUX.1-dev",
-            "FLUX.1",
-            "Diffusion",
-            "Quantization",
-            "ICLR2025",
-            "en",
-            "dataset:mit-han-lab/svdquant-datasets",
-            "arxiv:2411.05007",
-            "base_model:black-forest-labs/FLUX.1-dev",
-            "base_model:quantized:black-forest-labs/FLUX.1-dev",
-            "license:other",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 13611,
-          "likes": 59
-        },
-        {
           "id": "mit-han-lab/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
           "type": "hf.t5",
           "name": "mit-han-lab/nunchaku-t5",
@@ -17127,7 +17162,8 @@
         }
       ],
       "basic_fields": [
-        "model",
+        "variant",
+        "quantization",
         "prompt",
         "height",
         "width",
@@ -17414,7 +17450,7 @@
         },
         {
           "id": "mit-han-lab/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
-          "type": "hf.model",
+          "type": "hf.t5",
           "name": "mit-han-lab/nunchaku-t5",
           "repo_id": "mit-han-lab/nunchaku-t5",
           "path": "awq-int4-flux.1-t5xxl.safetensors",
@@ -17446,149 +17482,6 @@
         "height",
         "width",
         "guidance_scale",
-        "seed"
-      ]
-    },
-    {
-      "title": "Kolors Text2Image",
-      "description": "Generates images from text prompts using Kolors, a large-scale text-to-image generation model.\n    image, generation, AI, text-to-image, kolors, chinese, english\n\n    Use cases:\n    - Generate high-quality photorealistic images from text descriptions\n    - Create images with Chinese text understanding and rendering\n    - Produce images with complex semantic accuracy\n    - Generate images with both Chinese and English text support\n    - Create detailed images with strong text rendering capabilities",
-      "namespace": "huggingface.text_to_image",
-      "node_type": "huggingface.text_to_image.Kolors",
-      "properties": [
-        {
-          "name": "prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "A ladybug photo, macro, zoom, high quality, film, holding a sign that says \"\u53ef\u56fe\"",
-          "title": "Prompt",
-          "description": "A text prompt describing the desired image. Supports both Chinese and English."
-        },
-        {
-          "name": "negative_prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "",
-          "title": "Negative Prompt",
-          "description": "A text prompt describing what to avoid in the image."
-        },
-        {
-          "name": "guidance_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 6.5,
-          "title": "Guidance Scale",
-          "description": "The scale for classifier-free guidance.",
-          "min": 1.0,
-          "max": 20.0
-        },
-        {
-          "name": "num_inference_steps",
-          "type": {
-            "type": "int"
-          },
-          "default": 25,
-          "title": "Num Inference Steps",
-          "description": "The number of denoising steps.",
-          "min": 1.0,
-          "max": 100.0
-        },
-        {
-          "name": "width",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Width",
-          "description": "The width of the generated image.",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
-          "name": "height",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Height",
-          "description": "The height of the generated image.",
-          "min": 64.0,
-          "max": 2048.0
-        },
-        {
-          "name": "seed",
-          "type": {
-            "type": "int"
-          },
-          "default": -1,
-          "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
-          "min": -1.0
-        },
-        {
-          "name": "max_sequence_length",
-          "type": {
-            "type": "int"
-          },
-          "default": 256,
-          "title": "Max Sequence Length",
-          "description": "Maximum sequence length for the prompt.",
-          "min": 1.0,
-          "max": 512.0
-        },
-        {
-          "name": "use_dpm_solver",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Use Dpm Solver",
-          "description": "Whether to use DPMSolverMultistepScheduler with Karras sigmas for better quality."
-        }
-      ],
-      "outputs": [
-        {
-          "type": {
-            "type": "image"
-          },
-          "name": "output"
-        }
-      ],
-      "recommended_models": [
-        {
-          "id": "Kwai-Kolors/Kolors-diffusers",
-          "type": "hf.text_to_image",
-          "name": "Kwai-Kolors/Kolors-diffusers",
-          "repo_id": "Kwai-Kolors/Kolors-diffusers",
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ],
-          "size_on_disk": 17814710567,
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "Kolors",
-            "zh",
-            "en",
-            "license:apache-2.0",
-            "diffusers:KolorsPipeline",
-            "region:us"
-          ],
-          "has_model_index": true,
-          "downloads": 10536,
-          "likes": 111
-        }
-      ],
-      "basic_fields": [
-        "model",
-        "prompt",
-        "height",
-        "width",
         "seed"
       ]
     },

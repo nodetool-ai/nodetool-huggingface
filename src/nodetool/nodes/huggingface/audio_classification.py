@@ -144,10 +144,10 @@ class ZeroShotAudioClassifier(HuggingFacePipelineNode):
     async def preload_model(self, context: ProcessingContext):
         from transformers import ZeroShotAudioClassificationPipeline
 
-        self._pipeline = await self.load_model(
-            context,
-            ZeroShotAudioClassificationPipeline,
-            self.model.repo_id,
+        self._pipeline = await self.load_pipeline(
+            context=context,
+            pipeline_task="zero-shot-audio-classification",
+            model_id=self.model.repo_id,
             torch_dtype=select_inference_dtype(),
         )
 
