@@ -1,0 +1,31 @@
+"""
+Deprecated multi-node runner. Run individual smoke files instead:
+- test_image_to_image_flux_fill.py
+- test_image_to_image_flux_kontext.py
+- test_image_to_image_flux_prior_redux.py
+- test_image_to_image_image_to_image.py
+- test_image_to_image_inpaint.py
+- test_image_to_image_load_image_to_image_model.py
+- test_image_to_image_omni_gen_node.py
+- test_image_to_image_qwen_image_edit.py
+- test_image_to_image_real_e_s_r_g_a_n_node.py
+- test_image_to_image_stable_diffusion_control_net.py
+- test_image_to_image_stable_diffusion_control_net_img2_img_node.py
+- test_image_to_image_stable_diffusion_control_net_inpaint_node.py
+- test_image_to_image_stable_diffusion_img2_img_node.py
+- test_image_to_image_stable_diffusion_inpaint_node.py
+- test_image_to_image_stable_diffusion_latent_upscaler.py
+- test_image_to_image_stable_diffusion_upscale.py
+- test_image_to_image_stable_diffusion_x_l_control_net.py
+- test_image_to_image_stable_diffusion_x_l_control_net_img2_img_node.py
+- test_image_to_image_stable_diffusion_x_l_img2_img.py
+- test_image_to_image_stable_diffusion_x_l_inpainting.py
+- test_image_to_image_swin2_s_r.py
+- test_image_to_image_v_a_e_decode.py
+- test_image_to_image_v_a_e_encode.py
+"""
+
+if __name__ == "__main__":
+    import sys
+    sys.stderr.write("Use the per-node scripts: test_image_to_image_flux_fill.py, test_image_to_image_flux_kontext.py, test_image_to_image_flux_prior_redux.py, test_image_to_image_image_to_image.py, test_image_to_image_inpaint.py, test_image_to_image_load_image_to_image_model.py, test_image_to_image_omni_gen_node.py, test_image_to_image_qwen_image_edit.py, test_image_to_image_real_e_s_r_g_a_n_node.py, test_image_to_image_stable_diffusion_control_net.py, test_image_to_image_stable_diffusion_control_net_img2_img_node.py, test_image_to_image_stable_diffusion_control_net_inpaint_node.py, test_image_to_image_stable_diffusion_img2_img_node.py, test_image_to_image_stable_diffusion_inpaint_node.py, test_image_to_image_stable_diffusion_latent_upscaler.py, test_image_to_image_stable_diffusion_upscale.py, test_image_to_image_stable_diffusion_x_l_control_net.py, test_image_to_image_stable_diffusion_x_l_control_net_img2_img_node.py, test_image_to_image_stable_diffusion_x_l_img2_img.py, test_image_to_image_stable_diffusion_x_l_inpainting.py, test_image_to_image_swin2_s_r.py, test_image_to_image_v_a_e_decode.py, test_image_to_image_v_a_e_encode.py.\n")
+    raise SystemExit(0)
