@@ -42,10 +42,10 @@ class TokenClassification(
         connect_field(
             default=types.HFTokenClassification(
                 type="hf.token_classification",
-                repo_id="",
+                repo_id="dbmdz/bert-large-cased-finetuned-conll03-english",
                 path=None,
                 variant=None,
-                allow_patterns=None,
+                allow_patterns=["*.bin", "*.json", "**/*.json", "*.safetensors"],
                 ignore_patterns=None,
             ),
             description="The model ID to use for token classification",

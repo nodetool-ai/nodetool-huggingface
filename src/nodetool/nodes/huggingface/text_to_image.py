@@ -1434,15 +1434,28 @@ class FluxControl(HuggingFacePipelineNode):
                 f"Flux Control is a gated model, please set the HF_TOKEN in Nodetool settings and accept the terms of use for the model: {model_url}"
             )
 
-        log.info(f"Loading FLUX Control pipeline from {self.get_model_id()}...")
         torch_dtype = torch.bfloat16
+        text_encoder_model = (
+            HFT5(
+                repo_id="mit-han-lab/nunchaku-t5",
+                path="awq-int4-flux.1-t5xxl.safetensors",
+            )
+            if self._is_nunchaku_model()
+            else None
+        )
+
+        log.info(f"Loading FLUX Control pipeline from {self.get_model_id()}...")
         if self._is_nunchaku_model():
             await self._load_nunchaku_model(
                 context=context,
                 torch_dtype=torch_dtype,
                 hf_token=hf_token,
+                text_encoder_model=text_encoder_model,
             )
         else:
+            if not try_to_load_from_cache(self.get_model_id(), "model_index.json"):
+                raise ValueError(f"Model {self.get_model_id()} must be downloaded")
+
             self._pipeline = await self.load_model(
                 context=context,
                 model_class=FluxControlPipeline,
@@ -1450,13 +1463,13 @@ class FluxControl(HuggingFacePipelineNode):
                 torch_dtype=torch_dtype,
                 device="cpu",
                 token=hf_token,
+                local_files_only=True,
             )
 
-        # Apply CPU offload if enabled
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         if self._pipeline is not None and self.enable_cpu_offload:
-            self._pipeline.enable_model_cpu_offload()
+            self._pipeline.enable_sequential_cpu_offload()
 
     def _is_nunchaku_model(self) -> bool:
         repo_has_svdq = self.model.repo_id and "svdq" in self.model.repo_id.lower()
@@ -1475,17 +1488,48 @@ class FluxControl(HuggingFacePipelineNode):
         context: ProcessingContext,
         torch_dtype: torch.dtype,
         hf_token: str,
+        text_encoder_model: HFT5 | None,
     ):
-        variant_suffix, base_model_id = self._detect_flux_control_variant()
+        _, base_model_id = self._detect_flux_control_variant()
+
+        if not try_to_load_from_cache(base_model_id, "model_index.json"):
+            raise ValueError(
+                f"Base Flux Control model {base_model_id} must be downloaded"
+            )
+
+        if not self.model.path:
+            raise ValueError(
+                "Nunchaku Flux Control requires the model.path to point to the transformer file."
+            )
+
+        if not try_to_load_from_cache(self.model.repo_id, self.model.path):
+            raise ValueError(
+                f"Transformer model {self.model.repo_id}/{self.model.path} must be downloaded"
+            )
+
+        if text_encoder_model is not None and not try_to_load_from_cache(
+            text_encoder_model.repo_id, text_encoder_model.path
+        ):
+            raise ValueError(
+                f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded"
+            )
 
         transformer = await get_nunchaku_transformer(
             context=context,
             model_class=NunchakuFluxTransformer2dModel,
             node_id=self.id,
             repo_id=self.model.repo_id,
-            path=self.model.path or "",
+            path=self.model.path,
+            allow_downloads=False,
         )
-        text_encoder = await get_nunchaku_text_encoder(context, self.id)
+
+        text_encoder = await get_nunchaku_text_encoder(
+            context,
+            self.id,
+            repo_id=text_encoder_model.repo_id if text_encoder_model else None,
+            path=text_encoder_model.path if text_encoder_model else None,
+            allow_downloads=False,
+        )
 
         try:
             self._pipeline = FluxControlPipeline.from_pretrained(
@@ -1494,6 +1538,7 @@ class FluxControl(HuggingFacePipelineNode):
                 torch_dtype=torch_dtype,
                 token=hf_token,
                 text_encoder_2=text_encoder,
+                local_files_only=True,
             )
         except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
             raise ValueError(
@@ -1507,10 +1552,16 @@ class FluxControl(HuggingFacePipelineNode):
             if self.enable_cpu_offload:
                 # When moving to CPU, disable CPU offload and move all components to CPU
                 if device == "cpu":
-                    self._pipeline.to(device)
+                    try:
+                        self._pipeline.to(device)
+                    except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                        raise ValueError(
+                            "VRAM out of memory while moving Flux Control to device. "
+                            "Enable 'CPU offload' in the advanced node properties or reduce image size."
+                        ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
-                    self._pipeline.enable_model_cpu_offload()
+                    self._pipeline.enable_sequential_cpu_offload()
             else:
                 # Normal device movement without CPU offload
                 try:
@@ -1520,6 +1571,8 @@ class FluxControl(HuggingFacePipelineNode):
                         "VRAM out of memory while moving Flux Control to device. "
                         "Enable 'CPU offload' in the advanced node properties or reduce image size."
                     ) from e
+
+            _apply_vae_optimizations(self._pipeline)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:

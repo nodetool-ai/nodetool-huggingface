@@ -11,5 +11,5 @@ from tests.test_utils import main
 
 if __name__ == "__main__":
     main([
-        Wan_T2V(),
+        Wan_T2V(height=256, width=256),
     ])

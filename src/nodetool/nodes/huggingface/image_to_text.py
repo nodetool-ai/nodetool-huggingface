@@ -7,7 +7,7 @@ from pydantic import Field
 
 class LoadImageToTextModel(HuggingFacePipelineNode):
     repo_id: str = Field(
-        default="",
+        default="Salesforce/blip-image-captioning-base",
         title="Model ID on Huggingface",
         description="The model ID to use for image-to-text generation",
     )
@@ -39,7 +39,10 @@ class ImageToText(HuggingFacePipelineNode):
     """
 
     model: HFImageToText = Field(
-        default=HFImageToText(),
+        default=HFImageToText(
+            repo_id="Salesforce/blip-image-captioning-base",
+            allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
+        ),
         title="Model ID on Huggingface",
         description="The model ID to use for image-to-text generation",
     )

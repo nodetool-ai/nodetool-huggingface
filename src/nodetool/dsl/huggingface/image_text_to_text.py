@@ -36,10 +36,10 @@ class ImageTextToText(SingleOutputGraphNode[str], GraphNode[str]):
         connect_field(
             default=types.HFImageTextToText(
                 type="hf.image_text_to_text",
-                repo_id="",
+                repo_id="HuggingFaceTB/SmolVLM-Instruct",
                 path=None,
                 variant=None,
-                allow_patterns=None,
+                allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
                 ignore_patterns=None,
             ),
             description="The image-text-to-text model to use.",
@@ -86,7 +86,7 @@ class LoadImageTextToTextModel(
     """
 
     repo_id: str | OutputHandle[str] = connect_field(
-        default="",
+        default="HuggingFaceTB/SmolVLM-Instruct",
         description="The model repository ID to use for image-text-to-text generation.",
     )
 

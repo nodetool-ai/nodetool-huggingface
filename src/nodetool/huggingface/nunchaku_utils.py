@@ -20,6 +20,7 @@ async def get_nunchaku_text_encoder(
     node_id: str,
     repo_id: str | None = None,
     path: str | None = None,
+    allow_downloads: bool = True,
 ) -> Any | None:
     """
     Get text encoder kwargs when using a nunchaku model.
@@ -50,15 +51,13 @@ async def get_nunchaku_text_encoder(
 
     # Try to find nunchaku T5 encoder
     cache_path = try_to_load_from_cache(repo_id, path)
-    if cache_path:
-        return await load_model(
-            context=context,
-            model_id=cache_path,
-            model_class=NunchakuT5EncoderModel,
-            node_id=node_id,
-            torch_dtype=torch.bfloat16,
-        )
-    else:
+    if not cache_path:
+        if not allow_downloads:
+            raise ValueError(
+                f"Nunchaku text encoder {repo_id}/{path} is not downloaded. "
+                "Download it to the local HF cache before running this node."
+            )
+
         log.info(
             "Downloading Nunchaku text_encoder %s/%s to cache",
             repo_id,
@@ -86,7 +85,8 @@ async def get_nunchaku_transformer(
     model_class: type,
     node_id: str,
     repo_id: str,
-    path: str
+    path: str,
+    allow_downloads: bool = True,
 ) -> Any | None:
     """
     Get transformer kwargs when using a nunchaku model.
@@ -133,6 +133,12 @@ async def get_nunchaku_transformer(
 
     cache_path = try_to_load_from_cache(repo_id, path)
     if not cache_path:
+        if not allow_downloads:
+            raise ValueError(
+                f"Nunchaku transformer {repo_id}/{path} is not downloaded. "
+                "Download it to the local HF cache before running this node."
+            )
+
         log.info(
             "Downloading Nunchaku transformer %s/%s to cache",
             repo_id,

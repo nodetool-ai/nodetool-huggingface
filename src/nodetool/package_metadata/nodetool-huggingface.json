@@ -1881,10 +1881,14 @@
           },
           "default": {
             "type": "hf.translation",
-            "repo_id": "",
+            "repo_id": "google-t5/t5-base",
             "path": null,
             "variant": null,
-            "allow_patterns": null,
+            "allow_patterns": [
+              "*.json",
+              "*.txt",
+              "*.safetensors"
+            ],
             "ignore_patterns": null
           },
           "title": "Model ID on HuggingFace",
@@ -2166,10 +2170,15 @@
           },
           "default": {
             "type": "hf.image_to_text",
-            "repo_id": "",
+            "repo_id": "Salesforce/blip-image-captioning-base",
             "path": null,
             "variant": null,
-            "allow_patterns": null,
+            "allow_patterns": [
+              "*.safetensors",
+              "*.json",
+              "*.txt",
+              "*.model"
+            ],
             "ignore_patterns": null
           },
           "title": "Model ID on Huggingface",
@@ -2346,7 +2355,7 @@
           "type": {
             "type": "str"
           },
-          "default": "",
+          "default": "Salesforce/blip-image-captioning-base",
           "title": "Model ID on Huggingface",
           "description": "The model ID to use for image-to-text generation"
         }
@@ -2640,10 +2649,15 @@
           },
           "default": {
             "type": "hf.image_text_to_text",
-            "repo_id": "",
+            "repo_id": "HuggingFaceTB/SmolVLM-Instruct",
             "path": null,
             "variant": null,
-            "allow_patterns": null,
+            "allow_patterns": [
+              "*.safetensors",
+              "*.json",
+              "*.txt",
+              "*.model"
+            ],
             "ignore_patterns": null
           },
           "title": "Model",
@@ -2843,7 +2857,7 @@
           "type": {
             "type": "str"
           },
-          "default": "",
+          "default": "HuggingFaceTB/SmolVLM-Instruct",
           "title": "Model ID on Hugging Face",
           "description": "The model repository ID to use for image-text-to-text generation."
         }
@@ -3656,10 +3670,15 @@
           },
           "default": {
             "type": "hf.token_classification",
-            "repo_id": "",
+            "repo_id": "dbmdz/bert-large-cased-finetuned-conll03-english",
             "path": null,
             "variant": null,
-            "allow_patterns": null,
+            "allow_patterns": [
+              "*.bin",
+              "*.json",
+              "**/*.json",
+              "*.safetensors"
+            ],
             "ignore_patterns": null
           },
           "title": "Model ID on Huggingface",
@@ -9317,10 +9336,15 @@
           },
           "default": {
             "type": "hf.image_to_image",
-            "repo_id": "",
+            "repo_id": "runwayml/stable-diffusion-v1-5",
             "path": null,
             "variant": null,
-            "allow_patterns": null,
+            "allow_patterns": [
+              "*.safetensors",
+              "*.bin",
+              "*.json",
+              "**/*.json"
+            ],
             "ignore_patterns": null
           },
           "title": "Model",
@@ -9419,123 +9443,6 @@
       ]
     },
     {
-      "title": "AutoPipeline Inpainting",
-      "description": "Performs inpainting on images using AutoPipeline for Inpainting.\n    This node automatically detects the appropriate pipeline class based on the model used.\n    image, inpainting, autopipeline, stable-diffusion, SDXL, kandinsky\n\n    Use cases:\n    - Remove unwanted objects from images with any compatible model\n    - Fill in missing parts of images using various diffusion models\n    - Modify specific areas of images while preserving the rest\n    - Automatic pipeline selection for different model architectures",
-      "namespace": "huggingface.image_to_image",
-      "node_type": "huggingface.image_to_image.Inpaint",
-      "properties": [
-        {
-          "name": "model",
-          "type": {
-            "type": "hf.image_to_image"
-          },
-          "default": {
-            "type": "hf.image_to_image",
-            "repo_id": "",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Model",
-          "description": "The HuggingFace model to use for inpainting."
-        },
-        {
-          "name": "prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "",
-          "title": "Prompt",
-          "description": "Text prompt describing what should be generated in the masked area."
-        },
-        {
-          "name": "negative_prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "",
-          "title": "Negative Prompt",
-          "description": "Text prompt describing what should not appear in the generated content."
-        },
-        {
-          "name": "image",
-          "type": {
-            "type": "image"
-          },
-          "default": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null
-          },
-          "title": "Input Image",
-          "description": "The input image to inpaint"
-        },
-        {
-          "name": "mask_image",
-          "type": {
-            "type": "image"
-          },
-          "default": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null
-          },
-          "title": "Mask Image",
-          "description": "The mask image indicating areas to be inpainted (white areas will be inpainted)"
-        },
-        {
-          "name": "num_inference_steps",
-          "type": {
-            "type": "int"
-          },
-          "default": 25,
-          "title": "Num Inference Steps",
-          "description": "Number of denoising steps.",
-          "min": 1.0,
-          "max": 100.0
-        },
-        {
-          "name": "guidance_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 7.5,
-          "title": "Guidance Scale",
-          "description": "Guidance scale for generation. Higher values follow the prompt more closely.",
-          "min": 1.0,
-          "max": 20.0
-        },
-        {
-          "name": "seed",
-          "type": {
-            "type": "int"
-          },
-          "default": -1,
-          "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
-          "min": -1.0
-        }
-      ],
-      "outputs": [
-        {
-          "type": {
-            "type": "image"
-          },
-          "name": "output"
-        }
-      ],
-      "basic_fields": [
-        "model",
-        "image",
-        "mask_image",
-        "prompt",
-        "negative_prompt"
-      ]
-    },
-    {
       "title": "Load Image To Image Model",
       "description": "Load HuggingFace model for image-to-image generation from a repo_id.\n\n    Use cases:\n    - Loads a pipeline directly from a repo_id\n    - Used for ImageToImage node",
       "namespace": "huggingface.image_to_image",
@@ -9546,7 +9453,7 @@
           "type": {
             "type": "str"
           },
-          "default": "",
+          "default": "runwayml/stable-diffusion-v1-5",
           "title": "Repo Id",
           "description": "The repository ID of the model to use for image-to-image generation."
         }
@@ -17605,15 +17512,6 @@
           "title": "Seed",
           "description": "Seed for the random number generator. Use -1 for a random seed.",
           "min": -1.0
-        },
-        {
-          "name": "enable_cpu_offload",
-          "type": {
-            "type": "bool"
-          },
-          "default": false,
-          "title": "Enable Cpu Offload",
-          "description": "Enable CPU offload to reduce VRAM usage."
         }
       ],
       "outputs": [

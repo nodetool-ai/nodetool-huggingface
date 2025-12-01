@@ -35,10 +35,10 @@ class ImageToText(SingleOutputGraphNode[str], GraphNode[str]):
     model: types.HFImageToText | OutputHandle[types.HFImageToText] = connect_field(
         default=types.HFImageToText(
             type="hf.image_to_text",
-            repo_id="",
+            repo_id="Salesforce/blip-image-captioning-base",
             path=None,
             variant=None,
-            allow_patterns=None,
+            allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
             ignore_patterns=None,
         ),
         description="The model ID to use for image-to-text generation",
@@ -72,7 +72,8 @@ class LoadImageToTextModel(
     SingleOutputGraphNode[types.HFImageToText], GraphNode[types.HFImageToText]
 ):
     repo_id: str | OutputHandle[str] = connect_field(
-        default="", description="The model ID to use for image-to-text generation"
+        default="Salesforce/blip-image-captioning-base",
+        description="The model ID to use for image-to-text generation",
     )
 
     @classmethod

@@ -43,10 +43,10 @@ class Translation(SingleOutputGraphNode[str], GraphNode[str]):
     model: types.HFTranslation | OutputHandle[types.HFTranslation] = connect_field(
         default=types.HFTranslation(
             type="hf.translation",
-            repo_id="",
+            repo_id="google-t5/t5-base",
             path=None,
             variant=None,
-            allow_patterns=None,
+            allow_patterns=["*.json", "*.txt", "*.safetensors"],
             ignore_patterns=None,
         ),
         description="The model ID to use for translation",

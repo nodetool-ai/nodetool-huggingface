@@ -17,7 +17,7 @@ class LoadImageTextToTextModel(HuggingFacePipelineNode):
     """
 
     repo_id: str = Field(
-        default="",
+        default="HuggingFaceTB/SmolVLM-Instruct",
         title="Model ID on Hugging Face",
         description="The model repository ID to use for image-text-to-text generation.",
     )
@@ -49,7 +49,10 @@ class ImageTextToText(HuggingFacePipelineNode):
     """
 
     model: HFImageTextToText = Field(
-        default=HFImageTextToText(),
+        default=HFImageTextToText(
+            repo_id="HuggingFaceTB/SmolVLM-Instruct",
+            allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
+        ),
         title="Model",
         description="The image-text-to-text model to use.",
     )

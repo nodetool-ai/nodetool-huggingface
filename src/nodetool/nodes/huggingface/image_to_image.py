@@ -47,7 +47,6 @@ from nodetool.workflows.processing_context import ProcessingContext
 from diffusers.pipelines.omnigen.pipeline_omnigen import OmniGenPipeline
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
-from diffusers.pipelines.auto_pipeline import AutoPipelineForInpainting
 from diffusers.models.controlnets.controlnet import ControlNetModel
 from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import QwenImageEditPipeline
 from diffusers.models.transformers.transformer_qwenimage import (
@@ -354,7 +353,7 @@ class LoadImageToImageModel(HuggingFacePipelineNode):
     """
 
     repo_id: str = Field(
-        default="",
+        default="runwayml/stable-diffusion-v1-5",
         description="The repository ID of the model to use for image-to-image generation.",
     )
 
@@ -408,7 +407,10 @@ class ImageToImage(HuggingFacePipelineNode):
     """
 
     model: HFImageToImage = Field(
-        default=HFImageToImage(),
+        default=HFImageToImage(
+            repo_id="runwayml/stable-diffusion-v1-5",
+            allow_patterns=["*.safetensors", "*.bin", "*.json", "**/*.json"],
+        ),
         description="The HuggingFace model to use for image-to-image generation.",
     )
     prompt: str = Field(
@@ -523,129 +525,6 @@ class ImageToImage(HuggingFacePipelineNode):
                 "Enable 'CPU offload' in the advanced node properties (if available), "
                 "or reduce image size/steps."
             ) from e
-        image = output.images[0]
-
-        return await context.image_from_pil(image)
-
-
-class Inpaint(HuggingFacePipelineNode):
-    """
-    Performs inpainting on images using AutoPipeline for Inpainting.
-    This node automatically detects the appropriate pipeline class based on the model used.
-    image, inpainting, autopipeline, stable-diffusion, SDXL, kandinsky
-
-    Use cases:
-    - Remove unwanted objects from images with any compatible model
-    - Fill in missing parts of images using various diffusion models
-    - Modify specific areas of images while preserving the rest
-    - Automatic pipeline selection for different model architectures
-    """
-
-    model: HFImageToImage = Field(
-        default=HFImageToImage(),
-        description="The HuggingFace model to use for inpainting.",
-    )
-    prompt: str = Field(
-        default="",
-        description="Text prompt describing what should be generated in the masked area.",
-    )
-    negative_prompt: str = Field(
-        default="",
-        description="Text prompt describing what should not appear in the generated content.",
-    )
-    image: ImageRef = Field(
-        default=ImageRef(),
-        title="Input Image",
-        description="The input image to inpaint",
-    )
-    mask_image: ImageRef = Field(
-        default=ImageRef(),
-        title="Mask Image",
-        description="The mask image indicating areas to be inpainted (white areas will be inpainted)",
-    )
-    num_inference_steps: int = Field(
-        default=25,
-        description="Number of denoising steps.",
-        ge=1,
-        le=100,
-    )
-    guidance_scale: float = Field(
-        default=7.5,
-        description="Guidance scale for generation. Higher values follow the prompt more closely.",
-        ge=1.0,
-        le=20.0,
-    )
-    seed: int = Field(
-        default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
-        ge=-1,
-    )
-
-    _pipeline: AutoPipelineForInpainting | None = None
-
-    @classmethod
-    def get_basic_fields(cls):
-        return ["model", "image", "mask_image", "prompt", "negative_prompt"]
-
-    def required_inputs(self):
-        return ["image", "mask_image"]
-
-    @classmethod
-    def get_title(cls) -> str:
-        return "AutoPipeline Inpainting"
-
-    def get_model_id(self) -> str:
-        return self.model.repo_id
-
-    async def preload_model(self, context: ProcessingContext):
-        torch_dtype = _select_diffusion_dtype()
-        self._pipeline = await self.load_model(
-            context=context,
-            model_id=self.model.repo_id,
-            path=self.model.path,
-            model_class=AutoPipelineForInpainting,
-            torch_dtype=torch_dtype,
-            use_safetensors=True,
-            variant=self.model.variant,
-        )
-        _enable_pytorch2_attention(self._pipeline)
-        _apply_vae_optimizations(self._pipeline)
-
-    async def move_to_device(self, device: str):
-        if self._pipeline is not None:
-            self._pipeline.to(device)
-
-    async def process(self, context: ProcessingContext) -> ImageRef:
-        if self._pipeline is None:
-            raise ValueError("Pipeline not initialized")
-
-        # Set up the generator for reproducibility
-        generator = torch.Generator(device="cpu")
-        if self.seed != -1:
-            generator = generator.manual_seed(self.seed)
-
-        input_image = await context.image_to_pil(self.image)
-        mask_image = await context.image_to_pil(self.mask_image)
-
-        # Prepare kwargs for the pipeline
-        kwargs = {
-            "prompt": self.prompt,
-            "image": input_image,
-            "mask_image": mask_image,
-            "num_inference_steps": self.num_inference_steps,
-            "guidance_scale": self.guidance_scale,
-            "generator": generator,
-            "callback_on_step_end": pipeline_progress_callback(
-                self.id, self.num_inference_steps, context
-            ),
-        }
-
-        # Add negative prompt if provided
-        if self.negative_prompt:
-            kwargs["negative_prompt"] = self.negative_prompt
-
-        output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
-
         image = output.images[0]
 
         return await context.image_from_pil(image)

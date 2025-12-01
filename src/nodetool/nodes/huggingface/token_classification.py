@@ -28,7 +28,10 @@ class TokenClassification(HuggingFacePipelineNode):
         MAX = "max"
 
     model: HFTokenClassification = Field(
-        default=HFTokenClassification(),
+        default=HFTokenClassification(
+            repo_id="dbmdz/bert-large-cased-finetuned-conll03-english",
+            allow_patterns=["*.bin", "*.json", "**/*.json", "*.safetensors"],
+        ),
         title="Model ID on Huggingface",
         description="The model ID to use for token classification",
     )

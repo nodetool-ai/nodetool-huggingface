@@ -352,7 +352,9 @@ class Wan_T2V(HuggingFacePipelineNode):
             low_cpu_mem_usage=False,
             ignore_mismatched_sizes=True,
         )
-        torch_dtype = _select_diffusion_dtype()
+        # Wan models are huge and typically released with bfloat16 weights, so we
+        # explicitly request that dtype to keep memory usage manageable.
+        torch_dtype = torch.bfloat16
         self._pipeline = await self.load_model(
             context=context,
             model_class=WanPipeline,
@@ -367,6 +369,15 @@ class Wan_T2V(HuggingFacePipelineNode):
                 self._pipeline, "enable_model_cpu_offload"
             ):
                 self._pipeline.enable_model_cpu_offload()  # type: ignore
+                if hasattr(self._pipeline, "enable_sequential_cpu_offload"):
+                    self._pipeline.enable_sequential_cpu_offload()  # type: ignore
+
+            if hasattr(self._pipeline, "enable_attention_slicing"):
+                try:
+                    self._pipeline.enable_attention_slicing()  # type: ignore
+                except Exception:
+                    pass
+
             # VAE memory helpers
             if self.enable_vae_slicing and hasattr(self._pipeline, "vae"):
                 try:
@@ -378,6 +389,15 @@ class Wan_T2V(HuggingFacePipelineNode):
                     self._pipeline.vae.enable_tiling()  # type: ignore
                 except Exception:
                     pass
+
+            # Attempt to enable xformers if it is available
+            try:
+                if hasattr(self._pipeline, "unet") and hasattr(
+                    self._pipeline.unet, "enable_xformers_memory_efficient_attention"
+                ):
+                    self._pipeline.unet.enable_xformers_memory_efficient_attention()  # type: ignore
+            except Exception:
+                pass
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None and not self.enable_cpu_offload:

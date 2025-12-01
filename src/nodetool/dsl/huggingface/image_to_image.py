@@ -245,10 +245,10 @@ class ImageToImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageR
     model: types.HFImageToImage | OutputHandle[types.HFImageToImage] = connect_field(
         default=types.HFImageToImage(
             type="hf.image_to_image",
-            repo_id="",
+            repo_id="runwayml/stable-diffusion-v1-5",
             path=None,
             variant=None,
-            allow_patterns=None,
+            allow_patterns=["*.safetensors", "*.bin", "*.json", "**/*.json"],
             ignore_patterns=None,
         ),
         description="The HuggingFace model to use for image-to-image generation.",
@@ -297,68 +297,6 @@ import nodetool.nodes.huggingface.image_to_image
 from nodetool.workflows.base_node import BaseNode
 
 
-class Inpaint(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
-    """
-
-    Performs inpainting on images using AutoPipeline for Inpainting.
-    This node automatically detects the appropriate pipeline class based on the model used.
-    image, inpainting, autopipeline, stable-diffusion, SDXL, kandinsky
-
-    Use cases:
-    - Remove unwanted objects from images with any compatible model
-    - Fill in missing parts of images using various diffusion models
-    - Modify specific areas of images while preserving the rest
-    - Automatic pipeline selection for different model architectures
-    """
-
-    model: types.HFImageToImage | OutputHandle[types.HFImageToImage] = connect_field(
-        default=types.HFImageToImage(
-            type="hf.image_to_image",
-            repo_id="",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The HuggingFace model to use for inpainting.",
-    )
-    prompt: str | OutputHandle[str] = connect_field(
-        default="",
-        description="Text prompt describing what should be generated in the masked area.",
-    )
-    negative_prompt: str | OutputHandle[str] = connect_field(
-        default="",
-        description="Text prompt describing what should not appear in the generated content.",
-    )
-    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The input image to inpaint",
-    )
-    mask_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The mask image indicating areas to be inpainted (white areas will be inpainted)",
-    )
-    num_inference_steps: int | OutputHandle[int] = connect_field(
-        default=25, description="Number of denoising steps."
-    )
-    guidance_scale: float | OutputHandle[float] = connect_field(
-        default=7.5,
-        description="Guidance scale for generation. Higher values follow the prompt more closely.",
-    )
-    seed: int | OutputHandle[int] = connect_field(
-        default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
-    )
-
-    @classmethod
-    def get_node_class(cls) -> type[BaseNode]:
-        return nodetool.nodes.huggingface.image_to_image.Inpaint
-
-    @classmethod
-    def get_node_type(cls):
-        return cls.get_node_class().get_node_type()
-
-
 import typing
 from pydantic import Field
 from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
@@ -379,7 +317,7 @@ class LoadImageToImageModel(
     """
 
     repo_id: str | OutputHandle[str] = connect_field(
-        default="",
+        default="runwayml/stable-diffusion-v1-5",
         description="The repository ID of the model to use for image-to-image generation.",
     )
 

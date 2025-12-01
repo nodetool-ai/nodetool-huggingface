@@ -305,9 +305,6 @@ class QwenImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed.",
     )
-    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
-        default=False, description="Enable CPU offload to reduce VRAM usage."
-    )
 
     @classmethod
     def get_node_class(cls) -> type[BaseNode]:

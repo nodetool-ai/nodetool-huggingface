@@ -73,7 +73,10 @@ class Translation(HuggingFacePipelineNode):
         VIETNAMESE = "vi"
 
     model: HFTranslation = Field(
-        default=HFTranslation(),
+        default=HFTranslation(
+            repo_id="google-t5/t5-base",
+            allow_patterns=["*.json", "*.txt", "*.safetensors"],
+        ),
         title="Model ID on HuggingFace",
         description="The model ID to use for translation",
     )

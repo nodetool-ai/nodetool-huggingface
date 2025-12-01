@@ -1365,6 +1365,14 @@ class HuggingFaceLocalProvider(BaseProvider):
             # Apply memory optimization settings
             if enable_cpu_offload and hasattr(pipeline, "enable_model_cpu_offload"):
                 pipeline.enable_model_cpu_offload()
+                if hasattr(pipeline, "enable_sequential_cpu_offload"):
+                    pipeline.enable_sequential_cpu_offload()
+
+            if hasattr(pipeline, "enable_attention_slicing"):
+                try:
+                    pipeline.enable_attention_slicing()
+                except Exception:
+                    pass
 
             if enable_vae_slicing and hasattr(pipeline, "vae"):
                 try:
@@ -1377,6 +1385,14 @@ class HuggingFaceLocalProvider(BaseProvider):
                     pipeline.vae.enable_tiling()
                 except Exception:
                     pass
+
+            try:
+                if hasattr(pipeline, "unet") and hasattr(
+                    pipeline.unet, "enable_xformers_memory_efficient_attention"
+                ):
+                    pipeline.unet.enable_xformers_memory_efficient_attention()
+            except Exception:
+                pass
 
             # Cache the pipeline
             ModelManager.set_model(cache_key, cache_key, "text2video", pipeline)
