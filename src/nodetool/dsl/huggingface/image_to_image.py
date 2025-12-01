@@ -109,17 +109,10 @@ class FluxKontext(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRe
     - High-quality image editing with FLUX models
     """
 
-    model: types.HFFluxKontext | OutputHandle[types.HFFluxKontext] = connect_field(
-        default=types.HFFluxKontext(
-            type="hf.flux_kontext",
-            repo_id="black-forest-labs/FLUX.1-Kontext-dev",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The FLUX Kontext model to use for image editing.",
+    FluxKontextQuantization: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.image_to_image.FluxKontextQuantization
     )
+
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="The input image to edit",
@@ -131,6 +124,12 @@ class FluxKontext(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRe
     guidance_scale: float | OutputHandle[float] = connect_field(
         default=2.5,
         description="Guidance scale for editing. Higher values follow the prompt more closely",
+    )
+    quantization: nodetool.nodes.huggingface.image_to_image.FluxKontextQuantization = (
+        Field(
+            default=nodetool.nodes.huggingface.image_to_image.FluxKontextQuantization.INT4,
+            description="Quantization level for the FLUX Kontext transformer.",
+        )
     )
     seed: int | OutputHandle[int] = connect_field(
         default=-1,
@@ -288,13 +287,6 @@ class ImageToImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageR
     @classmethod
     def get_node_type(cls):
         return cls.get_node_class().get_node_type()
-
-
-import typing
-from pydantic import Field
-from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
-import nodetool.nodes.huggingface.image_to_image
-from nodetool.workflows.base_node import BaseNode
 
 
 import typing

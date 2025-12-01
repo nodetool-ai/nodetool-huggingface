@@ -9018,22 +9018,6 @@
       "node_type": "huggingface.image_to_image.FluxKontext",
       "properties": [
         {
-          "name": "model",
-          "type": {
-            "type": "hf.flux_kontext"
-          },
-          "default": {
-            "type": "hf.flux_kontext",
-            "repo_id": "black-forest-labs/FLUX.1-Kontext-dev",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Model",
-          "description": "The FLUX Kontext model to use for image editing."
-        },
-        {
           "name": "image",
           "type": {
             "type": "image"
@@ -9066,6 +9050,21 @@
           "description": "Guidance scale for editing. Higher values follow the prompt more closely",
           "min": 0.0,
           "max": 30.0
+        },
+        {
+          "name": "quantization",
+          "type": {
+            "type": "enum",
+            "values": [
+              "fp16",
+              "fp4",
+              "int4"
+            ],
+            "type_name": "nodetool.nodes.huggingface.image_to_image.FluxKontextQuantization"
+          },
+          "default": "int4",
+          "title": "Quantization",
+          "description": "Quantization level for the FLUX Kontext transformer."
         },
         {
           "name": "seed",
@@ -9180,7 +9179,7 @@
         },
         {
           "id": "mit-han-lab/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
-          "type": "hf.model",
+          "type": "hf.t5",
           "name": "mit-han-lab/nunchaku-t5",
           "repo_id": "mit-han-lab/nunchaku-t5",
           "path": "awq-int4-flux.1-t5xxl.safetensors",
@@ -9206,10 +9205,10 @@
         }
       ],
       "basic_fields": [
-        "model",
         "image",
         "prompt",
-        "guidance_scale"
+        "guidance_scale",
+        "quantization"
       ]
     },
     {

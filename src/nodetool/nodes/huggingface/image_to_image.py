@@ -1,4 +1,5 @@
 from enum import Enum
+import os
 import platform
 import re
 import asyncio
@@ -16,7 +17,6 @@ import torch
 from RealESRGAN import RealESRGAN
 from huggingface_hub import try_to_load_from_cache
 from nunchaku import NunchakuFluxTransformer2dModel
-from nunchaku.utils import get_precision as get_nunchaku_precision
 from nodetool.metadata.types import (
     HFImageToImage,
     HFControlNet,
@@ -27,6 +27,7 @@ from nodetool.metadata.types import (
     HFFluxRedux,
     HFFlux,
     HFFluxFill,
+    HFT5,
     TorchTensor,
     HuggingFaceModel,
     ImageRef,
@@ -96,25 +97,6 @@ from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_inpain
 from pydantic import Field
 
 log = get_logger(__name__)
-
-
-async def _get_nunchaku_text_encoder_kwargs(
-    context: ProcessingContext, node_id: str, model_repo_id: str
-) -> dict[str, Any]:
-    """Return kwargs for Flux pipelines when a Nunchaku text encoder is available."""
-    try:
-        text_encoder = await get_nunchaku_text_encoder(context, node_id)
-    except Exception as exc:
-        log.warning(
-            "Unable to load Nunchaku text encoder for %s: %s", model_repo_id, exc
-        )
-        return {}
-
-    if text_encoder is None:
-        return {}
-
-    return {"text_encoder_2": text_encoder}
-
 
 
 def _enable_pytorch2_attention(pipeline: Any, enabled: bool = True):
@@ -2311,6 +2293,12 @@ class FluxFill(HuggingFacePipelineNode):
         return await context.image_from_pil(image)
 
 
+class FluxKontextQuantization(Enum):
+    FP16 = "fp16"
+    FP4 = "fp4"
+    INT4 = "int4"
+
+
 class FluxKontext(HuggingFacePipelineNode):
     """
     Performs image editing using FLUX Kontext models for context-aware image generation.
@@ -2323,10 +2311,6 @@ class FluxKontext(HuggingFacePipelineNode):
     - High-quality image editing with FLUX models
     """
 
-    model: HFFluxKontext = Field(
-        default=HFFluxKontext(repo_id="black-forest-labs/FLUX.1-Kontext-dev"),
-        description="The FLUX Kontext model to use for image editing.",
-    )
     image: ImageRef = Field(
         default=ImageRef(),
         title="Input Image",
@@ -2342,6 +2326,10 @@ class FluxKontext(HuggingFacePipelineNode):
         ge=0.0,
         le=30.0,
     )
+    quantization: FluxKontextQuantization = Field(
+        default=FluxKontextQuantization.INT4,
+        description="Quantization level for the FLUX Kontext transformer.",
+    )
     seed: int = Field(
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed",
@@ -2356,10 +2344,10 @@ class FluxKontext(HuggingFacePipelineNode):
 
     @classmethod
     def get_basic_fields(cls):
-        return ["model", "image", "prompt", "guidance_scale"]
+        return ["image", "prompt", "guidance_scale", "quantization"]
 
     @classmethod
-    def get_recommended_models(cls) -> list[HFFluxKontext]:
+    def get_recommended_models(cls) -> list[HFFluxKontext | HFT5]:
         return [
             HFFluxKontext(repo_id="black-forest-labs/FLUX.1-Kontext-dev"),
             HFFluxKontext(
@@ -2370,7 +2358,7 @@ class FluxKontext(HuggingFacePipelineNode):
                 repo_id="nunchaku-tech/nunchaku-flux.1-kontext-dev",
                 path="svdq-fp4_r32-flux.1-kontext-dev.safetensors",
             ),
-            HuggingFaceModel(
+            HFT5(
                 repo_id="mit-han-lab/nunchaku-t5",
                 path="awq-int4-flux.1-t5xxl.safetensors",
             ),
@@ -2384,9 +2372,39 @@ class FluxKontext(HuggingFacePipelineNode):
         return "Flux Kontext"
 
     def get_model_id(self) -> str:
-        if self.model.repo_id:
-            return self.model.repo_id
-        return "black-forest-labs/FLUX.1-Kontext-dev"
+        return self._get_base_model().repo_id or "black-forest-labs/FLUX.1-Kontext-dev"
+
+    def _get_base_model(self) -> HFFluxKontext:
+        return HFFluxKontext(repo_id="black-forest-labs/FLUX.1-Kontext-dev")
+
+    def _resolve_model_config(
+        self, quantization: FluxKontextQuantization | None = None
+    ) -> tuple[HFFluxKontext, HFT5 | None]:
+        quantization = quantization or self.quantization
+        if quantization == FluxKontextQuantization.FP4:
+            return (
+                HFFluxKontext(
+                    repo_id="nunchaku-tech/nunchaku-flux.1-kontext-dev",
+                    path="svdq-fp4_r32-flux.1-kontext-dev.safetensors",
+                ),
+                HFT5(
+                    repo_id="mit-han-lab/nunchaku-t5",
+                    path="awq-int4-flux.1-t5xxl.safetensors",
+                ),
+            )
+        if quantization == FluxKontextQuantization.INT4:
+            return (
+                HFFluxKontext(
+                    repo_id="nunchaku-tech/nunchaku-flux.1-kontext-dev",
+                    path="svdq-int4_r32-flux.1-kontext-dev.safetensors",
+                ),
+                HFT5(
+                    repo_id="mit-han-lab/nunchaku-t5",
+                    path="awq-int4-flux.1-t5xxl.safetensors",
+                ),
+            )
+
+        return (self._get_base_model(), None)
 
     async def preload_model(self, context: ProcessingContext):
         hf_token = await context.get_secret("HF_TOKEN")
@@ -2396,19 +2414,90 @@ class FluxKontext(HuggingFacePipelineNode):
                 f"Flux Kontext is a gated model, please set the HF_TOKEN in Nodetool settings and accept the terms of use for the model: {model_url}"
             )
 
-        log.info(f"Loading FLUX Kontext pipeline from {self.get_model_id()}...")
         torch_dtype = torch.bfloat16
-        if self._is_nunchaku_model():
-            await self._load_nunchaku_model(
-                context=context,
-                torch_dtype=torch_dtype,
-                hf_token=hf_token,
+        base_model = self._get_base_model()
+
+        quantization = self.quantization
+        smoke_mode = os.getenv("NODETOOL_SMOKE_TEST", "").lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        if smoke_mode and quantization != FluxKontextQuantization.FP16:
+            log.info(
+                "Smoke test detected, forcing Flux Kontext quantization to fp16"
             )
+            quantization = FluxKontextQuantization.FP16
+
+        transformer_model, text_encoder_model = self._resolve_model_config(
+            quantization
+        )
+
+        log.info(
+            "Preparing FLUX Kontext pipeline (base=%s, quantization=%s)",
+            base_model.repo_id,
+            quantization.value,
+        )
+
+        if quantization in (
+            FluxKontextQuantization.INT4,
+            FluxKontextQuantization.FP4,
+        ):
+            assert transformer_model.path is not None
+            assert text_encoder_model is not None
+
+            if not try_to_load_from_cache(
+                transformer_model.repo_id, transformer_model.path
+            ):
+                raise ValueError(
+                    f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded"
+                )
+
+            if not try_to_load_from_cache(
+                text_encoder_model.repo_id, text_encoder_model.path
+            ):
+                raise ValueError(
+                    f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded"
+                )
+
+            transformer = await get_nunchaku_transformer(
+                context=context,
+                model_class=NunchakuFluxTransformer2dModel,
+                node_id=self.id,
+                repo_id=transformer_model.repo_id,
+                path=transformer_model.path,
+            )
+
+            text_encoder_2 = await get_nunchaku_text_encoder(
+                context=context,
+                node_id=self.id,
+                repo_id=text_encoder_model.repo_id,
+                path=text_encoder_model.path,
+            )
+
+            base_model_id = base_model.repo_id or "black-forest-labs/FLUX.1-Kontext-dev"
+
+            try:
+                self._pipeline = FluxKontextPipeline.from_pretrained(
+                    base_model_id,
+                    transformer=transformer,
+                    text_encoder_2=text_encoder_2,
+                    torch_dtype=torch_dtype,
+                    token=hf_token,
+                )
+            except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                raise ValueError(
+                    "VRAM out of memory while loading Flux Kontext with the Nunchaku transformer. "
+                    "Try enabling CPU offload or reduce image size."
+                ) from e
         else:
+            base_model_id = base_model.repo_id or "black-forest-labs/FLUX.1-Kontext-dev"
             self._pipeline = await self.load_model(
                 context=context,
                 model_class=FluxKontextPipeline,
-                model_id=self.get_model_id(),
+                model_id=base_model_id,
+                path=base_model.path,
                 torch_dtype=torch_dtype,
                 device="cpu",
                 token=hf_token,
@@ -2418,75 +2507,6 @@ class FluxKontext(HuggingFacePipelineNode):
         _enable_pytorch2_attention(self._pipeline)
         if self._pipeline is not None and self.enable_cpu_offload:
             self._pipeline.enable_model_cpu_offload()
-
-    def _is_nunchaku_model(self) -> bool:
-        repo_has_svdq = self.model.repo_id and "svdq" in self.model.repo_id.lower()
-        path_has_svdq = self.model.path and "svdq" in self.model.path.lower()
-        return bool(repo_has_svdq or path_has_svdq)
-
-    async def _load_nunchaku_model(
-        self,
-        context: ProcessingContext,
-        torch_dtype: torch.dtype,
-        hf_token: str,
-    ):
-        repo_id_lower = (self.model.repo_id or "").lower()
-        transformer_repo_id = (
-            self.model.repo_id
-            if self.model.repo_id and "nunchaku" in repo_id_lower and "kontext" in repo_id_lower
-            else "nunchaku-tech/nunchaku-flux.1-kontext-dev"
-        )
-
-        precision = get_nunchaku_precision()
-        transformer_path = (
-            self.model.path
-            or f"svdq-{precision}_r32-flux.1-kontext-dev.safetensors"
-        )
-
-        if "svdq" not in transformer_path.lower():
-            raise ValueError(
-                "Nunchaku Flux Kontext requires a transformer filename containing 'svdq'."
-            )
-
-        log.info(
-            "Loading Nunchaku Flux Kontext transformer from %s/%s (precision=%s)",
-            transformer_repo_id,
-            transformer_path,
-            precision,
-        )
-
-        transformer = await get_nunchaku_transformer(
-            context=context,
-            model_class=NunchakuFluxTransformer2dModel,
-            node_id=self.id,
-            repo_id=transformer_repo_id,
-            path=transformer_path,
-        )
-
-        log.info(
-            "Creating FLUX Kontext pipeline from %s with Nunchaku transformer %s/%s",
-            "black-forest-labs/FLUX.1-Kontext-dev",
-            transformer_repo_id,
-            transformer_path,
-        )
-        text_encoder_kwargs = await _get_nunchaku_text_encoder_kwargs(
-            context,
-            self.id,
-            transformer_repo_id,
-        )
-        try:
-            self._pipeline = FluxKontextPipeline.from_pretrained(
-                "black-forest-labs/FLUX.1-Kontext-dev",
-                transformer=transformer,
-                torch_dtype=torch_dtype,
-                token=hf_token,
-                **text_encoder_kwargs,
-            )
-        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
-            raise ValueError(
-                "VRAM out of memory while loading Flux Kontext with the Nunchaku transformer. "
-                "Try enabling CPU offload or reduce image size."
-            ) from e
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
