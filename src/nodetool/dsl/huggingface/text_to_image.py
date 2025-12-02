@@ -487,6 +487,9 @@ class StableDiffusionXL(
     - Visualizing interior design concepts for clients
     """
 
+    StableDiffusionXLQuantization: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization
+    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
     )
@@ -506,6 +509,12 @@ class StableDiffusionXL(
             ),
             description="The Stable Diffusion XL model to use for generation.",
         )
+    )
+    quantization: (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization
+    ) = Field(
+        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization.FP16,
+        description="Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet).",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."

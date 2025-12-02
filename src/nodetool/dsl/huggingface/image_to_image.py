@@ -417,17 +417,10 @@ class QwenImageEdit(SingleOutputGraphNode[types.ImageRef], GraphNode[types.Image
     - Memory-efficient editing using Nunchaku quantization
     """
 
-    model: types.HFQwenImageEdit | OutputHandle[types.HFQwenImageEdit] = connect_field(
-        default=types.HFQwenImageEdit(
-            type="hf.qwen_image_edit",
-            repo_id="mit-han-lab/nunchaku-qwen-image-edit",
-            path="awq-int4-qwen-image-edit.safetensors",
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The Qwen-Image-Edit model to use for image editing.",
+    QwenImageEditQuantization: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.image_to_image.QwenImageEditQuantization
     )
+
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
         default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
         description="The input image to edit",
@@ -446,6 +439,12 @@ class QwenImageEdit(SingleOutputGraphNode[types.ImageRef], GraphNode[types.Image
     true_cfg_scale: float | OutputHandle[float] = connect_field(
         default=4.0,
         description="Guidance scale for editing. Higher values follow the prompt more closely",
+    )
+    quantization: (
+        nodetool.nodes.huggingface.image_to_image.QwenImageEditQuantization
+    ) = Field(
+        default=nodetool.nodes.huggingface.image_to_image.QwenImageEditQuantization.INT4,
+        description="Quantization level for the Qwen Image Edit transformer.",
     )
     seed: int | OutputHandle[int] = connect_field(
         default=-1,
@@ -1461,6 +1460,9 @@ class StableDiffusionXLControlNet(
     - Artistic image generation with guided outputs
     """
 
+    StableDiffusionXLQuantization: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization
+    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
     )
@@ -1480,6 +1482,12 @@ class StableDiffusionXLControlNet(
             ),
             description="The Stable Diffusion XL model to use for generation.",
         )
+    )
+    quantization: (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization
+    ) = Field(
+        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization.FP16,
+        description="Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet).",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
@@ -1626,6 +1634,9 @@ class StableDiffusionXLControlNetImg2ImgNode(
     - Enhance image editing capabilities with AI-guided transformations
     """
 
+    StableDiffusionXLQuantization: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization
+    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
     )
@@ -1645,6 +1656,12 @@ class StableDiffusionXLControlNetImg2ImgNode(
             ),
             description="The Stable Diffusion XL model to use for generation.",
         )
+    )
+    quantization: (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization
+    ) = Field(
+        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization.FP16,
+        description="Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet).",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
@@ -1801,6 +1818,9 @@ class StableDiffusionXLImg2Img(
     - Applying text-guided edits to images
     """
 
+    StableDiffusionXLQuantization: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization
+    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
     )
@@ -1820,6 +1840,12 @@ class StableDiffusionXLImg2Img(
             ),
             description="The Stable Diffusion XL model to use for generation.",
         )
+    )
+    quantization: (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization
+    ) = Field(
+        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization.FP16,
+        description="Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet).",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."
@@ -1955,6 +1981,9 @@ class StableDiffusionXLInpainting(
     - Modify specific areas of images while preserving the rest
     """
 
+    StableDiffusionXLQuantization: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization
+    )
     StableDiffusionScheduler: typing.ClassVar[type] = (
         nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLBase.StableDiffusionScheduler
     )
@@ -1974,6 +2003,12 @@ class StableDiffusionXLInpainting(
             ),
             description="The Stable Diffusion XL model to use for generation.",
         )
+    )
+    quantization: (
+        nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization
+    ) = Field(
+        default=nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization.FP16,
+        description="Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet).",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="", description="The prompt for image generation."

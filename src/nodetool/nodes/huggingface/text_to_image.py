@@ -1,6 +1,7 @@
 from enum import Enum
+import os
 import huggingface_hub
-from huggingface_hub import hf_hub_download, try_to_load_from_cache, snapshot_download
+from huggingface_hub import try_to_load_from_cache
 from typing import Any, TypedDict
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
@@ -24,6 +25,7 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
     _select_diffusion_dtype,
     StableDiffusionBaseNode,
     StableDiffusionXLBase,
+    StableDiffusionXLQuantization,
 )
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress, Notification, LogUpdate
@@ -31,13 +33,12 @@ from nodetool.workflows.types import NodeProgress, Notification, LogUpdate
 import torch
 import asyncio
 import logging
-from pathlib import Path
 from nunchaku import (
     NunchakuFluxTransformer2dModel,
     NunchakuQwenImageTransformer2DModel,
 )
 from nunchaku.models.unets.unet_sdxl import NunchakuSDXLUNet2DConditionModel
-from nunchaku.utils import get_gpu_memory, get_precision as get_nunchaku_precision
+from nunchaku.utils import get_gpu_memory
 
 # The QwenImage import requires optional dependencies. Keep it near top-level to surface missing deps early.
 from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
@@ -172,160 +173,28 @@ class StableDiffusionXL(StableDiffusionXLBase):
     """
 
     _pipeline: StableDiffusionXLPipeline | DiffusionPipeline | None = None
-    _using_playground_pipeline: bool = False
 
     @classmethod
     def get_title(cls):
         return "Stable Diffusion XL"
 
     async def preload_model(self, context: ProcessingContext):
-        repo_id = (self.model.repo_id or "").lower()
-        is_playground = "playground" in repo_id
-
-        self._using_playground_pipeline = is_playground
-
         torch_dtype = self.get_torch_dtype()
-        pipeline_model_id = self._resolve_sdxl_pipeline_model_id()
-
-        if self._is_nunchaku_model():
-            await self._load_nunchaku_model(context, torch_dtype)
-        else:
-            self._pipeline = await self.load_model(
-                context=context,
-                model_class=StableDiffusionXLPipeline,
-                model_id=pipeline_model_id,
-                path=self.model.path,
-                torch_dtype=torch_dtype,
-                variant=None,
-            )
-            _enable_pytorch2_attention(self._pipeline)
-            _apply_vae_optimizations(self._pipeline)
-
+        base_model, pipeline_model_id, transformer_model = self._prepare_sdxl_models()
+        await self._load_sdxl_pipeline(
+            context=context,
+            pipeline_class=StableDiffusionXLPipeline,
+            torch_dtype=torch_dtype,
+            base_model=base_model,
+            pipeline_model_id=pipeline_model_id,
+            transformer_model=transformer_model,
+            variant=None,
+        )
         assert self._pipeline is not None
+        _enable_pytorch2_attention(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         self._load_ip_adapter()
-
-    def _is_nunchaku_model(self) -> bool:
-        repo_has_svdq = self.model.repo_id and "svdq" in self.model.repo_id.lower()
-        path_has_svdq = self.model.path and "svdq" in self.model.path.lower()
-        return bool(repo_has_svdq or path_has_svdq)
-
-    def _resolve_sdxl_pipeline_model_id(self) -> str:
-        if not self.model.repo_id:
-            return "stabilityai/stable-diffusion-xl-base-1.0"
-        repo_id_lower = self.model.repo_id.lower()
-        if "nunchaku" in repo_id_lower and "sdxl" in repo_id_lower:
-            return "stabilityai/stable-diffusion-xl-base-1.0"
-        return self.model.repo_id
-
-    async def _load_nunchaku_model(
-        self,
-        context: ProcessingContext,
-        torch_dtype: torch.dtype,
-    ):
-        hf_token = await context.get_secret("HF_TOKEN")
-        repo_id_lower = (self.model.repo_id or "").lower()
-        transformer_repo_id = (
-            self.model.repo_id
-            if self.model.repo_id and "nunchaku" in repo_id_lower and "sdxl" in repo_id_lower
-            else "nunchaku-tech/nunchaku-sdxl"
-        )
-
-        try:
-            precision = get_nunchaku_precision()
-        except Exception as exc:
-            log.warning(
-                "Failed to detect Nunchaku SDXL precision; defaulting to int4: %s", exc
-            )
-            precision = "int4"
-
-        transformer_precision = precision
-        if transformer_precision.startswith("nv"):
-            transformer_precision = transformer_precision[2:]
-
-        default_transformer_path = (
-            self.model.path
-            or f"svdq-{transformer_precision}_r32-sdxl.safetensors"
-        )
-        transformer_path = default_transformer_path.strip()
-
-        transformer_file = Path(transformer_path).expanduser()
-        transformer_identifier: str | None = None
-        transformer_filename = transformer_path
-
-        if transformer_file.is_file():
-            transformer_identifier = str(transformer_file)
-            transformer_filename = transformer_file.name
-        else:
-            repo_from_path: str | None = None
-            if not transformer_path.startswith(("/", "~")):
-                path_parts = transformer_path.split("/")
-                if len(path_parts) >= 3:
-                    repo_from_path = "/".join(path_parts[:2])
-                    transformer_filename = "/".join(path_parts[2:])
-
-            if repo_from_path:
-                transformer_repo_id = repo_from_path
-
-            if "svdq" not in transformer_filename.lower():
-                raise ValueError(
-                    "Nunchaku SDXL requires a transformer filename containing 'svdq'."
-                )
-
-            cache_path = try_to_load_from_cache(transformer_repo_id, transformer_filename)
-            if not cache_path:
-                log.info(
-                    "Downloading Nunchaku SDXL transformer %s/%s (precision=%s)",
-                    transformer_repo_id,
-                    transformer_filename,
-                    precision,
-                )
-                hf_hub_download(
-                    transformer_repo_id,
-                    transformer_filename,
-                    token=hf_token,
-                )
-                cache_path = try_to_load_from_cache(
-                    transformer_repo_id,
-                    transformer_filename,
-                )
-                if not cache_path:
-                    raise ValueError(
-                        f"Downloading model {transformer_repo_id}/{transformer_filename} failed"
-                    )
-
-            transformer_identifier = cache_path
-
-        assert transformer_identifier is not None
-
-        log.info(
-            "Loading Nunchaku SDXL UNet from %s/%s (precision=%s)",
-            transformer_repo_id,
-            transformer_filename,
-            precision,
-        )
-        unet = await self.load_model(
-            context=context,
-            model_id=transformer_identifier,
-            model_class=NunchakuSDXLUNet2DConditionModel,
-            torch_dtype=torch_dtype,
-            device="cpu",
-        )
-
-        pipeline_model_id = self._resolve_sdxl_pipeline_model_id()
-        log.info(
-            "Creating StableDiffusionXL pipeline from %s with Nunchaku UNet",
-            pipeline_model_id,
-        )
-        self._pipeline = await self.load_model(
-            context=context,
-            model_class=StableDiffusionXLPipeline,
-            model_id=pipeline_model_id,
-            torch_dtype=torch_dtype,
-            unet=unet,
-            use_safetensors=True,
-            token=hf_token,
-        )
 
     class OutputType(TypedDict):
         image: ImageRef | None

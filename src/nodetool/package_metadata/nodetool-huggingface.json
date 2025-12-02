@@ -9100,7 +9100,16 @@
           "type": "hf.flux_kontext",
           "name": "black-forest-labs/FLUX.1-Kontext-dev",
           "repo_id": "black-forest-labs/FLUX.1-Kontext-dev",
-          "size_on_disk": 57890836779,
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "tokenizer/*",
+            "tokenizer_2/*"
+          ],
+          "size_on_disk": 418781428,
           "pipeline_tag": "image-to-image",
           "tags": [
             "diffusers",
@@ -9641,22 +9650,6 @@
       "node_type": "huggingface.image_to_image.QwenImageEdit",
       "properties": [
         {
-          "name": "model",
-          "type": {
-            "type": "hf.qwen_image_edit"
-          },
-          "default": {
-            "type": "hf.qwen_image_edit",
-            "repo_id": "mit-han-lab/nunchaku-qwen-image-edit",
-            "path": "awq-int4-qwen-image-edit.safetensors",
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Model",
-          "description": "The Qwen-Image-Edit model to use for image editing."
-        },
-        {
           "name": "image",
           "type": {
             "type": "image"
@@ -9711,6 +9704,21 @@
           "max": 20.0
         },
         {
+          "name": "quantization",
+          "type": {
+            "type": "enum",
+            "values": [
+              "fp16",
+              "fp4",
+              "int4"
+            ],
+            "type_name": "nodetool.nodes.huggingface.image_to_image.QwenImageEditQuantization"
+          },
+          "default": "int4",
+          "title": "Quantization",
+          "description": "Quantization level for the Qwen Image Edit transformer."
+        },
+        {
           "name": "seed",
           "type": {
             "type": "int"
@@ -9749,19 +9757,102 @@
       ],
       "recommended_models": [
         {
-          "id": "mit-han-lab/nunchaku-qwen-image-edit:awq-int4-qwen-image-edit.safetensors",
+          "id": "Qwen/Qwen-Image-Edit",
           "type": "hf.qwen_image_edit",
-          "name": "mit-han-lab/nunchaku-qwen-image-edit",
-          "repo_id": "mit-han-lab/nunchaku-qwen-image-edit",
-          "path": "awq-int4-qwen-image-edit.safetensors"
+          "name": "Qwen/Qwen-Image-Edit",
+          "repo_id": "Qwen/Qwen-Image-Edit",
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "text_encoder_2/*",
+            "tokenizer/*",
+            "tokenizer_2/*"
+          ],
+          "size_on_disk": 16859425389,
+          "pipeline_tag": "image-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "image-to-image",
+            "en",
+            "zh",
+            "arxiv:2508.02324",
+            "license:apache-2.0",
+            "diffusers:QwenImageEditPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 157828,
+          "likes": 2133
+        },
+        {
+          "id": "nunchaku-tech/nunchaku-qwen-image-edit:svdq-int4_r32-qwen-image-edit.safetensors",
+          "type": "hf.qwen_image_edit",
+          "name": "nunchaku-tech/nunchaku-qwen-image-edit",
+          "repo_id": "nunchaku-tech/nunchaku-qwen-image-edit",
+          "path": "svdq-int4_r32-qwen-image-edit.safetensors",
+          "size_on_disk": 11521979944,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "image-editing",
+            "SVDQuant",
+            "Qwen-Image-Edit",
+            "Diffusion",
+            "Quantization",
+            "ICLR2025",
+            "text-to-image",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:Qwen/Qwen-Image-Edit",
+            "base_model:quantized:Qwen/Qwen-Image-Edit",
+            "license:apache-2.0",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 15655,
+          "likes": 105
+        },
+        {
+          "id": "nunchaku-tech/nunchaku-qwen-image-edit:svdq-fp4_r32-qwen-image-edit.safetensors",
+          "type": "hf.qwen_image_edit",
+          "name": "nunchaku-tech/nunchaku-qwen-image-edit",
+          "repo_id": "nunchaku-tech/nunchaku-qwen-image-edit",
+          "path": "svdq-fp4_r32-qwen-image-edit.safetensors",
+          "size_on_disk": 11948923656,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "image-editing",
+            "SVDQuant",
+            "Qwen-Image-Edit",
+            "Diffusion",
+            "Quantization",
+            "ICLR2025",
+            "text-to-image",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:Qwen/Qwen-Image-Edit",
+            "base_model:quantized:Qwen/Qwen-Image-Edit",
+            "license:apache-2.0",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 15655,
+          "likes": 105
         }
       ],
       "basic_fields": [
-        "model",
         "image",
         "prompt",
         "negative_prompt",
-        "true_cfg_scale"
+        "true_cfg_scale",
+        "quantization"
       ]
     },
     {
@@ -12406,6 +12497,21 @@
           "description": "The Stable Diffusion XL model to use for generation."
         },
         {
+          "name": "quantization",
+          "type": {
+            "type": "enum",
+            "values": [
+              "fp16",
+              "fp4",
+              "int4"
+            ],
+            "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization"
+          },
+          "default": "fp16",
+          "title": "Quantization",
+          "description": "Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet)."
+        },
+        {
           "name": "prompt",
           "type": {
             "type": "str"
@@ -13478,6 +13584,7 @@
       ],
       "basic_fields": [
         "model",
+        "quantization",
         "prompt",
         "width",
         "height",
@@ -13507,6 +13614,21 @@
           },
           "title": "Model",
           "description": "The Stable Diffusion XL model to use for generation."
+        },
+        {
+          "name": "quantization",
+          "type": {
+            "type": "enum",
+            "values": [
+              "fp16",
+              "fp4",
+              "int4"
+            ],
+            "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization"
+          },
+          "default": "fp16",
+          "title": "Quantization",
+          "description": "Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet)."
         },
         {
           "name": "prompt",
@@ -14606,6 +14728,7 @@
       ],
       "basic_fields": [
         "model",
+        "quantization",
         "prompt",
         "width",
         "height",
@@ -14637,6 +14760,21 @@
           },
           "title": "Model",
           "description": "The Stable Diffusion XL model to use for generation."
+        },
+        {
+          "name": "quantization",
+          "type": {
+            "type": "enum",
+            "values": [
+              "fp16",
+              "fp4",
+              "int4"
+            ],
+            "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization"
+          },
+          "default": "fp16",
+          "title": "Quantization",
+          "description": "Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet)."
         },
         {
           "name": "prompt",
@@ -15215,6 +15353,7 @@
       ],
       "basic_fields": [
         "model",
+        "quantization",
         "prompt",
         "width",
         "height",
@@ -15243,6 +15382,21 @@
           },
           "title": "Model",
           "description": "The Stable Diffusion XL model to use for generation."
+        },
+        {
+          "name": "quantization",
+          "type": {
+            "type": "enum",
+            "values": [
+              "fp16",
+              "fp4",
+              "int4"
+            ],
+            "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization"
+          },
+          "default": "fp16",
+          "title": "Quantization",
+          "description": "Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet)."
         },
         {
           "name": "prompt",
@@ -15835,6 +15989,7 @@
       ],
       "basic_fields": [
         "model",
+        "quantization",
         "prompt",
         "width",
         "height",
@@ -17993,6 +18148,21 @@
           "description": "The Stable Diffusion XL model to use for generation."
         },
         {
+          "name": "quantization",
+          "type": {
+            "type": "enum",
+            "values": [
+              "fp16",
+              "fp4",
+              "int4"
+            ],
+            "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization"
+          },
+          "default": "fp16",
+          "title": "Quantization",
+          "description": "Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet)."
+        },
+        {
           "name": "prompt",
           "type": {
             "type": "str"
@@ -18544,6 +18714,7 @@
       ],
       "basic_fields": [
         "model",
+        "quantization",
         "prompt",
         "width",
         "height"

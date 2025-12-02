@@ -16,7 +16,10 @@ from nodetool.workflows.types import NodeProgress
 import torch
 from RealESRGAN import RealESRGAN
 from huggingface_hub import try_to_load_from_cache
-from nunchaku import NunchakuFluxTransformer2dModel
+from nunchaku import (
+    NunchakuFluxTransformer2dModel,
+    NunchakuQwenImageTransformer2DModel,
+)
 from nodetool.metadata.types import (
     HFImageToImage,
     HFControlNet,
@@ -1406,13 +1409,16 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
-        self._pipeline = await self.load_model(
+        torch_dtype = _select_diffusion_dtype()
+        base_model, pipeline_model_id, transformer_model = self._prepare_sdxl_models()
+        await self._load_sdxl_pipeline(
             context=context,
-            model_class=StableDiffusionXLImg2ImgPipeline,
-            model_id=self.model.repo_id,
-            path=self.model.path,
+            pipeline_class=StableDiffusionXLImg2ImgPipeline,
+            torch_dtype=torch_dtype,
+            base_model=base_model,
+            pipeline_model_id=pipeline_model_id,
+            transformer_model=transformer_model,
             safety_checker=None,
-            torch_dtype=_select_diffusion_dtype(),
             variant=None,
         )
         assert self._pipeline is not None
@@ -1478,13 +1484,16 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
 
     async def preload_model(self, context: ProcessingContext):
         if self._pipeline is None:
-            self._pipeline = await self.load_model(
+            torch_dtype = _select_diffusion_dtype()
+            base_model, pipeline_model_id, transformer_model = self._prepare_sdxl_models()
+            await self._load_sdxl_pipeline(
                 context=context,
-                model_class=StableDiffusionXLInpaintPipeline,
-                model_id=self.model.repo_id,
-                path=self.model.path,
+                pipeline_class=StableDiffusionXLInpaintPipeline,
+                torch_dtype=torch_dtype,
+                base_model=base_model,
+                pipeline_model_id=pipeline_model_id,
+                transformer_model=transformer_model,
                 safety_checker=None,
-                torch_dtype=_select_diffusion_dtype(),
                 variant=None,
             )
             assert self._pipeline is not None
@@ -1886,6 +1895,12 @@ class OmniGenNode(HuggingFacePipelineNode):
         return await context.image_from_pil(image)
 
 
+class QwenImageEditQuantization(Enum):
+    FP16 = "fp16"
+    FP4 = "fp4"
+    INT4 = "int4"
+
+
 class QwenImageEdit(HuggingFacePipelineNode):
     """
     Performs image editing using the Qwen Image Edit model with support for Nunchaku quantization.
@@ -1899,14 +1914,6 @@ class QwenImageEdit(HuggingFacePipelineNode):
     - Complex image transformations guided by text
     - Memory-efficient editing using Nunchaku quantization
     """
-
-    model: HFQwenImageEdit = Field(
-        default=HFQwenImageEdit(
-            repo_id="mit-han-lab/nunchaku-qwen-image-edit",
-            path="awq-int4-qwen-image-edit.safetensors",
-        ),
-        description="The Qwen-Image-Edit model to use for image editing.",
-    )
 
     image: ImageRef = Field(
         default=ImageRef(), title="Input Image", description="The input image to edit"
@@ -1931,6 +1938,10 @@ class QwenImageEdit(HuggingFacePipelineNode):
         ge=1.0,
         le=20.0,
     )
+    quantization: QwenImageEditQuantization = Field(
+        default=QwenImageEditQuantization.INT4,
+        description="Quantization level for the Qwen Image Edit transformer.",
+    )
     seed: int = Field(
         default=-1,
         description="Seed for the random number generator. Use -1 for a random seed",
@@ -1949,7 +1960,13 @@ class QwenImageEdit(HuggingFacePipelineNode):
 
     @classmethod
     def get_basic_fields(cls):
-        return ["model", "image", "prompt", "negative_prompt", "true_cfg_scale"]
+        return [
+            "image",
+            "prompt",
+            "negative_prompt",
+            "true_cfg_scale",
+            "quantization",
+        ]
 
     def required_inputs(self):
         return ["image"]
@@ -1959,29 +1976,83 @@ class QwenImageEdit(HuggingFacePipelineNode):
         return "Qwen Image Edit"
 
     def get_model_id(self) -> str:
-        if self.model.repo_id:
-            return self.model.repo_id
-        return "Qwen/Qwen-Image-Edit"
+        return self._get_base_model().repo_id or "Qwen/Qwen-Image-Edit"
 
     @classmethod
     def get_recommended_models(cls) -> list[HFQwenImageEdit]:
+        allow_patterns = [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "text_encoder_2/*",
+            "tokenizer/*",
+            "tokenizer_2/*",
+        ]
         return [
             HFQwenImageEdit(
-                repo_id="mit-han-lab/nunchaku-qwen-image-edit",
-                path="awq-int4-qwen-image-edit.safetensors",
+                repo_id="Qwen/Qwen-Image-Edit",
+                allow_patterns=allow_patterns,
+            ),
+            HFQwenImageEdit(
+                repo_id="nunchaku-tech/nunchaku-qwen-image-edit",
+                path="svdq-int4_r32-qwen-image-edit.safetensors",
+            ),
+            HFQwenImageEdit(
+                repo_id="nunchaku-tech/nunchaku-qwen-image-edit",
+                path="svdq-fp4_r32-qwen-image-edit.safetensors",
             ),
         ]
 
-    async def _load_full_precision_pipeline(self, context: ProcessingContext):
-        log.info(
-            f"Loading Qwen-Image-Edit pipeline from {self.get_model_id()} without quantization..."
+    def _get_base_model(self) -> HFQwenImageEdit:
+        return HFQwenImageEdit(
+            repo_id="Qwen/Qwen-Image-Edit",
+            allow_patterns=[
+                "*.json",
+                "*.txt",
+                "scheduler/*",
+                "vae/*",
+                "text_encoder/*",
+                "text_encoder_2/*",
+                "tokenizer/*",
+                "tokenizer_2/*",
+            ],
         )
 
-        torch_dtype = _select_diffusion_dtype()
+    def _resolve_model_config(
+        self, quantization: QwenImageEditQuantization | None = None
+    ) -> HFQwenImageEdit:
+        quantization = quantization or self.quantization
+        if quantization == QwenImageEditQuantization.FP4:
+            return HFQwenImageEdit(
+                repo_id="nunchaku-tech/nunchaku-qwen-image-edit",
+                path="svdq-fp4_r32-qwen-image-edit.safetensors",
+            )
+        if quantization == QwenImageEditQuantization.INT4:
+            return HFQwenImageEdit(
+                repo_id="nunchaku-tech/nunchaku-qwen-image-edit",
+                path="svdq-int4_r32-qwen-image-edit.safetensors",
+            )
+        return self._get_base_model()
+
+    async def _load_full_precision_pipeline(
+        self, context: ProcessingContext, torch_dtype: torch.dtype
+    ):
+        base_model = self._get_base_model()
+        model_id = base_model.repo_id or "Qwen/Qwen-Image-Edit"
+        log.info(
+            f"Loading Qwen-Image-Edit pipeline from {model_id} without quantization..."
+        )
+
+        if not try_to_load_from_cache(model_id, "model_index.json"):
+            raise ValueError(f"Model {model_id} must be downloaded")
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=QwenImageEditPipeline,
-            model_id=self.get_model_id(),
+            model_id=model_id,
+            path=base_model.path,
             torch_dtype=torch_dtype,
             device="cpu",  # Load on CPU first, then move to GPU in workflow runner
         )
@@ -1998,8 +2069,78 @@ class QwenImageEdit(HuggingFacePipelineNode):
         if self.enable_memory_efficient_attention:
             self._pipeline.enable_attention_slicing()
 
+    async def _load_nunchaku_pipeline(
+        self,
+        context: ProcessingContext,
+        torch_dtype: torch.dtype,
+        quantization: QwenImageEditQuantization | None = None,
+    ):
+        transformer_model = self._resolve_model_config(quantization)
+        if not transformer_model.path:
+            raise ValueError("Quantized Qwen Image Edit requires a transformer path.")
+
+        if not try_to_load_from_cache(
+            transformer_model.repo_id, transformer_model.path
+        ):
+            raise ValueError(
+                f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded"
+            )
+
+        transformer = await get_nunchaku_transformer(
+            context=context,
+            model_class=NunchakuQwenImageTransformer2DModel,
+            node_id=self.id,
+            repo_id=transformer_model.repo_id,
+            path=transformer_model.path,
+        )
+
+        base_model_id = self._get_base_model().repo_id or "Qwen/Qwen-Image-Edit"
+        hf_token = await context.get_secret("HF_TOKEN")
+
+        try:
+            self._pipeline = QwenImageEditPipeline.from_pretrained(
+                base_model_id,
+                transformer=transformer,
+                torch_dtype=torch_dtype,
+                token=hf_token,
+            )
+        except torch.OutOfMemoryError as exc:  # type: ignore[attr-defined]
+            raise ValueError(
+                "VRAM out of memory while loading Qwen Image Edit with the Nunchaku transformer. "
+                "Try enabling CPU offload or reduce image size/steps."
+            ) from exc
+
+        _enable_pytorch2_attention(
+            self._pipeline, self.enable_memory_efficient_attention
+        )
+        _apply_vae_optimizations(self._pipeline)
+        if self.enable_cpu_offload:
+            self._pipeline.enable_model_cpu_offload()
+        if self.enable_memory_efficient_attention:
+            self._pipeline.enable_attention_slicing()
+
     async def preload_model(self, context: ProcessingContext):
-        await self._load_full_precision_pipeline(context)
+        torch_dtype = _select_diffusion_dtype()
+        quantization = self.quantization
+        smoke_mode = os.getenv("NODETOOL_SMOKE_TEST", "").lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        if smoke_mode and quantization != QwenImageEditQuantization.FP16:
+            log.info(
+                "Smoke test detected, forcing Qwen Image Edit quantization to fp16"
+            )
+            quantization = QwenImageEditQuantization.FP16
+
+        if quantization in (
+            QwenImageEditQuantization.INT4,
+            QwenImageEditQuantization.FP4,
+        ):
+            await self._load_nunchaku_pipeline(context, torch_dtype, quantization)
+        else:
+            await self._load_full_precision_pipeline(context, torch_dtype)
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
@@ -2348,8 +2489,20 @@ class FluxKontext(HuggingFacePipelineNode):
 
     @classmethod
     def get_recommended_models(cls) -> list[HFFluxKontext | HFT5]:
+        allow_patterns = [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "tokenizer/*",
+            "tokenizer_2/*",
+        ]
         return [
-            HFFluxKontext(repo_id="black-forest-labs/FLUX.1-Kontext-dev"),
+            HFFluxKontext(
+                repo_id="black-forest-labs/FLUX.1-Kontext-dev",
+                allow_patterns=allow_patterns,
+            ),
             HFFluxKontext(
                 repo_id="nunchaku-tech/nunchaku-flux.1-kontext-dev",
                 path="svdq-int4_r32-flux.1-kontext-dev.safetensors",
@@ -2375,7 +2528,18 @@ class FluxKontext(HuggingFacePipelineNode):
         return self._get_base_model().repo_id or "black-forest-labs/FLUX.1-Kontext-dev"
 
     def _get_base_model(self) -> HFFluxKontext:
-        return HFFluxKontext(repo_id="black-forest-labs/FLUX.1-Kontext-dev")
+        return HFFluxKontext(
+            repo_id="black-forest-labs/FLUX.1-Kontext-dev",
+            allow_patterns=[
+                "*.json",
+                "*.txt",
+                "scheduler/*",
+                "vae/*",
+                "text_encoder/*",
+                "tokenizer/*",
+                "tokenizer_2/*",
+            ],
+        )
 
     def _resolve_model_config(
         self, quantization: FluxKontextQuantization | None = None
