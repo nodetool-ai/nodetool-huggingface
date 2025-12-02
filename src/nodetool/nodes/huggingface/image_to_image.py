@@ -3,7 +3,7 @@ import os
 import platform
 import re
 import asyncio
-from typing import Any, TypedDict
+from typing import Any, TypedDict, ClassVar
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 from diffusers.models.autoencoders.vae import DecoderOutput
 from diffusers.models.modeling_outputs import AutoencoderKLOutput
@@ -2204,6 +2204,12 @@ class QwenImageEdit(HuggingFacePipelineNode):
         return await context.image_from_pil(image)
 
 
+class FluxFillQuantization(Enum):
+    FP16 = "fp16"
+    FP4 = "fp4"
+    INT4 = "int4"
+
+
 class FluxFill(HuggingFacePipelineNode):
     """
     Performs image inpainting/filling using FLUX Fill models with support for GGUF quantization.
@@ -2220,6 +2226,10 @@ class FluxFill(HuggingFacePipelineNode):
     model: HFFluxFill = Field(
         default=HFFluxFill(repo_id="black-forest-labs/FLUX.1-Fill-dev"),
         description="The FLUX Fill model to use for image inpainting.",
+    )
+    quantization: FluxFillQuantization = Field(
+        default=FluxFillQuantization.FP16,
+        description="Quantization level for the FLUX Fill transformer.",
     )
     prompt: str = Field(
         default="a white paper cup",
@@ -2270,12 +2280,30 @@ class FluxFill(HuggingFacePipelineNode):
     )
 
     _pipeline: FluxFillPipeline | None = None
+    FLUX_FILL_BASE_ALLOW_PATTERNS: ClassVar[list[str]] = [
+        "*.json",
+        "*.txt",
+        "scheduler/*",
+        "vae/*",
+        "text_encoder/*",
+        "tokenizer/*",
+        "tokenizer_2/*",
+        "transformer/config.json",
+    ]
 
     @classmethod
     def get_recommended_models(cls) -> list[HFFluxFill]:
         return [
             HFFluxFill(
                 repo_id="black-forest-labs/FLUX.1-Fill-dev",
+            ),
+            HFFluxFill(
+                repo_id="nunchaku-tech/nunchaku-flux.1-fill-dev",
+                path="svdq-int4_r32-flux.1-fill-dev.safetensors",
+            ),
+            HFFluxFill(
+                repo_id="nunchaku-tech/nunchaku-flux.1-fill-dev",
+                path="svdq-fp4_r32-flux.1-fill-dev.safetensors",
             ),
         ]
 
@@ -2287,6 +2315,7 @@ class FluxFill(HuggingFacePipelineNode):
     def get_basic_fields(cls) -> list[str]:
         return [
             "model",
+            "quantization",
             "image",
             "mask_image",
             "prompt",
@@ -2301,58 +2330,136 @@ class FluxFill(HuggingFacePipelineNode):
         return ["image", "mask_image"]
 
     def get_model_id(self) -> str:
-        if self.model.repo_id:
-            return self.model.repo_id
-        return "black-forest-labs/FLUX.1-Fill-dev"
+        quantization = self._resolve_effective_quantization()
+        base_model = self._get_base_model(quantization)
+        return base_model.repo_id or "black-forest-labs/FLUX.1-Fill-dev"
 
-    async def _load_nunchaku_model(self, context: ProcessingContext, torch_dtype):
-        """Load FLUX Fill model with Nunchaku quantization."""
-        hf_token = await context.get_secret("HF_TOKEN")
-        if not hf_token:
-            model_url = f"https://huggingface.co/{self.get_model_id()}"
-            raise ValueError(
-                f"Flux Fill is a gated model, please set the HF_TOKEN in Nodetool settings and accept the terms of use for the model: {model_url}"
-            )
+    def _detect_legacy_quantization(self) -> FluxFillQuantization | None:
+        repo = (self.model.repo_id or "").lower()
+        path = (self.model.path or "").lower()
+        if "svdq" not in repo and "svdq" not in path:
+            return None
+        if "fp4" in repo or "fp4" in path:
+            return FluxFillQuantization.FP4
+        return FluxFillQuantization.INT4
 
-        transformer = FluxTransformer2DModel.from_single_file(
-            cache_path,
-            torch_dtype=torch_dtype,
-            token=hf_token,
+    def _resolve_effective_quantization(self) -> FluxFillQuantization:
+        quantization = self.quantization
+        legacy = self._detect_legacy_quantization()
+        if quantization == FluxFillQuantization.FP16 and legacy is not None:
+            quantization = legacy
+
+        return quantization
+
+    def _get_base_model(self, quantization: FluxFillQuantization) -> HFFluxFill:
+        if quantization == FluxFillQuantization.FP16:
+            if self.model.repo_id:
+                return self.model
+            return HFFluxFill(repo_id="black-forest-labs/FLUX.1-Fill-dev")
+
+        return HFFluxFill(
+            repo_id="black-forest-labs/FLUX.1-Fill-dev",
+            allow_patterns=self.FLUX_FILL_BASE_ALLOW_PATTERNS,
         )
 
-        # Create the pipeline with the quantized transformer
-        log.info("Creating FLUX Fill pipeline...")
+    def _resolve_model_config(
+        self, quantization: FluxFillQuantization
+    ) -> tuple[HFFluxFill, HFFlux | None]:
+        base_model = self._get_base_model(quantization)
+        if quantization == FluxFillQuantization.FP16:
+            return base_model, None
 
-        base_model_id = "black-forest-labs/FLUX.1-Fill-dev"
-
-        log.info(
-            f"Loading FLUX Fill pipeline from {base_model_id} with quantized transformer..."
+        legacy = self._detect_legacy_quantization()
+        use_legacy = (
+            legacy is not None
+            and self.quantization == FluxFillQuantization.FP16
+            and quantization != FluxFillQuantization.FP16
         )
-        self._pipeline = FluxFillPipeline.from_pretrained(
-            base_model_id,
-            transformer=transformer,
-            torch_dtype=torch_dtype,
-        )
+        if use_legacy:
+            if not self.model.repo_id or not self.model.path:
+                raise ValueError(
+                    "Legacy Nunchaku Flux Fill configuration requires model.repo_id and model.path"
+                )
+            return base_model, HFFlux(repo_id=self.model.repo_id, path=self.model.path)
 
-        _enable_pytorch2_attention(self._pipeline)
-        _apply_vae_optimizations(self._pipeline)
+        precision = "fp4" if quantization == FluxFillQuantization.FP4 else "int4"
+        transformer = HFFlux(
+            repo_id="nunchaku-tech/nunchaku-flux.1-fill-dev",
+            path=f"svdq-{precision}_r32-flux.1-fill-dev.safetensors",
+        )
+        return base_model, transformer
 
     async def preload_model(self, context: ProcessingContext):
-        # Use bfloat16 for FLUX Fill models
         torch_dtype = torch.bfloat16
-
-        # Check if this is a GGUF model based on file extension
-        # Load the full pipeline normally
-        log.info(f"Loading FLUX Fill pipeline from {self.get_model_id()}...")
-        self._pipeline = await self.load_model(
-            context=context,
-            model_id=self.get_model_id(),
-            path=self.model.path,
-            model_class=FluxFillPipeline,
-            torch_dtype=torch_dtype,
-            variant=None,
-            device="cpu",
+        quantization = self._resolve_effective_quantization()
+        base_model, transformer_model = self._resolve_model_config(
+            quantization
         )
+
+        if transformer_model is not None:
+            if not try_to_load_from_cache(base_model.repo_id, "model_index.json"):
+                raise ValueError(
+                    f"Base Flux Fill model {base_model.repo_id} must be downloaded"
+                )
+
+            if not transformer_model.path:
+                raise ValueError(
+                    "Nunchaku Flux Fill requires the transformer path to be set."
+                )
+
+            if not try_to_load_from_cache(
+                transformer_model.repo_id, transformer_model.path
+            ):
+                raise ValueError(
+                    f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded"
+                )
+
+            hf_token = await context.get_secret("HF_TOKEN")
+            if not hf_token:
+                model_url = f"https://huggingface.co/{base_model.repo_id}"
+                raise ValueError(
+                    f"Flux Fill is a gated model, please set the HF_TOKEN in Nodetool settings and accept the terms of use for the model: {model_url}"
+                )
+
+            transformer = await get_nunchaku_transformer(
+                context=context,
+                model_class=NunchakuFluxTransformer2dModel,
+                node_id=self.id,
+                repo_id=transformer_model.repo_id,
+                path=transformer_model.path,
+            )
+
+            log.info(
+                "Loading FLUX Fill pipeline from %s with Nunchaku transformer %s/%s",
+                base_model.repo_id,
+                transformer_model.repo_id,
+                transformer_model.path,
+            )
+            try:
+                self._pipeline = FluxFillPipeline.from_pretrained(
+                    base_model.repo_id,
+                    transformer=transformer,
+                    torch_dtype=torch_dtype,
+                    token=hf_token,
+                )
+            except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                raise ValueError(
+                    "VRAM out of memory while loading Flux Fill with the Nunchaku transformer. "
+                    "Try enabling CPU offload or reduce image size/steps."
+                ) from e
+        else:
+            log.info(
+                f"Loading FLUX Fill pipeline from {base_model.repo_id} (quantization={quantization.value})..."
+            )
+            self._pipeline = await self.load_model(
+                context=context,
+                model_id=base_model.repo_id,
+                path=base_model.path,
+                model_class=FluxFillPipeline,
+                torch_dtype=torch_dtype,
+                variant=None,
+                device="cpu",
+            )
 
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
@@ -2582,18 +2689,6 @@ class FluxKontext(HuggingFacePipelineNode):
         base_model = self._get_base_model()
 
         quantization = self.quantization
-        smoke_mode = os.getenv("NODETOOL_SMOKE_TEST", "").lower() in {
-            "1",
-            "true",
-            "yes",
-            "on",
-        }
-        if smoke_mode and quantization != FluxKontextQuantization.FP16:
-            log.info(
-                "Smoke test detected, forcing Flux Kontext quantization to fp16"
-            )
-            quantization = FluxKontextQuantization.FP16
-
         transformer_model, text_encoder_model = self._resolve_model_config(
             quantization
         )
@@ -2727,6 +2822,12 @@ class FluxKontext(HuggingFacePipelineNode):
         return await context.image_from_pil(image)
 
 
+class FluxPriorReduxQuantization(Enum):
+    FP16 = "fp16"
+    FP4 = "fp4"
+    INT4 = "int4"
+
+
 class FluxPriorRedux(HuggingFacePipelineNode):
     """
     Performs image transformation using FLUX Prior Redux pipeline for image-conditioned generation.
@@ -2773,9 +2874,22 @@ class FluxPriorRedux(HuggingFacePipelineNode):
         default=True,
         description="Enable CPU offload to reduce VRAM usage.",
     )
+    quantization: FluxPriorReduxQuantization = Field(
+        default=FluxPriorReduxQuantization.INT4,
+        description="Quantization level for the Flux Prior Redux transformer.",
+    )
 
     _prior_pipeline: FluxPriorReduxPipeline | None = None
     _pipeline: FluxPipeline | None = None
+    FLUX_PRIOR_BASE_ALLOW_PATTERNS: ClassVar[list[str]] = [
+        "*.json",
+        "*.txt",
+        "scheduler/*",
+        "vae/*",
+        "text_encoder/*",
+        "tokenizer/*",
+        "tokenizer_2/*",
+    ]
 
     @classmethod
     def get_basic_fields(cls):
@@ -2801,9 +2915,70 @@ class FluxPriorRedux(HuggingFacePipelineNode):
         return "black-forest-labs/FLUX.1-Redux-dev"
 
     def get_flux_model_id(self) -> str:
-        if self.flux_model.repo_id:
-            return self.flux_model.repo_id
-        return "black-forest-labs/FLUX.1-dev"
+        quantization = self._resolve_effective_quantization()
+        base_model = self._get_flux_base_model(quantization)
+        return base_model.repo_id or "black-forest-labs/FLUX.1-dev"
+
+    def _detect_flux_legacy_quantization(self) -> FluxPriorReduxQuantization | None:
+        repo = (self.flux_model.repo_id or "").lower()
+        path = (self.flux_model.path or "").lower()
+        if "svdq" not in repo and "svdq" not in path:
+            return None
+        if "fp4" in repo or "fp4" in path:
+            return FluxPriorReduxQuantization.FP4
+        return FluxPriorReduxQuantization.INT4
+
+    def _resolve_effective_quantization(self) -> FluxPriorReduxQuantization:
+        quantization = self.quantization
+        legacy = self._detect_flux_legacy_quantization()
+        if quantization == FluxPriorReduxQuantization.FP16 and legacy is not None:
+            quantization = legacy
+
+        return quantization
+
+    def _get_flux_base_model(
+        self, quantization: FluxPriorReduxQuantization
+    ) -> HFFlux:
+        if quantization == FluxPriorReduxQuantization.FP16:
+            if self.flux_model.repo_id:
+                return self.flux_model
+            return HFFlux(repo_id="black-forest-labs/FLUX.1-dev")
+        return HFFlux(
+            repo_id="black-forest-labs/FLUX.1-dev",
+            allow_patterns=self.FLUX_PRIOR_BASE_ALLOW_PATTERNS,
+        )
+
+    def _resolve_flux_model_config(
+        self, quantization: FluxPriorReduxQuantization
+    ) -> tuple[HFFlux, HFFlux | None]:
+        base_model = self._get_flux_base_model(quantization)
+        if quantization == FluxPriorReduxQuantization.FP16:
+            return base_model, None
+
+        legacy = self._detect_flux_legacy_quantization()
+        use_legacy = (
+            legacy is not None
+            and self.quantization == FluxPriorReduxQuantization.FP16
+            and quantization != FluxPriorReduxQuantization.FP16
+        )
+        if use_legacy:
+            if not self.flux_model.repo_id or not self.flux_model.path:
+                raise ValueError(
+                    "Legacy Nunchaku Flux Prior Redux configuration requires flux_model.repo_id and flux_model.path"
+                )
+            return base_model, HFFlux(
+                repo_id=self.flux_model.repo_id,
+                path=self.flux_model.path,
+            )
+
+        precision = (
+            "fp4" if quantization == FluxPriorReduxQuantization.FP4 else "int4"
+        )
+        transformer = HFFlux(
+            repo_id="nunchaku-tech/nunchaku-flux.1-dev",
+            path=f"svdq-{precision}_r32-flux.1-dev.safetensors",
+        )
+        return base_model, transformer
 
     async def preload_model(self, context: ProcessingContext):
         hf_token = await context.get_secret("HF_TOKEN")
@@ -2827,16 +3002,67 @@ class FluxPriorRedux(HuggingFacePipelineNode):
         _enable_pytorch2_attention(self._prior_pipeline)
         _apply_vae_optimizations(self._prior_pipeline)
 
-        log.info(f"Loading FLUX pipeline from {self.get_flux_model_id()}...")
-        self._pipeline = await self.load_model(
-            context=context,
-            model_class=FluxPipeline,
-            model_id=self.get_flux_model_id(),
-            text_encoder=None,
-            text_encoder_2=None,
-            torch_dtype=torch_dtype,
-            device="cpu",
+        quantization = self._resolve_effective_quantization()
+        flux_base_model, transformer_model = self._resolve_flux_model_config(
+            quantization
         )
+
+        log.info(
+            "Loading FLUX pipeline from %s (quantization=%s)...",
+            flux_base_model.repo_id,
+            quantization.value,
+        )
+        if transformer_model is not None:
+            if not transformer_model.path:
+                raise ValueError(
+                    "Nunchaku Flux Prior Redux requires the transformer path to be set."
+                )
+
+            if not try_to_load_from_cache(flux_base_model.repo_id, "model_index.json"):
+                raise ValueError(
+                    f"Base Flux model {flux_base_model.repo_id} must be downloaded"
+                )
+
+            if not try_to_load_from_cache(
+                transformer_model.repo_id, transformer_model.path
+            ):
+                raise ValueError(
+                    f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded"
+                )
+
+            transformer = await get_nunchaku_transformer(
+                context=context,
+                model_class=NunchakuFluxTransformer2dModel,
+                node_id=self.id,
+                repo_id=transformer_model.repo_id,
+                path=transformer_model.path,
+            )
+
+            try:
+                self._pipeline = FluxPipeline.from_pretrained(
+                    flux_base_model.repo_id,
+                    transformer=transformer,
+                    text_encoder=None,
+                    text_encoder_2=None,
+                    torch_dtype=torch_dtype,
+                    token=hf_token,
+                )
+            except torch.OutOfMemoryError as e:  # ignore attr-defined
+                raise ValueError(
+                    "VRAM out of memory while loading Flux Prior Redux with the Nunchaku transformer. "
+                    "Try enabling CPU offload or reduce image size."
+                ) from e
+        else:
+            self._pipeline = await self.load_model(
+                context=context,
+                model_class=FluxPipeline,
+                model_id=flux_base_model.repo_id,
+                path=flux_base_model.path,
+                text_encoder=None,
+                text_encoder_2=None,
+                torch_dtype=torch_dtype,
+                device="cpu",
+            )
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 

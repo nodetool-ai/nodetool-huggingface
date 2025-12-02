@@ -8857,6 +8857,21 @@
           "description": "The FLUX Fill model to use for image inpainting."
         },
         {
+          "name": "quantization",
+          "type": {
+            "type": "enum",
+            "values": [
+              "fp16",
+              "fp4",
+              "int4"
+            ],
+            "type_name": "nodetool.nodes.huggingface.image_to_image.FluxFillQuantization"
+          },
+          "default": "fp16",
+          "title": "Quantization",
+          "description": "Quantization level for the FLUX Fill transformer."
+        },
+        {
           "name": "prompt",
           "type": {
             "type": "str"
@@ -8997,10 +9012,69 @@
           "has_model_index": true,
           "downloads": 218428,
           "likes": 958
+        },
+        {
+          "id": "nunchaku-tech/nunchaku-flux.1-fill-dev:svdq-int4_r32-flux.1-fill-dev.safetensors",
+          "type": "hf.inpainting",
+          "name": "nunchaku-tech/nunchaku-flux.1-fill-dev",
+          "repo_id": "nunchaku-tech/nunchaku-flux.1-fill-dev",
+          "path": "svdq-int4_r32-flux.1-fill-dev.safetensors",
+          "size_on_disk": 6770275936,
+          "pipeline_tag": "image-to-image",
+          "tags": [
+            "diffusers",
+            "image-to-image",
+            "SVDQuant",
+            "FLUX.1-Fill-dev",
+            "FLUX.1",
+            "Diffusion",
+            "Quantization",
+            "ICLR2025",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:black-forest-labs/FLUX.1-Fill-dev",
+            "base_model:quantized:black-forest-labs/FLUX.1-Fill-dev",
+            "license:other",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 5603,
+          "likes": 18
+        },
+        {
+          "id": "nunchaku-tech/nunchaku-flux.1-fill-dev:svdq-fp4_r32-flux.1-fill-dev.safetensors",
+          "type": "hf.inpainting",
+          "name": "nunchaku-tech/nunchaku-flux.1-fill-dev",
+          "repo_id": "nunchaku-tech/nunchaku-flux.1-fill-dev",
+          "path": "svdq-fp4_r32-flux.1-fill-dev.safetensors",
+          "size_on_disk": 7040672992,
+          "pipeline_tag": "image-to-image",
+          "tags": [
+            "diffusers",
+            "image-to-image",
+            "SVDQuant",
+            "FLUX.1-Fill-dev",
+            "FLUX.1",
+            "Diffusion",
+            "Quantization",
+            "ICLR2025",
+            "en",
+            "dataset:mit-han-lab/svdquant-datasets",
+            "arxiv:2411.05007",
+            "base_model:black-forest-labs/FLUX.1-Fill-dev",
+            "base_model:quantized:black-forest-labs/FLUX.1-Fill-dev",
+            "license:other",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 5603,
+          "likes": 18
         }
       ],
       "basic_fields": [
         "model",
+        "quantization",
         "image",
         "mask_image",
         "prompt",
@@ -9312,6 +9386,21 @@
           "default": true,
           "title": "Enable Cpu Offload",
           "description": "Enable CPU offload to reduce VRAM usage."
+        },
+        {
+          "name": "quantization",
+          "type": {
+            "type": "enum",
+            "values": [
+              "fp16",
+              "fp4",
+              "int4"
+            ],
+            "type_name": "nodetool.nodes.huggingface.image_to_image.FluxPriorReduxQuantization"
+          },
+          "default": "int4",
+          "title": "Quantization",
+          "description": "Quantization level for the Flux Prior Redux transformer."
         }
       ],
       "outputs": [
@@ -17338,6 +17427,21 @@
           "default": true,
           "title": "Enable Cpu Offload",
           "description": "Enable CPU offload to reduce VRAM usage."
+        },
+        {
+          "name": "quantization",
+          "type": {
+            "type": "enum",
+            "values": [
+              "fp16",
+              "fp4",
+              "int4"
+            ],
+            "type_name": "nodetool.nodes.huggingface.text_to_image.FluxControlQuantization"
+          },
+          "default": "int4",
+          "title": "Quantization",
+          "description": "Quantization level for the FLUX Control transformer."
         }
       ],
       "outputs": [
@@ -17354,7 +17458,17 @@
           "type": "hf.controlnet_flux",
           "name": "black-forest-labs/FLUX.1-Depth-dev",
           "repo_id": "black-forest-labs/FLUX.1-Depth-dev",
-          "size_on_disk": 67823838679,
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "tokenizer/*",
+            "tokenizer_2/*",
+            "transformer/config.json"
+          ],
+          "size_on_disk": 832541209,
           "pipeline_tag": "text-to-image",
           "tags": [
             "diffusers",
@@ -17376,7 +17490,17 @@
           "type": "hf.controlnet_flux",
           "name": "black-forest-labs/FLUX.1-Canny-dev",
           "repo_id": "black-forest-labs/FLUX.1-Canny-dev",
-          "size_on_disk": 67823838991,
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "tokenizer/*",
+            "tokenizer_2/*",
+            "transformer/config.json"
+          ],
+          "size_on_disk": 832541209,
           "pipeline_tag": "text-to-image",
           "tags": [
             "diffusers",
@@ -17538,6 +17662,7 @@
       ],
       "basic_fields": [
         "model",
+        "quantization",
         "prompt",
         "control_image",
         "height",

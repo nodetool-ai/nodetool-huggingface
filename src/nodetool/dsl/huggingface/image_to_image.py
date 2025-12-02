@@ -33,6 +33,10 @@ class FluxFill(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef])
     - High-quality image editing with FLUX models
     """
 
+    FluxFillQuantization: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.image_to_image.FluxFillQuantization
+    )
+
     model: types.HFFluxFill | OutputHandle[types.HFFluxFill] = connect_field(
         default=types.HFFluxFill(
             type="hf.inpainting",
@@ -43,6 +47,12 @@ class FluxFill(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef])
             ignore_patterns=None,
         ),
         description="The FLUX Fill model to use for image inpainting.",
+    )
+    quantization: nodetool.nodes.huggingface.image_to_image.FluxFillQuantization = (
+        Field(
+            default=nodetool.nodes.huggingface.image_to_image.FluxFillQuantization.FP16,
+            description="Quantization level for the FLUX Fill transformer.",
+        )
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="a white paper cup",
@@ -168,6 +178,10 @@ class FluxPriorRedux(SingleOutputGraphNode[types.ImageRef], GraphNode[types.Imag
     - Create variations of existing images with FLUX Prior Redux guidance
     """
 
+    FluxPriorReduxQuantization: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.image_to_image.FluxPriorReduxQuantization
+    )
+
     prior_redux_model: types.HFFluxRedux | OutputHandle[types.HFFluxRedux] = (
         connect_field(
             default=types.HFFluxRedux(
@@ -209,6 +223,12 @@ class FluxPriorRedux(SingleOutputGraphNode[types.ImageRef], GraphNode[types.Imag
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=True, description="Enable CPU offload to reduce VRAM usage."
+    )
+    quantization: (
+        nodetool.nodes.huggingface.image_to_image.FluxPriorReduxQuantization
+    ) = Field(
+        default=nodetool.nodes.huggingface.image_to_image.FluxPriorReduxQuantization.INT4,
+        description="Quantization level for the Flux Prior Redux transformer.",
     )
 
     @classmethod

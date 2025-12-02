@@ -171,6 +171,10 @@ class FluxControl(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRe
     - Depth-aware image generation
     """
 
+    FluxControlQuantization: typing.ClassVar[type] = (
+        nodetool.nodes.huggingface.text_to_image.FluxControlQuantization
+    )
+
     model: types.HFControlNetFlux | OutputHandle[types.HFControlNetFlux] = (
         connect_field(
             default=types.HFControlNetFlux(
@@ -210,6 +214,12 @@ class FluxControl(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRe
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=True, description="Enable CPU offload to reduce VRAM usage."
+    )
+    quantization: nodetool.nodes.huggingface.text_to_image.FluxControlQuantization = (
+        Field(
+            default=nodetool.nodes.huggingface.text_to_image.FluxControlQuantization.INT4,
+            description="Quantization level for the FLUX Control transformer.",
+        )
     )
 
     @classmethod

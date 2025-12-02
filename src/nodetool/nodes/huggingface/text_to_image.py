@@ -60,6 +60,7 @@ from diffusers.schedulers.scheduling_dpmsolver_multistep import (
 from pydantic import Field
 from transformers import T5EncoderModel
 from transformers.models.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
+from PIL import Image
 
 
 log = get_logger(__name__)
@@ -1191,6 +1192,26 @@ class QwenImage(HuggingFacePipelineNode):
         """Return list of required inputs that must be connected."""
         return []  # No required inputs - IP adapter image is optional
 
+
+FLUX_CONTROL_BASE_ALLOW_PATTERNS = [
+    "*.json",
+    "*.txt",
+    "scheduler/*",
+    "vae/*",
+    "text_encoder/*",
+    "tokenizer/*",
+    "tokenizer_2/*",
+    "controlnet/*",
+    "transformer/config.json",
+]
+
+
+class FluxControlQuantization(Enum):
+    FP16 = "fp16"
+    FP4 = "fp4"
+    INT4 = "int4"
+
+
 class FluxControl(HuggingFacePipelineNode):
     """
     Generates images using FLUX Control models with depth or other control guidance.
@@ -1242,12 +1263,17 @@ class FluxControl(HuggingFacePipelineNode):
         default=True,
         description="Enable CPU offload to reduce VRAM usage.",
     )
+    quantization: FluxControlQuantization = Field(
+        default=FluxControlQuantization.INT4,
+        description="Quantization level for the FLUX Control transformer.",
+    )
     _pipeline: FluxControlPipeline | None = None
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
         return [
             "model",
+            "quantization",
             "prompt",
             "control_image",
             "height",
@@ -1258,9 +1284,25 @@ class FluxControl(HuggingFacePipelineNode):
 
     @classmethod
     def get_recommended_models(cls) -> list[HFControlNetFlux | HFT5]:
+        allow_patterns = [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "tokenizer/*",
+            "tokenizer_2/*",
+            "transformer/config.json",
+        ]
         return [
-            HFControlNetFlux(repo_id="black-forest-labs/FLUX.1-Depth-dev"),
-            HFControlNetFlux(repo_id="black-forest-labs/FLUX.1-Canny-dev"),
+            HFControlNetFlux(
+                repo_id="black-forest-labs/FLUX.1-Depth-dev",
+                allow_patterns=allow_patterns,
+            ),
+            HFControlNetFlux(
+                repo_id="black-forest-labs/FLUX.1-Canny-dev",
+                allow_patterns=allow_patterns,
+            ),
             HFControlNetFlux(
                 repo_id="nunchaku-tech/nunchaku-flux.1-depth-dev",
                 path="svdq-int4_r32-flux.1-depth-dev.safetensors",
@@ -1288,9 +1330,9 @@ class FluxControl(HuggingFacePipelineNode):
         return "Flux Control"
 
     def get_model_id(self) -> str:
-        if self.model.repo_id:
-            return self.model.repo_id
-        return "black-forest-labs/FLUX.1-Depth-dev"
+        quantization = self._resolve_effective_quantization()
+        base_model, _, _ = self._resolve_model_config(quantization)
+        return base_model.repo_id or "black-forest-labs/FLUX.1-Depth-dev"
 
     def required_inputs(self):
         return ["control_image"]
@@ -1304,31 +1346,74 @@ class FluxControl(HuggingFacePipelineNode):
             )
 
         torch_dtype = torch.bfloat16
-        text_encoder_model = (
-            HFT5(
-                repo_id="mit-han-lab/nunchaku-t5",
-                path="awq-int4-flux.1-t5xxl.safetensors",
-            )
-            if self._is_nunchaku_model()
-            else None
+        quantization = self._resolve_effective_quantization()
+        base_model, transformer_model, text_encoder_model = self._resolve_model_config(
+            quantization
         )
 
-        log.info(f"Loading FLUX Control pipeline from {self.get_model_id()}...")
-        if self._is_nunchaku_model():
-            await self._load_nunchaku_model(
+        log.info(
+            "Loading FLUX Control pipeline from %s (quantization=%s)",
+            base_model.repo_id,
+            quantization.value,
+        )
+        if transformer_model is not None and text_encoder_model is not None:
+            if not try_to_load_from_cache(base_model.repo_id, "model_index.json"):
+                raise ValueError(
+                    f"Base Flux Control model {base_model.repo_id} must be downloaded"
+                )
+
+            if not try_to_load_from_cache(
+                transformer_model.repo_id, transformer_model.path
+            ):
+                raise ValueError(
+                    f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded"
+                )
+
+            if not try_to_load_from_cache(
+                text_encoder_model.repo_id, text_encoder_model.path
+            ):
+                raise ValueError(
+                    f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded"
+                )
+
+            transformer = await get_nunchaku_transformer(
                 context=context,
-                torch_dtype=torch_dtype,
-                hf_token=hf_token,
-                text_encoder_model=text_encoder_model,
+                model_class=NunchakuFluxTransformer2dModel,
+                node_id=self.id,
+                repo_id=transformer_model.repo_id,
+                path=transformer_model.path,
             )
+
+            text_encoder_2 = await get_nunchaku_text_encoder(
+                context=context,
+                node_id=self.id,
+                repo_id=text_encoder_model.repo_id,
+                path=text_encoder_model.path,
+            )
+
+            try:
+                self._pipeline = FluxControlPipeline.from_pretrained(
+                    base_model.repo_id,
+                    transformer=transformer,
+                    torch_dtype=torch_dtype,
+                    token=hf_token,
+                    text_encoder_2=text_encoder_2,
+                    local_files_only=True,
+                )
+            except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                raise ValueError(
+                    "VRAM out of memory while loading Flux Control with the Nunchaku transformer. "
+                    "Try enabling CPU offload or reduce image size."
+                ) from e
         else:
-            if not try_to_load_from_cache(self.get_model_id(), "model_index.json"):
-                raise ValueError(f"Model {self.get_model_id()} must be downloaded")
+            if not try_to_load_from_cache(base_model.repo_id, "model_index.json"):
+                raise ValueError(f"Model {base_model.repo_id} must be downloaded")
 
             self._pipeline = await self.load_model(
                 context=context,
                 model_class=FluxControlPipeline,
-                model_id=self.get_model_id(),
+                model_id=base_model.repo_id,
+                path=base_model.path,
                 torch_dtype=torch_dtype,
                 device="cpu",
                 token=hf_token,
@@ -1341,9 +1426,27 @@ class FluxControl(HuggingFacePipelineNode):
             self._pipeline.enable_sequential_cpu_offload()
 
     def _is_nunchaku_model(self) -> bool:
-        repo_has_svdq = self.model.repo_id and "svdq" in self.model.repo_id.lower()
-        path_has_svdq = self.model.path and "svdq" in self.model.path.lower()
-        return bool(repo_has_svdq or path_has_svdq)
+        return self._resolve_effective_quantization() != FluxControlQuantization.FP16
+
+    def _detect_legacy_quantization(self) -> FluxControlQuantization | None:
+        repo = (self.model.repo_id or "").lower()
+        path = (self.model.path or "").lower()
+        if "svdq" not in repo and "svdq" not in path:
+            return None
+        if "fp4" in repo or "fp4" in path:
+            return FluxControlQuantization.FP4
+        return FluxControlQuantization.INT4
+
+    def _resolve_effective_quantization(self) -> FluxControlQuantization:
+        quantization = self.quantization
+        legacy_quantization = self._detect_legacy_quantization()
+        if (
+            quantization == FluxControlQuantization.FP16
+            and legacy_quantization is not None
+        ):
+            quantization = legacy_quantization
+
+        return quantization
 
     def _detect_flux_control_variant(self) -> tuple[str, str]:
         repo_id = (self.model.repo_id or "").lower()
@@ -1352,68 +1455,32 @@ class FluxControl(HuggingFacePipelineNode):
             return "canny-dev", "black-forest-labs/FLUX.1-Canny-dev"
         return "depth-dev", "black-forest-labs/FLUX.1-Depth-dev"
 
-    async def _load_nunchaku_model(
-        self,
-        context: ProcessingContext,
-        torch_dtype: torch.dtype,
-        hf_token: str,
-        text_encoder_model: HFT5 | None,
-    ):
-        _, base_model_id = self._detect_flux_control_variant()
+    def _resolve_model_config(
+        self, quantization: FluxControlQuantization
+    ) -> tuple[HFControlNetFlux, HFControlNetFlux | None, HFT5 | None]:
+        variant_key, base_model_id = self._detect_flux_control_variant()
+        if quantization == FluxControlQuantization.FP16:
+            if self.model.repo_id:
+                return self.model, None, None
+            return HFControlNetFlux(repo_id=base_model_id), None, None
 
-        if not try_to_load_from_cache(base_model_id, "model_index.json"):
-            raise ValueError(
-                f"Base Flux Control model {base_model_id} must be downloaded"
-            )
-
-        if not self.model.path:
-            raise ValueError(
-                "Nunchaku Flux Control requires the model.path to point to the transformer file."
-            )
-
-        if not try_to_load_from_cache(self.model.repo_id, self.model.path):
-            raise ValueError(
-                f"Transformer model {self.model.repo_id}/{self.model.path} must be downloaded"
-            )
-
-        if text_encoder_model is not None and not try_to_load_from_cache(
-            text_encoder_model.repo_id, text_encoder_model.path
-        ):
-            raise ValueError(
-                f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded"
-            )
-
-        transformer = await get_nunchaku_transformer(
-            context=context,
-            model_class=NunchakuFluxTransformer2dModel,
-            node_id=self.id,
-            repo_id=self.model.repo_id,
-            path=self.model.path,
-            allow_downloads=False,
+        precision = (
+            "fp4" if quantization == FluxControlQuantization.FP4 else "int4"
         )
-
-        text_encoder = await get_nunchaku_text_encoder(
-            context,
-            self.id,
-            repo_id=text_encoder_model.repo_id if text_encoder_model else None,
-            path=text_encoder_model.path if text_encoder_model else None,
-            allow_downloads=False,
+        transformer_model = HFControlNetFlux(
+            repo_id=f"nunchaku-tech/nunchaku-flux.1-{variant_key}",
+            path=f"svdq-{precision}_r32-flux.1-{variant_key}.safetensors",
         )
+        text_encoder_model = HFT5(
+            repo_id="mit-han-lab/nunchaku-t5",
+            path="awq-int4-flux.1-t5xxl.safetensors",
+        )
+        base_model = HFControlNetFlux(
+            repo_id=base_model_id,
+            allow_patterns=FLUX_CONTROL_BASE_ALLOW_PATTERNS,
+        )
+        return base_model, transformer_model, text_encoder_model
 
-        try:
-            self._pipeline = FluxControlPipeline.from_pretrained(
-                base_model_id,
-                transformer=transformer,
-                torch_dtype=torch_dtype,
-                token=hf_token,
-                text_encoder_2=text_encoder,
-                local_files_only=True,
-            )
-        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
-            raise ValueError(
-                "VRAM out of memory while loading Flux Control with the Nunchaku transformer. "
-                "Try enabling CPU offload or reduce image size."
-            ) from e
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
