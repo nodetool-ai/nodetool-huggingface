@@ -6786,11 +6786,12 @@
           "likes": 190
         },
         {
-          "id": "diffusers/controlnet-zoe-depth-sdxl-1.0:diffusion_pytorch_model.fp16.safetensors",
+          "id": "diffusers/controlnet-zoe-depth-sdxl-1.0:diffusion_pytorch_model.safetensors",
           "type": "hf.controlnet",
           "name": "diffusers/controlnet-zoe-depth-sdxl-1.0",
           "repo_id": "diffusers/controlnet-zoe-depth-sdxl-1.0",
-          "path": "diffusion_pytorch_model.fp16.safetensors",
+          "path": "diffusion_pytorch_model.safetensors",
+          "size_on_disk": 2502139134,
           "pipeline_tag": "text-to-image",
           "tags": [
             "diffusers",
@@ -7930,11 +7931,12 @@
           "likes": 190
         },
         {
-          "id": "diffusers/controlnet-zoe-depth-sdxl-1.0:diffusion_pytorch_model.fp16.safetensors",
+          "id": "diffusers/controlnet-zoe-depth-sdxl-1.0:diffusion_pytorch_model.safetensors",
           "type": "hf.controlnet",
           "name": "diffusers/controlnet-zoe-depth-sdxl-1.0",
           "repo_id": "diffusers/controlnet-zoe-depth-sdxl-1.0",
-          "path": "diffusion_pytorch_model.fp16.safetensors",
+          "path": "diffusion_pytorch_model.safetensors",
+          "size_on_disk": 2502139134,
           "pipeline_tag": "text-to-image",
           "tags": [
             "diffusers",
@@ -9281,33 +9283,6 @@
           "has_model_index": false,
           "downloads": 664,
           "likes": 25
-        },
-        {
-          "id": "nunchaku-tech/nunchaku-sdxl:svdq-fp4_r32-sdxl.safetensors",
-          "type": "hf.stable_diffusion_xl",
-          "name": "nunchaku-tech/nunchaku-sdxl",
-          "repo_id": "nunchaku-tech/nunchaku-sdxl",
-          "path": "svdq-fp4_r32-sdxl.safetensors",
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "text-to-image",
-            "SVDQuant",
-            "SDXL",
-            "Diffusion",
-            "Quantization",
-            "stable-diffusion",
-            "en",
-            "dataset:mit-han-lab/svdquant-datasets",
-            "arxiv:2411.05007",
-            "base_model:stabilityai/stable-diffusion-xl-base-1.0",
-            "base_model:quantized:stabilityai/stable-diffusion-xl-base-1.0",
-            "license:openrail++",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 664,
-          "likes": 25
         }
       ],
       "basic_fields": [
@@ -9892,33 +9867,6 @@
           "repo_id": "nunchaku-tech/nunchaku-sdxl",
           "path": "svdq-int4_r32-sdxl.safetensors",
           "size_on_disk": 2559021560,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "text-to-image",
-            "SVDQuant",
-            "SDXL",
-            "Diffusion",
-            "Quantization",
-            "stable-diffusion",
-            "en",
-            "dataset:mit-han-lab/svdquant-datasets",
-            "arxiv:2411.05007",
-            "base_model:stabilityai/stable-diffusion-xl-base-1.0",
-            "base_model:quantized:stabilityai/stable-diffusion-xl-base-1.0",
-            "license:openrail++",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 664,
-          "likes": 25
-        },
-        {
-          "id": "nunchaku-tech/nunchaku-sdxl:svdq-fp4_r32-sdxl.safetensors",
-          "type": "hf.stable_diffusion_xl",
-          "name": "nunchaku-tech/nunchaku-sdxl",
-          "repo_id": "nunchaku-tech/nunchaku-sdxl",
-          "path": "svdq-fp4_r32-sdxl.safetensors",
           "pipeline_tag": "text-to-image",
           "tags": [
             "diffusers",
@@ -12121,30 +12069,6 @@
           "has_model_index": false,
           "downloads": 17,
           "likes": 8
-        },
-        {
-          "id": "Linaqruf/anime-detailer-xl-lora:anime-detailer-xl-lora.safetensors",
-          "type": "hf.lora_sdxl",
-          "name": "Linaqruf/anime-detailer-xl-lora",
-          "repo_id": "Linaqruf/anime-detailer-xl-lora",
-          "path": "anime-detailer-xl-lora.safetensors",
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "text-to-image",
-            "stable-diffusion",
-            "lora",
-            "safetensors",
-            "stable-diffusion-xl",
-            "en",
-            "base_model:Linaqruf/animagine-xl-2.0",
-            "base_model:adapter:Linaqruf/animagine-xl-2.0",
-            "license:openrail++",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 7273,
-          "likes": 61
         }
       ],
       "basic_fields": [
@@ -17218,33 +17142,6 @@
           "repo_id": "nunchaku-tech/nunchaku-sdxl",
           "path": "svdq-int4_r32-sdxl.safetensors",
           "size_on_disk": 2559021560,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "text-to-image",
-            "SVDQuant",
-            "SDXL",
-            "Diffusion",
-            "Quantization",
-            "stable-diffusion",
-            "en",
-            "dataset:mit-han-lab/svdquant-datasets",
-            "arxiv:2411.05007",
-            "base_model:stabilityai/stable-diffusion-xl-base-1.0",
-            "base_model:quantized:stabilityai/stable-diffusion-xl-base-1.0",
-            "license:openrail++",
-            "region:us"
-          ],
-          "has_model_index": false,
-          "downloads": 664,
-          "likes": 25
-        },
-        {
-          "id": "nunchaku-tech/nunchaku-sdxl:svdq-fp4_r32-sdxl.safetensors",
-          "type": "hf.stable_diffusion_xl",
-          "name": "nunchaku-tech/nunchaku-sdxl",
-          "repo_id": "nunchaku-tech/nunchaku-sdxl",
-          "path": "svdq-fp4_r32-sdxl.safetensors",
           "pipeline_tag": "text-to-image",
           "tags": [
             "diffusers",

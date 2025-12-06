@@ -32,17 +32,21 @@ DEFAULT_METADATA_PATH = (
 )
 
 
-def iter_repo_ids(metadata_path: Path) -> set[str]:
+def iter_repo_entries(metadata_path: Path) -> tuple[set[str], set[tuple[str, str]]]:
     with metadata_path.open("r", encoding="utf-8") as f:
         data = json.load(f)
 
     repo_ids: set[str] = set()
+    repo_paths: set[tuple[str, str]] = set()
 
     def visit(obj: object) -> None:
         if isinstance(obj, dict):
             repo_id = obj.get("repo_id")
+            path = obj.get("path")
             if isinstance(repo_id, str):
                 repo_ids.add(repo_id)
+                if isinstance(path, str) and path:
+                    repo_paths.add((repo_id, path))
             for value in obj.values():
                 visit(value)
         elif isinstance(obj, list):
@@ -50,7 +54,7 @@ def iter_repo_ids(metadata_path: Path) -> set[str]:
                 visit(item)
 
     visit(data)
-    return repo_ids
+    return repo_ids, repo_paths
 
 
 def check_repo(
@@ -84,6 +88,38 @@ def check_repo(
             return repo_id, False, str(exc)
 
 
+def check_file(
+    repo_id: str,
+    path: str,
+    token: str | None,
+    timeout: float,
+    retries: int,
+    backoff: float,
+) -> tuple[str, str, bool, str]:
+    url = f"https://huggingface.co/{repo_id}/resolve/main/{path}"
+    headers = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    for attempt in range(retries + 1):
+        try:
+            resp = requests.head(
+                url, headers=headers, timeout=timeout, allow_redirects=True
+            )
+            if resp.status_code == 200:
+                return repo_id, path, True, "ok"
+            if resp.status_code == 429 and attempt < retries:
+                delay = backoff * (2**attempt) + random.uniform(0, 0.5)
+                time.sleep(delay)
+                continue
+            return repo_id, path, False, f"status {resp.status_code}"
+        except Exception as exc:  # noqa: BLE001
+            if attempt < retries:
+                delay = backoff * (2**attempt) + random.uniform(0, 0.5)
+                time.sleep(delay)
+                continue
+            return repo_id, path, False, str(exc)
+
+
 def main(
     metadata_path: Path,
     token: str | None,
@@ -97,8 +133,10 @@ def main(
         print(f"Metadata file not found: {metadata_path}", file=sys.stderr)
         return 1
 
-    repo_ids = iter_repo_ids(metadata_path)
-    print(f"Found {len(repo_ids)} unique repo_ids in {metadata_path}")
+    repo_ids, repo_paths = iter_repo_entries(metadata_path)
+    print(
+        f"Found {len(repo_ids)} unique repo_ids and {len(repo_paths)} repo+path pairs in {metadata_path}"
+    )
 
     unreachable: list[tuple[str, str]] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
@@ -117,13 +155,42 @@ def main(
     succeeded = total - failed
     print(f"Checked {total} repos: {succeeded} ok, {failed} failed")
 
+    file_unreachable: list[tuple[str, str, str]] = []
+    if repo_paths:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+            for repo_id, path, ok, detail in pool.map(
+                lambda rp: check_file(
+                    rp[0], rp[1], token, timeout, retries, backoff
+                ),
+                sorted(repo_paths),
+            ):
+                if ok:
+                    print(f"[OK]   {repo_id}/{path}")
+                    continue
+                file_unreachable.append((repo_id, path, detail))
+                print(f"[FAIL] {repo_id}/{path}: {detail}")
+
+        total_files = len(repo_paths)
+        failed_files = len(file_unreachable)
+        succeeded_files = total_files - failed_files
+        print(
+            f"Checked {total_files} repo paths: {succeeded_files} ok, {failed_files} failed"
+        )
+
     if not unreachable:
         print("All repos reachable ✅")
-        return 0
+        if not repo_paths or not file_unreachable:
+            print("All specified paths reachable ✅")
+            return 0
 
-    print(f"{len(unreachable)} repos unreachable:")
-    for repo_id, detail in unreachable:
-        print(f"  - {repo_id}: {detail}")
+    if unreachable:
+        print(f"{len(unreachable)} repos unreachable:")
+        for repo_id, detail in unreachable:
+            print(f"  - {repo_id}: {detail}")
+    if repo_paths and file_unreachable:
+        print(f"{len(file_unreachable)} repo paths unreachable:")
+        for repo_id, path, detail in file_unreachable:
+            print(f"  - {repo_id}/{path}: {detail}")
     return 2
 
 
