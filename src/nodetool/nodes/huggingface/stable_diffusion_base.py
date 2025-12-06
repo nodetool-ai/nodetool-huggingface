@@ -93,10 +93,6 @@ HF_STABLE_DIFFUSION_XL_MODELS = [
         repo_id="nunchaku-tech/nunchaku-sdxl",
         path="svdq-int4_r32-sdxl.safetensors",
     ),
-    HFStableDiffusionXL(
-        repo_id="nunchaku-tech/nunchaku-sdxl",
-        path="svdq-fp4_r32-sdxl.safetensors",
-    ),
 ]
 
 SDXL_BASE_ALLOW_PATTERNS = [
@@ -166,7 +162,7 @@ HF_CONTROLNET_XL_MODELS: list[HFControlNet] = [
     ),
     HFControlNet(
         repo_id="diffusers/controlnet-zoe-depth-sdxl-1.0",
-        path="diffusion_pytorch_model.fp16.safetensors",
+        path="diffusion_pytorch_model.safetensors",
     ),
     # SD Control Collection - SDXL Canny models
     HFControlNet(

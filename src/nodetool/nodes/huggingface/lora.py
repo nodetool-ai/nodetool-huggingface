@@ -85,10 +85,6 @@ HF_LORA_SDXL_MODELS = [
         repo_id="robert123231/coloringbookgenerator",
         path="ColoringBookRedmond-ColoringBook-ColoringBookAF.safetensors",
     ),
-    HFLoraSDXL(
-        repo_id="Linaqruf/anime-detailer-xl-lora",
-        path="anime-detailer-xl-lora.safetensors",
-    ),
 ]
 
 
