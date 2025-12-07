@@ -517,23 +517,23 @@ class Flux(HuggingFacePipelineNode):
                 allow_patterns=allow_patterns,
             ),
             HFFlux(
-                repo_id="mit-han-lab/nunchaku-flux.1-schnell",
+                repo_id="nunchaku-tech/nunchaku-flux.1-schnell",
                 path="svdq-int4_r32-flux.1-schnell.safetensors",
             ),
             HFFlux(
-                repo_id="mit-han-lab/nunchaku-flux.1-schnell",
+                repo_id="nunchaku-tech/nunchaku-flux.1-schnell",
                 path="svdq-fp4_r32-flux.1-schnell.safetensors",
             ),
             HFFlux(
-                repo_id="mit-han-lab/nunchaku-flux.1-dev",
+                repo_id="nunchaku-tech/nunchaku-flux.1-dev",
                 path="svdq-int4_r32-flux.1-dev.safetensors",
             ),
             HFFlux(
-                repo_id="mit-han-lab/nunchaku-flux.1-dev",
+                repo_id="nunchaku-tech/nunchaku-flux.1-dev",
                 path="svdq-fp4_r32-flux.1-dev.safetensors",
             ),
             HFT5(
-                repo_id="mit-han-lab/nunchaku-t5",
+                repo_id="nunchaku-tech/nunchaku-t5",
                 path="awq-int4-flux.1-t5xxl.safetensors",
             ),  
         ]
@@ -551,7 +551,7 @@ class Flux(HuggingFacePipelineNode):
                         path="svdq-fp4_r32-flux.1-schnell.safetensors",
                     ),
                     HFT5(
-                        repo_id="mit-han-lab/nunchaku-t5",
+                        repo_id="nunchaku-tech/nunchaku-t5",
                         path="awq-int4-flux.1-t5xxl.safetensors",
                     ),
                 )
@@ -562,7 +562,7 @@ class Flux(HuggingFacePipelineNode):
                         path="svdq-fp4_r32-flux.1-dev.safetensors",
                     ),
                     HFT5(
-                        repo_id="mit-han-lab/nunchaku-t5",
+                        repo_id="nunchaku-tech/nunchaku-t5",
                         path="awq-int4-flux.1-t5xxl.safetensors",
                     ),
                 )
@@ -574,7 +574,7 @@ class Flux(HuggingFacePipelineNode):
                         path="svdq-int4_r32-flux.1-schnell.safetensors",
                     ),
                     HFT5(
-                        repo_id="mit-han-lab/nunchaku-t5",
+                        repo_id="nunchaku-tech/nunchaku-t5",
                         path="awq-int4-flux.1-t5xxl.safetensors",
                     ),
                 )
@@ -585,7 +585,7 @@ class Flux(HuggingFacePipelineNode):
                         path="svdq-int4_r32-flux.1-dev.safetensors",
                     ),
                     HFT5(
-                        repo_id="mit-han-lab/nunchaku-t5",
+                        repo_id="nunchaku-tech/nunchaku-t5",
                         path="awq-int4-flux.1-t5xxl.safetensors",
                     ),
                 )
@@ -1320,7 +1320,7 @@ class FluxControl(HuggingFacePipelineNode):
                 path="svdq-fp4_r32-flux.1-canny-dev.safetensors",
             ),
             HFT5(
-                repo_id="mit-han-lab/nunchaku-t5",
+                repo_id="nunchaku-tech/nunchaku-t5",
                 path="awq-int4-flux.1-t5xxl.safetensors",
             ),
         ]
@@ -1472,7 +1472,7 @@ class FluxControl(HuggingFacePipelineNode):
             path=f"svdq-{precision}_r32-flux.1-{variant_key}.safetensors",
         )
         text_encoder_model = HFT5(
-            repo_id="mit-han-lab/nunchaku-t5",
+            repo_id="nunchaku-tech/nunchaku-t5",
             path="awq-int4-flux.1-t5xxl.safetensors",
         )
         base_model = HFControlNetFlux(

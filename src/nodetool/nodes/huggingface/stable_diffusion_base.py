@@ -93,6 +93,10 @@ HF_STABLE_DIFFUSION_XL_MODELS = [
         repo_id="nunchaku-tech/nunchaku-sdxl",
         path="svdq-int4_r32-sdxl.safetensors",
     ),
+    HFStableDiffusionXL(
+        repo_id="nunchaku-tech/nunchaku-sdxl-turbo",
+        path="svdq-int4_r32-sdxl-turbo.safetensors",
+    ),
 ]
 
 SDXL_BASE_ALLOW_PATTERNS = [
@@ -1233,6 +1237,18 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
                     "Legacy Nunchaku SDXL configuration requires model.repo_id and model.path"
                 )
             return self.model
+
+        is_turbo = "turbo" in (self.model.repo_id or "").lower()
+        if is_turbo:
+            path = (
+                "svdq-fp4_r32-sdxl-turbo.safetensors"
+                if quantization == StableDiffusionXLQuantization.FP4
+                else "svdq-int4_r32-sdxl-turbo.safetensors"
+            )
+            return HFStableDiffusionXL(
+                repo_id="nunchaku-tech/nunchaku-sdxl-turbo",
+                path=path,
+            )
 
         path = (
             "svdq-fp4_r32-sdxl.safetensors"

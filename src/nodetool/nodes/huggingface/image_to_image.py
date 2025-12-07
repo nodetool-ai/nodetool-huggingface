@@ -2003,6 +2003,14 @@ class QwenImageEdit(HuggingFacePipelineNode):
                 repo_id="nunchaku-tech/nunchaku-qwen-image-edit",
                 path="svdq-fp4_r32-qwen-image-edit.safetensors",
             ),
+            HFQwenImageEdit(
+                repo_id="nunchaku-tech/nunchaku-qwen-image-edit-2509",
+                path="svdq-int4_r32-qwen-image-edit-2509.safetensors",
+            ),
+            HFQwenImageEdit(
+                repo_id="nunchaku-tech/nunchaku-qwen-image-edit-2509",
+                path="svdq-fp4_r32-qwen-image-edit-2509.safetensors",
+            ),
         ]
 
     def _get_base_model(self) -> HFQwenImageEdit:
@@ -2619,7 +2627,7 @@ class FluxKontext(HuggingFacePipelineNode):
                 path="svdq-fp4_r32-flux.1-kontext-dev.safetensors",
             ),
             HFT5(
-                repo_id="mit-han-lab/nunchaku-t5",
+                repo_id="nunchaku-tech/nunchaku-t5",
                 path="awq-int4-flux.1-t5xxl.safetensors",
             ),
         ]
@@ -2659,7 +2667,7 @@ class FluxKontext(HuggingFacePipelineNode):
                     path="svdq-fp4_r32-flux.1-kontext-dev.safetensors",
                 ),
                 HFT5(
-                    repo_id="mit-han-lab/nunchaku-t5",
+                    repo_id="nunchaku-tech/nunchaku-t5",
                     path="awq-int4-flux.1-t5xxl.safetensors",
                 ),
             )
@@ -2670,7 +2678,7 @@ class FluxKontext(HuggingFacePipelineNode):
                     path="svdq-int4_r32-flux.1-kontext-dev.safetensors",
                 ),
                 HFT5(
-                    repo_id="mit-han-lab/nunchaku-t5",
+                    repo_id="nunchaku-tech/nunchaku-t5",
                     path="awq-int4-flux.1-t5xxl.safetensors",
                 ),
             )

@@ -45,7 +45,7 @@ async def get_nunchaku_text_encoder(
     )
 
     if repo_id is None:
-        repo_id = "mit-han-lab/nunchaku-t5"
+        repo_id = "nunchaku-tech/nunchaku-t5"
     if path is None:
         path = f"awq-{get_precision()}-flux.1-t5xxl.safetensors"
 
