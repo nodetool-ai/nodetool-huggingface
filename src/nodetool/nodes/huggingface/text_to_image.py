@@ -1,7 +1,7 @@
 from enum import Enum
 import os
 import huggingface_hub
-from huggingface_hub import try_to_load_from_cache
+from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from typing import Any, TypedDict
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
@@ -484,11 +484,9 @@ class Flux(HuggingFacePipelineNode):
         model_mapping = {
             FluxVariant.SCHNELL: HFFlux(
                 repo_id="black-forest-labs/FLUX.1-schnell",
-                path="svdq-int4_r32-flux.1-schnell.safetensors",
             ),
             FluxVariant.DEV: HFFlux(
                 repo_id="black-forest-labs/FLUX.1-dev",
-                path="svdq-int4_r32-flux.1-dev.safetensors",
             ),
         }
         model = model_mapping.get(variant)
@@ -540,8 +538,8 @@ class Flux(HuggingFacePipelineNode):
 
     def _resolve_model_config(self) -> tuple[HFFlux, HFT5]:
         """
-        Resolve repo_id, transformer_path, and text_encoder_path based on variant and quantization.
-        Returns: (repo_id, transformer_path, text_encoder_path)
+        Resolve flux and t5 models based on variant and quantization.
+        Returns: (flux_model, t5_model)
         """
         if self.quantization == FluxQuantization.FP4:
             if self.variant == FluxVariant.SCHNELL:
@@ -620,10 +618,10 @@ class Flux(HuggingFacePipelineNode):
             assert text_encoder_model is not None
 
             # Ensure models are present in cache
-            if not try_to_load_from_cache(transformer_model.repo_id, transformer_model.path):
+            if not await HF_FAST_CACHE.resolve(transformer_model.repo_id, transformer_model.path):
                 raise ValueError(f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded")
             
-            if not try_to_load_from_cache(text_encoder_model.repo_id, text_encoder_model.path):
+            if not await HF_FAST_CACHE.resolve(text_encoder_model.repo_id, text_encoder_model.path):
                 raise ValueError(f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded")
 
             transformer = await get_nunchaku_transformer(
@@ -642,14 +640,22 @@ class Flux(HuggingFacePipelineNode):
             )
 
             base_model = self._get_base_model(self.variant)
+            
+            # Construct a unique cache key for this specific configuration
+            cache_key = f"{base_model.repo_id}:{self.variant.value}:{self.quantization.value}"
 
             try:
-                self._pipeline = FluxPipeline.from_pretrained(
-                    base_model.repo_id,
+                self._pipeline = await self.load_model(
+                    context=context,
+                    model_id=base_model.repo_id,
+                    model_class=FluxPipeline,
+                    torch_dtype=torch_dtype,
                     transformer=transformer,
                     text_encoder_2=text_encoder_2,
-                    torch_dtype=torch_dtype,
+                    variant=None,
+                    device="cpu", # Force CPU initially, let move_to_device handle it
                     token=hf_token,
+                    cache_key=cache_key,
                 )
             except torch.OutOfMemoryError as e:
                 raise ValueError(
@@ -660,7 +666,7 @@ class Flux(HuggingFacePipelineNode):
         else:
             # Standard loading
             # Ensure model is present in cache
-            if not try_to_load_from_cache(repo_id, "model_index.json"):
+            if not await HF_FAST_CACHE.resolve(repo_id, "model_index.json"):
                 raise ValueError(f"Model {repo_id} must be downloaded")
 
             log.info(f"Loading FLUX pipeline from {repo_id}...")

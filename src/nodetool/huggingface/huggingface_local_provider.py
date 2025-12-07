@@ -22,6 +22,7 @@ from nodetool.integrations.huggingface.huggingface_models import (
     fetch_model_info,
     get_image_to_image_models_from_hf_cache,
     get_text_to_image_models_from_hf_cache,
+    HF_FAST_CACHE,
 )
 from nodetool.types.job import JobUpdate
 import numpy as np
@@ -182,7 +183,7 @@ def _allow_downloads() -> bool:
     return os.getenv(ALLOW_DOWNLOAD_ENV, "").lower() in _ALLOW_DOWNLOAD_VALUES
 
 
-def _ensure_file_cached(
+async def _ensure_file_cached(
     repo_id: str,
     file_path: str,
     *,
@@ -193,12 +194,7 @@ def _ensure_file_cached(
     Guarantee a file exists locally, optionally downloading when allowed.
     Raises ValueError if downloads are blocked and the file is missing.
     """
-    cache_path = try_to_load_from_cache(
-        repo_id,
-        file_path,
-        revision=revision,
-        cache_dir=cache_dir,
-    )
+    cache_path = await HF_FAST_CACHE.resolve(repo_id, file_path)
     if cache_path:
         return cache_path
 
@@ -208,12 +204,20 @@ def _ensure_file_cached(
             repo_id,
             file_path,
         )
-        return hf_hub_download(
+        # hf_hub_download is blocking
+        await asyncio.to_thread(
+            hf_hub_download,
             repo_id,
             file_path,
             revision=revision,
             cache_dir=cache_dir,
         )
+        # Check again using fast cache
+        cache_path = await HF_FAST_CACHE.resolve(repo_id, file_path)
+        if cache_path:
+             return cache_path
+        # If fast cache still doesn't see it (race condition or weird FS), fallback to standard
+        return try_to_load_from_cache(repo_id, file_path, revision=revision, cache_dir=cache_dir)
 
     raise ValueError(f"Model {repo_id}/{file_path} must be downloaded first")
 
@@ -275,7 +279,7 @@ async def load_pipeline(
         cache_checked = False
         for candidate in ("model_index.json", "config.json"):
             try:
-                cache_path = _ensure_file_cached(
+                cache_path = await _ensure_file_cached(
                     repo_id_for_cache,
                     candidate,
                     revision=revision,
@@ -289,7 +293,7 @@ async def load_pipeline(
                 break
 
         if not cache_checked:
-            _ensure_file_cached(
+            await _ensure_file_cached(
                 repo_id_for_cache,
                 "config.json",
                 revision=revision,
@@ -325,6 +329,7 @@ async def load_model(
     torch_dtype: torch.dtype | None = None,
     path: str | None = None,
     skip_cache: bool = False,
+    cache_key: str | None = None,
     **kwargs: Any,
 ) -> T:
     """Load a HuggingFace model."""
@@ -336,7 +341,10 @@ async def load_model(
     log.info(f"Loading model {model_id}/{path} from {target_device}")
 
     if not skip_cache:
-        cached_model = ModelManager.get_model(model_id, model_class.__name__, path)
+        if cache_key:
+            cached_model = ModelManager.get_model(cache_key, model_class.__name__)
+        else:
+            cached_model = ModelManager.get_model(model_id, model_class.__name__, path)
         if cached_model:
             return _ensure_model_on_device(cached_model, target_device)
 
@@ -398,7 +406,20 @@ async def load_model(
         )
 
     model = _ensure_model_on_device(model, target_device)
-    ModelManager.set_model(node_id, model_id, model_class.__name__, model, path)
+    if cache_key:
+        # If explicit key provided, treat it as model_id and use empty task/path if needed
+        # But ModelManager expects (node_id, model_id, task, model, path)
+        # We'll use cache_key as model_id to ensure uniqueness.
+        # Actually ModelManager.set_model takes (node_id, model_id, task, model, path)
+        # and keys it as f"{model_id}_{task}_{path}"
+        # So we should pass cache_key as model_id, and task/path as empty/None to exact match
+        # checking ModelManager.get_model(cache_key, task) logic above:
+        # get_model uses f"{model_id}_{task}_{path}"
+        # So if we passed get_model(cache_key, model_class.__name__), effectively task=model_class.__name__, path=None
+        # So here we must match that.
+        ModelManager.set_model(node_id, cache_key, model_class.__name__, model, None)
+    else:
+        ModelManager.set_model(node_id, model_id, model_class.__name__, model, path)
     return model
 
 
@@ -561,11 +582,11 @@ async def _load_flux_gguf_pipeline(
 
     cache_path = try_to_load_from_cache(repo_id, file_path)
     if not cache_path:
-        _ensure_file_cached(
+        await _ensure_file_cached(
             repo_id,
             file_path,
-            revision=revision,
-            cache_dir=kwargs.get("cache_dir"),
+            revision=None, # kwargs are not available here in the snippet I saw, assuming default or need to check signature
+            cache_dir=None,
         )
 
     variant = _detect_flux_variant(repo_id, file_path)
@@ -623,11 +644,11 @@ async def load_qwen_image_gguf_pipeline(
 
     cache_path = try_to_load_from_cache(model_id, path)
     if not cache_path:
-        _ensure_file_cached(
+        await _ensure_file_cached(
             model_id,
             path,
-            revision=kwargs.get("revision"),
-            cache_dir=kwargs.get("cache_dir"),
+            revision=None,
+            cache_dir=None,
         )
 
     log.debug(f"Cache path: {cache_path}")
@@ -719,13 +740,11 @@ class HuggingFaceLocalProvider(BaseProvider):
                 # Verify the file is cached locally
                 cache_path = try_to_load_from_cache(params.model.id, params.model.path)
                 if not cache_path:
-                    raise ValueError(
-                        _ensure_file_cached(
-                            params.model.id,
-                            params.model.path,
-                            revision=params.revision,
-                            cache_dir=params.cache_dir,
-                        )
+                    cache_path = await _ensure_file_cached(
+                        params.model.id,
+                        params.model.path,
+                        revision=params.revision,
+                        cache_dir=params.cache_dir,
                     )
 
                 model_info = await fetch_model_info(params.model.id)

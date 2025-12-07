@@ -80,6 +80,7 @@ class HuggingFacePipelineNode(BaseNode):
         model_class: type[T],
         model_id: str,
         skip_cache: bool = False,
+        cache_key: str | None = None,
         **kwargs: Any,
     ) -> T:
         """Load a HuggingFace model (instance method wrapper)."""
@@ -89,6 +90,7 @@ class HuggingFacePipelineNode(BaseNode):
             model_class,
             model_id,
             skip_cache=skip_cache or self.should_skip_cache(),
+            cache_key=cache_key,
             **kwargs,
         )
 
