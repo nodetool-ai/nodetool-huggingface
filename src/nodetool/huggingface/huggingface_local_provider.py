@@ -45,7 +45,7 @@ from nodetool.config.logging_config import get_logger
 import torch
 from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
 from nodetool.ml.core.model_manager import ModelManager
-from huggingface_hub import hf_hub_download, try_to_load_from_cache, _CACHED_NO_EXIST
+from huggingface_hub import hf_hub_download, _CACHED_NO_EXIST
 
 
 def _is_cuda_available() -> bool:
@@ -217,7 +217,7 @@ async def _ensure_file_cached(
         if cache_path:
              return cache_path
         # If fast cache still doesn't see it (race condition or weird FS), fallback to standard
-        return try_to_load_from_cache(repo_id, file_path, revision=revision, cache_dir=cache_dir)
+        return None
 
     raise ValueError(f"Model {repo_id}/{file_path} must be downloaded first")
 
@@ -349,7 +349,7 @@ async def load_model(
             return _ensure_model_on_device(cached_model, target_device)
 
     if path:
-        cache_path = try_to_load_from_cache(model_id, path)
+        cache_path = await HF_FAST_CACHE.resolve(model_id, path)
         if not cache_path:
             context.post_message(
                 JobUpdate(
@@ -358,7 +358,7 @@ async def load_model(
                 )
             )
             hf_hub_download(model_id, path)
-            cache_path = try_to_load_from_cache(model_id, path)
+            cache_path = await HF_FAST_CACHE.resolve(model_id, path)
             if not cache_path:
                 raise ValueError(
                     f"Downloading model {model_id} from HuggingFace failed"
@@ -423,7 +423,7 @@ async def load_model(
     return model
 
 
-def _detect_cached_variant(repo_id: str) -> str | None:
+async def _detect_cached_variant(repo_id: str) -> str | None:
     """Detect a cached diffusers variant (e.g., fp16) for a given repo.
 
     Heuristic: locate any cached file for the repo, then scan its snapshot
@@ -442,7 +442,7 @@ def _detect_cached_variant(repo_id: str) -> str | None:
     ]
     snapshot_dir: str | None = None
     for fname in probe_files:
-        p = try_to_load_from_cache(repo_id, fname)
+        p = await HF_FAST_CACHE.resolve(repo_id, fname)
         if isinstance(p, str):
             snapshot_dir = os.path.dirname(p)
             break
@@ -580,7 +580,7 @@ async def _load_flux_gguf_pipeline(
 ):
     """Load a FLUX GGUF quantized transformer and wrap it in the requested pipeline."""
 
-    cache_path = try_to_load_from_cache(repo_id, file_path)
+    cache_path = await HF_FAST_CACHE.resolve(repo_id, file_path)
     if not cache_path:
         await _ensure_file_cached(
             repo_id,
@@ -642,7 +642,7 @@ async def load_qwen_image_gguf_pipeline(
     """Load Qwen-Image model with GGUF quantization."""
     log.info(f"Loading Qwen-Image model: {model_id}/{path}")
 
-    cache_path = try_to_load_from_cache(model_id, path)
+    cache_path = await HF_FAST_CACHE.resolve(model_id, path)
     if not cache_path:
         await _ensure_file_cached(
             model_id,
@@ -738,7 +738,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             # Check if model_id is in "repo_id:path" format (single-file model)
             if params.model.path:
                 # Verify the file is cached locally
-                cache_path = try_to_load_from_cache(params.model.id, params.model.path)
+                cache_path = await HF_FAST_CACHE.resolve(params.model.id, params.model.path)
                 if not cache_path:
                     cache_path = await _ensure_file_cached(
                         params.model.id,
@@ -835,7 +835,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                     torch_dtype=(
                         torch.float16 if _is_cuda_available() else torch.float32
                     ),
-                    variant=_detect_cached_variant(params.model.id),
+                    variant=await _detect_cached_variant(params.model.id),
                 )
 
             if not use_cpu_offload:
@@ -922,10 +922,10 @@ class HuggingFaceLocalProvider(BaseProvider):
             # Check if model_id is in "repo_id:path" format (single-file model)
             if params.model.path:
                 # Verify the file is cached locally
-                cache_path = try_to_load_from_cache(params.model.id, params.model.path)
+                cache_path = await HF_FAST_CACHE.resolve(params.model.id, params.model.path)
                 if not cache_path:
                     raise ValueError(
-                        _ensure_file_cached(
+                        await _ensure_file_cached(
                             params.model.id,
                             params.model.path,
                             revision=params.revision,
@@ -951,7 +951,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                     use_cpu_offload = True
                 else:
                     # Verify the file is cached locally
-                    cache_path = try_to_load_from_cache(
+                    cache_path = await HF_FAST_CACHE.resolve(
                         params.model.id, params.model.path
                     )
                     if not cache_path:
@@ -1024,7 +1024,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                     torch_dtype=(
                         torch.float16 if _is_cuda_available() else torch.float32
                     ),
-                    variant=_detect_cached_variant(params.model.id),
+                    variant=await _detect_cached_variant(params.model.id),
                 )
 
             assert pipeline is not None
@@ -1681,11 +1681,11 @@ class HuggingFaceLocalProvider(BaseProvider):
         cached_pipeline = ModelManager.get_model(cache_key, "text-generation")
 
         if not cached_pipeline:
-            cache_path = try_to_load_from_cache(
+            cache_path = await HF_FAST_CACHE.resolve(
                 repo_id, filename
             )  # pyright: ignore[reportArgumentType]
             if not cache_path:
-                _ensure_file_cached(
+                await _ensure_file_cached(
                     repo_id,
                     filename,
                 )

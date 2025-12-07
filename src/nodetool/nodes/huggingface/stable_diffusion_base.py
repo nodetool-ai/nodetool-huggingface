@@ -6,12 +6,13 @@ from random import randint
 import asyncio
 from typing import Any, TYPE_CHECKING, ClassVar
 
-from huggingface_hub import try_to_load_from_cache
+
 from pydantic import Field
 
 from nodetool.config.environment import Environment
 from nodetool.config.logging_config import get_logger
 from nodetool.huggingface.nunchaku_utils import get_nunchaku_transformer
+from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nodetool.metadata.types import (
     HFCLIP,
     HFCLIPVision,
@@ -388,7 +389,7 @@ class StableDiffusionXLQuantization(Enum):
     INT4 = "int4"
 
 
-def load_loras(pipeline: Any, loras: list[HFLoraSDConfig] | list[HFLoraSDXLConfig]):
+async def load_loras(pipeline: Any, loras: list[HFLoraSDConfig] | list[HFLoraSDXLConfig]):
     log.debug(f"Loading LoRAs. Total LoRAs provided: {len(loras)}")
     loras = [lora for lora in loras if lora.lora.is_set()]  # type: ignore
     log.debug(f"LoRAs after filtering (only set ones): {len(loras)}")
@@ -411,7 +412,7 @@ def load_loras(pipeline: Any, loras: list[HFLoraSDConfig] | list[HFLoraSDXLConfi
         log.debug(
             f"Processing LoRA {i+1}/{len(loras)}: {lora.lora.repo_id}/{lora.lora.path}"
         )
-        cache_path = try_to_load_from_cache(
+        cache_path = await HF_FAST_CACHE.resolve(
             lora.lora.repo_id,
             lora.lora.path or "",
         )
@@ -696,7 +697,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             return True
         return False
 
-    def _load_ip_adapter(self):
+    async def _load_ip_adapter(self):
         log.debug("Checking IP Adapter configuration")
         log.debug(f"IP Adapter model repo_id: {self.ip_adapter_model.repo_id}")
         log.debug(f"IP Adapter model path: {self.ip_adapter_model.path}")
@@ -715,7 +716,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                 )
 
             log.debug("IP Adapter model is configured, loading from cache")
-            cache_path = try_to_load_from_cache(
+            cache_path = await HF_FAST_CACHE.resolve(
                 self.ip_adapter_model.repo_id, self.ip_adapter_model.path
             )
             if cache_path is None:
@@ -826,7 +827,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             lora for lora in self.loras if not lora.lora.path in self._loaded_adapters
         ]
         log.debug(f"New LoRAs to load: {len(loras)}")
-        load_loras(self._pipeline, loras)
+        await load_loras(self._pipeline, loras)
         self._loaded_adapters.update(lora.lora.path for lora in loras if lora.lora.path)
         log.debug(f"Total loaded adapters: {len(self._loaded_adapters)}")
 
@@ -1126,7 +1127,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             return True
         return False
 
-    def _load_ip_adapter(self):
+    async def _load_ip_adapter(self):
         log.debug("Checking IP Adapter configuration (XL)")
         log.debug(f"IP Adapter model repo_id: {self.ip_adapter_model.repo_id}")
         log.debug(f"IP Adapter model path: {self.ip_adapter_model.path}")
@@ -1147,7 +1148,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
                 )
 
             log.debug("IP Adapter model is configured, loading from cache (XL)")
-            cache_path = try_to_load_from_cache(
+            cache_path = await HF_FAST_CACHE.resolve(
                 self.ip_adapter_model.repo_id, self.ip_adapter_model.path
             )
             if cache_path is None:
@@ -1330,6 +1331,55 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
                 **pipeline_kwargs,
             )
 
+        _apply_vae_optimizations(self._pipeline)
+        self._set_scheduler(self.scheduler)
+        await self._load_ip_adapter()
+
+    async def _load_ip_adapter(self):
+        if self.ip_adapter_model.repo_id != "" and self.ip_adapter_model.path:
+            if self._pipeline is None:
+                log.error("Pipeline not initialized when loading IP Adapter (XL)")
+                raise ValueError(
+                    "Pipeline must be initialized before loading IP Adapter (XL)"
+                )
+
+            if not hasattr(self._pipeline, "load_ip_adapter"):
+                log.error("Current XL pipeline does not support IP Adapter loading")
+                raise ValueError(
+                    "The current XL pipeline does not support IP Adapter. "
+                    "Use a Stable Diffusion XL pipeline with IP Adapter support."
+                )
+
+            log.debug("IP Adapter model is configured, loading from cache (XL)")
+            cache_path = await HF_FAST_CACHE.resolve(
+                self.ip_adapter_model.repo_id, self.ip_adapter_model.path
+            )
+            if cache_path is None:
+                log.error(
+                    f"IP Adapter cache not found for {self.ip_adapter_model.repo_id}/{self.ip_adapter_model.path}"
+                )
+                raise ValueError(
+                    f"Install the {self.ip_adapter_model.repo_id}/{self.ip_adapter_model.path} "
+                    "IP Adapter model to use it (Recommended Models above)"
+                )
+            path_parts = self.ip_adapter_model.path.split("/")
+            subfolder = "/".join(path_parts[0:-1])
+            weight_name = path_parts[-1]
+            log.info(
+                f"Loading IP Adapter {self.ip_adapter_model.repo_id}/{self.ip_adapter_model.path}"
+            )
+            log.debug(f"IP Adapter cache path: {cache_path}")
+            log.debug(f"IP Adapter subfolder: {subfolder}")
+            log.debug(f"IP Adapter weight name: {weight_name}")
+            self._pipeline.load_ip_adapter(  # type: ignore[call-arg]
+                self.ip_adapter_model.repo_id,
+                subfolder=subfolder,
+                weight_name=weight_name,
+            )
+            log.debug("IP Adapter loaded successfully (XL)")
+        else:
+            log.debug("No IP Adapter model configured (XL)")
+
     def _set_scheduler(self, scheduler_type: StableDiffusionScheduler):
         log.debug(f"Setting scheduler to: {scheduler_type} (XL)")
         log.debug(f"Model repo_id: {self.model.repo_id}")
@@ -1419,7 +1469,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             lora for lora in self.loras if not lora.lora.path in self._loaded_adapters
         ]
         log.debug(f"New LoRAs to load (XL): {len(loras)}")
-        load_loras(self._pipeline, loras)
+        await load_loras(self._pipeline, loras)
         self._loaded_adapters.update(lora.lora.path for lora in loras if lora.lora.path)
         log.debug(f"Total loaded adapters (XL): {len(self._loaded_adapters)}")
 

@@ -15,7 +15,8 @@ from nodetool.huggingface.nunchaku_utils import (
 from nodetool.workflows.types import NodeProgress
 import torch
 from RealESRGAN import RealESRGAN
-from huggingface_hub import try_to_load_from_cache
+
+from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nunchaku import (
     NunchakuFluxTransformer2dModel,
     NunchakuQwenImageTransformer2DModel,
@@ -245,7 +246,7 @@ class RealESRGANNode(BaseNode):
     async def preload_model(self, context: ProcessingContext):
         assert self.model.path is not None, "Model is not set"
 
-        model_path = try_to_load_from_cache(self.model.repo_id, self.model.path)
+        model_path = await HF_FAST_CACHE.resolve(self.model.repo_id, self.model.path)
 
         if model_path is None:
             raise ValueError("Download the model first from RECOMMENDED_MODELS above")
@@ -597,7 +598,7 @@ class StableDiffusionControlNet(StableDiffusionBaseNode):
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
-        self._load_ip_adapter()
+        await self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         control_image = await context.image_to_pil(self.control_image)
@@ -668,7 +669,7 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
-        self._load_ip_adapter()
+        await self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         init_image = await context.image_to_pil(self.init_image)
@@ -767,7 +768,7 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
-        self._load_ip_adapter()
+        await self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         init_image = await context.image_to_pil(self.init_image)
@@ -847,7 +848,7 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
             _enable_pytorch2_attention(self._pipeline)
             _apply_vae_optimizations(self._pipeline)
             self._set_scheduler(self.scheduler)
-            self._load_ip_adapter()
+            await self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         init_image = await context.image_to_pil(self.init_image)
@@ -950,7 +951,7 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
-        self._load_ip_adapter()
+        await self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         if self._pipeline is None:
@@ -1426,7 +1427,7 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         _apply_vae_optimizations(self._pipeline)
         self._pipeline.enable_model_cpu_offload()
         self._set_scheduler(self.scheduler)
-        self._load_ip_adapter()
+        await self._load_ip_adapter()
 
     async def process(self, context) -> OutputType:
         init_image = await context.image_to_pil(self.init_image)
@@ -1500,7 +1501,7 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
             _enable_pytorch2_attention(self._pipeline)
             _apply_vae_optimizations(self._pipeline)
             self._set_scheduler(self.scheduler)
-            self._load_ip_adapter()
+            await self._load_ip_adapter()
 
     async def process(self, context: ProcessingContext) -> OutputType:
         input_image = await context.image_to_pil(self.image)
@@ -2053,7 +2054,7 @@ class QwenImageEdit(HuggingFacePipelineNode):
             f"Loading Qwen-Image-Edit pipeline from {model_id} without quantization..."
         )
 
-        if not try_to_load_from_cache(model_id, "model_index.json"):
+        if not await HF_FAST_CACHE.resolve(model_id, "model_index.json"):
             raise ValueError(f"Model {model_id} must be downloaded")
 
         self._pipeline = await self.load_model(
@@ -2087,7 +2088,7 @@ class QwenImageEdit(HuggingFacePipelineNode):
         if not transformer_model.path:
             raise ValueError("Quantized Qwen Image Edit requires a transformer path.")
 
-        if not try_to_load_from_cache(
+        if not await HF_FAST_CACHE.resolve(
             transformer_model.repo_id, transformer_model.path
         ):
             raise ValueError(
@@ -2405,7 +2406,7 @@ class FluxFill(HuggingFacePipelineNode):
         )
 
         if transformer_model is not None:
-            if not try_to_load_from_cache(base_model.repo_id, "model_index.json"):
+            if not await HF_FAST_CACHE.resolve(base_model.repo_id, "model_index.json"):
                 raise ValueError(
                     f"Base Flux Fill model {base_model.repo_id} must be downloaded"
                 )
@@ -2415,7 +2416,7 @@ class FluxFill(HuggingFacePipelineNode):
                     "Nunchaku Flux Fill requires the transformer path to be set."
                 )
 
-            if not try_to_load_from_cache(
+            if not await HF_FAST_CACHE.resolve(
                 transformer_model.repo_id, transformer_model.path
             ):
                 raise ValueError(
@@ -2714,14 +2715,14 @@ class FluxKontext(HuggingFacePipelineNode):
             assert transformer_model.path is not None
             assert text_encoder_model is not None
 
-            if not try_to_load_from_cache(
+            if not await HF_FAST_CACHE.resolve(
                 transformer_model.repo_id, transformer_model.path
             ):
                 raise ValueError(
                     f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded"
                 )
 
-            if not try_to_load_from_cache(
+            if not await HF_FAST_CACHE.resolve(
                 text_encoder_model.repo_id, text_encoder_model.path
             ):
                 raise ValueError(
@@ -3026,12 +3027,12 @@ class FluxPriorRedux(HuggingFacePipelineNode):
                     "Nunchaku Flux Prior Redux requires the transformer path to be set."
                 )
 
-            if not try_to_load_from_cache(flux_base_model.repo_id, "model_index.json"):
+            if not await HF_FAST_CACHE.resolve(flux_base_model.repo_id, "model_index.json"):
                 raise ValueError(
                     f"Base Flux model {flux_base_model.repo_id} must be downloaded"
                 )
 
-            if not try_to_load_from_cache(
+            if not await HF_FAST_CACHE.resolve(
                 transformer_model.repo_id, transformer_model.path
             ):
                 raise ValueError(

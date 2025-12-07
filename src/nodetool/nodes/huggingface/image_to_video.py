@@ -9,7 +9,8 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
 from transformers import CLIPVisionModel
 from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
 from diffusers.pipelines.wan.pipeline_wan_i2v import WanImageToVideoPipeline
-from huggingface_hub.file_download import try_to_load_from_cache
+
+from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 
 from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
@@ -161,10 +162,10 @@ class Wan_I2V(HuggingFacePipelineNode):
         cache_checked = False
         for candidate in ("model_index.json", "config.json"):
             try:
-                cache_path = try_to_load_from_cache(
+                cache_path = await HF_FAST_CACHE.resolve(
                     repo_id_for_cache,
                     candidate,
-                    revision=revision,
+                    repo_type=None,
                 )
             except Exception:
                 cache_path = None

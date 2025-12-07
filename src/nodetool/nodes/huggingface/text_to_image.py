@@ -1,6 +1,8 @@
+
 from enum import Enum
 import os
 import huggingface_hub
+
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from typing import Any, TypedDict
 from nodetool.config.logging_config import get_logger
@@ -150,7 +152,7 @@ class StableDiffusion(StableDiffusionBaseNode):
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
-        self._load_ip_adapter()
+        await self._load_ip_adapter()
 
 
     async def process(self, context: ProcessingContext) -> OutputType:
@@ -195,7 +197,7 @@ class StableDiffusionXL(StableDiffusionXLBase):
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
-        self._load_ip_adapter()
+        await self._load_ip_adapter()
 
     class OutputType(TypedDict):
         image: ImageRef | None
@@ -1097,7 +1099,7 @@ class QwenImage(HuggingFacePipelineNode):
         torch_dtype = _select_diffusion_dtype()
 
         # Ensure model is present in cache
-        if not try_to_load_from_cache(self.get_model_id(), "model_index.json"):
+        if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
             raise ValueError(f"Model {self.get_model_id()} must be downloaded")
 
         self._pipeline = await self.load_model(
@@ -1122,7 +1124,7 @@ class QwenImage(HuggingFacePipelineNode):
         model = self._resolve_model_config()
         
         # Ensure model is present in cache
-        if not try_to_load_from_cache(model.repo_id, model.path):
+        if not await HF_FAST_CACHE.resolve(model.repo_id, model.path):
             raise ValueError(f"Transformer model {model.repo_id}/{model.path} must be downloaded")
 
         transformer = await get_nunchaku_transformer(
@@ -1363,19 +1365,19 @@ class FluxControl(HuggingFacePipelineNode):
             quantization.value,
         )
         if transformer_model is not None and text_encoder_model is not None:
-            if not try_to_load_from_cache(base_model.repo_id, "model_index.json"):
+            if not await HF_FAST_CACHE.resolve(base_model.repo_id, "model_index.json"):
                 raise ValueError(
                     f"Base Flux Control model {base_model.repo_id} must be downloaded"
                 )
 
-            if not try_to_load_from_cache(
+            if not await HF_FAST_CACHE.resolve(
                 transformer_model.repo_id, transformer_model.path
             ):
                 raise ValueError(
                     f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded"
                 )
 
-            if not try_to_load_from_cache(
+            if not await HF_FAST_CACHE.resolve(
                 text_encoder_model.repo_id, text_encoder_model.path
             ):
                 raise ValueError(
@@ -1412,7 +1414,7 @@ class FluxControl(HuggingFacePipelineNode):
                     "Try enabling CPU offload or reduce image size."
                 ) from e
         else:
-            if not try_to_load_from_cache(base_model.repo_id, "model_index.json"):
+            if not await HF_FAST_CACHE.resolve(base_model.repo_id, "model_index.json"):
                 raise ValueError(f"Model {base_model.repo_id} must be downloaded")
 
             self._pipeline = await self.load_model(

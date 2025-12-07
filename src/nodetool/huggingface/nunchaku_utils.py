@@ -39,9 +39,10 @@ async def get_nunchaku_text_encoder(
     """
     from nunchaku import NunchakuT5EncoderModel
     from nunchaku.utils import get_precision
-    from huggingface_hub import try_to_load_from_cache, hf_hub_download
+    from huggingface_hub import hf_hub_download
     from nodetool.huggingface.huggingface_local_provider import (
         load_model,
+        HF_FAST_CACHE,
     )
 
     if repo_id is None:
@@ -50,7 +51,7 @@ async def get_nunchaku_text_encoder(
         path = f"awq-{get_precision()}-flux.1-t5xxl.safetensors"
 
     # Try to find nunchaku T5 encoder
-    cache_path = try_to_load_from_cache(repo_id, path)
+    cache_path = await HF_FAST_CACHE.resolve(repo_id, path)
     if not cache_path:
         if not allow_downloads:
             raise ValueError(
@@ -64,7 +65,7 @@ async def get_nunchaku_text_encoder(
             path,
         )
         hf_hub_download(repo_id, path)
-        cache_path = try_to_load_from_cache(repo_id, path)
+        cache_path = await HF_FAST_CACHE.resolve(repo_id, path)
 
         if not cache_path:
             raise ValueError(
@@ -104,9 +105,10 @@ async def get_nunchaku_transformer(
         dict: Pipeline kwargs with transformer if nunchaku SVDQ transformer is found
     """
     from nunchaku.utils import get_precision
-    from huggingface_hub import hf_hub_download, try_to_load_from_cache
+    from huggingface_hub import hf_hub_download
     from nodetool.huggingface.huggingface_local_provider import (
         load_model,
+        HF_FAST_CACHE,
     )
 
     """Load FLUX pipeline using a Nunchaku SVDQ transformer file."""
@@ -131,7 +133,7 @@ async def get_nunchaku_transformer(
 
     cache_path: str | None = None
 
-    cache_path = try_to_load_from_cache(repo_id, path)
+    cache_path = await HF_FAST_CACHE.resolve(repo_id, path)
     if not cache_path:
         if not allow_downloads:
             raise ValueError(
@@ -148,7 +150,7 @@ async def get_nunchaku_transformer(
             repo_id,
             path,
         )
-        cache_path = try_to_load_from_cache(
+        cache_path = await HF_FAST_CACHE.resolve(
             repo_id,
             path,
         )
