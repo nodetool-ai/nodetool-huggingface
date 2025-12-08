@@ -102,6 +102,10 @@ from transformers import (
 from diffusers.models.transformers.transformer_qwenimage import (
     QwenImageTransformer2DModel,
 )
+from diffusers.pipelines.flux.pipeline_flux_fill import FluxFillPipeline
+from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import QwenImageEditPipeline
+from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
+from nunchaku import NunchakuQwenImageTransformer2DModel
 
 from nodetool.metadata.types import HFTextToSpeech
 from pydub import AudioSegment
@@ -140,6 +144,24 @@ def _is_mps_available() -> bool:
         )
     except Exception:
         return False
+
+
+def _is_node_model(
+    model_id: str, model_path: str | None, node_cls: Any
+) -> bool:
+    """Check if the model matches any of the node's recommended models."""
+    for rec in node_cls.get_recommended_models():
+        if rec.repo_id == model_id:
+            # If recommended model has a specific path, it must match
+            if rec.path:
+                if rec.path == model_path:
+                    return True
+            # If recommended model has no path (repo-level),
+            # it matches if model_path is None (dir) or if we accept any file in repo.
+            # Usually strict match on repo_id is enough for repo-level recommendations.
+            else:
+                 return True
+    return False
 
 
 def _resolve_hf_device(
@@ -257,7 +279,9 @@ async def load_pipeline(
     if model_id == "" or model_id is None:
         raise ValueError("Please select a model")
 
-    cached_model = ModelManager.get_model(model_id, pipeline_task)
+    cache_key = f"{model_id}_{pipeline_task}"
+
+    cached_model = ModelManager.get_model(cache_key)
     if cached_model:
         target_device = _resolve_hf_device(context, device or context.device)
         return _ensure_model_on_device(cached_model, target_device)
@@ -316,7 +340,7 @@ async def load_pipeline(
         **kwargs,
     )  # type: ignore
     model = _ensure_model_on_device(model, target_device)
-    ModelManager.set_model(node_id, model_id, pipeline_task, model)
+    ModelManager.set_model(node_id, cache_key, model)
     return model  # type: ignore
 
 
@@ -341,34 +365,22 @@ async def load_model(
     log.info(f"Loading model {model_id}/{path} from {target_device}")
 
     if not skip_cache:
-        if cache_key:
-            cached_model = ModelManager.get_model(cache_key, model_class.__name__)
-        else:
-            cached_model = ModelManager.get_model(model_id, model_class.__name__, path)
+        if cache_key is None:
+            cache_key = f"{model_id}_{model_class.__name__}_{path}"
+        cached_model = ModelManager.get_model(cache_key)
         if cached_model:
             return _ensure_model_on_device(cached_model, target_device)
 
     if path:
         cache_path = await HF_FAST_CACHE.resolve(model_id, path)
         if not cache_path:
-            context.post_message(
-                JobUpdate(
-                    status="running",
-                    message=f"Downloading model {model_id} from HuggingFace",
-                )
-            )
-            hf_hub_download(model_id, path)
-            cache_path = await HF_FAST_CACHE.resolve(model_id, path)
-            if not cache_path:
-                raise ValueError(
-                    f"Downloading model {model_id} from HuggingFace failed"
-                )
+            raise ValueError(f"Download model {model_id}/{path} first from recommended models")
 
         log.info(f"Loading model {model_id} from {cache_path}")
         context.post_message(
             JobUpdate(
                 status="running",
-                message=f"Loading model {model_id} from {cache_path}",
+                message=f"Loading model {model_id}",
             )
         )
 
@@ -406,20 +418,7 @@ async def load_model(
         )
 
     model = _ensure_model_on_device(model, target_device)
-    if cache_key:
-        # If explicit key provided, treat it as model_id and use empty task/path if needed
-        # But ModelManager expects (node_id, model_id, task, model, path)
-        # We'll use cache_key as model_id to ensure uniqueness.
-        # Actually ModelManager.set_model takes (node_id, model_id, task, model, path)
-        # and keys it as f"{model_id}_{task}_{path}"
-        # So we should pass cache_key as model_id, and task/path as empty/None to exact match
-        # checking ModelManager.get_model(cache_key, task) logic above:
-        # get_model uses f"{model_id}_{task}_{path}"
-        # So if we passed get_model(cache_key, model_class.__name__), effectively task=model_class.__name__, path=None
-        # So here we must match that.
-        ModelManager.set_model(node_id, cache_key, model_class.__name__, model, None)
-    else:
-        ModelManager.set_model(node_id, model_id, model_class.__name__, model, path)
+    ModelManager.set_model(node_id, cache_key, model)
     return model
 
 
@@ -460,22 +459,6 @@ async def _detect_cached_variant(repo_id: str) -> str | None:
                 return "fp16"
 
     return None
-
-
-def _is_qwen_image_gguf_model(repo_id: str, file_path: str | None) -> bool:
-    """Check if the repo/path pair corresponds to a Qwen-Image GGUF model."""
-    if not file_path:
-        return False
-    combined = f"{repo_id}:{file_path}".lower()
-    return file_path.lower().endswith(".gguf") and "qwen-image" in combined
-
-
-def _is_flux_gguf_model(repo_id: str, file_path: str | None) -> bool:
-    """Check if the repo/path pair corresponds to a FLUX GGUF model."""
-    if not file_path:
-        return False
-    combined = f"{repo_id}:{file_path}".lower()
-    return file_path.lower().endswith(".gguf") and "flux" in combined
 
 
 def _detect_flux_variant(repo_id: str, file_path: str | None) -> str:
@@ -525,13 +508,22 @@ def _node_identifier(node_id: str | None, repo_id: str) -> str:
     return node_id or repo_id
 
 
-async def _load_nunchaku_flux_pipeline(
+async def load_nunchaku_flux_pipeline(
     context: ProcessingContext,
     repo_id: str,
     transformer_path: str,
     node_id: str | None,
-) -> FluxPipeline:
+    pipeline_class: Any | None = None,
+    cache_key: str | None = None,
+) -> Any:
     """Load a FLUX pipeline with a Nunchaku transformer/text encoder pair."""
+    pipeline_class = pipeline_class or FluxPipeline
+    pipeline_name = pipeline_class.__name__
+
+    if cache_key:
+        cached_pipeline = ModelManager.get_model(cache_key)
+        if cached_pipeline:
+            return cached_pipeline
     variant = _detect_flux_variant(repo_id, transformer_path)
     base_model_id = _flux_variant_to_base_model_id(variant)
     hf_token = await context.get_secret("HF_TOKEN")
@@ -563,7 +555,10 @@ async def _load_nunchaku_flux_pipeline(
         pipeline_kwargs["text_encoder_2"] = text_encoder
 
     try:
-        return FluxPipeline.from_pretrained(base_model_id, **pipeline_kwargs)
+        pipeline = pipeline_class.from_pretrained(base_model_id, **pipeline_kwargs)
+        if cache_key and node_id:
+            ModelManager.set_model(node_id, cache_key, pipeline)
+        return pipeline
     except torch.OutOfMemoryError as exc:  # type: ignore[attr-defined]
         raise ValueError(
             "VRAM out of memory while loading Flux with the Nunchaku transformer. "
@@ -571,122 +566,58 @@ async def _load_nunchaku_flux_pipeline(
         ) from exc
 
 
-async def _load_flux_gguf_pipeline(
+async def load_nunchaku_qwen_pipeline(
+    context: ProcessingContext,
     repo_id: str,
-    file_path: str,
-    context: ProcessingContext,
-    task: Literal["text2image", "image2image"],
-    node_id: str | None = None,
-):
-    """Load a FLUX GGUF quantized transformer and wrap it in the requested pipeline."""
+    transformer_path: str,
+    node_id: str | None,
+    pipeline_class: Any,
+    base_model_id: str = "Qwen/Qwen-Image-Edit",
+) -> Any:
+    """Load a Qwen pipeline with a Nunchaku transformer."""
+    from nunchaku.utils import get_gpu_memory
 
-    cache_path = await HF_FAST_CACHE.resolve(repo_id, file_path)
-    if not cache_path:
-        await _ensure_file_cached(
-            repo_id,
-            file_path,
-            revision=None, # kwargs are not available here in the snippet I saw, assuming default or need to check signature
-            cache_dir=None,
-        )
+    hf_token = await context.get_secret("HF_TOKEN")
+    torch_dtype = torch.bfloat16 # Qwen usually uses float16
+    cache_key = f"{repo_id}/{transformer_path}"
 
-    variant = _detect_flux_variant(repo_id, file_path)
-    torch_dtype = torch.bfloat16 if variant in {"schnell", "dev"} else torch.float16
+    cached_pipeline = ModelManager.get_model(cache_key)
+    if cached_pipeline:
+        return cached_pipeline
 
-    transformer = await load_model(
-        node_id=node_id,
+    transformer = await get_nunchaku_transformer(
         context=context,
-        model_class=FluxTransformer2DModel,
-        model_id=repo_id,
-        path=file_path,
-        torch_dtype=torch_dtype,
-        skip_cache=False,
-        quantization_config=GGUFQuantizationConfig(compute_dtype=torch_dtype),
+        model_class=NunchakuQwenImageTransformer2DModel,
+        node_id=node_id,
+        repo_id=repo_id,
+        path=transformer_path,
     )
-
-    base_model_id = _flux_variant_to_base_model_id(variant)
-    log.info(
-        f"Initializing FLUX {task} pipeline from {base_model_id} with quantized transformer..."
-    )
-    context.post_message(
-        JobUpdate(
-            status="running",
-            message="Downloading FLUX pipelines components...",
-        )
-    )
-    if task == "image2image":
-        pipeline = FluxImg2ImgPipeline.from_pretrained(
+    
+    try:
+        pipeline = pipeline_class.from_pretrained(
             base_model_id,
             transformer=transformer,
             torch_dtype=torch_dtype,
+            token=hf_token,
         )
-    elif task == "text2image":
-        pipeline = FluxPipeline.from_pretrained(
-            base_model_id,
-            transformer=transformer,
-            torch_dtype=torch_dtype,
-        )
-    else:
-        raise ValueError(f"Unsupported FLUX gguf task: {task}")
+        if get_gpu_memory() > 18:
+            pipeline.enable_model_cpu_offload()
+        else:
+            # use per-layer offloading for low VRAM. This only requires 3-4GB of VRAM.
+            transformer.set_offload(
+                True, use_pin_memory=False, num_blocks_on_gpu=1
+            )  # increase num_blocks_on_gpu if you have more VRAM
+            pipeline._exclude_from_cpu_offload.append("transformer")
+            pipeline.enable_sequential_cpu_offload()
 
-    pipeline.enable_sequential_cpu_offload()
-    return pipeline
+        if cache_key and node_id:
+            ModelManager.set_model(node_id, cache_key, pipeline)
+        return pipeline
+    except torch.OutOfMemoryError as exc:
+        raise ValueError(
+            "VRAM out of memory while loading Qwen with the Nunchaku transformer."
+        ) from exc
 
-
-async def load_qwen_image_gguf_pipeline(
-    model_id: str,
-    path: str,
-    context: ProcessingContext,
-    torch_dtype: torch.dtype,
-    node_id: str | None = None,
-):
-    """Load Qwen-Image model with GGUF quantization."""
-    log.info(f"Loading Qwen-Image model: {model_id}/{path}")
-
-    cache_path = await HF_FAST_CACHE.resolve(model_id, path)
-    if not cache_path:
-        await _ensure_file_cached(
-            model_id,
-            path,
-            revision=None,
-            cache_dir=None,
-        )
-
-    log.debug(f"Cache path: {cache_path}")
-    log.debug(f"Torch dtype: {torch_dtype}")
-
-    transformer = await load_model(
-        node_id=node_id,
-        context=context,
-        model_class=QwenImageTransformer2DModel,
-        model_id=model_id,
-        path=path,
-        torch_dtype=torch_dtype,
-        skip_cache=False,
-        quantization_config=GGUFQuantizationConfig(compute_dtype=torch_dtype),
-        config="Qwen/Qwen-Image",
-        subfolder="transformer",
-        device="cpu",
-    )
-
-    # Create the pipeline with the quantized transformer
-    log.info("Creating Qwen-Image pipeline with quantized transformer...")
-    context.post_message(
-        JobUpdate(
-            status="running",
-            message="Downloading Qwen-Image pipelines components...",
-        )
-    )
-
-    pipeline = DiffusionPipeline.from_pretrained(
-        "Qwen/Qwen-Image",
-        transformer=transformer,
-        torch_dtype=torch_dtype,
-        device="cpu",
-    )
-    pipeline.enable_model_cpu_offload()
-    pipeline.enable_attention_slicing()
-
-    return pipeline
 
 
 @register_provider(Provider.HuggingFace)
@@ -728,8 +659,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 "ProcessingContext is required for HuggingFace image generation"
             )
 
-        cache_key = f"{params.model.id}:text2image"
-        pipeline = ModelManager.get_model(cache_key, "text2image")
+        pipeline = ModelManager.get_model(model_id)
 
         if not pipeline:
             log.info(f"Loading text-to-image pipeline: {params.model.id}")
@@ -759,31 +689,42 @@ class HuggingFaceLocalProvider(BaseProvider):
                 if not model_info.tags:
                     raise ValueError(f"Model {params.model.id} has no tags")
 
-                if _is_nunchaku_transformer(params.model.id, params.model.path):
-                    pipeline = await _load_nunchaku_flux_pipeline(
-                        context=context,
-                        repo_id=params.model.id,
-                        transformer_path=params.model.path,
-                        node_id=node_id,
-                    )
-                elif _is_flux_gguf_model(params.model.id, params.model.path):
-                    pipeline = await _load_flux_gguf_pipeline(
-                        repo_id=params.model.id,
-                        file_path=params.model.path,
-                        context=context,
-                        task="text2image",
-                        node_id=node_id,
-                    )
-                    use_cpu_offload = True
-                elif _is_qwen_image_gguf_model(params.model.id, params.model.path):
-                    pipeline = await load_qwen_image_gguf_pipeline(
-                        model_id=params.model.id,
-                        path=params.model.path,
-                        context=context,
-                        torch_dtype=torch.bfloat16,
-                        node_id=node_id,
-                    )
-                    use_cpu_offload = True
+                from nodetool.nodes.huggingface.text_to_image import Flux, QwenImage
+
+                if _is_node_model(params.model.id, params.model.path, Flux):
+                    if _is_nunchaku_transformer(params.model.id, params.model.path):
+                        pipeline = await load_nunchaku_flux_pipeline(
+                            context=context,
+                            repo_id=params.model.id,
+                            transformer_path=params.model.path,
+                            node_id=node_id,
+                        )
+                    else:
+                        # Standard Flux loading
+                         pipeline = FluxPipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=(
+                                torch.bfloat16
+                                if _is_cuda_available()
+                                else torch.float32
+                            ),
+                        )
+                elif _is_node_model(params.model.id, params.model.path, QwenImage):
+                    if _is_nunchaku_transformer(params.model.id, params.model.path):
+                        pipeline = await load_nunchaku_qwen_pipeline(
+                            model_id=params.model.id,
+                            path=params.model.path,
+                            context=context,
+                            torch_dtype=torch.bfloat16,
+                            node_id=node_id,
+                        )
+                        use_cpu_offload = True
+                    else:
+                        pipeline = QwenImagePipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=torch.bfloat16,
+                        )
+                        use_cpu_offload = True
                 else:
                     model_type = model_info.pipeline_tag or "unknown"
 
@@ -842,7 +783,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 pipeline.to(context.device)
 
             # Cache the pipeline
-            ModelManager.set_model(cache_key, cache_key, "text2image", pipeline)
+            ModelManager.set_model(node_id, cache_key, pipeline)
 
         # Set up generator for reproducibility
         generator = None
@@ -912,8 +853,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         pil_image = Image.open(BytesIO(image))
 
         # Get or load the pipeline
-        cache_key = f"{params.model.id}:image2image"
-        pipeline = ModelManager.get_model(cache_key, "image2image")
+        pipeline = ModelManager.get_model(model_id)
 
         if not pipeline:
             log.info(f"Loading image-to-image pipeline: {params.model.id}")
@@ -933,15 +873,54 @@ class HuggingFaceLocalProvider(BaseProvider):
                         )
                     )
 
-                if _is_nunchaku_transformer(params.model.id, params.model.path):
-                    pipeline = await _load_nunchaku_flux_pipeline(
+                from nodetool.nodes.huggingface.image_to_image import (
+                    FluxFill,
+                    QwenImageEdit,
+                )
+
+                if _is_node_model(params.model.id, params.model.path, FluxFill):
+                    if _is_nunchaku_transformer(params.model.id, params.model.path):
+                        # Flux Fill Nunchaku support
+                         pipeline = await load_nunchaku_flux_pipeline(
+                            context=context,
+                            repo_id=params.model.id,
+                            transformer_path=params.model.path,
+                            node_id=node_id,
+                            pipeline_class=FluxFillPipeline,
+                        )
+                    else:
+                        # Standard Flux Fill
+                        pipeline = FluxFillPipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=(
+                                torch.bfloat16
+                                if _is_cuda_available()
+                                else torch.float32
+                            ),
+                        )
+                elif _is_node_model(params.model.id, params.model.path, QwenImageEdit):
+                    if _is_nunchaku_transformer(params.model.id, params.model.path):
+                         pipeline = await load_nunchaku_qwen_pipeline(
+                            context=context,
+                            repo_id=params.model.id,
+                            transformer_path=params.model.path,
+                            node_id=node_id,
+                            pipeline_class=QwenImageEditPipeline,
+                        )
+                    else:
+                        pipeline = QwenImageEditPipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=torch.float16,
+                        )
+                elif _is_nunchaku_transformer(params.model.id, params.model.path):
+                    pipeline = await load_nunchaku_flux_pipeline(
                         context=context,
                         repo_id=params.model.id,
                         transformer_path=params.model.path,
                         node_id=node_id,
                     )
                 elif _is_flux_gguf_model(params.model.id, params.model.path):
-                    pipeline = await _load_flux_gguf_pipeline(
+                    pipeline = await load_flux_gguf_pipeline(
                         repo_id=params.model.id,
                         file_path=params.model.path,
                         context=context,
@@ -969,9 +948,8 @@ class HuggingFaceLocalProvider(BaseProvider):
                         raise ValueError(f"Model {params.model.id} not found")
 
                     if model_info.pipeline_tag != "image-to-image":
-                        raise ValueError(
-                            f"Model {params.model.id} is not an image-to-image model"
-                        )
+                        # Some pipelines like FluxFill might be classified differently or we want to allow it
+                        pass
 
                     if not model_info.tags:
                         raise ValueError(f"Model {params.model.id} has no tags")
@@ -1032,7 +1010,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 pipeline.to(context.device)
 
             # Cache the pipeline
-            ModelManager.set_model(cache_key, cache_key, "image2image", pipeline)
+            ModelManager.set_model(node_id, cache_key, pipeline)
 
         # Set up generator for reproducibility
         generator = None
@@ -1214,8 +1192,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         log.debug(f"Transcribing audio with HuggingFace Whisper model: {model}")
 
         # Get or load the pipeline
-        cache_key = f"{model}:asr"
-        asr_pipeline = ModelManager.get_model(cache_key, "automatic-speech-recognition")
+        asr_pipeline = ModelManager.get_model(model_id)
 
         if not asr_pipeline:
             log.info(f"Loading automatic speech recognition pipeline: {model}")
@@ -1249,9 +1226,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             )
 
             # Cache the pipeline
-            ModelManager.set_model(
-                cache_key, cache_key, "automatic-speech-recognition", asr_pipeline
-            )
+            ModelManager.set_model(node_id, cache_key, asr_pipeline)
 
         audio_segment = AudioSegment.from_file(BytesIO(audio))
         # Whisper expects 16kHz mono audio
@@ -1356,9 +1331,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             )
 
         # Get or load the pipeline
-        model_id = model
-        cache_key = f"{model_id}:text2video"
-        pipeline = ModelManager.get_model(cache_key, "text2video")
+        pipeline = ModelManager.get_model(model_id)
 
         if not pipeline:
             log.info(f"Loading text-to-video pipeline: {model_id}")
@@ -1414,7 +1387,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 pass
 
             # Cache the pipeline
-            ModelManager.set_model(cache_key, cache_key, "text2video", pipeline)
+            ModelManager.set_model(node_id, cache_key, pipeline)
 
         # Set up generator for reproducibility
         generator = None
@@ -1678,7 +1651,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             chat.append({"role": msg.role, "content": content})
 
         cache_key = f"{repo_id}:{filename}:text-generation"
-        cached_pipeline = ModelManager.get_model(cache_key, "text-generation")
+        cached_pipeline = ModelManager.get_model(cache_key)
 
         if not cached_pipeline:
             cache_path = await HF_FAST_CACHE.resolve(
@@ -1691,24 +1664,12 @@ class HuggingFaceLocalProvider(BaseProvider):
                 )
 
             log.info(f"Loading GGUF model {repo_id}/{filename}")
-            # Note: load_model doesn't support gguf_file parameter, so we load manually
-            # but still use ModelManager for caching consistency
-            cached_model = ModelManager.get_model(
-                repo_id, AutoModelForCausalLM.__name__, filename
+            hf_model = AutoModelForCausalLM.from_pretrained(
+                repo_id,
+                torch_dtype=torch.float32,
+                device_map="auto",
+                gguf_file=filename,
             )
-            if not cached_model:
-                hf_model = AutoModelForCausalLM.from_pretrained(
-                    repo_id,
-                    torch_dtype=torch.float32,
-                    device_map="auto",
-                    gguf_file=filename,
-                )
-                ModelManager.set_model(
-                    repo_id, AutoModelForCausalLM.__name__, filename, hf_model
-                )
-            else:
-                hf_model = cached_model
-
             tokenizer = AutoTokenizer.from_pretrained(
                 repo_id,
                 gguf_file=filename,
@@ -1716,9 +1677,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             cached_pipeline = pipeline(
                 "text-generation", model=hf_model, tokenizer=tokenizer
             )
-            ModelManager.set_model(
-                cache_key, cache_key, "text-generation", cached_pipeline
-            )
+            ModelManager.set_model(node_id, cache_key, cached_pipeline)
 
         tokenizer = cached_pipeline.tokenizer
         assert tokenizer is not None
@@ -1801,13 +1760,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         context: ProcessingContext,
         node_id: str | None,
     ) -> AsyncIterator[Chunk]:
-        # Check cache with our key format for backward compatibility
-        cache_key = f"{repo_id}:text-generation"
-        cached_pipeline = ModelManager.get_model(cache_key, "text-generation")
-
-        # Also check with load_pipeline's cache format
-        if not cached_pipeline:
-            cached_pipeline = ModelManager.get_model(repo_id, "text-generation")
+        cached_pipeline = ModelManager.get_model(repo_id)
 
         if not cached_pipeline:
             log.info(f"Loading HuggingFace pipeline model {repo_id}")
@@ -1817,10 +1770,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 pipeline_task="text-generation",
                 model_id=repo_id,
             )
-            # Cache with our key format for backward compatibility
-            ModelManager.set_model(
-                cache_key, cache_key, "text-generation", cached_pipeline
-            )
+            ModelManager.set_model(node_id, repo_id, cached_pipeline)
 
         tokenizer = cached_pipeline.tokenizer
         if tokenizer is None:

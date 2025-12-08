@@ -2871,7 +2871,17 @@
           "type": "hf.inpainting",
           "name": "black-forest-labs/FLUX.1-Fill-dev",
           "repo_id": "black-forest-labs/FLUX.1-Fill-dev",
-          "size_on_disk": 58056239932,
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "tokenizer/*",
+            "tokenizer_2/*",
+            "transformer/config.json"
+          ],
+          "size_on_disk": 586420144,
           "tags": [
             "diffusers",
             "safetensors",
@@ -3166,132 +3176,6 @@
         "prompt",
         "guidance_scale",
         "quantization"
-      ]
-    },
-    {
-      "title": "Flux Prior Redux",
-      "description": "Performs image transformation using FLUX Prior Redux pipeline for image-conditioned generation.\n    image, transformation, flux, redux, prior, image-conditioned, generation\n\n    Use cases:\n    - Transform images using FLUX Prior Redux for style transfer and image variations\n    - Generate images conditioned on reference images without text prompts\n    - High-quality image-to-image transformation with FLUX models\n    - Create variations of existing images with FLUX Prior Redux guidance",
-      "namespace": "huggingface.image_to_image",
-      "node_type": "huggingface.image_to_image.FluxPriorRedux",
-      "properties": [
-        {
-          "name": "prior_redux_model",
-          "type": {
-            "type": "hf.flux_redux"
-          },
-          "default": {
-            "type": "hf.flux_redux",
-            "repo_id": "black-forest-labs/FLUX.1-Redux-dev",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Prior Redux Model",
-          "description": "The FLUX Prior Redux model to use for image conditioning."
-        },
-        {
-          "name": "flux_model",
-          "type": {
-            "type": "hf.flux"
-          },
-          "default": {
-            "type": "hf.flux",
-            "repo_id": "black-forest-labs/FLUX.1-dev",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Flux Model",
-          "description": "The FLUX base model to use for generation."
-        },
-        {
-          "name": "image",
-          "type": {
-            "type": "image"
-          },
-          "default": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null
-          },
-          "title": "Input Image",
-          "description": "The input image to transform"
-        },
-        {
-          "name": "guidance_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 2.5,
-          "title": "Guidance Scale",
-          "description": "Guidance scale for generation. Higher values follow the prior more closely",
-          "min": 0.0,
-          "max": 30.0
-        },
-        {
-          "name": "num_inference_steps",
-          "type": {
-            "type": "int"
-          },
-          "default": 50,
-          "title": "Num Inference Steps",
-          "description": "Number of denoising steps",
-          "min": 1.0,
-          "max": 100.0
-        },
-        {
-          "name": "seed",
-          "type": {
-            "type": "int"
-          },
-          "default": -1,
-          "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed",
-          "min": -1.0
-        },
-        {
-          "name": "enable_cpu_offload",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Cpu Offload",
-          "description": "Enable CPU offload to reduce VRAM usage."
-        },
-        {
-          "name": "quantization",
-          "type": {
-            "type": "enum",
-            "values": [
-              "fp16",
-              "fp4",
-              "int4"
-            ],
-            "type_name": "nodetool.nodes.huggingface.image_to_image.FluxPriorReduxQuantization"
-          },
-          "default": "int4",
-          "title": "Quantization",
-          "description": "Quantization level for the Flux Prior Redux transformer."
-        }
-      ],
-      "outputs": [
-        {
-          "type": {
-            "type": "image"
-          },
-          "name": "output"
-        }
-      ],
-      "basic_fields": [
-        "prior_redux_model",
-        "flux_model",
-        "image",
-        "guidance_scale",
-        "num_inference_steps",
-        "seed"
       ]
     },
     {

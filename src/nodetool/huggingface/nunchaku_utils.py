@@ -87,7 +87,6 @@ async def get_nunchaku_transformer(
     node_id: str,
     repo_id: str,
     path: str,
-    allow_downloads: bool = True,
 ) -> Any | None:
     """
     Get transformer kwargs when using a nunchaku model.
@@ -135,29 +134,10 @@ async def get_nunchaku_transformer(
 
     cache_path = await HF_FAST_CACHE.resolve(repo_id, path)
     if not cache_path:
-        if not allow_downloads:
-            raise ValueError(
-                f"Nunchaku transformer {repo_id}/{path} is not downloaded. "
-                "Download it to the local HF cache before running this node."
-            )
-
-        log.info(
-            "Downloading Nunchaku transformer %s/%s to cache",
-            repo_id,
-            path,
+        raise ValueError(
+            f"Nunchaku transformer {repo_id}/{path} is not downloaded. "
+            "Download it from recommended models before running this node."
         )
-        hf_hub_download(
-            repo_id,
-            path,
-        )
-        cache_path = await HF_FAST_CACHE.resolve(
-            repo_id,
-            path,
-        )
-        if not cache_path:
-            raise ValueError(
-                f"Downloading model {repo_id}/{path} from HuggingFace failed"
-            )
 
     transformer_identifier = cache_path or f"{repo_id}/{path}"
 

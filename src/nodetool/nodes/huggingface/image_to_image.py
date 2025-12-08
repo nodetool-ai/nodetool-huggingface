@@ -10,7 +10,6 @@ from diffusers.models.modeling_outputs import AutoencoderKLOutput
 from nodetool.config.logging_config import get_logger
 from nodetool.huggingface.nunchaku_utils import (
     get_nunchaku_text_encoder,
-    get_nunchaku_transformer,
 )
 from nodetool.workflows.types import NodeProgress
 import torch
@@ -1896,7 +1895,7 @@ class OmniGenNode(HuggingFacePipelineNode):
         return await context.image_from_pil(image)
 
 
-class QwenImageEditQuantization(Enum):
+class QwenImageEditQuantization(str, Enum):
     FP16 = "fp16"
     FP4 = "fp4"
     INT4 = "int4"
@@ -2084,40 +2083,22 @@ class QwenImageEdit(HuggingFacePipelineNode):
         torch_dtype: torch.dtype,
         quantization: QwenImageEditQuantization | None = None,
     ):
-        transformer_model = self._resolve_model_config(quantization)
-        if not transformer_model.path:
-            raise ValueError("Quantized Qwen Image Edit requires a transformer path.")
-
-        if not await HF_FAST_CACHE.resolve(
-            transformer_model.repo_id, transformer_model.path
-        ):
-            raise ValueError(
-                f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded"
-            )
-
-        transformer = await get_nunchaku_transformer(
-            context=context,
-            model_class=NunchakuQwenImageTransformer2DModel,
-            node_id=self.id,
-            repo_id=transformer_model.repo_id,
-            path=transformer_model.path,
+        from nodetool.huggingface.huggingface_local_provider import (
+            load_nunchaku_qwen_pipeline,
         )
 
-        base_model_id = self._get_base_model().repo_id or "Qwen/Qwen-Image-Edit"
-        hf_token = await context.get_secret("HF_TOKEN")
+        transformer_model = self._resolve_model_config(quantization)
+        cache_key = f"{transformer_model.repo_id}:{quantization.value}:qwen-image-edit-v1"
 
-        try:
-            self._pipeline = QwenImageEditPipeline.from_pretrained(
-                base_model_id,
-                transformer=transformer,
-                torch_dtype=torch_dtype,
-                token=hf_token,
-            )
-        except torch.OutOfMemoryError as exc:  # type: ignore[attr-defined]
-            raise ValueError(
-                "VRAM out of memory while loading Qwen Image Edit with the Nunchaku transformer. "
-                "Try enabling CPU offload or reduce image size/steps."
-            ) from exc
+        self._pipeline = await load_nunchaku_qwen_pipeline(
+            context=context,
+            repo_id=transformer_model.repo_id,
+            transformer_path=transformer_model.path,
+            node_id=self.id,
+            pipeline_class=QwenImageEditPipeline,
+            base_model_id="Qwen/Qwen-Image-Edit",
+            cache_key=cache_key,
+        )
 
         _enable_pytorch2_attention(
             self._pipeline, self.enable_memory_efficient_attention
@@ -2131,17 +2112,6 @@ class QwenImageEdit(HuggingFacePipelineNode):
     async def preload_model(self, context: ProcessingContext):
         torch_dtype = _select_diffusion_dtype()
         quantization = self.quantization
-        smoke_mode = os.getenv("NODETOOL_SMOKE_TEST", "").lower() in {
-            "1",
-            "true",
-            "yes",
-            "on",
-        }
-        if smoke_mode and quantization != QwenImageEditQuantization.FP16:
-            log.info(
-                "Smoke test detected, forcing Qwen Image Edit quantization to fp16"
-            )
-            quantization = QwenImageEditQuantization.FP16
 
         if quantization in (
             QwenImageEditQuantization.INT4,
@@ -2213,7 +2183,7 @@ class QwenImageEdit(HuggingFacePipelineNode):
         return await context.image_from_pil(image)
 
 
-class FluxFillQuantization(Enum):
+class FluxFillQuantization(str, Enum):
     FP16 = "fp16"
     FP4 = "fp4"
     INT4 = "int4"
@@ -2305,6 +2275,7 @@ class FluxFill(HuggingFacePipelineNode):
         return [
             HFFluxFill(
                 repo_id="black-forest-labs/FLUX.1-Fill-dev",
+                allow_patterns=cls.FLUX_FILL_BASE_ALLOW_PATTERNS,
             ),
             HFFluxFill(
                 repo_id="nunchaku-tech/nunchaku-flux.1-fill-dev",
@@ -2339,26 +2310,8 @@ class FluxFill(HuggingFacePipelineNode):
         return ["image", "mask_image"]
 
     def get_model_id(self) -> str:
-        quantization = self._resolve_effective_quantization()
-        base_model = self._get_base_model(quantization)
-        return base_model.repo_id or "black-forest-labs/FLUX.1-Fill-dev"
+        return self._get_base_model(self.quantization)
 
-    def _detect_legacy_quantization(self) -> FluxFillQuantization | None:
-        repo = (self.model.repo_id or "").lower()
-        path = (self.model.path or "").lower()
-        if "svdq" not in repo and "svdq" not in path:
-            return None
-        if "fp4" in repo or "fp4" in path:
-            return FluxFillQuantization.FP4
-        return FluxFillQuantization.INT4
-
-    def _resolve_effective_quantization(self) -> FluxFillQuantization:
-        quantization = self.quantization
-        legacy = self._detect_legacy_quantization()
-        if quantization == FluxFillQuantization.FP16 and legacy is not None:
-            quantization = legacy
-
-        return quantization
 
     def _get_base_model(self, quantization: FluxFillQuantization) -> HFFluxFill:
         if quantization == FluxFillQuantization.FP16:
@@ -2378,19 +2331,6 @@ class FluxFill(HuggingFacePipelineNode):
         if quantization == FluxFillQuantization.FP16:
             return base_model, None
 
-        legacy = self._detect_legacy_quantization()
-        use_legacy = (
-            legacy is not None
-            and self.quantization == FluxFillQuantization.FP16
-            and quantization != FluxFillQuantization.FP16
-        )
-        if use_legacy:
-            if not self.model.repo_id or not self.model.path:
-                raise ValueError(
-                    "Legacy Nunchaku Flux Fill configuration requires model.repo_id and model.path"
-                )
-            return base_model, HFFlux(repo_id=self.model.repo_id, path=self.model.path)
-
         precision = "fp4" if quantization == FluxFillQuantization.FP4 else "int4"
         transformer = HFFlux(
             repo_id="nunchaku-tech/nunchaku-flux.1-fill-dev",
@@ -2400,65 +2340,26 @@ class FluxFill(HuggingFacePipelineNode):
 
     async def preload_model(self, context: ProcessingContext):
         torch_dtype = torch.bfloat16
-        quantization = self._resolve_effective_quantization()
         base_model, transformer_model = self._resolve_model_config(
-            quantization
+            self.quantization
         )
 
         if transformer_model is not None:
-            if not await HF_FAST_CACHE.resolve(base_model.repo_id, "model_index.json"):
-                raise ValueError(
-                    f"Base Flux Fill model {base_model.repo_id} must be downloaded"
-                )
+            from nodetool.huggingface.huggingface_local_provider import (
+                load_nunchaku_flux_pipeline,
+            )
 
-            if not transformer_model.path:
-                raise ValueError(
-                    "Nunchaku Flux Fill requires the transformer path to be set."
-                )
-
-            if not await HF_FAST_CACHE.resolve(
-                transformer_model.repo_id, transformer_model.path
-            ):
-                raise ValueError(
-                    f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded"
-                )
-
-            hf_token = await context.get_secret("HF_TOKEN")
-            if not hf_token:
-                model_url = f"https://huggingface.co/{base_model.repo_id}"
-                raise ValueError(
-                    f"Flux Fill is a gated model, please set the HF_TOKEN in Nodetool settings and accept the terms of use for the model: {model_url}"
-                )
-
-            transformer = await get_nunchaku_transformer(
+            self._pipeline = await load_nunchaku_flux_pipeline(
                 context=context,
-                model_class=NunchakuFluxTransformer2dModel,
-                node_id=self.id,
                 repo_id=transformer_model.repo_id,
-                path=transformer_model.path,
+                transformer_path=transformer_model.path,
+                node_id=self.id,
+                pipeline_class=FluxFillPipeline,
+                cache_key=f"{base_model.repo_id}:{self.quantization.value}:fill-v1",
             )
-
-            log.info(
-                "Loading FLUX Fill pipeline from %s with Nunchaku transformer %s/%s",
-                base_model.repo_id,
-                transformer_model.repo_id,
-                transformer_model.path,
-            )
-            try:
-                self._pipeline = FluxFillPipeline.from_pretrained(
-                    base_model.repo_id,
-                    transformer=transformer,
-                    torch_dtype=torch_dtype,
-                    token=hf_token,
-                )
-            except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
-                raise ValueError(
-                    "VRAM out of memory while loading Flux Fill with the Nunchaku transformer. "
-                    "Try enabling CPU offload or reduce image size/steps."
-                ) from e
         else:
             log.info(
-                f"Loading FLUX Fill pipeline from {base_model.repo_id} (quantization={quantization.value})..."
+                f"Loading FLUX Fill pipeline from {base_model.repo_id} (quantization={self.quantization.value})..."
             )
             self._pipeline = await self.load_model(
                 context=context,
@@ -2470,8 +2371,8 @@ class FluxFill(HuggingFacePipelineNode):
                 device="cpu",
             )
 
-        _enable_pytorch2_attention(self._pipeline)
-        _apply_vae_optimizations(self._pipeline)
+            _enable_pytorch2_attention(self._pipeline)
+            _apply_vae_optimizations(self._pipeline)
 
         # Apply CPU offload if enabled
         if self._pipeline is not None and self.enable_cpu_offload:
@@ -2550,7 +2451,7 @@ class FluxFill(HuggingFacePipelineNode):
         return await context.image_from_pil(image)
 
 
-class FluxKontextQuantization(Enum):
+class FluxKontextQuantization(str, Enum):
     FP16 = "fp16"
     FP4 = "fp4"
     INT4 = "int4"
@@ -2714,20 +2615,10 @@ class FluxKontext(HuggingFacePipelineNode):
         ):
             assert transformer_model.path is not None
             assert text_encoder_model is not None
-
-            if not await HF_FAST_CACHE.resolve(
-                transformer_model.repo_id, transformer_model.path
-            ):
-                raise ValueError(
-                    f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded"
-                )
-
-            if not await HF_FAST_CACHE.resolve(
-                text_encoder_model.repo_id, text_encoder_model.path
-            ):
-                raise ValueError(
-                    f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded"
-                )
+            from nodetool.huggingface.nunchaku_utils import (
+                get_nunchaku_transformer,
+                get_nunchaku_text_encoder,
+            )
 
             transformer = await get_nunchaku_transformer(
                 context=context,
@@ -2825,354 +2716,6 @@ class FluxKontext(HuggingFacePipelineNode):
                 "VRAM out of memory while running Flux Kontext. "
                 "Enable 'CPU offload' in the advanced node properties (if available), "
                 "or reduce image size."
-            ) from e
-        image = output.images[0]
-
-        return await context.image_from_pil(image)
-
-
-class FluxPriorReduxQuantization(Enum):
-    FP16 = "fp16"
-    FP4 = "fp4"
-    INT4 = "int4"
-
-
-class FluxPriorRedux(HuggingFacePipelineNode):
-    """
-    Performs image transformation using FLUX Prior Redux pipeline for image-conditioned generation.
-    image, transformation, flux, redux, prior, image-conditioned, generation
-
-    Use cases:
-    - Transform images using FLUX Prior Redux for style transfer and image variations
-    - Generate images conditioned on reference images without text prompts
-    - High-quality image-to-image transformation with FLUX models
-    - Create variations of existing images with FLUX Prior Redux guidance
-    """
-
-    prior_redux_model: HFFluxRedux = Field(
-        default=HFFluxRedux(repo_id="black-forest-labs/FLUX.1-Redux-dev"),
-        description="The FLUX Prior Redux model to use for image conditioning.",
-    )
-    flux_model: HFFlux = Field(
-        default=HFFlux(repo_id="black-forest-labs/FLUX.1-dev"),
-        description="The FLUX base model to use for generation.",
-    )
-    image: ImageRef = Field(
-        default=ImageRef(),
-        title="Input Image",
-        description="The input image to transform",
-    )
-    guidance_scale: float = Field(
-        default=2.5,
-        description="Guidance scale for generation. Higher values follow the prior more closely",
-        ge=0.0,
-        le=30.0,
-    )
-    num_inference_steps: int = Field(
-        default=50,
-        description="Number of denoising steps",
-        ge=1,
-        le=100,
-    )
-    seed: int = Field(
-        default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed",
-        ge=-1,
-    )
-    enable_cpu_offload: bool = Field(
-        default=True,
-        description="Enable CPU offload to reduce VRAM usage.",
-    )
-    quantization: FluxPriorReduxQuantization = Field(
-        default=FluxPriorReduxQuantization.INT4,
-        description="Quantization level for the Flux Prior Redux transformer.",
-    )
-
-    _prior_pipeline: FluxPriorReduxPipeline | None = None
-    _pipeline: FluxPipeline | None = None
-    FLUX_PRIOR_BASE_ALLOW_PATTERNS: ClassVar[list[str]] = [
-        "*.json",
-        "*.txt",
-        "scheduler/*",
-        "vae/*",
-        "text_encoder/*",
-        "tokenizer/*",
-        "tokenizer_2/*",
-    ]
-
-    @classmethod
-    def get_basic_fields(cls):
-        return [
-            "prior_redux_model",
-            "flux_model",
-            "image",
-            "guidance_scale",
-            "num_inference_steps",
-            "seed",
-        ]
-
-    def required_inputs(self):
-        return ["image"]
-
-    @classmethod
-    def get_title(cls) -> str:
-        return "Flux Prior Redux"
-
-    def get_prior_model_id(self) -> str:
-        if self.prior_redux_model.repo_id:
-            return self.prior_redux_model.repo_id
-        return "black-forest-labs/FLUX.1-Redux-dev"
-
-    def get_flux_model_id(self) -> str:
-        quantization = self._resolve_effective_quantization()
-        base_model = self._get_flux_base_model(quantization)
-        return base_model.repo_id or "black-forest-labs/FLUX.1-dev"
-
-    def _detect_flux_legacy_quantization(self) -> FluxPriorReduxQuantization | None:
-        repo = (self.flux_model.repo_id or "").lower()
-        path = (self.flux_model.path or "").lower()
-        if "svdq" not in repo and "svdq" not in path:
-            return None
-        if "fp4" in repo or "fp4" in path:
-            return FluxPriorReduxQuantization.FP4
-        return FluxPriorReduxQuantization.INT4
-
-    def _resolve_effective_quantization(self) -> FluxPriorReduxQuantization:
-        quantization = self.quantization
-        legacy = self._detect_flux_legacy_quantization()
-        if quantization == FluxPriorReduxQuantization.FP16 and legacy is not None:
-            quantization = legacy
-
-        return quantization
-
-    def _get_flux_base_model(
-        self, quantization: FluxPriorReduxQuantization
-    ) -> HFFlux:
-        if quantization == FluxPriorReduxQuantization.FP16:
-            if self.flux_model.repo_id:
-                return self.flux_model
-            return HFFlux(repo_id="black-forest-labs/FLUX.1-dev")
-        return HFFlux(
-            repo_id="black-forest-labs/FLUX.1-dev",
-            allow_patterns=self.FLUX_PRIOR_BASE_ALLOW_PATTERNS,
-        )
-
-    def _resolve_flux_model_config(
-        self, quantization: FluxPriorReduxQuantization
-    ) -> tuple[HFFlux, HFFlux | None]:
-        base_model = self._get_flux_base_model(quantization)
-        if quantization == FluxPriorReduxQuantization.FP16:
-            return base_model, None
-
-        legacy = self._detect_flux_legacy_quantization()
-        use_legacy = (
-            legacy is not None
-            and self.quantization == FluxPriorReduxQuantization.FP16
-            and quantization != FluxPriorReduxQuantization.FP16
-        )
-        if use_legacy:
-            if not self.flux_model.repo_id or not self.flux_model.path:
-                raise ValueError(
-                    "Legacy Nunchaku Flux Prior Redux configuration requires flux_model.repo_id and flux_model.path"
-                )
-            return base_model, HFFlux(
-                repo_id=self.flux_model.repo_id,
-                path=self.flux_model.path,
-            )
-
-        precision = (
-            "fp4" if quantization == FluxPriorReduxQuantization.FP4 else "int4"
-        )
-        transformer = HFFlux(
-            repo_id="nunchaku-tech/nunchaku-flux.1-dev",
-            path=f"svdq-{precision}_r32-flux.1-dev.safetensors",
-        )
-        return base_model, transformer
-
-    async def preload_model(self, context: ProcessingContext):
-        hf_token = await context.get_secret("HF_TOKEN")
-        if not hf_token:
-            model_url = f"https://huggingface.co/{self.get_prior_model_id()}"
-            raise ValueError(
-                f"Flux Prior Redux is a gated model, please set the HF_TOKEN in Nodetool settings and accept the terms of use for the model: {model_url}"
-            )
-
-        log.info(
-            f"Loading FLUX Prior Redux pipeline from {self.get_prior_model_id()}..."
-        )
-        torch_dtype = _select_diffusion_dtype()
-        self._prior_pipeline = await self.load_model(
-            context=context,
-            model_class=FluxPriorReduxPipeline,
-            model_id=self.get_prior_model_id(),
-            torch_dtype=torch_dtype,
-            device="cpu",
-        )
-        _enable_pytorch2_attention(self._prior_pipeline)
-        _apply_vae_optimizations(self._prior_pipeline)
-
-        quantization = self._resolve_effective_quantization()
-        flux_base_model, transformer_model = self._resolve_flux_model_config(
-            quantization
-        )
-
-        log.info(
-            "Loading FLUX pipeline from %s (quantization=%s)...",
-            flux_base_model.repo_id,
-            quantization.value,
-        )
-        if transformer_model is not None:
-            if not transformer_model.path:
-                raise ValueError(
-                    "Nunchaku Flux Prior Redux requires the transformer path to be set."
-                )
-
-            if not await HF_FAST_CACHE.resolve(flux_base_model.repo_id, "model_index.json"):
-                raise ValueError(
-                    f"Base Flux model {flux_base_model.repo_id} must be downloaded"
-                )
-
-            if not await HF_FAST_CACHE.resolve(
-                transformer_model.repo_id, transformer_model.path
-            ):
-                raise ValueError(
-                    f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded"
-                )
-
-            transformer = await get_nunchaku_transformer(
-                context=context,
-                model_class=NunchakuFluxTransformer2dModel,
-                node_id=self.id,
-                repo_id=transformer_model.repo_id,
-                path=transformer_model.path,
-            )
-
-            try:
-                self._pipeline = FluxPipeline.from_pretrained(
-                    flux_base_model.repo_id,
-                    transformer=transformer,
-                    text_encoder=None,
-                    text_encoder_2=None,
-                    torch_dtype=torch_dtype,
-                    token=hf_token,
-                )
-            except torch.OutOfMemoryError as e:  # ignore attr-defined
-                raise ValueError(
-                    "VRAM out of memory while loading Flux Prior Redux with the Nunchaku transformer. "
-                    "Try enabling CPU offload or reduce image size."
-                ) from e
-        else:
-            self._pipeline = await self.load_model(
-                context=context,
-                model_class=FluxPipeline,
-                model_id=flux_base_model.repo_id,
-                path=flux_base_model.path,
-                text_encoder=None,
-                text_encoder_2=None,
-                torch_dtype=torch_dtype,
-                device="cpu",
-            )
-        _enable_pytorch2_attention(self._pipeline)
-        _apply_vae_optimizations(self._pipeline)
-
-        # Apply CPU offload if enabled
-        if self._prior_pipeline is not None and self.enable_cpu_offload:
-            self._prior_pipeline.enable_model_cpu_offload()
-        if self._pipeline is not None and self.enable_cpu_offload:
-            self._pipeline.enable_model_cpu_offload()
-
-    async def move_to_device(self, device: str):
-        if self._prior_pipeline is not None:
-            # If CPU offload is enabled, we need to handle device movement differently
-            if self.enable_cpu_offload:
-                if device == "cpu":
-                    self._prior_pipeline.to(device)
-                elif device in ["cuda", "mps"]:
-                    self._prior_pipeline.enable_model_cpu_offload()
-            else:
-                try:
-                    self._prior_pipeline.to(device)
-                except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
-                    raise ValueError(
-                        "VRAM out of memory while moving Flux Prior Redux to device. "
-                        "Enable 'CPU offload' in the advanced node properties or reduce image size."
-                    ) from e
-
-        if self._pipeline is not None:
-            # If CPU offload is enabled, we need to handle device movement differently
-            if self.enable_cpu_offload:
-                if device == "cpu":
-                    self._pipeline.to(device)
-                elif device in ["cuda", "mps"]:
-                    self._pipeline.enable_model_cpu_offload()
-            else:
-                try:
-                    self._pipeline.to(device)
-                except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
-                    raise ValueError(
-                        "VRAM out of memory while moving Flux pipeline to device. "
-                        "Enable 'CPU offload' in the advanced node properties or reduce image size."
-                    ) from e
-
-    async def process(self, context: ProcessingContext) -> ImageRef:
-        if self._prior_pipeline is None or self._pipeline is None:
-            raise ValueError("Pipeline not initialized")
-
-        # Set up the generator for reproducibility
-        generator = torch.Generator(device="cpu")
-        if self.seed != -1:
-            generator = generator.manual_seed(self.seed)
-
-        input_image = await context.image_to_pil(self.image)
-
-        # Process image through prior redux pipeline
-        def _run_prior_redux():
-            return self._prior_pipeline(input_image)  # type: ignore
-
-        log.info("Running FLUX Prior Redux pipeline...")
-        pipe_prior_output = await asyncio.to_thread(_run_prior_redux)
-
-        # Convert prior output to dict if it's not already
-        if isinstance(pipe_prior_output, dict):
-            prior_dict = pipe_prior_output
-        elif hasattr(pipe_prior_output, "_asdict"):  # NamedTuple
-            prior_dict = pipe_prior_output._asdict()
-        elif hasattr(pipe_prior_output, "__dict__"):
-            prior_dict = pipe_prior_output.__dict__
-        else:
-            # Try to convert using vars() or create dict from attributes
-            try:
-                prior_dict = vars(pipe_prior_output)
-            except TypeError:
-                # Fallback: create dict from common attributes
-                prior_dict = {}
-                for attr in [
-                    "prompt_embeds",
-                    "pooled_prompt_embeds",
-                    "negative_prompt_embeds",
-                    "negative_pooled_prompt_embeds",
-                ]:
-                    if hasattr(pipe_prior_output, attr):
-                        prior_dict[attr] = getattr(pipe_prior_output, attr)
-
-        # Prepare kwargs for the main FluxPipeline
-        kwargs = {
-            "guidance_scale": self.guidance_scale,
-            "num_inference_steps": self.num_inference_steps,
-            "generator": generator,
-            "callback_on_step_end": pipeline_progress_callback(
-                self.id, self.num_inference_steps, context
-            ),
-            **prior_dict,  # Unpack prior redux output
-        }
-
-        try:
-            output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
-        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
-            raise ValueError(
-                "VRAM out of memory while running Flux Prior Redux. "
-                "Enable 'CPU offload' in the advanced node properties (if available), "
-                "or reduce image size/steps."
             ) from e
         image = output.images[0]
 

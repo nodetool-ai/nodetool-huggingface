@@ -19,10 +19,6 @@ from nodetool.metadata.types import (
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.image_to_image import pipeline_progress_callback
-from nodetool.huggingface.nunchaku_utils import (
-    get_nunchaku_text_encoder,
-    get_nunchaku_transformer,
-)
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     _select_diffusion_dtype,
     StableDiffusionBaseNode,
@@ -626,44 +622,21 @@ class Flux(HuggingFacePipelineNode):
             if not await HF_FAST_CACHE.resolve(text_encoder_model.repo_id, text_encoder_model.path):
                 raise ValueError(f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded")
 
-            transformer = await get_nunchaku_transformer(
-                context=context,
-                model_class=NunchakuFluxTransformer2dModel,
-                node_id=self.id,
-                repo_id=transformer_model.repo_id,
-                path=transformer_model.path,
+            from nodetool.huggingface.huggingface_local_provider import (
+                load_nunchaku_flux_pipeline,
             )
-            
-            text_encoder_2 = await get_nunchaku_text_encoder(
-                context=context,
-                node_id=self.id,
-                repo_id=text_encoder_model.repo_id,
-                path=text_encoder_model.path,
-            )
+            from nodetool.ml.core.model_manager import ModelManager
 
             base_model = self._get_base_model(self.variant)
-            
-            # Construct a unique cache key for this specific configuration
             cache_key = f"{base_model.repo_id}:{self.variant.value}:{self.quantization.value}"
 
-            try:
-                self._pipeline = await self.load_model(
-                    context=context,
-                    model_id=base_model.repo_id,
-                    model_class=FluxPipeline,
-                    torch_dtype=torch_dtype,
-                    transformer=transformer,
-                    text_encoder_2=text_encoder_2,
-                    variant=None,
-                    device="cpu", # Force CPU initially, let move_to_device handle it
-                    token=hf_token,
-                    cache_key=cache_key,
-                )
-            except torch.OutOfMemoryError as e:
-                raise ValueError(
-                    "VRAM out of memory while loading Flux. "
-                    "Try enabling CPU offload or reduce image size/steps."
-                ) from e
+            self._pipeline = await load_nunchaku_flux_pipeline(
+                context=context,
+                repo_id=transformer_model.repo_id,
+                transformer_path=transformer_model.path,
+                node_id=self.id,
+                cache_key=cache_key,
+            )
 
         else:
             # Standard loading
@@ -956,7 +929,7 @@ class Chroma(HuggingFacePipelineNode):
         ]
 
 
-class QwenQuantization(Enum):
+class QwenQuantization(str, Enum):
     FP16 = "fp16"
     FP4 = "fp4"
     INT4 = "int4"
@@ -1121,42 +1094,18 @@ class QwenImage(HuggingFacePipelineNode):
         torch_dtype,
     ):
         """Load Qwen-Image pipeline using a Nunchaku SVDQ transformer file."""
+        from nodetool.huggingface.huggingface_local_provider import load_nunchaku_qwen_pipeline
+
         model = self._resolve_model_config()
-        
-        # Ensure model is present in cache
-        if not await HF_FAST_CACHE.resolve(model.repo_id, model.path):
-            raise ValueError(f"Transformer model {model.repo_id}/{model.path} must be downloaded")
 
-        transformer = await get_nunchaku_transformer(
+        self._pipeline = await load_nunchaku_qwen_pipeline(
             context=context,
-            model_class=NunchakuQwenImageTransformer2DModel,
-            node_id=self.id,
             repo_id=model.repo_id,
-            path=model.path or "",
+            transformer_path=model.path,
+            node_id=self.id,
+            pipeline_class=QwenImagePipeline,
+            base_model_id="Qwen/Qwen-Image",
         )
-
-        try:
-            hf_token = await context.get_secret("HF_TOKEN")
-            self._pipeline = QwenImagePipeline.from_pretrained(
-                "Qwen/Qwen-Image",
-                transformer=transformer,
-                torch_dtype=torch_dtype,
-                token=hf_token,
-            )
-            if get_gpu_memory() > 18:
-                self._pipeline.enable_model_cpu_offload()
-            else:
-                # use per-layer offloading for low VRAM. This only requires 3-4GB of VRAM.
-                transformer.set_offload(
-                    True, use_pin_memory=False, num_blocks_on_gpu=1
-                )  # increase num_blocks_on_gpu if you have more VRAM
-                self._pipeline._exclude_from_cpu_offload.append("transformer")
-                self._pipeline.enable_sequential_cpu_offload()
-        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
-            raise ValueError(
-                "VRAM out of memory while loading Qwen-Image with the Nunchaku transformer. "
-                "Try enabling CPU offload or reduce image size/steps."
-            ) from e
 
     async def move_to_device(self, device: str):
         pass
@@ -1384,35 +1333,22 @@ class FluxControl(HuggingFacePipelineNode):
                     f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded"
                 )
 
-            transformer = await get_nunchaku_transformer(
+            from nodetool.huggingface.huggingface_local_provider import (
+                load_nunchaku_flux_pipeline,
+            )
+            from nodetool.ml.core.model_manager import ModelManager
+
+            # Cache key for controlnet variant
+            cache_key = f"{base_model.repo_id}:{quantization.value}:control-v1"
+
+            self._pipeline = await load_nunchaku_flux_pipeline(
                 context=context,
-                model_class=NunchakuFluxTransformer2dModel,
-                node_id=self.id,
                 repo_id=transformer_model.repo_id,
-                path=transformer_model.path,
-            )
-
-            text_encoder_2 = await get_nunchaku_text_encoder(
-                context=context,
+                transformer_path=transformer_model.path,
                 node_id=self.id,
-                repo_id=text_encoder_model.repo_id,
-                path=text_encoder_model.path,
+                pipeline_class=FluxControlPipeline,
+                cache_key=cache_key,
             )
-
-            try:
-                self._pipeline = FluxControlPipeline.from_pretrained(
-                    base_model.repo_id,
-                    transformer=transformer,
-                    torch_dtype=torch_dtype,
-                    token=hf_token,
-                    text_encoder_2=text_encoder_2,
-                    local_files_only=True,
-                )
-            except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
-                raise ValueError(
-                    "VRAM out of memory while loading Flux Control with the Nunchaku transformer. "
-                    "Try enabling CPU offload or reduce image size."
-                ) from e
         else:
             if not await HF_FAST_CACHE.resolve(base_model.repo_id, "model_index.json"):
                 raise ValueError(f"Model {base_model.repo_id} must be downloaded")
