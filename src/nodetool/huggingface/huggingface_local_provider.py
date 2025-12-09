@@ -686,7 +686,6 @@ async def load_nunchaku_qwen_pipeline(
         torch_dtype: The torch dtype to use
     """
     from nunchaku.utils import get_gpu_memory
-    from transformers import Qwen2_5_VLForConditionalGeneration, BitsAndBytesConfig
 
     hf_token = await context.get_secret("HF_TOKEN")
     torch_dtype = torch.bfloat16
@@ -718,15 +717,15 @@ async def load_nunchaku_qwen_pipeline(
             log.info("Enabling model CPU offload")
         else:
             log.info("Enabling model per-layer offloading")
-        # use per-layer offloading for low VRAM. This only requires 3-4GB of VRAM.
-        transformer.set_offload(
-            True, use_pin_memory=True, num_blocks_on_gpu=1
-        )  # increase num_blocks_on_gpu if you have more VRAM
-        pipeline._exclude_from_cpu_offload.append("transformer")
-        pipeline.enable_sequential_cpu_offload()
+            # use per-layer offloading for low VRAM. This only requires 3-4GB of VRAM.
+            transformer.set_offload(
+                True, use_pin_memory=True, num_blocks_on_gpu=1
+            )  # increase num_blocks_on_gpu if you have more VRAM
+            pipeline._exclude_from_cpu_offload.append("transformer")
+            pipeline.enable_sequential_cpu_offload()
 
         if cache_key and node_id:
-            ModelManager.set_model(node_id, text_encoder_repo, text_encoder)
+            ModelManager.set_model(node_id, cache_key, pipeline)
         return pipeline
     except torch.OutOfMemoryError as exc:
         raise ValueError(
