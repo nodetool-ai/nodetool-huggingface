@@ -35,7 +35,7 @@ class ImageToText(HuggingFacePipelineNode):
         description="The image to generate text from",
     )
     max_new_tokens: int = Field(
-        default=50,
+        default=1024,
         title="Max New Tokens",
         description="The maximum number of tokens to generate",
     )

@@ -3,8 +3,7 @@ from enum import Enum
 from pydantic import Field
 import torch
 from nodetool.nodes.huggingface.stable_diffusion_base import (
-    ModelVariant,
-    _select_diffusion_dtype,
+    available_torch_dtype,
 )
 from transformers import CLIPVisionModel
 from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
@@ -193,7 +192,7 @@ class Wan_I2V(HuggingFacePipelineNode):
             subfolder="vae",
             torch_dtype=torch.float32,
         )
-        torch_dtype = _select_diffusion_dtype()
+        torch_dtype = available_torch_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_class=WanImageToVideoPipeline,

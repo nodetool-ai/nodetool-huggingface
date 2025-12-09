@@ -1,4 +1,3 @@
-
 from enum import Enum
 import os
 import huggingface_hub
@@ -9,6 +8,7 @@ from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
     HFT5,
     HFFlux,
+    HFQwen2_5_VL,
     HFQwenImage,
     HFStableDiffusionXL,
     HFTextToImage,
@@ -20,10 +20,9 @@ from nodetool.metadata.types import (
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.image_to_image import pipeline_progress_callback
 from nodetool.nodes.huggingface.stable_diffusion_base import (
-    _select_diffusion_dtype,
+    available_torch_dtype,
     StableDiffusionBaseNode,
     StableDiffusionXLBase,
-    StableDiffusionXLQuantization,
 )
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress, Notification, LogUpdate
@@ -31,15 +30,10 @@ from nodetool.workflows.types import NodeProgress, Notification, LogUpdate
 import torch
 import asyncio
 import logging
-from nunchaku import (
-    NunchakuFluxTransformer2dModel,
-    NunchakuQwenImageTransformer2DModel,
-)
 from nunchaku.models.unets.unet_sdxl import NunchakuSDXLUNet2DConditionModel
 from nunchaku.utils import get_gpu_memory
 
 # The QwenImage import requires optional dependencies. Keep it near top-level to surface missing deps early.
-from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
 from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
 from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
@@ -52,14 +46,7 @@ from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import
 )
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
-from diffusers.schedulers.scheduling_dpmsolver_multistep import (
-    DPMSolverMultistepScheduler,
-)
 from pydantic import Field
-from transformers import T5EncoderModel
-from transformers.models.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
-from PIL import Image
-
 
 log = get_logger(__name__)
 
@@ -72,7 +59,9 @@ def _enable_pytorch2_attention(pipeline: Any):
         try:
             enable_sdpa()
             pipeline_name = type(pipeline).__name__
-            log.info("Enabled PyTorch 2 scaled dot product attention for %s", pipeline_name)
+            log.info(
+                "Enabled PyTorch 2 scaled dot product attention for %s", pipeline_name
+            )
         except Exception as e:
             log.warning("Failed to enable scaled dot product attention: %s", e)
     else:
@@ -100,6 +89,7 @@ def _apply_vae_optimizations(pipeline: Any):
         log.debug("Set VAE to channels_last memory format")
     except Exception as e:
         log.warning("Failed to set VAE channels_last memory format: %s", e)
+
 
 class StableDiffusion(StableDiffusionBaseNode):
     """
@@ -149,7 +139,6 @@ class StableDiffusion(StableDiffusionBaseNode):
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)
         await self._load_ip_adapter()
-
 
     async def process(self, context: ProcessingContext) -> OutputType:
         result = await self.run_pipeline(context, width=self.width, height=self.height)
@@ -222,7 +211,7 @@ class LoadTextToImageModel(HuggingFacePipelineNode):
     )
 
     async def preload_model(self, context: ProcessingContext):
-        torch_dtype = _select_diffusion_dtype()
+        torch_dtype = available_torch_dtype()
         await self.load_model(
             context=context,
             model_id=self.repo_id,
@@ -310,7 +299,7 @@ class Text2Image(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
-        torch_dtype = _select_diffusion_dtype()
+        torch_dtype = available_torch_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_id=self.get_model_id(),
@@ -385,9 +374,6 @@ class Text2Image(HuggingFacePipelineNode):
 class FluxVariant(Enum):
     SCHNELL = "schnell"
     DEV = "dev"
-    FILL_DEV = "fill-dev"
-    CANNY_DEV = "canny-dev"
-    DEPTH_DEV = "depth-dev"
 
 
 class FluxQuantization(Enum):
@@ -531,7 +517,7 @@ class Flux(HuggingFacePipelineNode):
             HFT5(
                 repo_id="nunchaku-tech/nunchaku-t5",
                 path="awq-int4-flux.1-t5xxl.safetensors",
-            ),  
+            ),
         ]
 
     def _resolve_model_config(self) -> tuple[HFFlux, HFT5]:
@@ -551,7 +537,7 @@ class Flux(HuggingFacePipelineNode):
                         path="awq-int4-flux.1-t5xxl.safetensors",
                     ),
                 )
-            else:  
+            else:
                 return (
                     HFFlux(
                         repo_id="nunchaku-tech/nunchaku-flux.1-dev",
@@ -574,7 +560,7 @@ class Flux(HuggingFacePipelineNode):
                         path="awq-int4-flux.1-t5xxl.safetensors",
                     ),
                 )
-            else: 
+            else:
                 return (
                     HFFlux(
                         repo_id="nunchaku-tech/nunchaku-flux.1-dev",
@@ -595,12 +581,6 @@ class Flux(HuggingFacePipelineNode):
         return repo_id
 
     async def preload_model(self, context: ProcessingContext):
-        hf_token = await context.get_secret("HF_TOKEN")
-        if not hf_token:
-            raise ValueError(
-                "Flux is a gated model, please set the HF_TOKEN in Nodetool settings and accept the terms of use for the model"
-            )
-
         transformer_model, text_encoder_model = self._resolve_model_config()
 
         torch_dtype = (
@@ -611,16 +591,27 @@ class Flux(HuggingFacePipelineNode):
 
         log.info(f"Using torch_dtype: {torch_dtype}")
 
-        if self.quantization == FluxQuantization.INT4 or self.quantization == FluxQuantization.FP4:
+        if (
+            self.quantization == FluxQuantization.INT4
+            or self.quantization == FluxQuantization.FP4
+        ):
             assert transformer_model is not None
             assert text_encoder_model is not None
 
             # Ensure models are present in cache
-            if not await HF_FAST_CACHE.resolve(transformer_model.repo_id, transformer_model.path):
-                raise ValueError(f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded")
-            
-            if not await HF_FAST_CACHE.resolve(text_encoder_model.repo_id, text_encoder_model.path):
-                raise ValueError(f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded")
+            if not await HF_FAST_CACHE.resolve(
+                transformer_model.repo_id, transformer_model.path
+            ):
+                raise ValueError(
+                    f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded"
+                )
+
+            if not await HF_FAST_CACHE.resolve(
+                text_encoder_model.repo_id, text_encoder_model.path
+            ):
+                raise ValueError(
+                    f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded"
+                )
 
             from nodetool.huggingface.huggingface_local_provider import (
                 load_nunchaku_flux_pipeline,
@@ -628,7 +619,9 @@ class Flux(HuggingFacePipelineNode):
             from nodetool.ml.core.model_manager import ModelManager
 
             base_model = self._get_base_model(self.variant)
-            cache_key = f"{base_model.repo_id}:{self.variant.value}:{self.quantization.value}"
+            cache_key = (
+                f"{base_model.repo_id}:{self.variant.value}:{self.quantization.value}"
+            )
 
             self._pipeline = await load_nunchaku_flux_pipeline(
                 context=context,
@@ -654,7 +647,7 @@ class Flux(HuggingFacePipelineNode):
                 device="cpu",
                 token=hf_token,
             )
-        
+
             _enable_pytorch2_attention(self._pipeline)
             _apply_vae_optimizations(self._pipeline)
 
@@ -753,7 +746,6 @@ class Flux(HuggingFacePipelineNode):
         return await context.image_from_pil(image)
 
 
-
 class Chroma(HuggingFacePipelineNode):
     """
     Generates images from text prompts using Chroma, a text-to-image model based on Flux.
@@ -842,7 +834,7 @@ class Chroma(HuggingFacePipelineNode):
         return "lodestones/Chroma"
 
     async def preload_model(self, context: ProcessingContext):
-        torch_dtype = _select_diffusion_dtype()
+        torch_dtype = available_torch_dtype()
         # Load the pipeline with reduced precision when available
         self._pipeline = await self.load_model(
             context=context,
@@ -935,7 +927,12 @@ class QwenQuantization(str, Enum):
     INT4 = "int4"
 
 
-# TODO: Wait for diffusers release
+class QwenTextEncoderQuantization(str, Enum):
+    NF4 = "nf4"
+    NF8 = "nf8"
+    FP16 = "fp16"
+
+
 class QwenImage(HuggingFacePipelineNode):
     """
     Generates images from text prompts using Qwen-Image with support for Nunchaku quantization.
@@ -999,7 +996,6 @@ class QwenImage(HuggingFacePipelineNode):
             "*.txt",
             "scheduler/*",
             "vae/*",
-            "text_encoder/*",
             "tokenizer/*",
             "tokenizer_2/*",
         ]
@@ -1015,6 +1011,9 @@ class QwenImage(HuggingFacePipelineNode):
             HFQwenImage(
                 repo_id="nunchaku-tech/nunchaku-qwen-image",
                 path="svdq-fp4_r32-qwen-image.safetensors",
+            ),
+            HFQwen2_5_VL(
+                repo_id="Qwen/Qwen2.5-VL-7B-Instruct",
             ),
         ]
 
@@ -1060,7 +1059,7 @@ class QwenImage(HuggingFacePipelineNode):
 
     async def preload_model(self, context: ProcessingContext):
         if self._is_nunchaku_model():
-            await self._load_nunchaku_model(context, _select_diffusion_dtype())
+            await self._load_nunchaku_model(context, available_torch_dtype())
         else:
             await self._load_full_precision_pipeline(context)
 
@@ -1069,7 +1068,7 @@ class QwenImage(HuggingFacePipelineNode):
             f"Loading Qwen-Image pipeline from {self.get_model_id()} without quantization..."
         )
 
-        torch_dtype = _select_diffusion_dtype()
+        torch_dtype = available_torch_dtype()
 
         # Ensure model is present in cache
         if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
@@ -1091,10 +1090,12 @@ class QwenImage(HuggingFacePipelineNode):
     async def _load_nunchaku_model(
         self,
         context: ProcessingContext,
-        torch_dtype,
+        torch_dtype: torch.dtype,
     ):
         """Load Qwen-Image pipeline using a Nunchaku SVDQ transformer file."""
-        from nodetool.huggingface.huggingface_local_provider import load_nunchaku_qwen_pipeline
+        from nodetool.huggingface.huggingface_local_provider import (
+            load_nunchaku_qwen_pipeline,
+        )
 
         model = self._resolve_model_config()
 
@@ -1105,6 +1106,7 @@ class QwenImage(HuggingFacePipelineNode):
             node_id=self.id,
             pipeline_class=QwenImagePipeline,
             base_model_id="Qwen/Qwen-Image",
+            torch_dtype=torch_dtype,
         )
 
     async def move_to_device(self, device: str):
@@ -1408,9 +1410,7 @@ class FluxControl(HuggingFacePipelineNode):
                 return self.model, None, None
             return HFControlNetFlux(repo_id=base_model_id), None, None
 
-        precision = (
-            "fp4" if quantization == FluxControlQuantization.FP4 else "int4"
-        )
+        precision = "fp4" if quantization == FluxControlQuantization.FP4 else "int4"
         transformer_model = HFControlNetFlux(
             repo_id=f"nunchaku-tech/nunchaku-flux.1-{variant_key}",
             path=f"svdq-{precision}_r32-flux.1-{variant_key}.safetensors",
@@ -1424,7 +1424,6 @@ class FluxControl(HuggingFacePipelineNode):
             allow_patterns=FLUX_CONTROL_BASE_ALLOW_PATTERNS,
         )
         return base_model, transformer_model, text_encoder_model
-
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:

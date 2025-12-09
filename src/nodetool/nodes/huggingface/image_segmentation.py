@@ -13,8 +13,7 @@ from nodetool.metadata.types import (
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.stable_diffusion_base import (
-    ModelVariant,
-    _select_diffusion_dtype,
+    available_torch_dtype,
 )
 from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
@@ -135,7 +134,7 @@ class SAM2Segmentation(HuggingFacePipelineNode):
         import torch
         from sam2.sam2_image_predictor import SAM2ImagePredictor
 
-        torch_dtype = _select_diffusion_dtype()
+        torch_dtype = available_torch_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_id="facebook/sam2-hiera-large",

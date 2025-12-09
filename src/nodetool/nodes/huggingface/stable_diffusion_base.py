@@ -389,7 +389,9 @@ class StableDiffusionXLQuantization(Enum):
     INT4 = "int4"
 
 
-async def load_loras(pipeline: Any, loras: list[HFLoraSDConfig] | list[HFLoraSDXLConfig]):
+async def load_loras(
+    pipeline: Any, loras: list[HFLoraSDConfig] | list[HFLoraSDXLConfig]
+):
     log.debug(f"Loading LoRAs. Total LoRAs provided: {len(loras)}")
     loras = [lora for lora in loras if lora.lora.is_set()]  # type: ignore
     log.debug(f"LoRAs after filtering (only set ones): {len(loras)}")
@@ -479,22 +481,8 @@ def upscale_latents(latents: torch.Tensor, scale_factor: int = 2) -> torch.Tenso
     return upscaled
 
 
-class ModelVariant(Enum):
-    DEFAULT = "default"
-    FP16 = "fp16"
-    FP32 = "fp32"
-    BF16 = "bf16"
-
-
-def _select_diffusion_dtype(variant: ModelVariant | None = None) -> "torch.dtype":
+def available_torch_dtype() -> "torch.dtype":
     import torch
-
-    if variant == ModelVariant.FP32:
-        return torch.float32
-    if variant == ModelVariant.FP16:
-        return torch.float16
-    if variant == ModelVariant.BF16:
-        return torch.bfloat16
 
     # Prefer BF16 on capable GPUs (PyTorch 2 optimization path), otherwise fall back.
     try:
@@ -513,10 +501,8 @@ def _select_diffusion_dtype(variant: ModelVariant | None = None) -> "torch.dtype
 
 class StableDiffusionBaseNode(HuggingFacePipelineNode):
 
-    variant: ClassVar[ModelVariant] = ModelVariant.DEFAULT
-
     def get_torch_dtype(self) -> "torch.dtype":
-        return _select_diffusion_dtype()
+        return available_torch_dtype()
 
     async def preload_model(self, context: ProcessingContext):
         """Preload the Stable Diffusion model and set up pipeline."""
@@ -549,7 +535,9 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
     @classmethod
     def get_scheduler_class(cls, scheduler: StableDiffusionScheduler):
         from diffusers.schedulers.scheduling_dpmsolver_sde import DPMSolverSDEScheduler
-        from diffusers.schedulers.scheduling_euler_discrete import EulerDiscreteScheduler
+        from diffusers.schedulers.scheduling_euler_discrete import (
+            EulerDiscreteScheduler,
+        )
         from diffusers.schedulers.scheduling_lms_discrete import LMSDiscreteScheduler
         from diffusers.schedulers.scheduling_ddim import DDIMScheduler
         from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
@@ -557,7 +545,9 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         from diffusers.schedulers.scheduling_dpmsolver_multistep import (
             DPMSolverMultistepScheduler,
         )
-        from diffusers.schedulers.scheduling_deis_multistep import DEISMultistepScheduler
+        from diffusers.schedulers.scheduling_deis_multistep import (
+            DEISMultistepScheduler,
+        )
         from diffusers.schedulers.scheduling_pndm import PNDMScheduler
         from diffusers.schedulers.scheduling_euler_ancestral_discrete import (
             EulerAncestralDiscreteScheduler,
@@ -565,7 +555,9 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         from diffusers.schedulers.scheduling_unipc_multistep import (
             UniPCMultistepScheduler,
         )
-        from diffusers.schedulers.scheduling_k_dpm_2_discrete import KDPM2DiscreteScheduler
+        from diffusers.schedulers.scheduling_k_dpm_2_discrete import (
+            KDPM2DiscreteScheduler,
+        )
         from diffusers.schedulers.scheduling_dpmsolver_singlestep import (
             DPMSolverSinglestepScheduler,
         )
@@ -706,7 +698,9 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         if self.ip_adapter_model.repo_id != "" and self.ip_adapter_model.path:
             if self._pipeline is None:
                 log.error("Pipeline not initialized when loading IP Adapter")
-                raise ValueError("Pipeline must be initialized before loading IP Adapter")
+                raise ValueError(
+                    "Pipeline must be initialized before loading IP Adapter"
+                )
 
             if not hasattr(self._pipeline, "load_ip_adapter"):
                 log.error("Current pipeline does not support IP Adapter loading")
@@ -930,10 +924,8 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
 
 class StableDiffusionXLBase(HuggingFacePipelineNode):
 
-    variant: ClassVar[ModelVariant] = ModelVariant.DEFAULT
-
     def get_torch_dtype(self) -> torch.dtype:
-        return _select_diffusion_dtype()
+        return available_torch_dtype()
 
     async def preload_model(self, context: ProcessingContext):
         """Preload the Stable Diffusion XL model and set up pipeline."""
@@ -962,7 +954,9 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
     @classmethod
     def get_scheduler_class(cls, scheduler: StableDiffusionScheduler):
         from diffusers.schedulers.scheduling_dpmsolver_sde import DPMSolverSDEScheduler
-        from diffusers.schedulers.scheduling_euler_discrete import EulerDiscreteScheduler
+        from diffusers.schedulers.scheduling_euler_discrete import (
+            EulerDiscreteScheduler,
+        )
         from diffusers.schedulers.scheduling_lms_discrete import LMSDiscreteScheduler
         from diffusers.schedulers.scheduling_ddim import DDIMScheduler
         from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
@@ -970,7 +964,9 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         from diffusers.schedulers.scheduling_dpmsolver_multistep import (
             DPMSolverMultistepScheduler,
         )
-        from diffusers.schedulers.scheduling_deis_multistep import DEISMultistepScheduler
+        from diffusers.schedulers.scheduling_deis_multistep import (
+            DEISMultistepScheduler,
+        )
         from diffusers.schedulers.scheduling_pndm import PNDMScheduler
         from diffusers.schedulers.scheduling_euler_ancestral_discrete import (
             EulerAncestralDiscreteScheduler,
@@ -978,7 +974,9 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         from diffusers.schedulers.scheduling_unipc_multistep import (
             UniPCMultistepScheduler,
         )
-        from diffusers.schedulers.scheduling_k_dpm_2_discrete import KDPM2DiscreteScheduler
+        from diffusers.schedulers.scheduling_k_dpm_2_discrete import (
+            KDPM2DiscreteScheduler,
+        )
         from diffusers.schedulers.scheduling_dpmsolver_singlestep import (
             DPMSolverSinglestepScheduler,
         )
@@ -1262,9 +1260,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             path=path,
         )
 
-    def _resolve_sdxl_pipeline_model_id(
-        self, base_model: HFStableDiffusionXL
-    ) -> str:
+    def _resolve_sdxl_pipeline_model_id(self, base_model: HFStableDiffusionXL) -> str:
         repo_id = base_model.repo_id or "stabilityai/stable-diffusion-xl-base-1.0"
         repo_id_lower = repo_id.lower()
         if "nunchaku" in repo_id_lower and "sdxl" in repo_id_lower:

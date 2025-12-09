@@ -87,6 +87,8 @@ async def get_nunchaku_transformer(
     node_id: str,
     repo_id: str,
     path: str,
+    torch_dtype: torch.dtype = torch.bfloat16,
+    device: str | None = None,
 ) -> Any | None:
     """
     Get transformer kwargs when using a nunchaku model.
@@ -98,7 +100,10 @@ async def get_nunchaku_transformer(
         context: The context object
         model_class: The model class to load
         node_id: The node ID
-        precision: Optional precision override ('int4' or 'fp4'), auto-detected if None
+        repo_id: The repository ID
+        path: The path to the transformer file
+        torch_dtype: The torch dtype to use
+        device: The device to use
 
     Returns:
         dict: Pipeline kwargs with transformer if nunchaku SVDQ transformer is found
@@ -117,7 +122,7 @@ async def get_nunchaku_transformer(
         raise ValueError(
             "Nunchaku Flux requires a transformer filename containing 'svdq'."
         )
-    
+
     if precision not in path.lower():
         raise ValueError(
             f"Nunchaku Flux requires a transformer filename containing {precision}."
@@ -146,6 +151,7 @@ async def get_nunchaku_transformer(
         model_id=transformer_identifier,
         model_class=model_class,
         node_id=node_id,
-        torch_dtype=torch.bfloat16,
+        torch_dtype=torch_dtype,
+        device=device,
     )
     return transformer

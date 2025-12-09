@@ -40,8 +40,7 @@ from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineN
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     HF_CONTROLNET_MODELS,
     HF_CONTROLNET_XL_MODELS,
-    ModelVariant,
-    _select_diffusion_dtype,
+    available_torch_dtype,
     StableDiffusionBaseNode,
     StableDiffusionXLBase,
 )
@@ -113,7 +112,9 @@ def _enable_pytorch2_attention(pipeline: Any, enabled: bool = True):
         try:
             enable_sdpa()
             pipeline_name = type(pipeline).__name__
-            log.info("Enabled PyTorch 2 scaled dot product attention for %s", pipeline_name)
+            log.info(
+                "Enabled PyTorch 2 scaled dot product attention for %s", pipeline_name
+            )
         except Exception as e:
             log.warning("Failed to enable scaled dot product attention: %s", e)
     else:
@@ -343,7 +344,7 @@ class LoadImageToImageModel(HuggingFacePipelineNode):
     )
 
     async def preload_model(self, context: ProcessingContext):
-        torch_dtype = _select_diffusion_dtype()
+        torch_dtype = available_torch_dtype()
         await self.load_model(
             context=context,
             model_id=self.repo_id,
@@ -452,7 +453,7 @@ class ImageToImage(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
-        torch_dtype = _select_diffusion_dtype()
+        torch_dtype = available_torch_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_id=self.model.repo_id,
@@ -576,7 +577,9 @@ class StableDiffusionControlNet(StableDiffusionBaseNode):
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
         # Use PyTorch 2 attention optimizations while keeping MPS/controlnet compatibility
-        controlnet_dtype = torch.float32 if context.device == "mps" else _select_diffusion_dtype()
+        controlnet_dtype = (
+            torch.float32 if context.device == "mps" else available_torch_dtype()
+        )
         controlnet = await self.load_model(
             context=context,
             model_class=ControlNetModel,
@@ -662,7 +665,7 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
             path=self.model.path,
             safety_checker=None,
             config="Lykon/DreamShaper",
-            torch_dtype=_select_diffusion_dtype(),
+            torch_dtype=available_torch_dtype(),
         )
         assert self._pipeline is not None
         _enable_pytorch2_attention(self._pipeline)
@@ -745,7 +748,9 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
 
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
-        controlnet_dtype = torch.float32 if context.device == "mps" else _select_diffusion_dtype()
+        controlnet_dtype = (
+            torch.float32 if context.device == "mps" else available_torch_dtype()
+        )
         controlnet = await self.load_pipeline(
             context,
             "controlnet",
@@ -840,7 +845,7 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
                 path=self.model.path,
                 safety_checker=None,
                 config="Lykon/DreamShaper",
-                torch_dtype=_select_diffusion_dtype(),
+                torch_dtype=available_torch_dtype(),
                 variant=None,
             )
             assert self._pipeline is not None
@@ -928,7 +933,9 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
             raise ValueError(f"Model {self.model.repo_id} must be downloaded first")
 
         # Use float32 for MPS compatibility with controlnet models
-        controlnet_dtype = torch.float32 if context.device == "mps" else _select_diffusion_dtype()
+        controlnet_dtype = (
+            torch.float32 if context.device == "mps" else available_torch_dtype()
+        )
         controlnet_variant = None
         controlnet = await self.load_model(
             context=context,
@@ -1143,6 +1150,12 @@ class StableDiffusionLatentUpscaler(HuggingFacePipelineNode):
     _pipeline: StableDiffusionLatentUpscalePipeline | None = None
 
     @classmethod
+    def get_recommended_models(cls):
+        return [
+            HFImageToImage(repo_id="stabilityai/sd-x2-latent-upscaler"),
+        ]
+
+    @classmethod
     def get_basic_fields(cls):
         return [
             "latents",
@@ -1165,7 +1178,7 @@ class StableDiffusionLatentUpscaler(HuggingFacePipelineNode):
             model_class=StableDiffusionLatentUpscalePipeline,
             model_id="stabilityai/sd-x2-latent-upscaler",
             variant=None,
-            torch_dtype=_select_diffusion_dtype(),
+            torch_dtype=available_torch_dtype(),
         )
         assert self._pipeline is not None
         _enable_pytorch2_attention(self._pipeline)
@@ -1409,7 +1422,7 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
-        torch_dtype = _select_diffusion_dtype()
+        torch_dtype = available_torch_dtype()
         base_model, pipeline_model_id, transformer_model = self._prepare_sdxl_models()
         await self._load_sdxl_pipeline(
             context=context,
@@ -1484,8 +1497,10 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
 
     async def preload_model(self, context: ProcessingContext):
         if self._pipeline is None:
-            torch_dtype = _select_diffusion_dtype()
-            base_model, pipeline_model_id, transformer_model = self._prepare_sdxl_models()
+            torch_dtype = available_torch_dtype()
+            base_model, pipeline_model_id, transformer_model = (
+                self._prepare_sdxl_models()
+            )
             await self._load_sdxl_pipeline(
                 context=context,
                 pipeline_class=StableDiffusionXLInpaintPipeline,
@@ -1580,7 +1595,9 @@ class StableDiffusionXLControlNet(StableDiffusionXLBase):
 
     async def preload_model(self, context: ProcessingContext):
         await super().preload_model(context)
-        controlnet_dtype = torch.float32 if context.device == "mps" else _select_diffusion_dtype()
+        controlnet_dtype = (
+            torch.float32 if context.device == "mps" else available_torch_dtype()
+        )
         controlnet_variant = None
 
         controlnet = await self.load_model(
@@ -1687,7 +1704,9 @@ class StableDiffusionXLControlNetImg2ImgNode(StableDiffusionXLImg2Img):
             self._pipeline.to(device)
 
     async def preload_model(self, context: ProcessingContext):
-        controlnet_dtype = torch.float32 if context.device == "mps" else _select_diffusion_dtype()
+        controlnet_dtype = (
+            torch.float32 if context.device == "mps" else available_torch_dtype()
+        )
         controlnet_variant = None
 
         controlnet = await self.load_model(
@@ -1834,7 +1853,7 @@ class OmniGenNode(HuggingFacePipelineNode):
         return "Shitao/OmniGen-v1-diffusers"
 
     async def preload_model(self, context: ProcessingContext):
-        torch_dtype = _select_diffusion_dtype()
+        torch_dtype = available_torch_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_id="Shitao/OmniGen-v1-diffusers",
@@ -2088,7 +2107,9 @@ class QwenImageEdit(HuggingFacePipelineNode):
         )
 
         transformer_model = self._resolve_model_config(quantization)
-        cache_key = f"{transformer_model.repo_id}:{quantization.value}:qwen-image-edit-v1"
+        cache_key = (
+            f"{transformer_model.repo_id}:{quantization.value}:qwen-image-edit-v1"
+        )
 
         self._pipeline = await load_nunchaku_qwen_pipeline(
             context=context,
@@ -2110,7 +2131,7 @@ class QwenImageEdit(HuggingFacePipelineNode):
             self._pipeline.enable_attention_slicing()
 
     async def preload_model(self, context: ProcessingContext):
-        torch_dtype = _select_diffusion_dtype()
+        torch_dtype = available_torch_dtype()
         quantization = self.quantization
 
         if quantization in (
@@ -2312,7 +2333,6 @@ class FluxFill(HuggingFacePipelineNode):
     def get_model_id(self) -> str:
         return self._get_base_model(self.quantization)
 
-
     def _get_base_model(self, quantization: FluxFillQuantization) -> HFFluxFill:
         if quantization == FluxFillQuantization.FP16:
             if self.model.repo_id:
@@ -2340,9 +2360,7 @@ class FluxFill(HuggingFacePipelineNode):
 
     async def preload_model(self, context: ProcessingContext):
         torch_dtype = torch.bfloat16
-        base_model, transformer_model = self._resolve_model_config(
-            self.quantization
-        )
+        base_model, transformer_model = self._resolve_model_config(self.quantization)
 
         if transformer_model is not None:
             from nodetool.huggingface.huggingface_local_provider import (
@@ -2599,9 +2617,7 @@ class FluxKontext(HuggingFacePipelineNode):
         base_model = self._get_base_model()
 
         quantization = self.quantization
-        transformer_model, text_encoder_model = self._resolve_model_config(
-            quantization
-        )
+        transformer_model, text_encoder_model = self._resolve_model_config(quantization)
 
         log.info(
             "Preparing FLUX Kontext pipeline (base=%s, quantization=%s)",

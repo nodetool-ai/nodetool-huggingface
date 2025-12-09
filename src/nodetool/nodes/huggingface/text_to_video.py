@@ -13,8 +13,7 @@ from nodetool.metadata.types import (
 )
 from .huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.stable_diffusion_base import (
-    ModelVariant,
-    _select_diffusion_dtype,
+    available_torch_dtype,
 )
 from nodetool.workflows.types import NodeProgress
 
@@ -152,7 +151,7 @@ class CogVideoX(HuggingFacePipelineNode):
         import torch
         from diffusers.pipelines.cogvideo.pipeline_cogvideox import CogVideoXPipeline
 
-        torch_dtype = _select_diffusion_dtype()
+        torch_dtype = available_torch_dtype()
         self._pipeline = await self.load_model(
             context=context,
             model_class=CogVideoXPipeline,

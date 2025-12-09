@@ -2,8 +2,6 @@
 HuggingFace local provider implementation.
 
 This module implements the BaseProvider interface for locally cached HuggingFace models.
-- Language models: Only GGUF models are supported, using transformers for inference
-  with model IDs in format "repo_id:filename.gguf" (same as LlamaCpp provider)
 - Image models: Text2Image and ImageToImage using diffusion pipelines
   Supports both multi-file models (repo_id) and single-file models (repo_id:path.safetensors)
 - TTS models: KokoroTTS and other HuggingFace TTS models
@@ -11,10 +9,10 @@ This module implements the BaseProvider interface for locally cached HuggingFace
 
 import asyncio
 import base64
-from queue import Queue
-import threading
 import re
-from typing import Any, AsyncGenerator, List, Literal, Set
+import threading
+from queue import Queue
+from typing import Any, AsyncGenerator, List, Literal, Set, Dict
 from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
 from nodetool.providers.base import BaseProvider, register_provider
 from nodetool.providers.types import ImageBytes, TextToImageParams, ImageToImageParams
@@ -46,6 +44,10 @@ import torch
 from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
 from nodetool.ml.core.model_manager import ModelManager
 from huggingface_hub import hf_hub_download, _CACHED_NO_EXIST
+from nodetool.metadata.types import MessageTextContent, MessageImageContent
+from nodetool.io.media_fetch import fetch_uri_bytes_and_mime_sync
+from pydantic import BaseModel
+import json
 
 
 def _is_cuda_available() -> bool:
@@ -72,9 +74,6 @@ from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import (
     StableDiffusion3Pipeline,
 )
 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
-from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
-from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
-from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from nodetool.huggingface.nunchaku_utils import (
     get_nunchaku_text_encoder,
     get_nunchaku_transformer,
@@ -95,7 +94,6 @@ from diffusers.pipelines.flux.pipeline_flux_img2img import FluxImg2ImgPipeline
 from transformers import (
     AutoModelForSpeechSeq2Seq,
     AutoProcessor,
-    T5EncoderModel,
     TextStreamer,
     pipeline as create_pipeline,
 )
@@ -114,13 +112,7 @@ from nodetool.metadata.types import HFTextToSpeech
 
 from nodetool.workflows.recommended_models import get_recommended_models
 from nodetool.metadata.types import LanguageModel, VideoRef
-from transformers.models.auto import AutoModelForCausalLM, AutoTokenizer
 from transformers.pipelines import pipeline
-from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
-from diffusers.pipelines.wan.pipeline_wan import WanPipeline
-from nodetool.integrations.huggingface.huggingface_models import (
-    get_llamacpp_language_models_from_hf_cache,
-)
 from pathlib import Path
 from typing import TypeVar
 import os
@@ -146,9 +138,7 @@ def _is_mps_available() -> bool:
         return False
 
 
-def _is_node_model(
-    model_id: str, model_path: str | None, node_cls: Any
-) -> bool:
+def _is_node_model(model_id: str, model_path: str | None, node_cls: Any) -> bool:
     """Check if the model matches any of the node's recommended models."""
     for rec in node_cls.get_recommended_models():
         if rec.repo_id == model_id:
@@ -160,7 +150,7 @@ def _is_node_model(
             # it matches if model_path is None (dir) or if we accept any file in repo.
             # Usually strict match on repo_id is enough for repo-level recommendations.
             else:
-                 return True
+                return True
     return False
 
 
@@ -237,7 +227,7 @@ async def _ensure_file_cached(
         # Check again using fast cache
         cache_path = await HF_FAST_CACHE.resolve(repo_id, file_path)
         if cache_path:
-             return cache_path
+            return cache_path
         # If fast cache still doesn't see it (race condition or weird FS), fallback to standard
         return None
 
@@ -265,6 +255,22 @@ def _ensure_model_on_device(model: Any, device: str | None) -> Any:
     return model
 
 
+def _is_vram_error(exc: Exception) -> bool:
+    """Check if an exception indicates insufficient VRAM/GPU memory."""
+    error_msg = str(exc).lower()
+    vram_indicators = [
+        "out of memory",
+        "cuda out of memory",
+        "not enough gpu ram",
+        "some modules are dispatched on the cpu or the disk",
+        "make sure you have enough gpu ram",
+        "oom",
+        "cudnn_status_not_supported",
+        "cublas_status_alloc_failed",
+    ]
+    return any(indicator in error_msg for indicator in vram_indicators)
+
+
 async def load_pipeline(
     node_id: str,
     context: ProcessingContext,
@@ -275,7 +281,11 @@ async def load_pipeline(
     skip_cache: bool = False,
     **kwargs: Any,
 ):
-    """Load a HuggingFace pipeline model."""
+    """Load a HuggingFace pipeline model.
+
+    If loading fails due to insufficient VRAM, this function will attempt to
+    free cached models and retry once.
+    """
     if model_id == "" or model_id is None:
         raise ValueError("Please select a model")
 
@@ -286,7 +296,7 @@ async def load_pipeline(
         target_device = _resolve_hf_device(context, device or context.device)
         return _ensure_model_on_device(cached_model, target_device)
 
-    target_device = _resolve_hf_device(context, device or context.device)
+    # target_device = _resolve_hf_device(context, device or context.device)
 
     if (
         isinstance(model_id, str)
@@ -332,14 +342,54 @@ async def load_pipeline(
     )
     if "token" not in kwargs:
         kwargs["token"] = await context.get_secret("HF_TOKEN")
-    model = pipeline(
-        pipeline_task,  # type: ignore
-        model=model_id,
-        torch_dtype=torch_dtype,
-        device=target_device,
-        **kwargs,
-    )  # type: ignore
-    model = _ensure_model_on_device(model, target_device)
+
+    def _create_pipeline():
+        return pipeline(
+            pipeline_task,  # type: ignore
+            model=model_id,
+            torch_dtype=torch_dtype,
+            # device=target_device,
+            **kwargs,
+        )
+
+    # First attempt to load the pipeline
+    try:
+        model = _create_pipeline()
+    except (ValueError, RuntimeError) as exc:
+        # Also catch torch.cuda.OutOfMemoryError if available
+        if not _is_vram_error(exc):
+            raise
+
+        # VRAM error detected - try to free memory and retry
+        log.warning(
+            f"VRAM error while loading pipeline {model_id}: {exc}. "
+            "Attempting to free cached models and retry..."
+        )
+        context.post_message(
+            JobUpdate(
+                status="running",
+                message=f"Freeing VRAM and retrying load of {model_id}...",
+            )
+        )
+
+        # Aggressively free VRAM by clearing cached models
+        ModelManager.free_vram_if_needed(
+            reason=f"VRAM error loading pipeline {model_id}",
+            aggressive=True,
+        )
+
+        # Retry loading after freeing memory
+        try:
+            model = _create_pipeline()
+            log.info(f"Successfully loaded pipeline {model_id} after freeing VRAM")
+        except Exception as retry_exc:
+            log.error(
+                f"Failed to load pipeline {model_id} even after freeing VRAM: {retry_exc}"
+            )
+            raise
+
+    #  model = _ensure_model_on_device(model, target_device)
+
     ModelManager.set_model(node_id, cache_key, model)
     return model  # type: ignore
 
@@ -356,7 +406,11 @@ async def load_model(
     cache_key: str | None = None,
     **kwargs: Any,
 ) -> T:
-    """Load a HuggingFace model."""
+    """Load a HuggingFace model.
+
+    If loading fails due to insufficient VRAM, this function will attempt to
+    free cached models and retry once.
+    """
     if model_id == "":
         raise ValueError("Please select a model")
 
@@ -364,58 +418,100 @@ async def load_model(
 
     log.info(f"Loading model {model_id}/{path} from {target_device}")
 
+    # Always ensure cache_key is set
+    if cache_key is None:
+        cache_key = f"{model_id}_{model_class.__name__}_{path}"
+
     if not skip_cache:
-        if cache_key is None:
-            cache_key = f"{model_id}_{model_class.__name__}_{path}"
         cached_model = ModelManager.get_model(cache_key)
         if cached_model:
             return _ensure_model_on_device(cached_model, target_device)
 
-    if path:
-        cache_path = await HF_FAST_CACHE.resolve(model_id, path)
-        if not cache_path:
-            raise ValueError(f"Download model {model_id}/{path} first from recommended models")
+    async def _do_load() -> T:
+        """Inner function that performs the actual model loading."""
+        if path:
+            cache_path = await HF_FAST_CACHE.resolve(model_id, path)
+            if not cache_path:
+                raise ValueError(
+                    f"Download model {model_id}/{path} first from recommended models"
+                )
 
-        log.info(f"Loading model {model_id} from {cache_path}")
-        context.post_message(
-            JobUpdate(
-                status="running",
-                message=f"Loading model {model_id}",
+            log.info(f"Loading model {model_id} from {cache_path}")
+            context.post_message(
+                JobUpdate(
+                    status="running",
+                    message=f"Loading model {model_id}",
+                )
             )
-        )
 
-        if hasattr(model_class, "from_single_file"):
-            model = model_class.from_single_file(  # type: ignore
-                cache_path,
-                torch_dtype=torch_dtype,
-                variant=variant,
-                **kwargs,
-            )
+            if hasattr(model_class, "from_single_file"):
+                model = model_class.from_single_file(  # type: ignore
+                    cache_path,
+                    torch_dtype=torch_dtype,
+                    variant=variant,
+                    **kwargs,
+                )
+            else:
+                # Fallback to from_pretrained for classes without from_single_file
+                model = model_class.from_pretrained(  # type: ignore
+                    model_id,
+                    torch_dtype=torch_dtype,
+                    variant=variant,
+                    **kwargs,
+                )
         else:
-            # Fallback to from_pretrained for classes without from_single_file
+            log.info(f"Loading model {model_id} from HuggingFace")
+            context.post_message(
+                JobUpdate(
+                    status="running",
+                    message=f"Loading model {model_id} from HuggingFace",
+                )
+            )
+            if "token" not in kwargs:
+                kwargs["token"] = await context.get_secret("HF_TOKEN")
+
             model = model_class.from_pretrained(  # type: ignore
                 model_id,
                 torch_dtype=torch_dtype,
                 variant=variant,
                 **kwargs,
             )
-    else:
-        log.info(f"Loading model {model_id} from HuggingFace")
+        return model
+
+    # First attempt to load the model
+    try:
+        model = await _do_load()
+    except (ValueError, RuntimeError, torch.cuda.OutOfMemoryError) as exc:  # type: ignore[attr-defined]
+        if not _is_vram_error(exc):
+            raise
+
+        # VRAM error detected - try to free memory and retry
+        log.warning(
+            f"VRAM error while loading model {model_id}: {exc}. "
+            "Attempting to free cached models and retry..."
+        )
         context.post_message(
             JobUpdate(
                 status="running",
-                message=f"Loading model {model_id} from HuggingFace",
+                message=f"Freeing VRAM and retrying load of {model_id}...",
             )
         )
-        if "token" not in kwargs:
-            kwargs["token"] = await context.get_secret("HF_TOKEN")
 
-        model = model_class.from_pretrained(  # type: ignore
-            model_id,
-            torch_dtype=torch_dtype,
-            variant=variant,
-            **kwargs,
+        # Aggressively free VRAM by clearing cached models
+        ModelManager.free_vram_if_needed(
+            reason=f"VRAM error loading {model_id}",
+            aggressive=True,
         )
+
+        # Retry loading after freeing memory
+        try:
+            model = await _do_load()
+            log.info(f"Successfully loaded model {model_id} after freeing VRAM")
+        except Exception as retry_exc:
+            log.error(
+                f"Failed to load model {model_id} even after freeing VRAM: {retry_exc}"
+            )
+            raise
 
     model = _ensure_model_on_device(model, target_device)
     ModelManager.set_model(node_id, cache_key, model)
@@ -527,9 +623,9 @@ async def load_nunchaku_flux_pipeline(
     variant = _detect_flux_variant(repo_id, transformer_path)
     base_model_id = _flux_variant_to_base_model_id(variant)
     hf_token = await context.get_secret("HF_TOKEN")
-    if not hf_token:
+    if variant != "schnell" and not hf_token:
         raise ValueError(
-            "Flux is a gated model, please set the HF_TOKEN in Nodetool settings and accept the terms of use for the model: "
+            f"Flux-{variant} is a gated model, please set the HF_TOKEN in Nodetool settings and accept the terms of use for the model: "
             f"https://huggingface.co/{base_model_id}"
         )
 
@@ -543,6 +639,7 @@ async def load_nunchaku_flux_pipeline(
         repo_id=repo_id,
         path=transformer_path,
     )
+    transformer.set_attention_impl("nunchaku-fp16")
 
     text_encoder = await get_nunchaku_text_encoder(context, node_key)
 
@@ -572,52 +669,69 @@ async def load_nunchaku_qwen_pipeline(
     transformer_path: str,
     node_id: str | None,
     pipeline_class: Any,
-    base_model_id: str = "Qwen/Qwen-Image-Edit",
+    base_model_id: str,
+    cache_key: str | None = None,
+    torch_dtype: torch.dtype = torch.bfloat16,
 ) -> Any:
-    """Load a Qwen pipeline with a Nunchaku transformer."""
+    """Load a Qwen pipeline with a Nunchaku transformer and quantized text encoder.
+
+    Args:
+        context: Processing context
+        repo_id: Repository ID for the Nunchaku transformer
+        transformer_path: Path to the transformer file
+        node_id: Node ID for caching
+        pipeline_class: The pipeline class to use (QwenImagePipeline or QwenImageEditPipeline)
+        base_model_id: Base model ID for loading pipeline components
+        cache_key: Optional cache key for the pipeline
+        torch_dtype: The torch dtype to use
+    """
     from nunchaku.utils import get_gpu_memory
+    from transformers import Qwen2_5_VLForConditionalGeneration, BitsAndBytesConfig
 
     hf_token = await context.get_secret("HF_TOKEN")
-    torch_dtype = torch.bfloat16 # Qwen usually uses float16
-    cache_key = f"{repo_id}/{transformer_path}"
+    torch_dtype = torch.bfloat16
+    if cache_key is None:
+        cache_key = f"{repo_id}/{transformer_path}"
 
     cached_pipeline = ModelManager.get_model(cache_key)
     if cached_pipeline:
         return cached_pipeline
 
-    transformer = await get_nunchaku_transformer(
-        context=context,
-        model_class=NunchakuQwenImageTransformer2DModel,
-        node_id=node_id,
-        repo_id=repo_id,
-        path=transformer_path,
-    )
-    
     try:
+        # Load Nunchaku transformer
+        transformer = await get_nunchaku_transformer(
+            context=context,
+            model_class=NunchakuQwenImageTransformer2DModel,
+            node_id=node_id,
+            repo_id=repo_id,
+            path=transformer_path,
+            device=context.device,
+        )
         pipeline = pipeline_class.from_pretrained(
             base_model_id,
             transformer=transformer,
             torch_dtype=torch_dtype,
             token=hf_token,
         )
+        pipeline.enable_model_cpu_offload()
         if get_gpu_memory() > 18:
-            pipeline.enable_model_cpu_offload()
+            log.info("Enabling model CPU offload")
         else:
-            # use per-layer offloading for low VRAM. This only requires 3-4GB of VRAM.
-            transformer.set_offload(
-                True, use_pin_memory=False, num_blocks_on_gpu=1
-            )  # increase num_blocks_on_gpu if you have more VRAM
-            pipeline._exclude_from_cpu_offload.append("transformer")
-            pipeline.enable_sequential_cpu_offload()
+            log.info("Enabling model per-layer offloading")
+        # use per-layer offloading for low VRAM. This only requires 3-4GB of VRAM.
+        transformer.set_offload(
+            True, use_pin_memory=True, num_blocks_on_gpu=1
+        )  # increase num_blocks_on_gpu if you have more VRAM
+        pipeline._exclude_from_cpu_offload.append("transformer")
+        pipeline.enable_sequential_cpu_offload()
 
         if cache_key and node_id:
-            ModelManager.set_model(node_id, cache_key, pipeline)
+            ModelManager.set_model(node_id, text_encoder_repo, text_encoder)
         return pipeline
     except torch.OutOfMemoryError as exc:
         raise ValueError(
             "VRAM out of memory while loading Qwen with the Nunchaku transformer."
         ) from exc
-
 
 
 @register_provider(Provider.HuggingFace)
@@ -668,7 +782,9 @@ class HuggingFaceLocalProvider(BaseProvider):
             # Check if model_id is in "repo_id:path" format (single-file model)
             if params.model.path:
                 # Verify the file is cached locally
-                cache_path = await HF_FAST_CACHE.resolve(params.model.id, params.model.path)
+                cache_path = await HF_FAST_CACHE.resolve(
+                    params.model.id, params.model.path
+                )
                 if not cache_path:
                     cache_path = await _ensure_file_cached(
                         params.model.id,
@@ -701,7 +817,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                         )
                     else:
                         # Standard Flux loading
-                         pipeline = FluxPipeline.from_single_file(
+                        pipeline = FluxPipeline.from_single_file(
                             str(cache_path),
                             torch_dtype=(
                                 torch.bfloat16
@@ -733,27 +849,21 @@ class HuggingFaceLocalProvider(BaseProvider):
                         pipeline = StableDiffusionXLPipeline.from_single_file(
                             str(cache_path),
                             torch_dtype=(
-                                torch.float16
-                                if _is_cuda_available()
-                                else torch.float32
+                                torch.float16 if _is_cuda_available() else torch.float32
                             ),
                         )
                     elif "diffusers:StableDiffusionPipeline" in model_info.tags:
                         pipeline = StableDiffusionPipeline.from_single_file(
                             str(cache_path),
                             torch_dtype=(
-                                torch.float16
-                                if _is_cuda_available()
-                                else torch.float32
+                                torch.float16 if _is_cuda_available() else torch.float32
                             ),
                         )
                     elif "diffusers:StableDiffusion3Pipeline" in model_info.tags:
                         pipeline = StableDiffusion3Pipeline.from_single_file(
                             str(cache_path),
                             torch_dtype=(
-                                torch.float16
-                                if _is_cuda_available()
-                                else torch.float32
+                                torch.float16 if _is_cuda_available() else torch.float32
                             ),
                         )
                     elif "flux" in model_info.tags:
@@ -862,7 +972,9 @@ class HuggingFaceLocalProvider(BaseProvider):
             # Check if model_id is in "repo_id:path" format (single-file model)
             if params.model.path:
                 # Verify the file is cached locally
-                cache_path = await HF_FAST_CACHE.resolve(params.model.id, params.model.path)
+                cache_path = await HF_FAST_CACHE.resolve(
+                    params.model.id, params.model.path
+                )
                 if not cache_path:
                     raise ValueError(
                         await _ensure_file_cached(
@@ -881,7 +993,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 if _is_node_model(params.model.id, params.model.path, FluxFill):
                     if _is_nunchaku_transformer(params.model.id, params.model.path):
                         # Flux Fill Nunchaku support
-                         pipeline = await load_nunchaku_flux_pipeline(
+                        pipeline = await load_nunchaku_flux_pipeline(
                             context=context,
                             repo_id=params.model.id,
                             transformer_path=params.model.path,
@@ -900,7 +1012,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                         )
                 elif _is_node_model(params.model.id, params.model.path, QwenImageEdit):
                     if _is_nunchaku_transformer(params.model.id, params.model.path):
-                         pipeline = await load_nunchaku_qwen_pipeline(
+                        pipeline = await load_nunchaku_qwen_pipeline(
                             context=context,
                             repo_id=params.model.id,
                             transformer_path=params.model.path,
@@ -919,15 +1031,6 @@ class HuggingFaceLocalProvider(BaseProvider):
                         transformer_path=params.model.path,
                         node_id=node_id,
                     )
-                elif _is_flux_gguf_model(params.model.id, params.model.path):
-                    pipeline = await load_flux_gguf_pipeline(
-                        repo_id=params.model.id,
-                        file_path=params.model.path,
-                        context=context,
-                        task="image2image",
-                        node_id=node_id,
-                    )
-                    use_cpu_offload = True
                 else:
                     # Verify the file is cached locally
                     cache_path = await HF_FAST_CACHE.resolve(
@@ -959,27 +1062,21 @@ class HuggingFaceLocalProvider(BaseProvider):
                         pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
                             str(cache_path),
                             torch_dtype=(
-                                torch.float16
-                                if _is_cuda_available()
-                                else torch.float32
+                                torch.float16 if _is_cuda_available() else torch.float32
                             ),
                         )
                     elif "diffusers:StableDiffusionXLPipeline" in model_info.tags:
                         pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
                             str(cache_path),
                             torch_dtype=(
-                                torch.float16
-                                if _is_cuda_available()
-                                else torch.float32
+                                torch.float16 if _is_cuda_available() else torch.float32
                             ),
                         )
                     elif "diffusers:StableDiffusion3Pipeline" in model_info.tags:
                         pipeline = StableDiffusion3Img2ImgPipeline.from_single_file(
                             str(cache_path),
                             torch_dtype=(
-                                torch.float16
-                                if _is_cuda_available()
-                                else torch.float32
+                                torch.float16 if _is_cuda_available() else torch.float32
                             ),
                         )
                     elif "flux" in model_info.tags:
@@ -1323,8 +1420,12 @@ class HuggingFaceLocalProvider(BaseProvider):
             ValueError: If required parameters are missing or context not provided
             RuntimeError: If generation fails
         """
-        from nodetool.nodes.huggingface.text_to_video import AutoencoderKLWan, WanPipeline
+        from nodetool.nodes.huggingface.text_to_video import (
+            AutoencoderKLWan,
+            WanPipeline,
+        )
         from nodetool.nodes.huggingface.text_to_video import pipeline_progress_callback
+
         if context is None:
             raise ValueError(
                 "ProcessingContext is required for HuggingFace text-to-video generation"
@@ -1422,27 +1523,16 @@ class HuggingFaceLocalProvider(BaseProvider):
         return video_ref
 
     async def get_available_language_models(self) -> List[LanguageModel]:
-        """Get available HuggingFace GGUF language models.
+        """Get available HuggingFace language models.
 
-        Returns GGUF models available in the local HuggingFace cache.
-        Uses the same model ID syntax as LlamaCpp provider: "repo_id:filename.gguf"
+        Returns models available in the local HuggingFace cache.
 
         Returns:
-            List of LanguageModel instances for HuggingFace GGUF models
+            List of LanguageModel instances for HuggingFace models
         """
-        models = await get_llamacpp_language_models_from_hf_cache()
-        # Update provider to HuggingFace for these models
-        hf_models = [
-            LanguageModel(
-                id=model.id,  # Already in "repo_id:filename" format
-                name=model.name,
-                provider=Provider.HuggingFace,
-                supported_tasks=["text_generation"],
-            )
-            for model in models
-        ]
-        log.debug(f"Found {len(hf_models)} HuggingFace GGUF models in HF cache")
-        return hf_models
+        models = await get_hf_language_models_from_hf_cache()
+        log.debug(f"Found {len(models)} HuggingFace models in HF cache")
+        return models
 
     async def get_available_image_models(self) -> List[ImageModel]:
         """Get available HuggingFace image models.
@@ -1583,198 +1673,166 @@ class HuggingFaceLocalProvider(BaseProvider):
         return models
 
     @staticmethod
-    def _parse_model_spec(model: str) -> tuple[str, str | None, bool]:
-        """Return repo_id, optional filename, and GGUF flag from model spec."""
+    def _parse_model_spec(model: str) -> tuple[str, str | None]:
+        """Return repo_id, optional filename from model spec."""
         if ":" not in model:
-            return model, None, False
+            return model, None
         parts = model.split(":", 1)
         if len(parts) != 2 or not parts[0] or not parts[1]:
             raise ValueError(f"Invalid model spec: {model}")
         repo_id, filename = parts
-        is_gguf = filename.lower().endswith(".gguf")
-        return repo_id, filename, is_gguf
+        return repo_id, filename
 
-    @staticmethod
-    def _build_prompt_from_messages(messages: Sequence[Message]) -> str:
-        """Convert simple text-only chat history into a prompt string."""
-        system_parts: list[str] = []
-        user_prompt: str | None = None
+    def _load_image_data(self, image_ref) -> bytes:
+        """Load image data from an ImageRef."""
+        if hasattr(image_ref, "data") and image_ref.data is not None:
+            return image_ref.data
 
-        for msg in messages:
-            if isinstance(msg.content, str):
-                content = msg.content.strip()
-            elif msg.content is None:
-                content = ""
+        uri = getattr(image_ref, "uri", "") if hasattr(image_ref, "uri") else ""
+        if not uri:
+            raise ValueError("ImageRef has no data or URI")
+
+        _mime, data = fetch_uri_bytes_and_mime_sync(uri)
+        return data
+
+    def convert_message(self, message: Message) -> Dict[str, Any]:
+        """
+        Convert an internal message to HF dict format.
+        Preserves PIL images in content list for further processing.
+        """
+        if message.role == "tool":
+            if isinstance(message.content, BaseModel):
+                content = message.content.model_dump_json()
+            elif isinstance(message.content, dict):
+                content = json.dumps(message.content)
+            elif isinstance(message.content, list):
+                content = json.dumps([part.model_dump() for part in message.content])
+            elif isinstance(message.content, str):
+                content = message.content
             else:
-                raise ValueError(
-                    "HuggingFace local provider only supports text messages for local models"
-                )
+                content = json.dumps(message.content)
 
-            if msg.role == "system" and content:
-                system_parts.append(content)
-            elif msg.role == "user" and content:
-                user_prompt = content
+            return {"role": "tool", "content": content, "name": message.name}
 
-        if user_prompt is None:
-            raise ValueError(
-                "HuggingFace text generation requires at least one user message with text content"
-            )
-
-        if system_parts:
-            return "\n\n".join(system_parts + [user_prompt])
-        return user_prompt
-
-    async def _stream_gguf_generation(
-        self,
-        messages: Sequence[Message],
-        repo_id: str,
-        filename: str | None,
-        max_tokens: int,
-        temperature: float,
-        top_p: float,
-        do_sample: bool,
-    ) -> AsyncIterator[Chunk]:
-        if not filename:
-            raise ValueError("GGUF model path is required for HuggingFace local models")
-
-        chat: list[dict[str, str]] = []
-        for msg in messages:
-            if isinstance(msg.content, str):
-                content = msg.content
-            elif isinstance(msg.content, list):
-                raise ValueError(
-                    "HuggingFace GGUF models do not support multimodal content. "
-                    "Please use text-only messages."
-                )
-            else:
+        elif message.role == "system":
+            if message.content is None:
                 content = ""
-            chat.append({"role": msg.role, "content": content})
+            elif isinstance(message.content, str):
+                content = message.content
+            else:
+                text_parts = [
+                    part.text
+                    for part in message.content
+                    if isinstance(part, MessageTextContent)
+                ]
+                content = "\n".join(text_parts)
+            return {"role": "system", "content": content}
 
-        cache_key = f"{repo_id}:{filename}:text-generation"
-        cached_pipeline = ModelManager.get_model(cache_key)
+        elif message.role == "user":
+            if isinstance(message.content, str):
+                return {"role": "user", "content": message.content}
 
-        if not cached_pipeline:
-            cache_path = await HF_FAST_CACHE.resolve(
-                repo_id, filename
-            )  # pyright: ignore[reportArgumentType]
-            if not cache_path:
-                await _ensure_file_cached(
-                    repo_id,
-                    filename,
-                )
+            # Handle list content
+            content_list = []
+            for part in message.content:
+                if isinstance(part, MessageTextContent):
+                    content_list.append({"type": "text", "text": part.text})
+                elif isinstance(part, MessageImageContent):
+                    # Load image to PIL
+                    data = self._load_image_data(part.image)
+                    img = Image.open(io.BytesIO(data))
+                    # Store PIL image directly; will be extracted later
+                    content_list.append({"type": "image", "image": img})
 
-            log.info(f"Loading GGUF model {repo_id}/{filename}")
-            hf_model = AutoModelForCausalLM.from_pretrained(
-                repo_id,
-                torch_dtype=torch.float32,
-                device_map="auto",
-                gguf_file=filename,
-            )
-            tokenizer = AutoTokenizer.from_pretrained(
-                repo_id,
-                gguf_file=filename,
-            )
-            cached_pipeline = pipeline(
-                "text-generation", model=hf_model, tokenizer=tokenizer
-            )
-            ModelManager.set_model(node_id, cache_key, cached_pipeline)
+            return {"role": "user", "content": content_list}
 
-        tokenizer = cached_pipeline.tokenizer
-        assert tokenizer is not None
-        formatted_prompt = tokenizer.apply_chat_template(
-            chat, tokenize=False, add_generation_prompt=True
-        )
+        elif message.role == "assistant":
+            # For assistant, we mainly handle text content and tool calls if we supported them
+            content = ""
+            if message.content is None:
+                content = ""
+            elif isinstance(message.content, str):
+                content = message.content
+            else:
+                text_parts = [
+                    part.text
+                    for part in message.content
+                    if isinstance(part, MessageTextContent)
+                ]
+                content = "\n".join(text_parts)
 
-        token_queue: Queue = Queue()
+            msg_dict = {"role": "assistant", "content": content}
 
-        class AsyncTextStreamer(TextStreamer):
-            def __init__(self, tokenizer, skip_prompt=True, **decode_kwargs):
-                super().__init__(tokenizer, skip_prompt, **decode_kwargs)
-                self.token_queue = token_queue
+            # TODO: Handle tool calls formatting if HF supports it in standard templates
+            # For now, we omit complex tool_call structures as apply_chat_template conventions vary
 
-            def put(self, value):
-                if len(value.shape) > 1 and value.shape[0] > 1:
-                    raise ValueError("TextStreamer only supports batch size 1")
-                elif len(value.shape) > 1:
-                    value = value[0]
+            return msg_dict
 
-                if self.skip_prompt and self.next_tokens_are_prompt:
-                    self.next_tokens_are_prompt = False
-                    return
+        else:
+            # Fallback
+            content = str(message.content) if message.content else ""
+            return {"role": message.role, "content": content}
 
-                text = self.tokenizer.decode(
-                    value, skip_special_tokens=True
-                )  # pyright: ignore[reportAttributeAccessIssue]
-                if text:
-                    self.token_queue.put(text)
-
-            def end(self):
-                self.token_queue.put(None)
-
-        streamer = AsyncTextStreamer(
-            tokenizer,
-            skip_prompt=True,
-            skip_special_tokens=True,
-        )
-
-        def generate():
-            generation_kwargs = {
-                "max_new_tokens": max_tokens,
-                "temperature": temperature,
-                "top_p": top_p,
-                "do_sample": do_sample,
-                "streamer": streamer,
-                "return_full_text": False,
-            }
-            cached_pipeline(formatted_prompt, **generation_kwargs)  # type: ignore[reportArgumentType]
-
-        thread = threading.Thread(target=generate)
-        thread.start()
-
-        try:
-            while True:
-                await asyncio.sleep(0.01)
-                while not token_queue.empty():
-                    token = token_queue.get_nowait()
-                    if token is None:
-                        return
-                    yield Chunk(content=token, done=False, content_type="text")
-                if not thread.is_alive():
-                    while not token_queue.empty():
-                        token = token_queue.get_nowait()
-                        if token is None:
-                            return
-                        yield Chunk(content=token, done=False, content_type="text")
-                    break
-        finally:
-            thread.join(timeout=1.0)
+        # Helper to convert messages to prompt is no longer needed as we use apply_chat_template
+        return ""
 
     async def _stream_pipeline_generation(
         self,
         repo_id: str,
-        prompt: str,
+        messages: Sequence[Message],
         max_tokens: int,
         temperature: float,
         top_p: float,
         do_sample: bool,
         context: ProcessingContext,
         node_id: str | None,
+        quantization: str = "fp16",
     ) -> AsyncIterator[Chunk]:
+        from transformers import BitsAndBytesConfig
+
         cached_pipeline = ModelManager.get_model(repo_id)
 
         if not cached_pipeline:
             log.info(f"Loading HuggingFace pipeline model {repo_id}")
+            load_kwargs = {}
+            if quantization == "nf4":
+                load_kwargs["model_kwargs"] = {
+                    "quantization_config": BitsAndBytesConfig(
+                        load_in_4bit=True,
+                        bnb_4bit_quant_type="nf4",
+                        bnb_4bit_use_double_quant=True,
+                        bnb_4bit_compute_dtype=torch.bfloat16,
+                    )
+                }
+            elif quantization == "nf8":
+                load_kwargs["model_kwargs"] = {
+                    "quantization_config": BitsAndBytesConfig(
+                        load_in_8bit=True,
+                        bnb_8bit_quant_type="nf8",
+                        bnb_8bit_use_double_quant=True,
+                        bnb_8bit_compute_dtype=torch.bfloat16,
+                    )
+                }
             cached_pipeline = await load_pipeline(
                 node_id=node_id,
                 context=context,
                 pipeline_task="text-generation",
                 model_id=repo_id,
+                **load_kwargs,
             )
             ModelManager.set_model(node_id, repo_id, cached_pipeline)
 
         tokenizer = cached_pipeline.tokenizer
         if tokenizer is None:
             raise ValueError("Tokenizer missing from HuggingFace pipeline")
+
+        # Apply chat template
+        # Ensure messages are in the format expected by HF (list of dicts)
+        hf_messages = [self.convert_message(msg) for msg in messages]
+
+        prompt = tokenizer.apply_chat_template(
+            hf_messages, tokenize=False, add_generation_prompt=True
+        )
 
         token_queue: Queue = Queue()
 
@@ -1818,6 +1876,170 @@ class HuggingFaceLocalProvider(BaseProvider):
                 "return_full_text": False,
             }
             cached_pipeline(prompt, **generation_kwargs)  # type: ignore[reportArgumentType]
+
+        thread = threading.Thread(target=generate)
+        thread.start()
+
+        try:
+            while True:
+                await asyncio.sleep(0.01)
+                while not token_queue.empty():
+                    token = token_queue.get_nowait()
+                    if token is None:
+                        return
+                    yield Chunk(content=token, done=False, content_type="text")
+                if not thread.is_alive():
+                    while not token_queue.empty():
+                        token = token_queue.get_nowait()
+                        if token is None:
+                            return
+                        yield Chunk(content=token, done=False, content_type="text")
+                    break
+        finally:
+            thread.join(timeout=1.0)
+
+    @staticmethod
+    def _extract_text_from_output(outputs: Any) -> str:
+        """Normalize output across pipeline variants."""
+        if isinstance(outputs, list) and len(outputs) > 0:
+            first = outputs[0]
+            if isinstance(first, dict):
+                for key in [
+                    "generated_text",
+                    "answer",
+                    "text",
+                    "output_text",
+                ]:
+                    if key in first and isinstance(first[key], str):
+                        return first[key]  # type: ignore
+            if isinstance(first, str):
+                return first
+        return str(outputs)
+
+    async def _stream_image_text_to_text(
+        self,
+        repo_id: str,
+        messages: Sequence[Message],
+        max_tokens: int,
+        context: ProcessingContext,
+        node_id: str | None,
+        quantization: str = "fp16",
+    ) -> AsyncIterator[Chunk]:
+        """Stream generation for image-text-to-text models."""
+        from transformers import BitsAndBytesConfig, AutoProcessor, AutoModelForCausalLM
+
+        # Extract images and clean messages
+        # Convert messages and extract images
+        cleaned_messages = []
+        pil_images = []
+
+        for msg in messages:
+            # Use convert_message to standardize
+            converted = self.convert_message(msg)
+
+            # Post-process for VLM: extract PIL images from content list
+            if isinstance(converted.get("content"), list):
+                new_content = []
+                for item in converted["content"]:
+                    if item.get("type") == "image" and "image" in item:
+                        # Extract PIL image
+                        pil_images.append(item["image"])
+                        # Keep placeholder
+                        new_content.append({"type": "image"})
+                    else:
+                        new_content.append(item)
+                converted["content"] = new_content
+
+            cleaned_messages.append(converted)
+
+        # Load processor
+        processor = await load_model(
+            node_id=node_id,
+            context=context,
+            model_class=AutoProcessor,
+            model_id=repo_id,
+        )
+
+        load_kwargs = {"device_map": "auto"}
+        if quantization == "nf4":
+            load_kwargs["quantization_config"] = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+            )
+        elif quantization == "nf8":
+            load_kwargs["quantization_config"] = BitsAndBytesConfig(
+                load_in_8bit=True,
+                bnb_8bit_quant_type="nf8",
+                bnb_8bit_use_double_quant=True,
+                bnb_8bit_compute_dtype=torch.bfloat16,
+            )
+
+        # Load model using AutoModelForCausalLM as requested for VL models
+        model = await load_model(
+            node_id=node_id,
+            context=context,
+            model_class=AutoModelForCausalLM,  # User guide suggests this for Qwen2.5-VL/LLaVA
+            model_id=repo_id,
+            **load_kwargs,
+        )
+
+        # Prepare inputs
+        def _prepare_inputs():
+            return processor.apply_chat_template(
+                cleaned_messages,
+                add_generation_prompt=True,
+                return_tensors="pt",
+                tokenize=True,
+                images=pil_images if pil_images else None,
+            ).to(model.device)
+
+        inputs = await asyncio.to_thread(_prepare_inputs)
+
+        # Output streamer
+        token_queue: Queue = Queue()
+
+        # We need a streamer that puts into our queue
+        # Reusing the class defined inside _stream_pipeline_generation is not possible cleanly unless we move it out or duplicate.
+        # Duplicating for now since the other method has it inline.
+
+        class AsyncTextStreamer(TextStreamer):
+            def __init__(self, tokenizer, skip_prompt=True, **decode_kwargs):
+                super().__init__(tokenizer, skip_prompt, **decode_kwargs)
+                self.token_queue = token_queue
+
+            def put(self, value):
+                if len(value.shape) > 1 and value.shape[0] > 1:
+                    raise ValueError("TextStreamer only supports batch size 1")
+                elif len(value.shape) > 1:
+                    value = value[0]
+
+                if self.skip_prompt and self.next_tokens_are_prompt:
+                    self.next_tokens_are_prompt = False
+                    return
+
+                text = self.tokenizer.decode(value, skip_special_tokens=True)
+                if text:
+                    self.token_queue.put(text)
+
+            def end(self):
+                self.token_queue.put(None)
+
+        streamer = AsyncTextStreamer(
+            processor.tokenizer,  # Processor should have tokenizer
+            skip_prompt=True,
+            skip_special_tokens=True,
+        )
+
+        def generate():
+            model.generate(
+                **(
+                    inputs if isinstance(inputs, dict) else {"input_ids": inputs}
+                ),  # apply_chat_template returns tensor or dict
+                max_new_tokens=max_tokens,
+                streamer=streamer,
+            )
 
         thread = threading.Thread(target=generate)
         thread.start()
@@ -1906,6 +2128,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         max_tokens: int = 8192,
         context_window: int = 4096,
         response_format: dict | None = None,
+        quantization: str = "fp16",
         **kwargs: Any,
     ) -> AsyncIterator[Chunk]:
         """Stream message completions using HuggingFace GGUF models.
@@ -1917,6 +2140,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             max_tokens: Maximum tokens to generate
             context_window: Maximum tokens to consider for context
             response_format: Optional response schema (not supported for HF GGUF models)
+            quantization: Quantization method to use (nf4 for 4-bit, nf8 for 8-bit, fp16 for default)
             **kwargs: Additional arguments (temperature, top_p, do_sample, context)
 
         Yields:
@@ -1940,32 +2164,32 @@ class HuggingFaceLocalProvider(BaseProvider):
         do_sample = kwargs.get("do_sample", True)
         node_id = kwargs.get("node_id")
 
-        repo_id, filename, is_gguf = self._parse_model_spec(model)
-
-        if is_gguf:
-            async for chunk in self._stream_gguf_generation(
-                messages=messages,
+        pipeline_task = kwargs.get("pipeline_task")
+        if pipeline_task == "image-text-to-text":
+            repo_id, _ = self._parse_model_spec(model)
+            async for chunk in self._stream_image_text_to_text(
                 repo_id=repo_id,
-                filename=filename,
+                messages=messages,
                 max_tokens=max_tokens,
-                temperature=temperature,
-                top_p=top_p,
-                do_sample=do_sample,
+                context=context,
+                node_id=node_id,
+                quantization=quantization,
             ):
                 yield chunk
             return
 
-        prompt = self._build_prompt_from_messages(messages)
+        repo_id, filename = self._parse_model_spec(model)
 
         async for chunk in self._stream_pipeline_generation(
             repo_id=repo_id,
-            prompt=prompt,
+            messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,
             top_p=top_p,
             do_sample=do_sample,
             context=context,
             node_id=node_id,
+            quantization=quantization,
         ):
             yield chunk
 
