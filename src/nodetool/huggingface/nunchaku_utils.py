@@ -103,7 +103,7 @@ async def get_nunchaku_transformer(
         repo_id: The repository ID
         path: The path to the transformer file
         torch_dtype: The torch dtype to use
-        device: The device to use
+        device: The device to use (defaults to context.device or cuda/cpu)
 
     Returns:
         dict: Pipeline kwargs with transformer if nunchaku SVDQ transformer is found
@@ -114,6 +114,10 @@ async def get_nunchaku_transformer(
         load_model,
         HF_FAST_CACHE,
     )
+
+    # Resolve device - nunchaku requires a valid device, not None
+    if device is None:
+        device = context.device if context.device else ("cuda" if torch.cuda.is_available() else "cpu")
 
     """Load FLUX pipeline using a Nunchaku SVDQ transformer file."""
     precision = get_precision()
