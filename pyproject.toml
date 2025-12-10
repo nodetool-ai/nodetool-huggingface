@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nodetool-huggingface"
-version = "0.6.2-rc.6"
+version = "0.6.2-rc9"
 description = "HuggingFace nodes for Nodetool"
 readme = "README.md"
 authors = [{ name = "Matthias Georgi", email = "matti.georgi@gmail.com" }]
 requires-python = ">=3.10.13"
 
 dependencies = [
-    "nodetool-core==0.6.2-rc.6",
+    "nodetool-core==0.6.2-rc9",
     "torch==2.9.0",
     "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2+torch2.10-cp310-cp310-linux_x86_64.whl ; platform_system == 'Linux' and python_version >= '3.10' and python_version < '3.11'",
     "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2+torch2.10-cp311-cp311-linux_x86_64.whl ; platform_system == 'Linux' and python_version >= '3.11' and python_version < '3.12'",
