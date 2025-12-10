@@ -13,14 +13,7 @@ requires-python = ">=3.10.13"
 dependencies = [
     "nodetool-core==0.6.2-rc.9",
     "torch==2.9.0",
-    "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2+torch2.10-cp310-cp310-linux_x86_64.whl ; platform_system == 'Linux' and python_version >= '3.10' and python_version < '3.11'",
-    "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2+torch2.10-cp311-cp311-linux_x86_64.whl ; platform_system == 'Linux' and python_version >= '3.11' and python_version < '3.12'",
-    "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2+torch2.10-cp312-cp312-linux_x86_64.whl ; platform_system == 'Linux' and python_version >= '3.12' and python_version < '3.13'",
-    "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2+torch2.10-cp313-cp313-linux_x86_64.whl ; platform_system == 'Linux' and python_version >= '3.13' and python_version < '3.14'",
-    "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2+torch2.10-cp310-cp310-win_amd64.whl ; platform_system == 'Windows' and python_version >= '3.10' and python_version < '3.11'",
-    "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2+torch2.10-cp311-cp311-win_amd64.whl ; platform_system == 'Windows' and python_version >= '3.11' and python_version < '3.12'",
-    "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2+torch2.10-cp312-cp312-win_amd64.whl ; platform_system == 'Windows' and python_version >= '3.12' and python_version < '3.13'",
-    "nunchaku @ https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2+torch2.10-cp313-cp313-win_amd64.whl ; platform_system == 'Windows' and python_version >= '3.13' and python_version < '3.14'",
+    "nunchaku ; platform_system != 'Darwin'",
     "torchsde",
     "torchvision",
     "torchaudio",
@@ -42,9 +35,6 @@ dependencies = [
     "bitsandbytes",
 ]
 
-
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nodetool", "src/RealESRGAN"]
