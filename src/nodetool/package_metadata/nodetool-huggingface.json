@@ -1,7 +1,7 @@
 {
   "name": "nodetool-huggingface",
   "description": "HuggingFace nodes for Nodetool",
-  "version": "0.6.2-rc.9",
+  "version": "0.6.2-rc.10",
   "authors": [
     "Matthias Georgi <matti.georgi@gmail.com>"
   ],
