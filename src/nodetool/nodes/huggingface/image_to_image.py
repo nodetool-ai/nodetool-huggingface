@@ -1,25 +1,16 @@
+from __future__ import annotations
 from enum import Enum
 import os
 import platform
 import re
 import asyncio
-from typing import Any, TypedDict, ClassVar
-from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
-from diffusers.models.autoencoders.vae import DecoderOutput
-from diffusers.models.modeling_outputs import AutoencoderKLOutput
-from nodetool.config.logging_config import get_logger
-from nodetool.huggingface.nunchaku_utils import (
-    get_nunchaku_text_encoder,
-)
-from nodetool.workflows.types import NodeProgress
-import torch
-from RealESRGAN import RealESRGAN
+from typing import Any, TypedDict, ClassVar, TYPE_CHECKING
 
+from pydantic import Field
+
+from nodetool.config.logging_config import get_logger
+from nodetool.workflows.types import NodeProgress
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
-from nunchaku import (
-    NunchakuFluxTransformer2dModel,
-    NunchakuQwenImageTransformer2DModel,
-)
 from nodetool.metadata.types import (
     HFImageToImage,
     HFControlNet,
@@ -47,58 +38,45 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
 from nodetool.nodes.huggingface.huggingface_node import progress_callback
 from nodetool.workflows.processing_context import ProcessingContext
 
-from diffusers.pipelines.omnigen.pipeline_omnigen import OmniGenPipeline
-from diffusers.pipelines.pipeline_utils import DiffusionPipeline
-from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
-from diffusers.models.controlnets.controlnet import ControlNetModel
-from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import QwenImageEditPipeline
-from diffusers.models.transformers.transformer_qwenimage import (
-    QwenImageTransformer2DModel,
-)
-from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
-from diffusers.pipelines.flux.pipeline_flux_fill import FluxFillPipeline
-from diffusers.pipelines.flux.pipeline_flux_kontext import FluxKontextPipeline
-from diffusers.pipelines.flux.pipeline_flux_prior_redux import FluxPriorReduxPipeline
-from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
-from diffusers.pipelines.controlnet.pipeline_controlnet import (
-    StableDiffusionControlNetPipeline,
-)
-from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import (
-    StableDiffusionControlNetImg2ImgPipeline,
-)
-from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint import (
-    StableDiffusionControlNetInpaintPipeline,
-)
-from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl import (
-    StableDiffusionXLControlNetPipeline,
-)
-from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl_img2img import (
-    StableDiffusionXLControlNetImg2ImgPipeline,
-)
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import (
-    StableDiffusionImg2ImgPipeline,
-)
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import (
-    StableDiffusionInpaintPipeline,
-)
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_upscale import (
-    StableDiffusionUpscalePipeline,
-)
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upscale import (
-    StableDiffusionLatentUpscalePipeline,
-)
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
-    StableDiffusionXLPipeline,
-)
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
-    StableDiffusionXLImg2ImgPipeline,
-)
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_inpaint import (
-    StableDiffusionXLInpaintPipeline,
-)
-from pydantic import Field
+if TYPE_CHECKING:
+    import torch
+    from RealESRGAN import RealESRGAN
+    from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
+    from diffusers.models.autoencoders.vae import DecoderOutput
+    from diffusers.models.modeling_outputs import AutoencoderKLOutput
+    from diffusers.pipelines.omnigen.pipeline_omnigen import OmniGenPipeline
+    from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+    from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
+    from diffusers.models.controlnets.controlnet import ControlNetModel
+    from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import QwenImageEditPipeline
+    from diffusers.models.transformers.transformer_qwenimage import QwenImageTransformer2DModel
+    from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
+    from diffusers.pipelines.flux.pipeline_flux_fill import FluxFillPipeline
+    from diffusers.pipelines.flux.pipeline_flux_kontext import FluxKontextPipeline
+    from diffusers.pipelines.flux.pipeline_flux_prior_redux import FluxPriorReduxPipeline
+    from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+    from diffusers.pipelines.controlnet.pipeline_controlnet import StableDiffusionControlNetPipeline
+    from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import StableDiffusionControlNetImg2ImgPipeline
+    from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint import StableDiffusionControlNetInpaintPipeline
+    from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl import StableDiffusionXLControlNetPipeline
+    from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl_img2img import StableDiffusionXLControlNetImg2ImgPipeline
+    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
+    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipeline
+    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_upscale import StableDiffusionUpscalePipeline
+    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upscale import StableDiffusionLatentUpscalePipeline
+    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
+    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import StableDiffusionXLImg2ImgPipeline
+    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_inpaint import StableDiffusionXLInpaintPipeline
 
 log = get_logger(__name__)
+
+
+def _get_torch():
+    """Lazy import for torch."""
+    import torch
+    return torch
+
+
 
 
 def _enable_pytorch2_attention(pipeline: Any, enabled: bool = True):
@@ -220,7 +198,7 @@ class RealESRGANNode(BaseNode):
         title="RealESRGAN Model",
         description="The RealESRGAN model to use for image super-resolution",
     )
-    _model: RealESRGAN | None = None
+    _model: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFRealESRGAN]:
@@ -436,7 +414,7 @@ class ImageToImage(HuggingFacePipelineNode):
         ge=-1,
     )
 
-    _pipeline: AutoPipelineForImage2Image | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -542,7 +520,7 @@ class StableDiffusionControlNet(StableDiffusionBaseNode):
         le=2.0,
     )
 
-    _pipeline: StableDiffusionControlNetPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -639,7 +617,7 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
         le=1.0,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: StableDiffusionImg2ImgPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -724,7 +702,7 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
         le=2.0,
     )
 
-    _pipeline: StableDiffusionControlNetInpaintPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -818,7 +796,7 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
         le=1.0,
         description="Strength for inpainting. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: StableDiffusionInpaintPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -902,7 +880,7 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
         description="The control image to guide the transformation.",
     )
 
-    _pipeline: StableDiffusionControlNetImg2ImgPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1037,7 +1015,7 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
     def get_title(cls):
         return "Stable Diffusion 4x Upscale"
 
-    _pipeline: StableDiffusionUpscalePipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls):
@@ -1147,7 +1125,7 @@ class StableDiffusionLatentUpscaler(HuggingFacePipelineNode):
         description="Low-resolution latents tensor to upscale.",
     )
 
-    _pipeline: StableDiffusionLatentUpscalePipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls):
@@ -1241,7 +1219,7 @@ class VAEEncode(HuggingFacePipelineNode):
         description="Scaling factor applied to latents (e.g., 0.18215 for SD15)",
     )
 
-    _vae: AutoencoderKL | None = None
+    _vae: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1320,7 +1298,7 @@ class VAEDecode(HuggingFacePipelineNode):
         description="Scaling factor used for encoding (inverse is applied before decode)",
     )
 
-    _vae: AutoencoderKL | None = None
+    _vae: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1404,7 +1382,7 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         le=1.0,
         description="Strength for Image-to-Image generation. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: StableDiffusionXLImg2ImgPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1478,7 +1456,7 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
         le=1.0,
         description="Strength for inpainting. Higher values allow for more deviation from the original image.",
     )
-    _pipeline: StableDiffusionXLInpaintPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1567,7 +1545,7 @@ class StableDiffusionXLControlNet(StableDiffusionXLBase):
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage but may slow down generation.",
     )
 
-    _pipeline: StableDiffusionXLControlNetPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFControlNet]:
@@ -1677,7 +1655,7 @@ class StableDiffusionXLControlNetImg2ImgNode(StableDiffusionXLImg2Img):
         description="Enable attention slicing for the pipeline. This can reduce VRAM usage but may slow down generation.",
     )
 
-    _pipeline: StableDiffusionXLControlNetImg2ImgPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -1975,7 +1953,7 @@ class QwenImageEdit(HuggingFacePipelineNode):
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _pipeline: QwenImageEditPipeline | DiffusionPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -2279,7 +2257,8 @@ class FluxFill(HuggingFacePipelineNode):
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _pipeline: FluxFillPipeline | None = None
+    _pipeline: Any = None
+
     FLUX_FILL_BASE_ALLOW_PATTERNS: ClassVar[list[str]] = [
         "*.json",
         "*.txt",
@@ -2516,7 +2495,7 @@ class FluxKontext(HuggingFacePipelineNode):
         description="Enable CPU offload to reduce VRAM usage.",
     )
 
-    _pipeline: FluxKontextPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -2631,10 +2610,11 @@ class FluxKontext(HuggingFacePipelineNode):
         ):
             assert transformer_model.path is not None
             assert text_encoder_model is not None
-            from nodetool.huggingface.nunchaku_utils import (
+            from nodetool.huggingface.nunchaku_pipelines import (
                 get_nunchaku_transformer,
                 get_nunchaku_text_encoder,
             )
+            from nunchaku import NunchakuFluxTransformer2dModel
 
             transformer = await get_nunchaku_transformer(
                 context=context,

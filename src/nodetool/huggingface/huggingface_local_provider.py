@@ -6,14 +6,24 @@ This module implements the BaseProvider interface for locally cached HuggingFace
   Supports both multi-file models (repo_id) and single-file models (repo_id:path.safetensors)
 - TTS models: KokoroTTS and other HuggingFace TTS models
 """
+from __future__ import annotations
 
 import asyncio
 import base64
 import re
+import os
 import threading
+import json
 from queue import Queue
-from typing import Any, AsyncGenerator, List, Literal, Set, Dict
-from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
+from typing import Any, AsyncGenerator, List, Literal, Set, Dict, Sequence, AsyncIterator, TypeVar, TYPE_CHECKING
+from io import BytesIO
+from pathlib import Path
+
+import numpy as np
+from pydub import AudioSegment
+from PIL import Image
+from pydantic import BaseModel
+
 from nodetool.providers.base import BaseProvider, register_provider
 from nodetool.providers.types import ImageBytes, TextToImageParams, ImageToImageParams
 from nodetool.integrations.huggingface.huggingface_models import (
@@ -23,36 +33,64 @@ from nodetool.integrations.huggingface.huggingface_models import (
     HF_FAST_CACHE,
 )
 from nodetool.types.job import JobUpdate
-import numpy as np
-from pydub import AudioSegment
-import io
-from io import BytesIO
 from nodetool.types.model import UnifiedModel
 from nodetool.workflows.processing_context import ProcessingContext
-from PIL import Image
 from nodetool.metadata.types import (
     ImageModel,
     Provider,
     TTSModel,
     Message,
+    ASRModel,
+    MessageTextContent,
+    MessageImageContent,
+    HFTextToSpeech,
+    LanguageModel,
+    VideoRef,
 )
 from nodetool.workflows.types import Chunk, NodeProgress
-from nodetool.metadata.types import ASRModel
-from typing import List, Sequence, Any, AsyncIterator
 from nodetool.config.logging_config import get_logger
-import torch
-from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
 from nodetool.ml.core.model_manager import ModelManager
-from huggingface_hub import hf_hub_download, _CACHED_NO_EXIST
-from nodetool.metadata.types import MessageTextContent, MessageImageContent
 from nodetool.io.media_fetch import fetch_uri_bytes_and_mime_sync
-from pydantic import BaseModel
-import json
+from nodetool.workflows.recommended_models import get_recommended_models
+
+if TYPE_CHECKING:
+    import torch
+    from huggingface_hub import _CACHED_NO_EXIST
+    from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image, AutoPipelineForText2Image
+    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
+    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
+    from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import StableDiffusion3Pipeline
+    from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
+    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import StableDiffusionXLImg2ImgPipeline
+    from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3_img2img import StableDiffusion3Img2ImgPipeline
+    from diffusers.pipelines.flux.pipeline_flux_img2img import FluxImg2ImgPipeline
+    from diffusers.pipelines.flux.pipeline_flux_fill import FluxFillPipeline
+    from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import QwenImageEditPipeline
+    from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
+    from diffusers.models.transformers.transformer_qwenimage import QwenImageTransformer2DModel
+    from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, TextStreamer
+    from transformers.pipelines import pipeline as transformers_pipeline
+
+ALLOW_DOWNLOAD_ENV = "NODETOOL_HF_ALLOW_DOWNLOAD"
+
+T = TypeVar("T")
+
+log = get_logger(__name__)
+_PREFERRED_HF_DEVICE = "mps"
+_ALLOW_DOWNLOAD_VALUES = {"1", "true", "yes", "on"}
+
+
+def _get_torch():
+    """Lazy import for torch."""
+    import torch
+    return torch
 
 
 def _is_cuda_available() -> bool:
     """Safely check if CUDA is available, handling cases where PyTorch is not compiled with CUDA support."""
     try:
+        torch = _get_torch()
         # Check if cuda module exists
         if not hasattr(torch, "cuda"):
             return False
@@ -63,59 +101,6 @@ def _is_cuda_available() -> bool:
         return False
 
 
-import os
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
-    StableDiffusionPipeline,
-)
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
-    StableDiffusionXLPipeline,
-)
-from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import (
-    StableDiffusion3Pipeline,
-)
-from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
-from nodetool.huggingface.nunchaku_utils import (
-    get_nunchaku_text_encoder,
-    get_nunchaku_transformer,
-)
-from nunchaku import NunchakuFluxTransformer2dModel
-
-# Import specific pipeline classes
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import (
-    StableDiffusionImg2ImgPipeline,
-)
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
-    StableDiffusionXLImg2ImgPipeline,
-)
-from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3_img2img import (
-    StableDiffusion3Img2ImgPipeline,
-)
-from diffusers.pipelines.flux.pipeline_flux_img2img import FluxImg2ImgPipeline
-from transformers import (
-    AutoModelForSpeechSeq2Seq,
-    AutoProcessor,
-    TextStreamer,
-    pipeline as create_pipeline,
-)
-from diffusers.models.transformers.transformer_qwenimage import (
-    QwenImageTransformer2DModel,
-)
-from diffusers.pipelines.flux.pipeline_flux_fill import FluxFillPipeline
-from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import QwenImageEditPipeline
-from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
-from nunchaku import NunchakuQwenImageTransformer2DModel
-
-from nodetool.metadata.types import HFTextToSpeech
-from pydub import AudioSegment
-from io import BytesIO
-from nodetool.metadata.types import HFTextToSpeech
-
-from nodetool.workflows.recommended_models import get_recommended_models
-from nodetool.metadata.types import LanguageModel, VideoRef
-from transformers.pipelines import pipeline
-from pathlib import Path
-from typing import TypeVar
-import os
 
 ALLOW_DOWNLOAD_ENV = "NODETOOL_HF_ALLOW_DOWNLOAD"
 
@@ -129,6 +114,7 @@ _ALLOW_DOWNLOAD_VALUES = {"1", "true", "yes", "on"}
 def _is_mps_available() -> bool:
     """Detect whether the Apple Metal backend is available."""
     try:
+        import torch
         return (
             hasattr(torch, "backends")
             and hasattr(torch.backends, "mps")
@@ -344,6 +330,7 @@ async def load_pipeline(
         kwargs["token"] = await context.get_secret("HF_TOKEN")
 
     def _create_pipeline():
+        from transformers import pipeline
         return pipeline(
             pipeline_task,  # type: ignore
             model=model_id,
@@ -481,7 +468,7 @@ async def load_model(
     # First attempt to load the model
     try:
         model = await _do_load()
-    except (ValueError, RuntimeError, torch.cuda.OutOfMemoryError) as exc:  # type: ignore[attr-defined]
+    except (ValueError, RuntimeError) as exc:
         if not _is_vram_error(exc):
             raise
 
@@ -599,140 +586,6 @@ def _is_nunchaku_transformer(repo_id: str, file_path: str | None) -> bool:
     )
 
 
-def _node_identifier(node_id: str | None, repo_id: str) -> str:
-    """Derive a unique identifier for caching based on node ID or repo."""
-    return node_id or repo_id
-
-
-async def load_nunchaku_flux_pipeline(
-    context: ProcessingContext,
-    repo_id: str,
-    transformer_path: str,
-    node_id: str | None,
-    pipeline_class: Any | None = None,
-    cache_key: str | None = None,
-) -> Any:
-    """Load a FLUX pipeline with a Nunchaku transformer/text encoder pair."""
-    pipeline_class = pipeline_class or FluxPipeline
-    pipeline_name = pipeline_class.__name__
-
-    if cache_key:
-        cached_pipeline = ModelManager.get_model(cache_key)
-        if cached_pipeline:
-            return cached_pipeline
-    variant = _detect_flux_variant(repo_id, transformer_path)
-    base_model_id = _flux_variant_to_base_model_id(variant)
-    hf_token = await context.get_secret("HF_TOKEN")
-    if variant != "schnell" and not hf_token:
-        raise ValueError(
-            f"Flux-{variant} is a gated model, please set the HF_TOKEN in Nodetool settings and accept the terms of use for the model: "
-            f"https://huggingface.co/{base_model_id}"
-        )
-
-    torch_dtype = torch.bfloat16 if variant in ["schnell", "dev"] else torch.float16
-    node_key = _node_identifier(node_id, repo_id)
-
-    transformer = await get_nunchaku_transformer(
-        context=context,
-        model_class=NunchakuFluxTransformer2dModel,
-        node_id=node_key,
-        repo_id=repo_id,
-        path=transformer_path,
-    )
-    transformer.set_attention_impl("nunchaku-fp16")
-
-    text_encoder = await get_nunchaku_text_encoder(context, node_key)
-
-    pipeline_kwargs: dict[str, Any] = {
-        "transformer": transformer,
-        "torch_dtype": torch_dtype,
-        "token": hf_token,
-    }
-    if text_encoder is not None:
-        pipeline_kwargs["text_encoder_2"] = text_encoder
-
-    try:
-        pipeline = pipeline_class.from_pretrained(base_model_id, **pipeline_kwargs)
-        if cache_key and node_id:
-            ModelManager.set_model(node_id, cache_key, pipeline)
-        return pipeline
-    except torch.OutOfMemoryError as exc:  # type: ignore[attr-defined]
-        raise ValueError(
-            "VRAM out of memory while loading Flux with the Nunchaku transformer. "
-            "Try enabling 'CPU offload' or reduce image size/steps."
-        ) from exc
-
-
-async def load_nunchaku_qwen_pipeline(
-    context: ProcessingContext,
-    repo_id: str,
-    transformer_path: str,
-    node_id: str | None,
-    pipeline_class: Any,
-    base_model_id: str,
-    cache_key: str | None = None,
-    torch_dtype: torch.dtype = torch.bfloat16,
-) -> Any:
-    """Load a Qwen pipeline with a Nunchaku transformer and quantized text encoder.
-
-    Args:
-        context: Processing context
-        repo_id: Repository ID for the Nunchaku transformer
-        transformer_path: Path to the transformer file
-        node_id: Node ID for caching
-        pipeline_class: The pipeline class to use (QwenImagePipeline or QwenImageEditPipeline)
-        base_model_id: Base model ID for loading pipeline components
-        cache_key: Optional cache key for the pipeline
-        torch_dtype: The torch dtype to use
-    """
-    from nunchaku.utils import get_gpu_memory
-
-    hf_token = await context.get_secret("HF_TOKEN")
-    torch_dtype = torch.bfloat16
-    if cache_key is None:
-        cache_key = f"{repo_id}/{transformer_path}"
-
-    cached_pipeline = ModelManager.get_model(cache_key)
-    if cached_pipeline:
-        return cached_pipeline
-
-    try:
-        # Load Nunchaku transformer
-        transformer = await get_nunchaku_transformer(
-            context=context,
-            model_class=NunchakuQwenImageTransformer2DModel,
-            node_id=node_id,
-            repo_id=repo_id,
-            path=transformer_path,
-            device=context.device,
-        )
-        pipeline = pipeline_class.from_pretrained(
-            base_model_id,
-            transformer=transformer,
-            torch_dtype=torch_dtype,
-            token=hf_token,
-        )
-        pipeline.enable_model_cpu_offload()
-        if get_gpu_memory() > 18:
-            log.info("Enabling model CPU offload")
-        else:
-            log.info("Enabling model per-layer offloading")
-            # use per-layer offloading for low VRAM. This only requires 3-4GB of VRAM.
-            transformer.set_offload(
-                True, use_pin_memory=False, num_blocks_on_gpu=20
-            )  # increase num_blocks_on_gpu if you have more VRAM
-            pipeline._exclude_from_cpu_offload.append("transformer")
-            pipeline.enable_sequential_cpu_offload()
-
-        if cache_key and node_id:
-            ModelManager.set_model(node_id, cache_key, pipeline)
-        return pipeline
-    except torch.OutOfMemoryError as exc:
-        raise ValueError(
-            "VRAM out of memory while loading Qwen with the Nunchaku transformer."
-        ) from exc
-
-
 @register_provider(Provider.HuggingFace)
 class HuggingFaceLocalProvider(BaseProvider):
     """Local provider for HuggingFace models using cached diffusion pipelines."""
@@ -808,6 +661,7 @@ class HuggingFaceLocalProvider(BaseProvider):
 
                 if _is_node_model(params.model.id, params.model.path, Flux):
                     if _is_nunchaku_transformer(params.model.id, params.model.path):
+                        from nodetool.huggingface.nunchaku_pipelines import load_nunchaku_flux_pipeline
                         pipeline = await load_nunchaku_flux_pipeline(
                             context=context,
                             repo_id=params.model.id,
@@ -816,6 +670,8 @@ class HuggingFaceLocalProvider(BaseProvider):
                         )
                     else:
                         # Standard Flux loading
+                        from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+                        torch = _get_torch()
                         pipeline = FluxPipeline.from_single_file(
                             str(cache_path),
                             torch_dtype=(
@@ -826,6 +682,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                         )
                 elif _is_node_model(params.model.id, params.model.path, QwenImage):
                     if _is_nunchaku_transformer(params.model.id, params.model.path):
+                        from nodetool.huggingface.nunchaku_pipelines import load_nunchaku_qwen_pipeline
                         pipeline = await load_nunchaku_qwen_pipeline(
                             model_id=params.model.id,
                             path=params.model.path,
@@ -835,6 +692,8 @@ class HuggingFaceLocalProvider(BaseProvider):
                         )
                         use_cpu_offload = True
                     else:
+                        from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
+                        torch = _get_torch()
                         pipeline = QwenImagePipeline.from_single_file(
                             str(cache_path),
                             torch_dtype=torch.bfloat16,
@@ -844,7 +703,9 @@ class HuggingFaceLocalProvider(BaseProvider):
                     model_type = model_info.pipeline_tag or "unknown"
 
                     # Load pipeline from single file based on model type
+                    torch = _get_torch()
                     if "diffusers:StableDiffusionXLPipeline" in model_info.tags:
+                        from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
                         pipeline = StableDiffusionXLPipeline.from_single_file(
                             str(cache_path),
                             torch_dtype=(
@@ -852,6 +713,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                             ),
                         )
                     elif "diffusers:StableDiffusionPipeline" in model_info.tags:
+                        from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
                         pipeline = StableDiffusionPipeline.from_single_file(
                             str(cache_path),
                             torch_dtype=(
@@ -859,6 +721,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                             ),
                         )
                     elif "diffusers:StableDiffusion3Pipeline" in model_info.tags:
+                        from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import StableDiffusion3Pipeline
                         pipeline = StableDiffusion3Pipeline.from_single_file(
                             str(cache_path),
                             torch_dtype=(
@@ -866,6 +729,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                             ),
                         )
                     elif "flux" in model_info.tags:
+                        from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
                         pipeline = FluxPipeline.from_single_file(
                             str(cache_path),
                             torch_dtype=(
@@ -897,6 +761,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         # Set up generator for reproducibility
         generator = None
         if params.seed is not None and params.seed != -1:
+            import torch
             generator = torch.Generator(device="cpu").manual_seed(params.seed)
 
         # Progress callback
@@ -992,6 +857,8 @@ class HuggingFaceLocalProvider(BaseProvider):
                 if _is_node_model(params.model.id, params.model.path, FluxFill):
                     if _is_nunchaku_transformer(params.model.id, params.model.path):
                         # Flux Fill Nunchaku support
+                        from nodetool.huggingface.nunchaku_pipelines import load_nunchaku_flux_pipeline
+                        from diffusers.pipelines.flux.pipeline_flux_fill import FluxFillPipeline
                         pipeline = await load_nunchaku_flux_pipeline(
                             context=context,
                             repo_id=params.model.id,
@@ -1001,6 +868,8 @@ class HuggingFaceLocalProvider(BaseProvider):
                         )
                     else:
                         # Standard Flux Fill
+                        from diffusers.pipelines.flux.pipeline_flux_fill import FluxFillPipeline
+                        torch = _get_torch()
                         pipeline = FluxFillPipeline.from_single_file(
                             str(cache_path),
                             torch_dtype=(
@@ -1011,6 +880,8 @@ class HuggingFaceLocalProvider(BaseProvider):
                         )
                 elif _is_node_model(params.model.id, params.model.path, QwenImageEdit):
                     if _is_nunchaku_transformer(params.model.id, params.model.path):
+                        from nodetool.huggingface.nunchaku_pipelines import load_nunchaku_qwen_pipeline
+                        from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import QwenImageEditPipeline
                         pipeline = await load_nunchaku_qwen_pipeline(
                             context=context,
                             repo_id=params.model.id,
@@ -1019,11 +890,14 @@ class HuggingFaceLocalProvider(BaseProvider):
                             pipeline_class=QwenImageEditPipeline,
                         )
                     else:
+                        from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import QwenImageEditPipeline
+                        torch = _get_torch()
                         pipeline = QwenImageEditPipeline.from_single_file(
                             str(cache_path),
                             torch_dtype=torch.float16,
                         )
                 elif _is_nunchaku_transformer(params.model.id, params.model.path):
+                    from nodetool.huggingface.nunchaku_pipelines import load_nunchaku_flux_pipeline
                     pipeline = await load_nunchaku_flux_pipeline(
                         context=context,
                         repo_id=params.model.id,

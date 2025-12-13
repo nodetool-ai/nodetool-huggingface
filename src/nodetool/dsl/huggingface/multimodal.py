@@ -48,7 +48,7 @@ class ImageToText(SingleOutputGraphNode[str], GraphNode[str]):
         description="The image to generate text from",
     )
     max_new_tokens: int | OutputHandle[int] = connect_field(
-        default=50, description="The maximum number of tokens to generate"
+        default=1024, description="The maximum number of tokens to generate"
     )
 
     @classmethod

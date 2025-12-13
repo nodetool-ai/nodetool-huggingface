@@ -10,7 +10,6 @@ from nodetool.config.logging_config import get_logger
 from pydantic import Field
 import logging
 from enum import Enum
-import torch
 from typing import TYPE_CHECKING, List, Optional, Union, Iterable, Any
 from collections.abc import Generator
 

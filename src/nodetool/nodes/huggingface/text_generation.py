@@ -9,12 +9,6 @@ from typing import AsyncGenerator, TypedDict
 from pydantic import Field
 
 
-class Quantization(str, Enum):
-    nf4 = "nf4"
-    nf8 = "nf8"
-    fp16 = "fp16"
-
-
 class TextGeneration(HuggingFacePipelineNode):
     """
     Generates text based on a given prompt.
@@ -31,11 +25,6 @@ class TextGeneration(HuggingFacePipelineNode):
         default=HFTextGeneration(),
         title="Model ID on Huggingface",
         description="The model ID to use for the text generation. Supports both regular models and GGUF quantized models (detected by .gguf file extension).",
-    )
-    quantization: Quantization = Field(
-        default=Quantization.fp16,
-        title="Quantization",
-        description="The quantization method to use for the text generation.",
     )
     prompt: str = Field(
         default="",
@@ -189,7 +178,6 @@ class TextGeneration(HuggingFacePipelineNode):
         async for item in provider.generate_messages(
             messages=messages,
             model=model_id,
-            quantization=self.quantization.value,
             max_tokens=self.max_new_tokens,
             temperature=self.temperature,
             top_p=self.top_p,

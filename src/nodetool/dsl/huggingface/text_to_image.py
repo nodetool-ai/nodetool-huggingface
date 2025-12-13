@@ -462,16 +462,12 @@ class StableDiffusion(
 
 class StableDiffusionOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -616,16 +612,12 @@ class StableDiffusionXL(
 
 class StableDiffusionXLOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -700,13 +692,9 @@ class Text2Image(
 
 class Text2ImageOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])

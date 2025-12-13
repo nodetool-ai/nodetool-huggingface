@@ -1,9 +1,13 @@
+from __future__ import annotations
 from enum import Enum
 import os
-import huggingface_hub
+import asyncio
+import logging
+from typing import Any, TypedDict, TYPE_CHECKING, Optional
+
+from pydantic import Field
 
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
-from typing import Any, TypedDict
 from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
     HFT5,
@@ -27,28 +31,27 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress, Notification, LogUpdate
 
-import torch
-import asyncio
-import logging
-from nunchaku.models.unets.unet_sdxl import NunchakuSDXLUNet2DConditionModel
-from nunchaku.utils import get_gpu_memory
-
-# The QwenImage import requires optional dependencies. Keep it near top-level to surface missing deps early.
-from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
-from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
-from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
-from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
-    StableDiffusionPipeline,
-)
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
-    StableDiffusionXLPipeline,
-)
-from diffusers.pipelines.pipeline_utils import DiffusionPipeline
-from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
-from pydantic import Field
+if TYPE_CHECKING:
+    import torch
+    import huggingface_hub
+    from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
+    from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
+    from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+    from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
+    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
+    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
+    from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+    from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
 
 log = get_logger(__name__)
+
+
+def _get_torch():
+    """Lazy import for torch."""
+    import torch
+    return torch
+
+
 
 
 def _enable_pytorch2_attention(pipeline: Any):
@@ -109,7 +112,7 @@ class StableDiffusion(StableDiffusionBaseNode):
     height: int = Field(
         default=512, ge=256, le=1024, description="Height of the generated image"
     )
-    _pipeline: StableDiffusionPipeline | None = None
+    _pipeline: Any= None
 
     @classmethod
     def get_basic_fields(cls):
@@ -160,7 +163,7 @@ class StableDiffusionXL(StableDiffusionXLBase):
     - Visualizing interior design concepts for clients
     """
 
-    _pipeline: StableDiffusionXLPipeline | DiffusionPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_title(cls):
@@ -289,7 +292,7 @@ class Text2Image(HuggingFacePipelineNode):
         ge=-1,
     )
 
-    _pipeline: AutoPipelineForText2Image | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_title(cls) -> str:
@@ -447,7 +450,7 @@ class Flux(HuggingFacePipelineNode):
         ge=-1,
     )
 
-    _pipeline: FluxPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_title(cls) -> str:
@@ -810,7 +813,7 @@ class Chroma(HuggingFacePipelineNode):
         description="Enable attention slicing to reduce memory usage.",
     )
 
-    _pipeline: ChromaPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HFTextToImage]:
@@ -1226,7 +1229,7 @@ class FluxControl(HuggingFacePipelineNode):
         default=FluxControlQuantization.INT4,
         description="Quantization level for the FLUX Control transformer.",
     )
-    _pipeline: FluxControlPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:

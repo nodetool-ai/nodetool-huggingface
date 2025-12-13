@@ -51,7 +51,7 @@ class TextGeneration(
         default="", description="The input text prompt for generation"
     )
     max_new_tokens: int | OutputHandle[int] = connect_field(
-        default=50, description="The maximum number of new tokens to generate"
+        default=512, description="The maximum number of new tokens to generate"
     )
     temperature: float | OutputHandle[float] = connect_field(
         default=1.0,

@@ -165,88 +165,6 @@ import nodetool.nodes.huggingface.image_to_image
 from nodetool.workflows.base_node import BaseNode
 
 
-class FluxPriorRedux(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
-    """
-
-    Performs image transformation using FLUX Prior Redux pipeline for image-conditioned generation.
-    image, transformation, flux, redux, prior, image-conditioned, generation
-
-    Use cases:
-    - Transform images using FLUX Prior Redux for style transfer and image variations
-    - Generate images conditioned on reference images without text prompts
-    - High-quality image-to-image transformation with FLUX models
-    - Create variations of existing images with FLUX Prior Redux guidance
-    """
-
-    FluxPriorReduxQuantization: typing.ClassVar[type] = (
-        nodetool.nodes.huggingface.image_to_image.FluxPriorReduxQuantization
-    )
-
-    prior_redux_model: types.HFFluxRedux | OutputHandle[types.HFFluxRedux] = (
-        connect_field(
-            default=types.HFFluxRedux(
-                type="hf.flux_redux",
-                repo_id="black-forest-labs/FLUX.1-Redux-dev",
-                path=None,
-                variant=None,
-                allow_patterns=None,
-                ignore_patterns=None,
-            ),
-            description="The FLUX Prior Redux model to use for image conditioning.",
-        )
-    )
-    flux_model: types.HFFlux | OutputHandle[types.HFFlux] = connect_field(
-        default=types.HFFlux(
-            type="hf.flux",
-            repo_id="black-forest-labs/FLUX.1-dev",
-            path=None,
-            variant=None,
-            allow_patterns=None,
-            ignore_patterns=None,
-        ),
-        description="The FLUX base model to use for generation.",
-    )
-    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The input image to transform",
-    )
-    guidance_scale: float | OutputHandle[float] = connect_field(
-        default=2.5,
-        description="Guidance scale for generation. Higher values follow the prior more closely",
-    )
-    num_inference_steps: int | OutputHandle[int] = connect_field(
-        default=50, description="Number of denoising steps"
-    )
-    seed: int | OutputHandle[int] = connect_field(
-        default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed",
-    )
-    enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
-        default=True, description="Enable CPU offload to reduce VRAM usage."
-    )
-    quantization: (
-        nodetool.nodes.huggingface.image_to_image.FluxPriorReduxQuantization
-    ) = Field(
-        default=nodetool.nodes.huggingface.image_to_image.FluxPriorReduxQuantization.INT4,
-        description="Quantization level for the Flux Prior Redux transformer.",
-    )
-
-    @classmethod
-    def get_node_class(cls) -> type[BaseNode]:
-        return nodetool.nodes.huggingface.image_to_image.FluxPriorRedux
-
-    @classmethod
-    def get_node_type(cls):
-        return cls.get_node_class().get_node_type()
-
-
-import typing
-from pydantic import Field
-from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
-import nodetool.nodes.huggingface.image_to_image
-from nodetool.workflows.base_node import BaseNode
-
-
 class ImageToImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
 
@@ -681,16 +599,12 @@ class StableDiffusionControlNet(
 
 class StableDiffusionControlNetOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -850,16 +764,12 @@ class StableDiffusionControlNetImg2ImgNode(
 
 class StableDiffusionControlNetImg2ImgNodeOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -1020,16 +930,12 @@ class StableDiffusionControlNetInpaintNode(
 
 class StableDiffusionControlNetInpaintNodeOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -1173,16 +1079,12 @@ class StableDiffusionImg2ImgNode(
 
 class StableDiffusionImg2ImgNodeOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -1329,16 +1231,12 @@ class StableDiffusionInpaintNode(
 
 class StableDiffusionInpaintNodeOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -1617,16 +1515,12 @@ class StableDiffusionXLControlNet(
 
 class StableDiffusionXLControlNetOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -1801,16 +1695,12 @@ class StableDiffusionXLControlNetImg2ImgNode(
 
 class StableDiffusionXLControlNetImg2ImgNodeOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -1965,16 +1855,12 @@ class StableDiffusionXLImg2Img(
 
 class StableDiffusionXLImg2ImgOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing
@@ -2132,16 +2018,12 @@ class StableDiffusionXLInpainting(
 
 class StableDiffusionXLInpaintingOutputs(OutputsProxy):
     @property
-    def image(self) -> OutputHandle[nodetool.metadata.types.ImageRef]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.ImageRef], self["image"]
-        )
+    def image(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["image"])
 
     @property
-    def latent(self) -> OutputHandle[nodetool.metadata.types.TorchTensor]:
-        return typing.cast(
-            OutputHandle[nodetool.metadata.types.TorchTensor], self["latent"]
-        )
+    def latent(self) -> OutputHandle[typing.Any]:
+        return typing.cast(OutputHandle[typing.Any], self["latent"])
 
 
 import typing

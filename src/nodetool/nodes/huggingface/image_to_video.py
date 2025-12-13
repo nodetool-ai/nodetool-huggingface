@@ -1,16 +1,12 @@
-from typing import Any
+from __future__ import annotations
+from typing import Any, TYPE_CHECKING
 from enum import Enum
 from pydantic import Field
-import torch
+
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     available_torch_dtype,
 )
-from transformers import CLIPVisionModel
-from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
-from diffusers.pipelines.wan.pipeline_wan_i2v import WanImageToVideoPipeline
-
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
-
 from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.metadata.types import (
@@ -21,6 +17,12 @@ from nodetool.metadata.types import (
 )
 from nodetool.workflows.types import NodeProgress
 from .huggingface_pipeline import HuggingFacePipelineNode
+
+if TYPE_CHECKING:
+    import torch
+    from transformers import CLIPVisionModel
+    from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
+    from diffusers.pipelines.wan.pipeline_wan_i2v import WanImageToVideoPipeline
 
 
 class Wan_I2V(HuggingFacePipelineNode):
@@ -114,7 +116,7 @@ class Wan_I2V(HuggingFacePipelineNode):
         description="Enable VAE tiling to reduce VRAM usage for large videos.",
     )
 
-    _pipeline: WanImageToVideoPipeline | None = None
+    _pipeline: Any = None
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
@@ -178,6 +180,11 @@ class Wan_I2V(HuggingFacePipelineNode):
                 f"Model {model_id} must be downloaded before running this node."
             )
 
+        import torch
+        from transformers import CLIPVisionModel
+        from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
+        from diffusers.pipelines.wan.pipeline_wan_i2v import WanImageToVideoPipeline
+
         image_encoder = await self.load_model(
             context=context,
             model_class=CLIPVisionModel,
@@ -231,6 +238,7 @@ class Wan_I2V(HuggingFacePipelineNode):
 
         generator = None
         if self.seed != -1:
+            import torch
             generator = torch.Generator(device="cpu").manual_seed(self.seed)
 
         def callback_on_step_end(

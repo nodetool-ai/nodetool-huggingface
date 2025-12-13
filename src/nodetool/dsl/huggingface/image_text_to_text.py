@@ -19,7 +19,70 @@ import nodetool.nodes.huggingface.image_text_to_text
 from nodetool.workflows.base_node import BaseNode
 
 
-class ImageTextToText(SingleOutputGraphNode[str], GraphNode[str]):
+class BaseQwenVL(
+    GraphNode[nodetool.nodes.huggingface.image_text_to_text.BaseQwenVL.OutputType]
+):
+    """
+    Base class for Qwen VL nodes.
+    """
+
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The image to analyze.",
+    )
+    video: types.VideoRef | OutputHandle[types.VideoRef] = connect_field(
+        default=types.VideoRef(
+            type="video", uri="", asset_id=None, data=None, duration=None, format=None
+        ),
+        description="The video to analyze.",
+    )
+    prompt: str | OutputHandle[str] = connect_field(
+        default="Describe this image.",
+        description="Instruction or question for the model.",
+    )
+    min_pixels: int | OutputHandle[int] | None = connect_field(
+        default=None, description="Minimum number of pixels for image resizing."
+    )
+    max_pixels: int | OutputHandle[int] | None = connect_field(
+        default=None, description="Maximum number of pixels for image resizing."
+    )
+    max_new_tokens: int | OutputHandle[int] = connect_field(
+        default=128, description="Maximum number of tokens to generate."
+    )
+
+    @property
+    def out(self) -> "BaseQwenVLOutputs":
+        return BaseQwenVLOutputs(self)
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_text_to_text.BaseQwenVL
+
+    @classmethod
+    def get_node_type(cls):
+        return cls.get_node_class().get_node_type()
+
+
+class BaseQwenVLOutputs(OutputsProxy):
+    @property
+    def text(self) -> OutputHandle[str]:
+        return typing.cast(OutputHandle[str], self["text"])
+
+    @property
+    def chunk(self) -> OutputHandle[types.Chunk]:
+        return typing.cast(OutputHandle[types.Chunk], self["chunk"])
+
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.image_text_to_text
+from nodetool.workflows.base_node import BaseNode
+
+
+class ImageTextToText(
+    GraphNode[nodetool.nodes.huggingface.image_text_to_text.ImageTextToText.OutputType]
+):
     """
 
     Answers questions or follows instructions given both an image and text.
@@ -39,7 +102,7 @@ class ImageTextToText(SingleOutputGraphNode[str], GraphNode[str]):
                 repo_id="HuggingFaceTB/SmolVLM-Instruct",
                 path=None,
                 variant=None,
-                allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
+                allow_patterns=None,
                 ignore_patterns=None,
             ),
             description="The image-text-to-text model to use.",
@@ -57,6 +120,10 @@ class ImageTextToText(SingleOutputGraphNode[str], GraphNode[str]):
         default=256, description="Maximum number of tokens to generate."
     )
 
+    @property
+    def out(self) -> "ImageTextToTextOutputs":
+        return ImageTextToTextOutputs(self)
+
     @classmethod
     def get_node_class(cls) -> type[BaseNode]:
         return nodetool.nodes.huggingface.image_text_to_text.ImageTextToText
@@ -64,6 +131,16 @@ class ImageTextToText(SingleOutputGraphNode[str], GraphNode[str]):
     @classmethod
     def get_node_type(cls):
         return cls.get_node_class().get_node_type()
+
+
+class ImageTextToTextOutputs(OutputsProxy):
+    @property
+    def text(self) -> OutputHandle[str]:
+        return typing.cast(OutputHandle[str], self["text"])
+
+    @property
+    def chunk(self) -> OutputHandle[types.Chunk]:
+        return typing.cast(OutputHandle[types.Chunk], self["chunk"])
 
 
 import typing
@@ -97,3 +174,160 @@ class LoadImageTextToTextModel(
     @classmethod
     def get_node_type(cls):
         return cls.get_node_class().get_node_type()
+
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.image_text_to_text
+from nodetool.workflows.base_node import BaseNode
+
+
+class Qwen2_5_VL(
+    GraphNode[nodetool.nodes.huggingface.image_text_to_text.BaseQwenVL.OutputType]
+):
+    """
+
+    Qwen2.5-VL: A versatile vision-language model for image and video understanding.
+
+    Capabilities:
+    - Visual understanding of objects, text, charts, and layouts
+    - Video comprehension and event capturing
+    - Visual localization (bounding boxes, points)
+    - Structured output generation
+    """
+
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The image to analyze.",
+    )
+    video: types.VideoRef | OutputHandle[types.VideoRef] = connect_field(
+        default=types.VideoRef(
+            type="video", uri="", asset_id=None, data=None, duration=None, format=None
+        ),
+        description="The video to analyze.",
+    )
+    prompt: str | OutputHandle[str] = connect_field(
+        default="Describe this image.",
+        description="Instruction or question for the model.",
+    )
+    min_pixels: int | OutputHandle[int] | None = connect_field(
+        default=None, description="Minimum number of pixels for image resizing."
+    )
+    max_pixels: int | OutputHandle[int] | None = connect_field(
+        default=None, description="Maximum number of pixels for image resizing."
+    )
+    max_new_tokens: int | OutputHandle[int] = connect_field(
+        default=128, description="Maximum number of tokens to generate."
+    )
+    model: types.HFQwen2_5_VL | OutputHandle[types.HFQwen2_5_VL] = connect_field(
+        default=types.HFQwen2_5_VL(
+            type="hf.qwen2_5_vl",
+            repo_id="Qwen/Qwen2.5-VL-7B-Instruct",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The Qwen2.5-VL model to use.",
+    )
+
+    @property
+    def out(self) -> "Qwen2_5_VLOutputs":
+        return Qwen2_5_VLOutputs(self)
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_text_to_text.Qwen2_5_VL
+
+    @classmethod
+    def get_node_type(cls):
+        return cls.get_node_class().get_node_type()
+
+
+class Qwen2_5_VLOutputs(OutputsProxy):
+    @property
+    def text(self) -> OutputHandle[str]:
+        return typing.cast(OutputHandle[str], self["text"])
+
+    @property
+    def chunk(self) -> OutputHandle[types.Chunk]:
+        return typing.cast(OutputHandle[types.Chunk], self["chunk"])
+
+
+import typing
+from pydantic import Field
+from nodetool.dsl.handles import OutputHandle, OutputsProxy, connect_field
+import nodetool.nodes.huggingface.image_text_to_text
+from nodetool.workflows.base_node import BaseNode
+
+
+class Qwen3_VL(
+    GraphNode[nodetool.nodes.huggingface.image_text_to_text.BaseQwenVL.OutputType]
+):
+    """
+
+    Qwen3-VL: Next-generation multimodal vision-language model for images and video.
+
+    Capabilities:
+    - Advanced visual reasoning across images and video
+    - Instruction-following with improved spatial-temporal grounding
+    - Supports DeepStack visual features and long-context chat templating
+    """
+
+    image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
+        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        description="The image to analyze.",
+    )
+    video: types.VideoRef | OutputHandle[types.VideoRef] = connect_field(
+        default=types.VideoRef(
+            type="video", uri="", asset_id=None, data=None, duration=None, format=None
+        ),
+        description="The video to analyze.",
+    )
+    prompt: str | OutputHandle[str] = connect_field(
+        default="Describe this image.",
+        description="Instruction or question for the model.",
+    )
+    min_pixels: int | OutputHandle[int] | None = connect_field(
+        default=None, description="Minimum number of pixels for image resizing."
+    )
+    max_pixels: int | OutputHandle[int] | None = connect_field(
+        default=None, description="Maximum number of pixels for image resizing."
+    )
+    max_new_tokens: int | OutputHandle[int] = connect_field(
+        default=128, description="Maximum number of tokens to generate."
+    )
+    model: types.HFQwen3_VL | OutputHandle[types.HFQwen3_VL] = connect_field(
+        default=types.HFQwen3_VL(
+            type="hf.qwen3_vl",
+            repo_id="Qwen/Qwen3-VL-4B-Instruct",
+            path=None,
+            variant=None,
+            allow_patterns=None,
+            ignore_patterns=None,
+        ),
+        description="The Qwen3-VL model to use.",
+    )
+
+    @property
+    def out(self) -> "Qwen3_VLOutputs":
+        return Qwen3_VLOutputs(self)
+
+    @classmethod
+    def get_node_class(cls) -> type[BaseNode]:
+        return nodetool.nodes.huggingface.image_text_to_text.Qwen3_VL
+
+    @classmethod
+    def get_node_type(cls):
+        return cls.get_node_class().get_node_type()
+
+
+class Qwen3_VLOutputs(OutputsProxy):
+    @property
+    def text(self) -> OutputHandle[str]:
+        return typing.cast(OutputHandle[str], self["text"])
+
+    @property
+    def chunk(self) -> OutputHandle[types.Chunk]:
+        return typing.cast(OutputHandle[types.Chunk], self["chunk"])

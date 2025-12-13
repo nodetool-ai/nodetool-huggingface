@@ -11,7 +11,6 @@ from pydantic import Field
 
 from nodetool.config.environment import Environment
 from nodetool.config.logging_config import get_logger
-from nodetool.huggingface.nunchaku_utils import get_nunchaku_transformer
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nodetool.metadata.types import (
     HFCLIP,
@@ -26,7 +25,6 @@ from nodetool.metadata.types import (
     ImageRef,
     TorchTensor,
 )
-from nunchaku.models.unets.unet_sdxl import NunchakuSDXLUNet2DConditionModel
 
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
@@ -1298,9 +1296,10 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             if not transformer_model.path:
                 raise ValueError("Nunchaku SDXL requires a transformer path to be set")
 
+            from nodetool.huggingface.nunchaku_pipelines import get_nunchaku_transformer, get_nunchaku_sdxl_unet_class
             transformer = await get_nunchaku_transformer(
                 context=context,
-                model_class=NunchakuSDXLUNet2DConditionModel,
+                model_class=get_nunchaku_sdxl_unet_class(),
                 node_id=self.id,
                 repo_id=transformer_model.repo_id,
                 path=transformer_model.path,
