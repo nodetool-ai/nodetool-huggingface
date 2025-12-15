@@ -59,6 +59,17 @@ This package provides a rich set of HuggingFace nodes for integration with Nodet
 
 ### 🗣️ Speech & Audio Processing
 
+#### Audio Classification
+- **Audio Classifier** - Classify audio into predefined categories
+  - Recommended models:
+    - `MIT/ast-finetuned-audioset-10-10-0.4593`
+    - `ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition`
+  - Use cases: Music genre classification, speech detection, environmental sounds, emotion recognition
+
+- **Zero-Shot Audio Classifier** - Classify audio without predefined categories
+  - Flexible classification with custom labels
+  - Use cases: Dynamic audio categorization, sound identification
+
 #### Automatic Speech Recognition
 - **Whisper** - Convert speech to text with multilingual support
   - Supports 100+ languages
@@ -180,14 +191,32 @@ This package provides a rich set of HuggingFace nodes for integration with Nodet
 
 ### 🎭 Multimodal Processing
 
+#### Video Generation
+- **Text-to-Video (CogVideoX)** - Generate videos from text prompts
+  - Large diffusion transformer model
+  - High-quality, consistent video generation
+  - Longer video sequences
+  - Use cases: Video content creation, animated storytelling, marketing videos, cinematic content
+
+- **Image-to-Video** - Convert static images into video sequences
+  - Animate still images
+  - Add motion to photographs
+  - Use cases: Photo animation, creating video from stills, dynamic presentations
+
 #### Image-Text Models
 - **Image to Text** - Generate captions for images
   - Automatic image captioning
   - Use cases: Accessibility, content tagging, image search
 
+- **Image-Text-to-Text** - Process images with text queries
+  - Visual question answering
+  - Image reasoning with text context
+  - Use cases: Document understanding, visual Q&A, scene description
+
 - **Multimodal** - Process both image and text inputs
   - Vision-language models
-  - Use cases: Visual question answering, image reasoning
+  - Combined visual and textual understanding
+  - Use cases: Complex visual reasoning, document analysis, multimodal search
 
 ### 🎯 Model Customization
 
