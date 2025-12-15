@@ -24,7 +24,7 @@ This package provides a rich set of HuggingFace nodes for integration with Nodet
   - Use cases: Marketing materials, game assets, interior design concepts
 
 - **Flux** - Next-generation image generation with memory-efficient quantization
-  - Supports schnell (fast) and dev (high-quality) variants
+  - Supports *schnell* (fast) and *dev* (high-quality) variants
   - Nunchaku quantization (FP16, FP4, INT4) for reduced VRAM usage
   - CPU offload support for large models
   - Configurable max_sequence_length for prompt complexity
