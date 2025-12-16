@@ -205,13 +205,13 @@ class BaseQwenVL(HuggingFacePipelineNode):
         title="Prompt",
         description="Instruction or question for the model.",
     )
-    min_pixels: int | None = Field(
-        default=None,
+    min_pixels: int = Field(
+        default=0,
         title="Min Pixels",
         description="Minimum number of pixels for image resizing.",
     )
-    max_pixels: int | None = Field(
-        default=None,
+    max_pixels: int = Field(
+        default=0,
         title="Max Pixels",
         description="Maximum number of pixels for image resizing.",
     )

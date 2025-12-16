@@ -523,6 +523,91 @@ class Flux(HuggingFacePipelineNode):
             ),
         ]
 
+    @classmethod
+    def get_model_packs(cls):
+        """Return curated Flux model packs for one-click download."""
+        from nodetool.types.model import ModelPack, UnifiedModel
+
+        FLUX_SCHNELL_ALLOW_PATTERNS = [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "tokenizer/*",
+            "tokenizer_2/*",
+        ]
+        FLUX_DEV_ALLOW_PATTERNS = FLUX_SCHNELL_ALLOW_PATTERNS
+
+        return [
+            ModelPack(
+                id="flux_schnell_nunchaku_int4",
+                title="Flux Schnell (Nunchaku INT4)",
+                description="Fast 4-step Flux with INT4 quantization via Nunchaku. Requires base Schnell repo + quantized transformer + T5 encoder.",
+                category="image_generation",
+                tags=["flux", "text-to-image", "int4", "nunchaku", "fast", "4-step"],
+                models=[
+                    UnifiedModel(
+                        id="black-forest-labs/FLUX.1-schnell",
+                        type="hf.flux",
+                        name="Flux Schnell Base (configs/VAE/tokenizer)",
+                        repo_id="black-forest-labs/FLUX.1-schnell",
+                        allow_patterns=FLUX_SCHNELL_ALLOW_PATTERNS,
+                    ),
+                    UnifiedModel(
+                        id="nunchaku-tech/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
+                        type="hf.flux",
+                        name="Nunchaku Schnell Transformer (INT4)",
+                        repo_id="nunchaku-tech/nunchaku-flux.1-schnell",
+                        path="svdq-int4_r32-flux.1-schnell.safetensors",
+                        size_on_disk=6400000000,
+                    ),
+                    UnifiedModel(
+                        id="nunchaku-tech/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
+                        type="hf.t5",
+                        name="Nunchaku T5-XXL Encoder (INT4)",
+                        repo_id="nunchaku-tech/nunchaku-t5",
+                        path="awq-int4-flux.1-t5xxl.safetensors",
+                        size_on_disk=5000000000,
+                    ),
+                ],
+                total_size=11400000000,
+            ),
+            ModelPack(
+                id="flux_dev_nunchaku_int4",
+                title="Flux Dev (Nunchaku INT4)",
+                description="High-quality Flux Dev with INT4 quantization via Nunchaku. Requires base Dev repo + quantized transformer + T5 encoder.",
+                category="image_generation",
+                tags=["flux", "text-to-image", "int4", "nunchaku", "high-quality"],
+                models=[
+                    UnifiedModel(
+                        id="black-forest-labs/FLUX.1-dev",
+                        type="hf.flux",
+                        name="Flux Dev Base (configs/VAE/tokenizer)",
+                        repo_id="black-forest-labs/FLUX.1-dev",
+                        allow_patterns=FLUX_DEV_ALLOW_PATTERNS,
+                    ),
+                    UnifiedModel(
+                        id="nunchaku-tech/nunchaku-flux.1-dev:svdq-int4_r32-flux.1-dev.safetensors",
+                        type="hf.flux",
+                        name="Nunchaku Dev Transformer (INT4)",
+                        repo_id="nunchaku-tech/nunchaku-flux.1-dev",
+                        path="svdq-int4_r32-flux.1-dev.safetensors",
+                        size_on_disk=6400000000,
+                    ),
+                    UnifiedModel(
+                        id="nunchaku-tech/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
+                        type="hf.t5",
+                        name="Nunchaku T5-XXL Encoder (INT4)",
+                        repo_id="nunchaku-tech/nunchaku-t5",
+                        path="awq-int4-flux.1-t5xxl.safetensors",
+                        size_on_disk=5000000000,
+                    ),
+                ],
+                total_size=11400000000,
+            ),
+        ]
+
     def _resolve_model_config(self) -> tuple[HFFlux, HFT5]:
         """
         Resolve flux and t5 models based on variant and quantization.
@@ -1017,6 +1102,54 @@ class QwenImage(HuggingFacePipelineNode):
             ),
             HFQwen2_5_VL(
                 repo_id="Qwen/Qwen2.5-VL-7B-Instruct",
+            ),
+        ]
+
+    @classmethod
+    def get_model_packs(cls):
+        """Return curated Qwen-Image model packs for one-click download."""
+        from nodetool.types.model import ModelPack, UnifiedModel
+
+        QWEN_IMAGE_ALLOW_PATTERNS = [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "tokenizer/*",
+            "tokenizer_2/*",
+        ]
+
+        return [
+            ModelPack(
+                id="qwen_image_nunchaku_int4",
+                title="Qwen-Image (Nunchaku INT4)",
+                description="Qwen-Image with INT4 quantization via Nunchaku. Requires base Qwen-Image repo + quantized transformer.",
+                category="image_generation",
+                tags=["qwen", "text-to-image", "int4", "nunchaku"],
+                models=[
+                    UnifiedModel(
+                        id="Qwen/Qwen-Image",
+                        type="hf.qwen_image",
+                        name="Qwen-Image Base (configs/VAE/tokenizer)",
+                        repo_id="Qwen/Qwen-Image",
+                        allow_patterns=QWEN_IMAGE_ALLOW_PATTERNS,
+                    ),
+                    UnifiedModel(
+                        id="nunchaku-tech/nunchaku-qwen-image:svdq-int4_r32-qwen-image.safetensors",
+                        type="hf.qwen_image",
+                        name="Nunchaku Qwen Transformer (INT4)",
+                        repo_id="nunchaku-tech/nunchaku-qwen-image",
+                        path="svdq-int4_r32-qwen-image.safetensors",
+                        size_on_disk=6500000000,
+                    ),
+                    UnifiedModel(
+                        id="Qwen/Qwen2.5-VL-7B-Instruct",
+                        type="hf.qwen_vl",
+                        name="Qwen2.5-VL-7B-Instruct (Text Encoder)",
+                        repo_id="Qwen/Qwen2.5-VL-7B-Instruct",
+                    ),
+                ],
+                total_size=6500000000,
             ),
         ]
 

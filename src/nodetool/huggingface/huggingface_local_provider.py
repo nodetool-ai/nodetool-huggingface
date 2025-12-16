@@ -30,6 +30,7 @@ from nodetool.integrations.huggingface.huggingface_models import (
     fetch_model_info,
     get_image_to_image_models_from_hf_cache,
     get_text_to_image_models_from_hf_cache,
+    get_hf_language_models_from_hf_cache,
     HF_FAST_CACHE,
 )
 from nodetool.types.job import JobUpdate
