@@ -222,6 +222,8 @@ class RealESRGANNode(BaseNode):
         ]
 
     async def preload_model(self, context: ProcessingContext):
+        from RealESRGAN import RealESRGAN
+
         assert self.model.path is not None, "Model is not set"
 
         model_path = await HF_FAST_CACHE.resolve(self.model.repo_id, self.model.path)
