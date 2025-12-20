@@ -32,6 +32,9 @@ jobs:
           cache: "pip"
 
       - name: Install Python dependencies
+        env:
+          NODETOOL_CORE_REF: v0.6.2-rc.12
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
+          pip install "nodetool-core @ git+https://github.com/nodetool-ai/nodetool-core.git@${NODETOOL_CORE_REF}"
+          pip install -e . --no-deps
