@@ -682,6 +682,8 @@ class Flux(HuggingFacePipelineNode):
         return repo_id
 
     async def preload_model(self, context: ProcessingContext):
+        import torch
+
         transformer_model, text_encoder_model = self._resolve_model_config()
 
         torch_dtype = (
@@ -714,7 +716,7 @@ class Flux(HuggingFacePipelineNode):
                     f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded"
                 )
 
-            from nodetool.huggingface.huggingface_local_provider import (
+            from nodetool.huggingface.nunchaku_pipelines import (
                 load_nunchaku_flux_pipeline,
             )
             from nodetool.ml.core.model_manager import ModelManager
@@ -1242,7 +1244,7 @@ class QwenImage(HuggingFacePipelineNode):
         torch_dtype: torch.dtype,
     ):
         """Load Qwen-Image pipeline using a Nunchaku SVDQ transformer file."""
-        from nodetool.huggingface.huggingface_local_provider import (
+        from nodetool.huggingface.nunchaku_pipelines import (
             load_nunchaku_qwen_pipeline,
         )
 
@@ -1484,7 +1486,7 @@ class FluxControl(HuggingFacePipelineNode):
                     f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded"
                 )
 
-            from nodetool.huggingface.huggingface_local_provider import (
+            from nodetool.huggingface.nunchaku_pipelines import (
                 load_nunchaku_flux_pipeline,
             )
             from nodetool.ml.core.model_manager import ModelManager
