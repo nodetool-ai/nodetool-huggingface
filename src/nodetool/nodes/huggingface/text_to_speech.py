@@ -19,24 +19,26 @@ if TYPE_CHECKING:
 
 class Bark(HuggingFacePipelineNode):
     """
-    Bark is a text-to-audio model created by Suno. Bark can generate highly realistic, multilingual speech as well as other audio - including music, background noise and simple sound effects. The model can also produce nonverbal communications like laughing, sighing and crying.
-    tts, audio, speech, huggingface
+    Generates realistic multilingual speech and non-verbal audio from text using Suno's Bark model.
+    tts, audio, speech, huggingface, multilingual, voice-synthesis
 
     Use cases:
-    - Create voice content for apps and websites
-    - Develop voice assistants with natural-sounding speech
-    - Generate automated announcements for public spaces
+    - Create natural-sounding voice content for apps and videos
+    - Generate multilingual speech for global applications
+    - Produce expressive speech with emotions (laughing, sighing, crying)
+    - Add realistic voice to chatbots and virtual assistants
+    - Create audio content with background music and sound effects
     """
 
     model: HFTextToSpeech = Field(
         default=HFTextToSpeech(),
-        title="Model ID on Huggingface",
-        description="The model ID to use for the image generation",
+        title="Model",
+        description="The Bark model variant. bark-small is faster; bark offers higher quality. Both support multilingual output.",
     )
     prompt: str = Field(
         default="",
-        title="Inputs",
-        description="The input text to the model",
+        title="Text Prompt",
+        description="The text to convert to speech. Can include non-verbal markers like [laughs] or [sighs].",
     )
     _pipeline: Any = None
 
@@ -78,16 +80,18 @@ class Bark(HuggingFacePipelineNode):
 
 class KokoroTTS(HuggingFacePipelineNode):
     """
-    Kokoro is an open-weight, fast, and lightweight TTS model (~82M params) with Apache-2.0 weights.
-    It supports multiple languages via `misaki` and provides high-quality speech with selectable voices.
-    tts, audio, speech, huggingface, kokoro
-
-    Reference: https://huggingface.co/hexgrad/Kokoro-82M
+    Generates high-quality speech from text using the lightweight Kokoro TTS model.
+    tts, audio, speech, huggingface, kokoro, multilingual, voice
 
     Use cases:
-    - Natural-sounding speech synthesis for apps, assistants, and narration
-    - Low-latency TTS in production or local projects
-    - Multi-language TTS with configurable voices and speed
+    - Generate natural-sounding speech for applications and assistants
+    - Create voice content with multiple voice options and styles
+    - Build low-latency TTS systems for real-time applications
+    - Produce multilingual speech in various languages
+    - Generate narration for videos, presentations, and e-learning
+
+    **Note:** Kokoro is a fast, lightweight model (~82M params) with Apache-2.0 license.
+    See https://huggingface.co/hexgrad/Kokoro-82M for voice samples.
     """
 
     class LanguageCode(str, Enum):
@@ -180,35 +184,30 @@ class KokoroTTS(HuggingFacePipelineNode):
 
     model: HFTextToSpeech = Field(
         default=HFTextToSpeech(repo_id="hexgrad/Kokoro-82M"),
-        title="Model ID on Hugging Face",
-        description="The Kokoro repo to use (e.g., hexgrad/Kokoro-82M)",
+        title="Model",
+        description="The Kokoro model repository.",
     )
     text: str = Field(
         default="Hello from Kokoro.",
         title="Text",
-        description="Input text to synthesize",
+        description="The text to convert to speech.",
     )
     lang_code: LanguageCode = Field(
         default=LanguageCode.AMERICAN_ENGLISH,
-        title="Language Code",
-        description=(
-            "Language code for G2P. Examples: 'a' (American English), 'b' (British English), "
-            "'e' (es), 'f' (fr-fr), 'h' (hi), 'i' (it), 'p' (pt-br), 'j' (ja), 'z' (zh)."
-        ),
+        title="Language",
+        description="Language for pronunciation. Choose based on your text's language.",
     )
     voice: Voice = Field(
         default=Voice.AF_HEART,
         title="Voice",
-        description=(
-            "Voice name (see VOICES.md on the model page). Examples: af_heart, af_bella, af_jessica."
-        ),
+        description="The voice to use. af_* = American female, am_* = American male, bf_* = British female, etc.",
     )
     speed: float = Field(
         default=1.0,
         ge=0.5,
         le=2.0,
         title="Speed",
-        description="Speech speed multiplier (0.5–2.0)",
+        description="Speech speed multiplier: 0.5 = half speed, 1.0 = normal, 2.0 = double speed.",
     )
 
     _kpipeline: Any = None
@@ -389,24 +388,26 @@ class KokoroTTS(HuggingFacePipelineNode):
 
 class TextToSpeech(HuggingFacePipelineNode):
     """
-    A generic Text-to-Speech node that can work with various Hugging Face TTS models.
-    tts, audio, speech, huggingface, speak, voice
+    Converts text to speech using various Hugging Face TTS models for multiple languages.
+    tts, audio, speech, huggingface, voice, speak
 
     Use cases:
-    - Generate speech from text for various applications
-    - Create voice content for apps, websites, or virtual assistants
-    - Produce audio narrations for videos, presentations, or e-learning content
+    - Generate speech from text for applications and websites
+    - Create voice content for virtual assistants and chatbots
+    - Produce audio narrations for videos and presentations
+    - Build accessibility features with text-to-speech output
+    - Generate multilingual speech using MMS-TTS models
     """
 
     model: HFTextToSpeech = Field(
         default=HFTextToSpeech(),
-        title="Model ID on Huggingface",
-        description="The model ID to use for text-to-speech generation",
+        title="Model",
+        description="The TTS model to use. facebook/mms-tts-* models support many languages (eng=English, fra=French, deu=German, kor=Korean, etc.).",
     )
     text: str = Field(
         default="Hello, this is a test of the text-to-speech system.",
         title="Input Text",
-        description="The text to convert to speech",
+        description="The text to convert to speech.",
     )
     _pipeline: Any = None
 

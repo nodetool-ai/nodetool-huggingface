@@ -1296,7 +1296,11 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             if not transformer_model.path:
                 raise ValueError("Nunchaku SDXL requires a transformer path to be set")
 
-            from nodetool.huggingface.nunchaku_pipelines import get_nunchaku_transformer, get_nunchaku_sdxl_unet_class
+            from nodetool.huggingface.nunchaku_pipelines import (
+                get_nunchaku_transformer,
+                get_nunchaku_sdxl_unet_class,
+            )
+
             transformer = await get_nunchaku_transformer(
                 context=context,
                 model_class=get_nunchaku_sdxl_unet_class(),

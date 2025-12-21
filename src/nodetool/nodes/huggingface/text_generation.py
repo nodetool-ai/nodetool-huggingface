@@ -11,49 +11,50 @@ from pydantic import Field
 
 class TextGeneration(HuggingFacePipelineNode):
     """
-    Generates text based on a given prompt.
-    text, generation, natural language processing
+    Generates text continuations and responses from prompts using large language models.
+    text, generation, NLP, LLM, chatbot, creative-writing
 
     Use cases:
-    - Creative writing assistance
-    - Automated content generation
-    - Chatbots and conversational AI
-    - Code generation and completion
+    - Generate creative writing, stories, and content
+    - Build chatbots and conversational AI assistants
+    - Create code completions and programming assistance
+    - Produce automated content for various applications
+    - Answer questions and provide explanations
     """
 
     model: HFTextGeneration = Field(
         default=HFTextGeneration(),
-        title="Model ID on Huggingface",
-        description="The model ID to use for the text generation. Supports both regular models and GGUF quantized models (detected by .gguf file extension).",
+        title="Model",
+        description="The language model to use. Instruction-tuned models (Instruct) follow prompts better; Base models are for completion tasks. BNB-4bit variants reduce memory.",
     )
     prompt: str = Field(
         default="",
         title="Prompt",
-        description="The input text prompt for generation",
+        description="The input text to generate from. For instruct models, phrase as a request; for base models, provide text to continue.",
     )
     max_new_tokens: int = Field(
         default=512,
         title="Max New Tokens",
-        description="The maximum number of new tokens to generate",
+        description="Maximum number of tokens to generate in the response.",
     )
     temperature: float = Field(
         default=1.0,
         title="Temperature",
-        description="Controls randomness in generation. Lower values make it more deterministic.",
+        description="Controls randomness: lower values (0.1-0.5) for focused responses, higher (0.7-1.5) for creative output.",
         ge=0.0,
         le=2.0,
     )
     top_p: float = Field(
         default=1.0,
         title="Top P",
-        description="Controls diversity of generated text. Lower values make it more focused.",
+        description="Nucleus sampling: limits token selection to top probability mass. Lower values (0.1-0.5) increase focus.",
         ge=0.0,
         le=1.0,
     )
     do_sample: bool = Field(
         default=True,
         title="Do Sample",
-        description="Whether to use sampling or greedy decoding",
+        description="Enable sampling for varied outputs. Disable for deterministic, greedy decoding.",
     )
 
     @classmethod

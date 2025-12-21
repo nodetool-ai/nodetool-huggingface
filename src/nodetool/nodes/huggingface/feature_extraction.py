@@ -10,25 +10,26 @@ from pydantic import Field
 
 class FeatureExtraction(HuggingFacePipelineNode):
     """
-    Extracts features from text using pre-trained models.
-    text, feature extraction, embeddings, natural language processing
+    Extracts dense vector embeddings from text using transformer models for downstream ML tasks.
+    text, feature-extraction, embeddings, NLP, semantic-search
 
     Use cases:
-    - Text similarity comparison
-    - Clustering text documents
-    - Input for machine learning models
-    - Semantic search applications
+    - Compute text embeddings for semantic similarity comparisons
+    - Cluster documents by meaning rather than keywords
+    - Generate input features for machine learning classifiers
+    - Build semantic search engines and recommendation systems
+    - Create vector databases for retrieval-augmented generation (RAG)
     """
 
     model: HFFeatureExtraction = Field(
         default=HFFeatureExtraction(),
-        title="Model ID on Huggingface",
-        description="The model ID to use for feature extraction",
+        title="Model",
+        description="The embedding model to use. mxbai-embed-large-v1 and BGE models offer excellent quality; smaller models trade accuracy for speed.",
     )
     inputs: str = Field(
         default="",
         title="Input Text",
-        description="The text to extract features from",
+        description="The text to extract embeddings from. Can be a sentence, paragraph, or document.",
     )
 
     @classmethod

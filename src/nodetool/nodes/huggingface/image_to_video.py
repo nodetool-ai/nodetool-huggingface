@@ -27,12 +27,17 @@ if TYPE_CHECKING:
 
 class Wan_I2V(HuggingFacePipelineNode):
     """
-    Generates a video from an input image using Wan image-to-video pipelines.
-    video, generation, AI, image-to-video, diffusion, Wan
+    Transforms a static image into a dynamic video clip using Wan image-to-video diffusion models.
+    video, generation, AI, image-to-video, diffusion, Wan, animation
 
     Use cases:
-    - Turn a single image into a dynamic clip with prompt guidance
-    - Choose between Wan 2.2 A14B, Wan 2.1 14B 480P, and Wan 2.1 14B 720P models
+    - Animate photographs and artwork into short video clips
+    - Create motion from still images with text-guided direction
+    - Generate video content for social media from static images
+    - Bring product images to life with realistic movement
+    - Create dynamic visual effects from single frames
+
+    **Note:** Model variants offer different quality/speed tradeoffs. A14B is balanced; 720P provides higher resolution.
     """
 
     class WanI2VModel(str, Enum):
@@ -42,78 +47,78 @@ class Wan_I2V(HuggingFacePipelineNode):
 
     input_image: ImageRef = Field(
         default=ImageRef(),
-        description="The input image to generate the video from.",
+        description="The source image to animate. Image content guides the video's appearance.",
     )
     prompt: str = Field(
         default="An astronaut walking on the moon, cinematic lighting, high detail",
-        description="A text prompt describing the desired video.",
+        description="Text description guiding how the image should animate and move.",
     )
     model_variant: WanI2VModel = Field(
         default=WanI2VModel.WAN_2_2_I2V_A14B,
-        description="Select the Wan I2V model to use.",
+        description="The Wan I2V model variant. A14B is balanced; 720P offers higher resolution output.",
     )
     negative_prompt: str = Field(
         default="",
-        description="A text prompt describing what to avoid in the video.",
+        description="Describe what to avoid in the generated video (e.g., 'blurry, distorted').",
     )
     num_frames: int = Field(
         default=81,
-        description="The number of frames in the video.",
+        description="Total frames in the output video. More frames = longer duration.",
         ge=16,
         le=129,
     )
     guidance_scale: float = Field(
         default=5.0,
-        description="The scale for classifier-free guidance.",
+        description="How strongly to follow the prompt. Higher values = more prompt adherence.",
         ge=1.0,
         le=20.0,
     )
     num_inference_steps: int = Field(
         default=50,
-        description="The number of denoising steps.",
+        description="Denoising steps. More steps = better quality but slower generation.",
         ge=1,
         le=100,
     )
     height: int = Field(
         default=480,
-        description="The height of the generated video in pixels.",
+        description="Output video height in pixels.",
         ge=256,
         le=1080,
     )
     width: int = Field(
         default=832,
-        description="The width of the generated video in pixels.",
+        description="Output video width in pixels.",
         ge=256,
         le=1920,
     )
     fps: int = Field(
         default=16,
-        description="Frames per second for the output video.",
+        description="Frames per second for the output video file.",
         ge=1,
         le=60,
     )
     seed: int = Field(
         default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducibility. Use -1 for random generation.",
         ge=-1,
     )
     max_sequence_length: int = Field(
         default=512,
-        description="Maximum sequence length in encoded prompt.",
+        description="Maximum prompt encoding length. Higher allows longer prompts.",
         ge=64,
         le=1024,
     )
     enable_cpu_offload: bool = Field(
         default=True,
-        description="Enable CPU offload to reduce VRAM usage.",
+        description="Offload model components to CPU to reduce VRAM usage.",
     )
     enable_vae_slicing: bool = Field(
         default=True,
-        description="Enable VAE slicing to reduce VRAM usage.",
+        description="Process VAE in slices to reduce peak memory usage.",
     )
     enable_vae_tiling: bool = Field(
         default=False,
-        description="Enable VAE tiling to reduce VRAM usage for large videos.",
+        description="Process VAE in tiles for very large videos. May affect quality.",
     )
 
     _pipeline: Any = None
@@ -239,6 +244,7 @@ class Wan_I2V(HuggingFacePipelineNode):
         generator = None
         if self.seed != -1:
             import torch
+
             generator = torch.Generator(device="cpu").manual_seed(self.seed)
 
         def callback_on_step_end(

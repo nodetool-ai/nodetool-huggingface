@@ -31,17 +31,19 @@ import threading
 
 class LoadImageTextToTextModel(HuggingFacePipelineNode):
     """
-    Load a Hugging Face image-text-to-text model/pipeline by repo_id.
+    Loads and validates a Hugging Face image-text-to-text model for use in downstream nodes.
+    model-loader, vision-language, multimodal, VLM
 
     Use cases:
-    - Produces a configurable `HFImageTextToText` model reference for downstream nodes
-    - Ensures the selected model can be loaded with the "image-text-to-text" task
+    - Pre-load vision-language models for image understanding tasks
+    - Validate model availability before running pipelines
+    - Configure model settings for ImageTextToText processing
     """
 
     repo_id: str = Field(
         default="HuggingFaceTB/SmolVLM-Instruct",
-        title="Model ID on Hugging Face",
-        description="The model repository ID to use for image-text-to-text generation.",
+        title="Model ID",
+        description="The Hugging Face repository ID for the vision-language model (e.g., SmolVLM, LLaVA variants).",
     )
 
     async def preload_model(self, context: ProcessingContext):
@@ -60,14 +62,15 @@ class LoadImageTextToTextModel(HuggingFacePipelineNode):
 
 class ImageTextToText(HuggingFacePipelineNode):
     """
-    Answers questions or follows instructions given both an image and text.
-    image, text, visual question answering, multimodal, VLM
+    Generates text responses based on an image and text prompt using vision-language models.
+    image, text, visual-question-answering, multimodal, VLM, captioning
 
     Use cases:
-    - Visual question answering with free-form reasoning
-    - Zero-shot object localization or structure extraction via instructions
-    - OCR-free document understanding when combined with prompts
-    - Multi-turn, instruction-following conversations grounded in an image
+    - Answer questions about image content with detailed explanations
+    - Generate comprehensive image descriptions and captions
+    - Extract structured information (objects, text, layout) from images
+    - Perform OCR-free document understanding via natural language
+    - Build multi-turn visual conversations and assistants
     """
 
     model: HFImageTextToText = Field(
@@ -75,22 +78,22 @@ class ImageTextToText(HuggingFacePipelineNode):
             repo_id="HuggingFaceTB/SmolVLM-Instruct",
         ),
         title="Model",
-        description="The image-text-to-text model to use.",
+        description="The vision-language model to use. SmolVLM is lightweight; LLaVA variants offer different capability levels.",
     )
     image: ImageRef = Field(
         default=ImageRef(),
         title="Input Image",
-        description="The image to analyze.",
+        description="The image to analyze and discuss.",
     )
     prompt: str = Field(
         default="Describe this image.",
         title="Prompt",
-        description="Instruction or question for the model about the image.",
+        description="Your question or instruction about the image. Be specific for better results.",
     )
     max_new_tokens: int = Field(
         default=256,
         title="Max New Tokens",
-        description="Maximum number of tokens to generate.",
+        description="Maximum length of the generated response in tokens.",
         ge=1,
     )
 
@@ -188,37 +191,40 @@ class Qwen2_5_VLQuantization(str, Enum):
 
 
 class BaseQwenVL(HuggingFacePipelineNode):
-    """Base class for Qwen VL nodes."""
+    """
+    Base class for Qwen vision-language models supporting image and video understanding.
+    image, video, multimodal, VLM, Qwen
+    """
 
     image: ImageRef = Field(
         default=ImageRef(),
         title="Input Image",
-        description="The image to analyze.",
+        description="An image to analyze. Leave empty if providing video input.",
     )
     video: VideoRef = Field(
         default=VideoRef(),
         title="Input Video",
-        description="The video to analyze.",
+        description="A video to analyze. Leave empty if providing image input.",
     )
     prompt: str = Field(
         default="Describe this image.",
         title="Prompt",
-        description="Instruction or question for the model.",
+        description="Your question or instruction about the visual content.",
     )
     min_pixels: int = Field(
         default=0,
         title="Min Pixels",
-        description="Minimum number of pixels for image resizing.",
+        description="Minimum pixel count for image resizing. Use 0 for automatic sizing.",
     )
     max_pixels: int = Field(
         default=0,
         title="Max Pixels",
-        description="Maximum number of pixels for image resizing.",
+        description="Maximum pixel count for image resizing. Use 0 for automatic sizing.",
     )
     max_new_tokens: int = Field(
         default=128,
         title="Max New Tokens",
-        description="Maximum number of tokens to generate.",
+        description="Maximum length of the generated response in tokens.",
         ge=1,
     )
     _pipeline: Any = None
@@ -453,13 +459,17 @@ class BaseQwenVL(HuggingFacePipelineNode):
 
 class Qwen2_5_VL(BaseQwenVL):
     """
-    Qwen2.5-VL: A versatile vision-language model for image and video understanding.
+    Analyzes images and videos using Alibaba's Qwen2.5-VL vision-language model.
+    image, video, multimodal, VLM, Qwen, visual-understanding
 
-    Capabilities:
-    - Visual understanding of objects, text, charts, and layouts
-    - Video comprehension and event capturing
-    - Visual localization (bounding boxes, points)
-    - Structured output generation
+    Use cases:
+    - Understand visual content including objects, text, charts, and layouts
+    - Comprehend videos with temporal event tracking and scene changes
+    - Localize objects with bounding boxes or point annotations
+    - Generate structured output (JSON, tables) from visual data
+    - Read and interpret documents, diagrams, and UI screenshots
+
+    **Note:** BNB-4bit variants from Unsloth reduce memory usage significantly.
     """
 
     model: HFQwen2_5_VL = Field(
@@ -467,7 +477,7 @@ class Qwen2_5_VL(BaseQwenVL):
             repo_id="Qwen/Qwen2.5-VL-7B-Instruct",
         ),
         title="Model",
-        description="The Qwen2.5-VL model to use.",
+        description="The Qwen2.5-VL model variant. Larger models (32B, 72B) offer better accuracy; BNB-4bit variants reduce memory usage.",
     )
 
     @classmethod
@@ -535,12 +545,17 @@ class Qwen3_VLQuantization(str, Enum):
 
 class Qwen3_VL(BaseQwenVL):
     """
-    Qwen3-VL: Next-generation multimodal vision-language model for images and video.
+    Analyzes images and videos using Alibaba's next-generation Qwen3-VL vision-language model.
+    image, video, multimodal, VLM, Qwen, visual-reasoning, thinking
 
-    Capabilities:
-    - Advanced visual reasoning across images and video
+    Use cases:
+    - Advanced visual reasoning across images and video content
     - Instruction-following with improved spatial-temporal grounding
-    - Supports DeepStack visual features and long-context chat templating
+    - Complex multi-step visual analysis with chain-of-thought reasoning
+    - Document, chart, and diagram understanding with enhanced accuracy
+    - Long-context visual conversations with memory
+
+    **Note:** Thinking variants include extended reasoning capabilities. BNB-4bit variants reduce memory usage.
     """
 
     model: HFQwen3_VL = Field(
@@ -548,7 +563,7 @@ class Qwen3_VL(BaseQwenVL):
             repo_id="Qwen/Qwen3-VL-4B-Instruct",
         ),
         title="Model",
-        description="The Qwen3-VL model to use.",
+        description="The Qwen3-VL model variant. Thinking variants add chain-of-thought; BNB-4bit reduces memory; larger models improve accuracy.",
     )
 
     @classmethod

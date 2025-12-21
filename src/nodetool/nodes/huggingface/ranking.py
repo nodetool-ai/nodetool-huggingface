@@ -13,29 +13,31 @@ if TYPE_CHECKING:
 
 class Reranker(HuggingFacePipelineNode):
     """
-    Reranks pairs of text based on their semantic similarity.
-    text, ranking, reranking, natural language processing
+    Scores and ranks text pairs by semantic relevance using cross-encoder reranking models.
+    text, ranking, reranking, NLP, search
 
     Use cases:
-    - Improve search results ranking
-    - Question-answer pair scoring
-    - Document relevance ranking
+    - Improve search result quality by reranking initial retrieval results
+    - Score question-answer pair relevance for QA systems
+    - Rank document relevance for information retrieval
+    - Build two-stage retrieval pipelines (retrieve then rerank)
+    - Filter and prioritize candidates in recommendation systems
     """
 
     model: HFReranker = Field(
         default=HFReranker(),
-        title="Model ID on Huggingface",
-        description="The model ID to use for reranking",
+        title="Model",
+        description="The reranking model. BGE-reranker-v2-m3 is multilingual; base and large variants offer different speed/accuracy tradeoffs.",
     )
     query: str = Field(
         default="",
         title="Query Text",
-        description="The query text to compare against candidates",
+        description="The query or question to compare candidates against.",
     )
     candidates: list[str] = Field(
         default=[],
         title="Candidate Texts",
-        description="List of candidate texts to rank",
+        description="List of text candidates to rank by relevance to the query.",
     )
 
     _model: Any = None

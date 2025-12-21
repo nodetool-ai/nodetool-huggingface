@@ -4,6 +4,7 @@ from typing import TypedDict, AsyncGenerator
 from nodetool.workflows.base_node import BaseNode
 from pydantic import Field
 
+
 class SplitSentences(BaseNode):
     """
     Splits text into sentences using LangChain's SentenceTransformersTokenTextSplitter.

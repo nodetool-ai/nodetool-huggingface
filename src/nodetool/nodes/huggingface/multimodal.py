@@ -14,30 +14,30 @@ from nodetool.workflows.types import NodeUpdate
 
 class ImageToText(HuggingFacePipelineNode):
     """
-    Generates text descriptions from images.
-    image, text, captioning, vision-language
+    Generates descriptive text captions from images using vision-language models.
+    image, text, captioning, vision-language, accessibility
 
     Use cases:
-    - Automatic image captioning
-    - Assisting visually impaired users
-    - Enhancing image search capabilities
-    - Generating alt text for web images
+    - Generate natural language descriptions of image content
+    - Create alt-text for web accessibility compliance
+    - Build automatic image cataloging and search systems
+    - Enable content discovery through text-based image queries
     """
 
     model: HFImageToText = Field(
         default=HFImageToText(),
-        title="Model ID on Huggingface",
-        description="The model ID to use for image-to-text generation",
+        title="Model",
+        description="The image captioning model. BLIP variants offer good quality/speed balance.",
     )
     image: ImageRef = Field(
         default=ImageRef(),
         title="Input Image",
-        description="The image to generate text from",
+        description="The image to generate a caption for.",
     )
     max_new_tokens: int = Field(
         default=1024,
         title="Max New Tokens",
-        description="The maximum number of tokens to generate",
+        description="Maximum length of the generated caption in tokens.",
     )
 
     @classmethod
@@ -87,30 +87,30 @@ class ImageToText(HuggingFacePipelineNode):
 
 class VisualQuestionAnswering(HuggingFacePipelineNode):
     """
-    Answers questions about images.
-    image, text, question answering, multimodal
+    Answers natural language questions about image content using vision-language models.
+    image, text, question-answering, multimodal, VQA
 
     Use cases:
-    - Image content analysis
-    - Automated image captioning
-    - Visual information retrieval
-    - Accessibility tools for visually impaired users
+    - Query image content with natural language questions
+    - Extract specific information from photos and diagrams
+    - Build interactive image exploration interfaces
+    - Create accessibility tools for visual content understanding
     """
 
     model: HFVisualQuestionAnswering = Field(
         default=HFVisualQuestionAnswering(),
-        title="Model ID on Huggingface",
-        description="The model ID to use for visual question answering",
+        title="Model",
+        description="The visual question answering model. BLIP-VQA provides good general performance.",
     )
     image: ImageRef = Field(
         default=ImageRef(),
         title="Image",
-        description="The image to analyze",
+        description="The image to ask questions about.",
     )
     question: str = Field(
         default="",
         title="Question",
-        description="The question to be answered about the image",
+        description="Your question about the image content (e.g., 'What color is the car?').",
     )
 
     @classmethod

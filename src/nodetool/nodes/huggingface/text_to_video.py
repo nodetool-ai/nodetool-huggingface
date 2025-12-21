@@ -32,83 +32,83 @@ if TYPE_CHECKING:
 
 class CogVideoX(HuggingFacePipelineNode):
     """
-    Generates videos from text prompts using CogVideoX, a large diffusion transformer model.
-    video, generation, AI, text-to-video, transformer, diffusion
+    Generates high-quality videos from text prompts using the CogVideoX diffusion transformer.
+    video, generation, AI, text-to-video, transformer, diffusion, cinematic
 
     Use cases:
-    - Create high-quality videos from text descriptions
-    - Generate longer and more consistent videos
-    - Produce cinematic content for creative projects
-    - Create animated scenes for storytelling
-    - Generate video content for marketing and media
+    - Create videos from detailed text descriptions
+    - Generate cinematic content for creative projects
+    - Produce animated scenes for storytelling and marketing
+    - Build AI video generation applications
+    - Create visual content for social media
     """
 
     prompt: str = Field(
         default="A detailed wooden toy ship with intricately carved masts and sails is seen gliding smoothly over a plush, blue carpet that mimics the waves of the sea. The ship's hull is painted a rich brown, with tiny windows. The carpet, soft and textured, provides a perfect backdrop, resembling an oceanic expanse. Surrounding the ship are various other toys and children's items, hinting at a playful environment. The scene captures the innocence and imagination of childhood, with the toy ship's journey symbolizing endless adventures in a whimsical, indoor setting.",
-        description="A text prompt describing the desired video.",
+        description="Detailed text description of the video to generate. More descriptive prompts produce better results.",
     )
     negative_prompt: str = Field(
         default="",
-        description="A text prompt describing what to avoid in the video.",
+        description="Describe what to avoid in the video (e.g., 'blurry, low quality, distorted').",
     )
     num_frames: int = Field(
         default=49,
-        description="The number of frames in the video. Must be divisible by 8 + 1 (e.g., 49, 81, 113).",
+        description="Total frames in the output. Must be 8n+1 (49, 81, 113). More frames = longer video.",
         ge=49,
         le=113,
     )
     guidance_scale: float = Field(
         default=6.0,
-        description="The scale for classifier-free guidance.",
+        description="How strongly to follow the prompt. 5-8 is typical; higher = more adherence.",
         ge=1.0,
         le=20.0,
     )
     num_inference_steps: int = Field(
         default=50,
-        description="The number of denoising steps.",
+        description="Denoising steps. 50 is recommended; lower for faster generation.",
         ge=1,
         le=100,
     )
     height: int = Field(
         default=480,
-        description="The height of the generated video in pixels.",
+        description="Output video height in pixels.",
         ge=256,
         le=1024,
     )
     width: int = Field(
         default=720,
-        description="The width of the generated video in pixels.",
+        description="Output video width in pixels.",
         ge=256,
         le=1024,
     )
     fps: int = Field(
         default=8,
-        description="Frames per second for the output video.",
+        description="Frames per second for the output video file.",
         ge=1,
         le=30,
     )
     seed: int = Field(
         default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
         ge=-1,
     )
     max_sequence_length: int = Field(
         default=226,
-        description="Maximum sequence length in encoded prompt.",
+        description="Maximum prompt encoding length. Higher allows longer prompts.",
         ge=1,
         le=512,
     )
     enable_cpu_offload: bool = Field(
         default=True,
-        description="Enable CPU offload to reduce VRAM usage.",
+        description="Offload model components to CPU to reduce VRAM usage.",
     )
     enable_vae_slicing: bool = Field(
         default=True,
-        description="Enable VAE slicing to reduce VRAM usage.",
+        description="Process VAE in slices to reduce peak memory usage.",
     )
     enable_vae_tiling: bool = Field(
         default=True,
-        description="Enable VAE tiling to reduce VRAM usage for large videos.",
+        description="Process VAE in tiles for large videos. Reduces memory but may affect quality.",
     )
 
     _pipeline: Any = None
@@ -219,12 +219,17 @@ class CogVideoX(HuggingFacePipelineNode):
 
 class Wan_T2V(HuggingFacePipelineNode):
     """
-    Generates videos from text prompts using Wan text-to-video pipeline.
-    video, generation, AI, text-to-video, diffusion, Wan
+    Generates videos from text prompts using Wan text-to-video diffusion models.
+    video, generation, AI, text-to-video, diffusion, Wan, cinematic
 
     Use cases:
     - Create high-quality videos from text descriptions
-    - Efficient 1.3B model for consumer GPUs or 14B for maximum quality
+    - Generate cinematic content for creative and commercial projects
+    - Produce animated scenes for storytelling and marketing
+    - Build AI video generation applications
+    - Create visual content for social media and entertainment
+
+    **Note:** Model variants offer different quality/resource tradeoffs. A14B is balanced; 14B offers maximum quality.
     """
 
     class WanModel(str, Enum):
@@ -234,74 +239,74 @@ class Wan_T2V(HuggingFacePipelineNode):
 
     prompt: str = Field(
         default="A robot standing on a mountain top at sunset, cinematic lighting, high detail",
-        description="A text prompt describing the desired video.",
+        description="Detailed text description of the video to generate.",
     )
     model_variant: WanModel = Field(
         default=WanModel.WAN_2_2_T2V_A14B,
-        description="Select the Wan model to use.",
+        description="The Wan model variant. A14B is balanced; TI2V-5B is smaller/faster.",
     )
     negative_prompt: str = Field(
         default="",
-        description="A text prompt describing what to avoid in the video.",
+        description="Describe what to avoid in the video (e.g., 'blurry, distorted').",
     )
     num_frames: int = Field(
         default=49,
-        description="The number of frames in the video.",
+        description="Total frames in the output video. More frames = longer duration.",
         ge=16,
         le=129,
     )
     guidance_scale: float = Field(
         default=5.0,
-        description="The scale for classifier-free guidance.",
+        description="How strongly to follow the prompt. 4-7 is typical.",
         ge=1.0,
         le=20.0,
     )
     num_inference_steps: int = Field(
         default=30,
-        description="The number of denoising steps.",
+        description="Denoising steps. 30 is fast; 50+ for higher quality.",
         ge=1,
         le=100,
     )
     height: int = Field(
         default=480,
-        description="The height of the generated video in pixels.",
+        description="Output video height in pixels.",
         ge=256,
         le=1080,
     )
     width: int = Field(
         default=720,
-        description="The width of the generated video in pixels.",
+        description="Output video width in pixels.",
         ge=256,
         le=1920,
     )
     fps: int = Field(
         default=16,
-        description="Frames per second for the output video.",
+        description="Frames per second for the output video file.",
         ge=1,
         le=60,
     )
     seed: int = Field(
         default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
         ge=-1,
     )
     max_sequence_length: int = Field(
         default=512,
-        description="Maximum sequence length in encoded prompt.",
+        description="Maximum prompt encoding length. Higher allows longer prompts.",
         ge=64,
         le=1024,
     )
     enable_cpu_offload: bool = Field(
         default=True,
-        description="Enable CPU offload to reduce VRAM usage.",
+        description="Offload model components to CPU to reduce VRAM usage.",
     )
     enable_vae_slicing: bool = Field(
         default=True,
-        description="Enable VAE slicing to reduce VRAM usage.",
+        description="Process VAE in slices to reduce peak memory usage.",
     )
     enable_vae_tiling: bool = Field(
         default=False,
-        description="Enable VAE tiling to reduce VRAM usage for large videos.",
+        description="Process VAE in tiles for large videos. May affect quality.",
     )
 
     _pipeline: Any = None
