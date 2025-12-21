@@ -17,30 +17,31 @@ from typing import Any, TypedDict
 
 class QuestionAnswering(HuggingFacePipelineNode):
     """
-    Answers questions based on a given context.
-    text, question answering, natural language processing
+    Extracts answers to questions from a given text context using extractive QA models.
+    text, question-answering, NLP, reading-comprehension
 
     Use cases:
-    - Automated customer support
-    - Information retrieval from documents
-    - Reading comprehension tasks
-    - Enhancing search functionality
+    - Build automated FAQ and customer support systems
+    - Extract specific information from documents and articles
+    - Create reading comprehension and study tools
+    - Enable natural language queries over text databases
+    - Analyze contracts and legal documents for key details
     """
 
     model: HFQuestionAnswering = Field(
         default=HFQuestionAnswering(),
-        title="Model ID on Huggingface",
-        description="The model ID to use for question answering",
+        title="Model",
+        description="The extractive QA model. DistilBERT is fast; BERT-large and RoBERTa offer higher accuracy.",
     )
     context: str = Field(
         default="",
         title="Context",
-        description="The context or passage to answer questions from",
+        description="The text passage containing the information to answer questions from.",
     )
     question: str = Field(
         default="",
         title="Question",
-        description="The question to be answered based on the context",
+        description="The question to answer based on the provided context.",
     )
 
     @classmethod
@@ -100,14 +101,15 @@ class QuestionAnswering(HuggingFacePipelineNode):
 
 class TableQuestionAnswering(HuggingFacePipelineNode):
     """
-    Answers questions based on tabular data.
-    table, question answering, natural language processing
+    Answers natural language questions about tabular data using table QA models.
+    table, question-answering, NLP, data-analysis
 
     Use cases:
-    - Querying databases using natural language
-    - Analyzing spreadsheet data with questions
-    - Extracting insights from tabular reports
-    - Automated data exploration
+    - Query spreadsheets and databases using natural language
+    - Extract insights from financial reports and data tables
+    - Build conversational interfaces for data exploration
+    - Automate data analysis with question-based queries
+    - Enable non-technical users to query structured data
     """
 
     @classmethod
@@ -129,18 +131,18 @@ class TableQuestionAnswering(HuggingFacePipelineNode):
 
     model: HFTableQuestionAnswering = Field(
         default=HFTableQuestionAnswering(),
-        title="Model ID on Huggingface",
-        description="The model ID to use for table question answering",
+        title="Model",
+        description="The table QA model. TAPAS models handle complex queries; TAPEX offers fact verification.",
     )
     dataframe: DataframeRef = Field(
         default=DataframeRef(),
         title="Table",
-        description="The input table to query",
+        description="The table data to query. Columns should have clear, descriptive headers.",
     )
     question: str = Field(
         default="",
         title="Question",
-        description="The question to be answered based on the table",
+        description="Your question about the table data (e.g., 'What is the total revenue?' or 'Which product sold the most?').",
     )
 
     async def preload_model(self, context: ProcessingContext):

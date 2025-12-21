@@ -21,23 +21,26 @@ if TYPE_CHECKING:
 
 class ImageClassifier(HuggingFacePipelineNode):
     """
-    Classifies images into predefined categories.
-    image, classification, labeling, categorization
+    Classifies images into predefined categories using vision transformer models.
+    image, classification, labeling, categorization, computer-vision
 
     Use cases:
-    - Content moderation by detecting inappropriate images
-    - Organizing photo libraries by automatically tagging images
+    - Automatically tag and organize photo libraries
+    - Detect inappropriate or NSFW content for moderation
+    - Classify product images in e-commerce catalogs
+    - Identify age, gender, or other attributes in photos
+    - Sort images by scene type, object presence, or style
     """
 
     model: HFImageClassification = Field(
         default=HFImageClassification(),
-        title="Model ID on Huggingface",
-        description="The model ID to use for the classification",
+        title="Model",
+        description="The image classification model. ViT and ResNet models offer general classification; specialized models exist for NSFW detection, age estimation, etc.",
     )
     image: ImageRef = Field(
         default=ImageRef(),
         title="Image",
-        description="The input image to classify",
+        description="The image to classify. Supports common formats like JPEG, PNG, WebP.",
     )
     _pipeline: Any = None
 
@@ -109,29 +112,31 @@ class ImageClassifier(HuggingFacePipelineNode):
 
 class ZeroShotImageClassifier(HuggingFacePipelineNode):
     """
-    Classifies images into categories without the need for training data.
-    image, classification, labeling, categorization
+    Classifies images into custom categories without requiring task-specific training data.
+    image, classification, labeling, categorization, zero-shot, flexible
 
     Use cases:
-    - Quickly categorize images without training data
-    - Identify objects in images without predefined labels
-    - Automate image tagging for large datasets
+    - Categorize images with custom, user-defined labels on the fly
+    - Quickly prototype image classification systems without training
+    - Identify objects or scenes without predefined model categories
+    - Build flexible image tagging workflows with dynamic categories
+    - Test hypotheses about image content using natural language labels
     """
 
     model: HFZeroShotImageClassification = Field(
         default=HFZeroShotImageClassification(),
-        title="Model ID on Huggingface",
-        description="The model ID to use for the classification",
+        title="Model",
+        description="The zero-shot classification model. CLIP-based models (OpenAI, LAION) enable flexible label matching using vision-language understanding.",
     )
     image: ImageRef = Field(
         default=ImageRef(),
         title="Image",
-        description="The input image to classify",
+        description="The image to classify. Supports common formats like JPEG, PNG, WebP.",
     )
     candidate_labels: str = Field(
         default="",
         title="Candidate Labels",
-        description="The candidate labels to classify the image against, separated by commas",
+        description="Comma-separated list of labels to classify against (e.g., 'cat,dog,bird,fish'). Use descriptive labels for better results.",
     )
 
     @classmethod

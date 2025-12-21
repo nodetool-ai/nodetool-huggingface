@@ -8,25 +8,26 @@ from pydantic import Field
 
 class DepthEstimation(HuggingFacePipelineNode):
     """
-    Estimates depth from a single image.
-    image, depth estimation, 3D, huggingface
+    Generates depth maps from single RGB images using monocular depth estimation models.
+    image, depth-estimation, 3D, huggingface, computer-vision
 
     Use cases:
-    - Generate depth maps for 3D modeling
-    - Assist in augmented reality applications
-    - Enhance computer vision systems for robotics
-    - Improve scene understanding in autonomous vehicles
+    - Create depth maps for 3D modeling and scene reconstruction
+    - Enable augmented reality applications with depth awareness
+    - Improve robotic navigation and obstacle detection
+    - Enhance scene understanding in autonomous vehicles
+    - Generate depth-based visual effects for images and video
     """
 
     model: HFDepthEstimation = Field(
         default=HFDepthEstimation(repo_id="LiheYoung/depth-anything-base-hf"),
-        title="Model ID on Huggingface",
-        description="The model ID to use for depth estimation",
+        title="Model",
+        description="The depth estimation model to use. Depth-Anything V2 models offer state-of-the-art accuracy; DPT-large is a reliable alternative.",
     )
     image: ImageRef = Field(
         default=ImageRef(),
         title="Image",
-        description="The input image for depth estimation",
+        description="The input RGB image to estimate depth from. Any standard image format is supported.",
     )
 
     @classmethod

@@ -11,30 +11,31 @@ from typing import Any
 
 class FillMask(HuggingFacePipelineNode):
     """
-    Fills in a masked token in a given text.
-    text, fill-mask, natural language processing
+    Predicts the most likely words to fill masked positions in text using language models.
+    text, fill-mask, NLP, language-modeling, word-prediction
 
     Use cases:
-    - Text completion
-    - Sentence prediction
-    - Language understanding tasks
-    - Generating text options
+    - Complete sentences with contextually appropriate words
+    - Generate word suggestions for text editing tools
+    - Test language understanding and word associations
+    - Build autocomplete and text prediction features
+    - Explore semantic relationships between words in context
     """
 
     model: HFFillMask = Field(
         default=HFFillMask(),
-        title="Model ID",
-        description="The model ID to use for fill-mask task",
+        title="Model",
+        description="The masked language model to use. BERT, RoBERTa, and DistilBERT variants are supported.",
     )
     inputs: str = Field(
         default="The capital of France is [MASK].",
-        title="Inputs",
-        description="The input text with [MASK] token to be filled",
+        title="Input Text",
+        description="Text containing [MASK] token(s) to be predicted. Different models may use different mask tokens (e.g., BERT uses [MASK], RoBERTa uses <mask>).",
     )
     top_k: int = Field(
         default=5,
         title="Top K",
-        description="Number of top predictions to return",
+        description="Number of most likely predictions to return for each masked position.",
     )
 
     @classmethod

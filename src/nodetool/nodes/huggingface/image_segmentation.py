@@ -25,25 +25,28 @@ if TYPE_CHECKING:
 
 class Segmentation(HuggingFacePipelineNode):
     """
-    Performs semantic segmentation on images, identifying and labeling different regions.
-    image, segmentation, object detection, scene parsing
+    Performs semantic segmentation on images, identifying and labeling different regions with pixel-level precision.
+    image, segmentation, object-detection, scene-parsing, computer-vision
 
     Use cases:
-    - Segmenting objects in images
-    - Segmenting facial features in images
+    - Segment and identify objects, people, or regions in images
+    - Extract clothing items or body parts for fashion applications
+    - Parse indoor/outdoor scenes into semantic components
+    - Enable background removal or replacement in photos
+    - Build autonomous driving perception systems
     """
 
     model: HFImageSegmentation = Field(
         default=HFImageSegmentation(
             repo_id="nvidia/segformer-b3-finetuned-ade-512-512"
         ),
-        title="Model ID on Huggingface",
-        description="The model ID to use for the segmentation",
+        title="Model",
+        description="The segmentation model. SegFormer-ADE for general scenes, specialized models for clothing or body parts.",
     )
     image: ImageRef = Field(
         default=ImageRef(),
         title="Image",
-        description="The input image to segment",
+        description="The input image to segment. Larger images may require more processing time.",
     )
 
     _pipeline: Any = None
@@ -97,20 +100,21 @@ class Segmentation(HuggingFacePipelineNode):
 
 class SAM2Segmentation(HuggingFacePipelineNode):
     """
-    Performs semantic segmentation on images using SAM2 (Segment Anything Model 2).
-    image, segmentation, object detection, scene parsing, mask
+    Performs automatic instance segmentation using Meta's Segment Anything Model 2 (SAM2).
+    image, segmentation, object-detection, scene-parsing, mask, SAM2
 
     Use cases:
-    - Automatic segmentation of objects in images
-    - Instance segmentation for computer vision tasks
-    - Interactive segmentation with point prompts
-    - Scene understanding and object detection
+    - Automatically segment all distinct objects in an image
+    - Generate high-quality masks without manual prompts
+    - Extract individual objects for image editing workflows
+    - Build interactive segmentation applications
+    - Enable precise object selection in creative tools
     """
 
     image: ImageRef = Field(
         default=ImageRef(),
         title="Input Image",
-        description="The input image to segment",
+        description="The image to segment. SAM2 automatically identifies and masks all distinct objects.",
     )
 
     _pipeline: Any = None
@@ -177,20 +181,25 @@ class SAM2Segmentation(HuggingFacePipelineNode):
 
 class FindSegment(BaseNode):
     """
-    Extracts a specific segment from a list of segmentation masks.
-    image, segmentation, object detection, mask
+    Extracts a specific segment mask by label from a list of segmentation results.
+    image, segmentation, object-detection, mask, filter
+
+    Use cases:
+    - Extract a specific object mask (e.g., 'person', 'car') from segmentation output
+    - Filter segmentation results to focus on a single category
+    - Isolate regions for further processing or compositing
     """
 
     segments: list[ImageSegmentationResult] = Field(
         default=[],
         title="Segmentation Masks",
-        description="The segmentation masks to search",
+        description="List of segmentation results from Segmentation or SAM2Segmentation nodes.",
     )
 
     segment_label: str = Field(
         default="",
         title="Label",
-        description="The label of the segment to extract",
+        description="The exact label name to find (e.g., 'person', 'wall', 'sky'). Must match a label in the segments list.",
     )
 
     def required_inputs(self):
@@ -209,25 +218,26 @@ class FindSegment(BaseNode):
 
 class VisualizeSegmentation(BaseNode):
     """
-    Visualizes segmentation masks on images with labels.
-    image, segmentation, visualization, mask
+    Renders segmentation masks as colored overlays on the original image with labeled regions.
+    image, segmentation, visualization, mask, annotation
 
     Use cases:
-    - Visualize results of image segmentation models
-    - Analyze and compare different segmentation techniques
-    - Create labeled images for presentations or reports
+    - Visualize and verify segmentation model results
+    - Create labeled images for documentation or presentations
+    - Compare different segmentation techniques visually
+    - Generate annotated images for training data review
     """
 
     image: ImageRef = Field(
         default=ImageRef(),
         title="Image",
-        description="The input image to visualize",
+        description="The original image to overlay segmentation masks on.",
     )
 
     segments: list[ImageSegmentationResult] = Field(
         default=[],
         title="Segmentation Masks",
-        description="The segmentation masks to visualize",
+        description="List of segmentation results to visualize. Each segment gets a distinct color and label.",
     )
 
     def required_inputs(self):

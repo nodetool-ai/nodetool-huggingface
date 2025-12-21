@@ -8,24 +8,26 @@ from pydantic import Field
 
 class SentenceSimilarity(HuggingFacePipelineNode):
     """
-    Compares the similarity between two sentences.
-    text, sentence similarity, embeddings, natural language processing
+    Generates dense vector embeddings from text for semantic similarity comparisons.
+    text, sentence-similarity, embeddings, NLP, semantic-search
 
     Use cases:
-    - Duplicate detection in text data
-    - Semantic search
-    - Sentiment analysis
+    - Compute semantic similarity between sentences or documents
+    - Build semantic search and recommendation engines
+    - Detect duplicate or near-duplicate content
+    - Cluster documents by meaning rather than keywords
+    - Create text embeddings for downstream ML tasks
     """
 
     model: HFSentenceSimilarity = Field(
         default=HFSentenceSimilarity(),
-        title="Model ID on Huggingface",
-        description="The model ID to use for sentence similarity",
+        title="Model",
+        description="The sentence embedding model. all-mpnet-base-v2 offers high quality; MiniLM variants are faster; BGE-m3 is multilingual.",
     )
     inputs: str = Field(
         default="",
         title="Input Text",
-        description="The text to compare",
+        description="The text to generate embeddings for. Can be a sentence, paragraph, or short document.",
     )
 
     @classmethod

@@ -17,35 +17,36 @@ from pydantic import Field
 
 class ObjectDetection(HuggingFacePipelineNode):
     """
-    Detects and localizes objects in images.
-    image, object detection, bounding boxes, huggingface
+    Detects and localizes objects in images with bounding boxes and confidence scores.
+    image, object-detection, bounding-boxes, huggingface, computer-vision
 
     Use cases:
-    - Identify and count objects in images
-    - Locate specific items in complex scenes
-    - Assist in autonomous vehicle vision systems
-    - Enhance security camera footage analysis
+    - Count and identify objects in photographs and videos
+    - Locate specific items in complex scenes for robotics
+    - Analyze security camera footage for monitoring systems
+    - Detect tables and structures in documents
+    - Build automated inventory and inspection systems
     """
 
     model: HFObjectDetection = Field(
         default=HFObjectDetection(repo_id="facebook/detr-resnet-50"),
-        title="Model ID on Huggingface",
-        description="The model ID to use for object detection",
+        title="Model",
+        description="The object detection model. DETR models offer high accuracy; YOLOS variants are faster. Specialized models exist for tables and fashion items.",
     )
     image: ImageRef = Field(
         default=ImageRef(),
-        title="Inputs",
-        description="The input image for object detection",
+        title="Image",
+        description="The image to detect objects in. Supports common formats like JPEG, PNG.",
     )
     threshold: float = Field(
         default=0.9,
         title="Confidence Threshold",
-        description="Minimum confidence score for detected objects",
+        description="Minimum confidence score (0-1) for detected objects. Higher values return fewer but more certain detections.",
     )
     top_k: int = Field(
         default=5,
         title="Top K",
-        description="The number of top predictions to return",
+        description="Maximum number of detected objects to return, sorted by confidence.",
     )
 
     @classmethod
@@ -132,20 +133,26 @@ class ObjectDetection(HuggingFacePipelineNode):
 
 class VisualizeObjectDetection(BaseNode):
     """
-    Visualizes object detection results on images.
-    image, object detection, bounding boxes, visualization, mask
+    Renders object detection results as labeled bounding boxes overlaid on the original image.
+    image, object-detection, bounding-boxes, visualization, annotation
+
+    Use cases:
+    - Visualize and verify object detection model outputs
+    - Create annotated images for documentation and presentations
+    - Debug and analyze detection accuracy and coverage
+    - Generate labeled images for training data review
     """
 
     image: ImageRef = Field(
         default=ImageRef(),
         title="Image",
-        description="The input image to visualize",
+        description="The original image to draw detection boxes on.",
     )
 
     objects: list[ObjectDetectionResult] = Field(
         default={},
         title="Detected Objects",
-        description="The detected objects to visualize",
+        description="List of detected objects from ObjectDetection or ZeroShotObjectDetection nodes.",
     )
 
     def required_inputs(self):
@@ -210,39 +217,40 @@ class VisualizeObjectDetection(BaseNode):
 
 class ZeroShotObjectDetection(HuggingFacePipelineNode):
     """
-    Detects objects in images without the need for training data.
-    image, object detection, bounding boxes, zero-shot, mask
+    Detects objects in images using custom labels without requiring task-specific training.
+    image, object-detection, bounding-boxes, zero-shot, flexible
 
     Use cases:
-    - Quickly detect objects in images without training data
-    - Identify objects in images without predefined labels
-    - Automate object detection for large datasets
+    - Detect custom objects without training a specialized model
+    - Search for specific items described in natural language
+    - Build flexible object detection systems with dynamic categories
+    - Prototype detection applications with arbitrary object classes
     """
 
     model: HFZeroShotObjectDetection = Field(
         default=HFZeroShotObjectDetection(repo_id="google/owlv2-base-patch16"),
-        title="Model ID on Huggingface",
-        description="The model ID to use for object detection",
+        title="Model",
+        description="The zero-shot detection model. OWL-ViT/OWLv2 models use CLIP for flexible label matching; Grounding-DINO offers strong performance.",
     )
     image: ImageRef = Field(
         default=ImageRef(),
-        title="Inputs",
-        description="The input image for object detection",
+        title="Image",
+        description="The image to detect objects in.",
     )
     threshold: float = Field(
         default=0.1,
         title="Confidence Threshold",
-        description="Minimum confidence score for detected objects",
+        description="Minimum confidence score (0-1) for detections. Lower values find more objects but may include false positives.",
     )
     top_k: int = Field(
         default=5,
         title="Top K",
-        description="The number of top predictions to return",
+        description="Maximum number of detected objects to return per label.",
     )
     candidate_labels: str = Field(
         default="",
         title="Candidate Labels",
-        description="The candidate labels to detect in the image, separated by commas",
+        description="Comma-separated list of object labels to detect (e.g., 'cat,dog,person,car'). Use descriptive phrases for better results.",
     )
 
     @classmethod

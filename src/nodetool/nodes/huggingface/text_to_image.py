@@ -38,8 +38,12 @@ if TYPE_CHECKING:
     from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
     from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
     from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
-    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
-    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
+    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
+        StableDiffusionPipeline,
+    )
+    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
+        StableDiffusionXLPipeline,
+    )
     from diffusers.pipelines.pipeline_utils import DiffusionPipeline
     from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
 
@@ -49,9 +53,8 @@ log = get_logger(__name__)
 def _get_torch():
     """Lazy import for torch."""
     import torch
+
     return torch
-
-
 
 
 def _enable_pytorch2_attention(pipeline: Any):
@@ -96,23 +99,30 @@ def _apply_vae_optimizations(pipeline: Any):
 
 class StableDiffusion(StableDiffusionBaseNode):
     """
-    Generates images from text prompts using Stable Diffusion.
-    image, generation, AI, text-to-image, SD
+    Generates images from text prompts using Stable Diffusion 1.x/2.x models.
+    image, generation, AI, text-to-image, SD, creative
 
     Use cases:
-    - Creating custom illustrations for various projects
-    - Generating concept art for creative endeavors
-    - Producing unique visual content for marketing materials
-    - Exploring AI-generated art for personal or professional use
+    - Create custom illustrations and artwork from text descriptions
+    - Generate concept art for games, films, and creative projects
+    - Produce unique visual content for marketing and media
+    - Explore AI-generated art with extensive community models
+    - Build image generation applications with well-understood architecture
     """
 
     width: int = Field(
-        default=512, ge=256, le=1024, description="Width of the generated image."
+        default=512,
+        ge=256,
+        le=1024,
+        description="Output image width in pixels. 512 is standard for SD 1.x.",
     )
     height: int = Field(
-        default=512, ge=256, le=1024, description="Height of the generated image"
+        default=512,
+        ge=256,
+        le=1024,
+        description="Output image height in pixels. 512 is standard for SD 1.x.",
     )
-    _pipeline: Any= None
+    _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls):
@@ -153,14 +163,15 @@ class StableDiffusion(StableDiffusionBaseNode):
 
 class StableDiffusionXL(StableDiffusionXLBase):
     """
-    Generates images from text prompts using Stable Diffusion XL.
-    image, generation, AI, text-to-image, SDXL
+    Generates high-resolution images from text prompts using Stable Diffusion XL.
+    image, generation, AI, text-to-image, SDXL, high-resolution
 
     Use cases:
-    - Creating custom illustrations for marketing materials
-    - Generating concept art for game and film development
-    - Producing unique stock imagery for websites and publications
-    - Visualizing interior design concepts for clients
+    - Create detailed, high-resolution images (1024x1024) from text
+    - Generate marketing visuals and product imagery
+    - Produce concept art and illustrations with enhanced detail
+    - Create stock imagery and visual content for publications
+    - Build professional image generation applications
     """
 
     _pipeline: Any = None
@@ -201,16 +212,18 @@ class StableDiffusionXL(StableDiffusionXLBase):
 
 class LoadTextToImageModel(HuggingFacePipelineNode):
     """
-    Load HuggingFace model for image-to-image generation from a repo_id.
+    Loads and validates a Hugging Face text-to-image model for use in downstream nodes.
+    model-loader, text-to-image, pipeline
 
     Use cases:
-    - Loads a pipeline directly from a repo_id
-    - Used for AutoPipelineForImage2Image
+    - Pre-load text-to-image models before running pipelines
+    - Validate model availability and compatibility
+    - Configure model settings for Text2Image processing
     """
 
     repo_id: str = Field(
         default="",
-        description="The repository ID of the model to use for image-to-image generation.",
+        description="The Hugging Face repository ID for the text-to-image model.",
     )
 
     async def preload_model(self, context: ProcessingContext):
@@ -239,56 +252,56 @@ class LoadTextToImageModel(HuggingFacePipelineNode):
 
 class Text2Image(HuggingFacePipelineNode):
     """
-    Generates images from text prompts using AutoPipeline for automatic pipeline selection.
-    image, generation, AI, text-to-image, auto
+    Generates images from text prompts using AutoPipeline for automatic model detection.
+    image, generation, AI, text-to-image, auto, flexible
 
     Use cases:
-    - Automatic selection of the best pipeline for a given model
-    - Flexible image generation without pipeline-specific knowledge
-    - Quick prototyping with various text-to-image models
-    - Streamlined workflow for different model architectures
+    - Generate images with automatic pipeline selection for any supported model
+    - Quickly prototype with various text-to-image architectures
+    - Build flexible workflows that adapt to different model types
+    - Create images without needing pipeline-specific configuration
     """
 
     model: HFTextToImage = Field(
         default=HFTextToImage(),
-        description="The model to use for text-to-image generation.",
+        description="The text-to-image model. AutoPipeline automatically selects the correct pipeline type.",
     )
 
     prompt: str = Field(
         default="A cat holding a sign that says hello world",
-        description="A text prompt describing the desired image.",
+        description="Text description of the image to generate. Be specific for better results.",
     )
     negative_prompt: str = Field(
         default="",
-        description="A text prompt describing what to avoid in the image.",
+        description="Describe what to avoid in the image (e.g., 'blurry, low quality').",
     )
     num_inference_steps: int = Field(
         default=50,
-        description="The number of denoising steps.",
+        description="Denoising steps. 20-50 is typical; more steps = better quality but slower.",
         ge=1,
         le=100,
     )
     guidance_scale: float = Field(
         default=7.5,
-        description="The scale for classifier-free guidance.",
+        description="How strongly to follow the prompt. 7-9 is typical for SD models.",
         ge=1.0,
         le=20.0,
     )
     width: int = Field(
         default=512,
-        description="The width of the generated image.",
+        description="Output image width in pixels.",
         ge=64,
         le=2048,
     )
     height: int = Field(
         default=512,
-        description="The height of the generated image.",
+        description="Output image height in pixels.",
         ge=64,
         le=2048,
     )
     seed: int = Field(
         default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
         ge=-1,
     )
 
@@ -387,66 +400,66 @@ class FluxQuantization(Enum):
 
 class Flux(HuggingFacePipelineNode):
     """
-    Generates images using FLUX models with support for Nunchaku quantization.
-    image, generation, AI, text-to-image, flux, quantization
+    Generates high-quality images using Black Forest Labs' FLUX diffusion models with Nunchaku quantization.
+    image, generation, AI, text-to-image, flux, quantization, high-quality
 
     Use cases:
-    - High-quality image generation with FLUX models
-    - Memory-efficient generation using Nunchaku quantization
-    - Fast generation with FLUX.1-schnell
-    - High-fidelity generation with FLUX.1-dev
-    - Controlled generation with Fill, Canny, or Depth variants
+    - Generate high-fidelity images with excellent text rendering
+    - Create images with memory-efficient INT4/FP4 quantization
+    - Fast generation with FLUX.1-schnell (4 steps)
+    - High-quality generation with FLUX.1-dev
+    - Build production image generation systems
     """
 
     variant: FluxVariant = Field(
         default=FluxVariant.DEV,
-        description="The FLUX variant to use.",
+        description="FLUX variant: 'schnell' for fast 4-step generation, 'dev' for higher quality with more steps.",
     )
     quantization: FluxQuantization = Field(
         default=FluxQuantization.INT4,
-        description="The quantization level to use.",
+        description="Quantization level: INT4/FP4 for lower VRAM, FP16 for full precision.",
     )
     enable_cpu_offload: bool = Field(
         default=True,
-        description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
+        description="Offload model components to CPU to reduce VRAM usage.",
     )
     prompt: str = Field(
         default="A cat holding a sign that says hello world",
-        description="A text prompt describing the desired image.",
+        description="Text description of the image to generate. FLUX excels at text rendering.",
     )
     guidance_scale: float = Field(
         default=3.5,
-        description="The scale for classifier-free guidance. Use 0.0 for schnell, 3.5 for dev.",
+        description="Prompt adherence strength. Use 0.0 for schnell, 3-4 for dev.",
         ge=0.0,
         le=20.0,
     )
     width: int = Field(
         default=1024,
-        description="The width of the generated image.",
+        description="Output image width in pixels. 1024 is recommended.",
         ge=64,
         le=2048,
     )
     height: int = Field(
         default=1024,
-        description="The height of the generated image.",
+        description="Output image height in pixels. 1024 is recommended.",
         ge=64,
         le=2048,
     )
     num_inference_steps: int = Field(
         default=20,
-        description="The number of denoising steps. 4 steps is forced for schnell models.",
+        description="Denoising steps. Schnell uses 4 steps; dev uses 20-50.",
         ge=1,
         le=100,
     )
     max_sequence_length: int = Field(
         default=512,
-        description="Maximum sequence length for the prompt. Use 256 for schnell, 512 for dev.",
+        description="Maximum prompt length. Use 256 for schnell, 512 for dev.",
         ge=1,
         le=512,
     )
     seed: int = Field(
         default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
         ge=-1,
     )
 
@@ -836,66 +849,66 @@ class Flux(HuggingFacePipelineNode):
 
 class Chroma(HuggingFacePipelineNode):
     """
-    Generates images from text prompts using Chroma, a text-to-image model based on Flux.
-    image, generation, AI, text-to-image, flux, chroma, transformer
+    Generates high-quality images from text prompts using Chroma, a Flux-based architecture with enhanced color control.
+    image, generation, AI, text-to-image, flux, chroma, transformer, artistic
 
     Use cases:
-    - Generate high-quality images with Flux-based architecture
-    - Create images with advanced attention masking for enhanced fidelity
-    - Generate images with optimized memory usage
-    - Create professional-quality images with precise color control
+    - Generate professional-quality images with precise color control
+    - Create artistic images with advanced attention mechanisms
+    - Produce images with optimized memory usage via CPU offload
+    - Build creative applications requiring high-fidelity output
     """
 
     prompt: str = Field(
         default="A high-fashion close-up portrait of a blonde woman in clear sunglasses. The image uses a bold teal and red color split for dramatic lighting. The background is a simple teal-green. The photo is sharp and well-composed, and is designed for viewing with anaglyph 3D glasses for optimal effect. It looks professionally done.",
-        description="A text prompt describing the desired image.",
+        description="Detailed text description of the image to generate.",
     )
     negative_prompt: str = Field(
         default="low quality, ugly, unfinished, out of focus, deformed, disfigure, blurry, smudged, restricted palette, flat colors",
-        description="A text prompt describing what to avoid in the image.",
+        description="Describe what to avoid (e.g., 'blurry, low quality, distorted').",
     )
     guidance_scale: float = Field(
         default=3.0,
-        description="The scale for classifier-free guidance.",
+        description="Prompt adherence strength. 2-5 is typical for Chroma.",
         ge=0.0,
         le=30.0,
     )
     num_inference_steps: int = Field(
         default=40,
-        description="The number of denoising steps.",
+        description="Denoising steps. 30-50 is typical; more = better quality but slower.",
         ge=1,
         le=100,
     )
     height: int = Field(
         default=1024,
-        description="The height of the generated image.",
+        description="Output image height in pixels.",
         ge=256,
         le=2048,
     )
     width: int = Field(
         default=1024,
-        description="The width of the generated image.",
+        description="Output image width in pixels.",
         ge=256,
         le=2048,
     )
     seed: int = Field(
         default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
         ge=-1,
     )
     max_sequence_length: int = Field(
         default=512,
-        description="Maximum sequence length to use with the prompt.",
+        description="Maximum prompt length in tokens.",
         ge=1,
         le=512,
     )
     enable_cpu_offload: bool = Field(
         default=True,
-        description="Enable CPU offload to reduce VRAM usage.",
+        description="Offload model components to CPU to reduce VRAM usage.",
     )
     enable_attention_slicing: bool = Field(
         default=True,
-        description="Enable attention slicing to reduce memory usage.",
+        description="Process attention in slices to reduce memory usage.",
     )
 
     _pipeline: Any = None
@@ -1023,55 +1036,55 @@ class QwenTextEncoderQuantization(str, Enum):
 
 class QwenImage(HuggingFacePipelineNode):
     """
-    Generates images from text prompts using Qwen-Image with support for Nunchaku quantization.
-    image, generation, AI, text-to-image, qwen, quantization
+    Generates images from text prompts using Alibaba's Qwen-Image model with Nunchaku quantization support.
+    image, generation, AI, text-to-image, qwen, quantization, multilingual
 
     Use cases:
-    - High-quality, general-purpose text-to-image generation
-    - Memory-efficient generation using Nunchaku quantization
-    - Quick prototyping leveraging AutoPipeline
-    - Works out-of-the-box with the official Qwen model
+    - Generate high-quality images with strong multilingual prompt support
+    - Memory-efficient generation using INT4/FP4 quantization
+    - Create images with precise semantic understanding
+    - Build production image generation systems
     """
 
     quantization: QwenQuantization = Field(
         default=QwenQuantization.INT4,
-        description="The quantization level to use.",
+        description="Quantization level: INT4/FP4 for lower VRAM, FP16 for full precision.",
     )
     prompt: str = Field(
         default="A cat holding a sign that says hello world",
-        description="A text prompt describing the desired image.",
+        description="Text description of the image to generate.",
     )
     negative_prompt: str = Field(
         default="",
-        description="A text prompt describing what to avoid in the image.",
+        description="Describe what to avoid in the image (e.g., 'blurry, low quality').",
     )
     true_cfg_scale: float = Field(
         default=1.0,
-        description="True CFG scale for Qwen-Image models.",
+        description="True CFG scale for enhanced prompt following.",
         ge=0.0,
         le=10.0,
     )
     num_inference_steps: int = Field(
         default=50,
-        description="The number of denoising steps.",
+        description="Denoising steps. 30-50 is typical.",
         ge=1,
         le=100,
     )
     height: int = Field(
         default=1024,
-        description="The height of the generated image.",
+        description="Output image height in pixels.",
         ge=256,
         le=2048,
     )
     width: int = Field(
         default=1024,
-        description="The width of the generated image.",
+        description="Output image width in pixels.",
         ge=256,
         le=2048,
     )
     seed: int = Field(
         default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
         ge=-1,
     )
 

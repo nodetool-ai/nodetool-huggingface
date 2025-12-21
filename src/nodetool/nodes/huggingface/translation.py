@@ -22,15 +22,17 @@ logger = get_logger(__name__)
 
 class Translation(HuggingFacePipelineNode):
     """
-    Translates text from one language to another.
-    text, translation, natural language processing
+    Translates text between languages using sequence-to-sequence transformer models.
+    text, translation, NLP, multilingual, localization
 
     Use cases:
-    - Multilingual content creation
-    - Cross-language communication
-    - Localization of applications and websites
+    - Translate content for multilingual websites and applications
+    - Enable cross-language communication in chat systems
+    - Localize documents and product descriptions
+    - Build multilingual content pipelines
+    - Support international user bases with automatic translation
 
-    Note: some models support more languages than others.
+    **Note:** Different models support different language pairs. T5 models handle many language combinations.
     """
 
     class LanguageCode(str, Enum):
@@ -76,23 +78,23 @@ class Translation(HuggingFacePipelineNode):
             repo_id="google-t5/t5-base",
             allow_patterns=["*.json", "*.txt", "*.safetensors"],
         ),
-        title="Model ID on HuggingFace",
-        description="The model ID to use for translation",
+        title="Model",
+        description="The translation model. T5 models support many language pairs; larger variants offer better quality.",
     )
     inputs: str = Field(
         default="",
         title="Input Text",
-        description="The text to translate",
+        description="The text to translate.",
     )
     source_lang: LanguageCode = Field(
         default=LanguageCode.ENGLISH,
         title="Source Language",
-        description="The source language code (e.g., 'en' for English)",
+        description="The language of the input text.",
     )
     target_lang: LanguageCode = Field(
         default=LanguageCode.FRENCH,
         title="Target Language",
-        description="The target language code (e.g., 'fr' for French)",
+        description="The language to translate the text into.",
     )
 
     _pipeline: Any = None  # Type annotation for the pipeline

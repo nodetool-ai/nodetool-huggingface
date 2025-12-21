@@ -11,14 +11,15 @@ from enum import Enum
 
 class TokenClassification(HuggingFacePipelineNode):
     """
-    Performs token classification tasks such as Named Entity Recognition (NER).
-    text, token classification, named entity recognition, natural language processing
+    Performs token-level classification tasks such as Named Entity Recognition (NER).
+    text, token-classification, NER, NLP, entity-extraction
 
     Use cases:
-    - Named Entity Recognition in text
-    - Part-of-speech tagging
-    - Chunking and shallow parsing
-    - Information extraction from unstructured text
+    - Extract named entities (people, organizations, locations) from text
+    - Identify parts of speech in sentences
+    - Perform chunking and shallow parsing for text analysis
+    - Extract structured information from unstructured documents
+    - Build information extraction pipelines for documents
     """
 
     class AggregationStrategy(str, Enum):
@@ -32,18 +33,18 @@ class TokenClassification(HuggingFacePipelineNode):
             repo_id="dbmdz/bert-large-cased-finetuned-conll03-english",
             allow_patterns=["*.bin", "*.json", "**/*.json", "*.safetensors"],
         ),
-        title="Model ID on Huggingface",
-        description="The model ID to use for token classification",
+        title="Model",
+        description="The token classification model. BERT-large-cased-finetuned-conll03 offers high-quality NER for English text.",
     )
     inputs: str = Field(
         default="",
         title="Input Text",
-        description="The input text for token classification",
+        description="The text to extract entities from.",
     )
     aggregation_strategy: AggregationStrategy = Field(
         default=AggregationStrategy.SIMPLE,
         title="Aggregation Strategy",
-        description="Strategy to aggregate tokens into entities",
+        description="How to combine token predictions into entities: 'simple' merges adjacent tokens; 'first'/'average'/'max' control subword handling.",
     )
 
     async def preload_model(self, context: ProcessingContext):

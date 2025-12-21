@@ -48,25 +48,55 @@ if TYPE_CHECKING:
     from diffusers.pipelines.pipeline_utils import DiffusionPipeline
     from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
     from diffusers.models.controlnets.controlnet import ControlNetModel
-    from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import QwenImageEditPipeline
-    from diffusers.models.transformers.transformer_qwenimage import QwenImageTransformer2DModel
+    from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import (
+        QwenImageEditPipeline,
+    )
+    from diffusers.models.transformers.transformer_qwenimage import (
+        QwenImageTransformer2DModel,
+    )
     from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
     from diffusers.pipelines.flux.pipeline_flux_fill import FluxFillPipeline
     from diffusers.pipelines.flux.pipeline_flux_kontext import FluxKontextPipeline
-    from diffusers.pipelines.flux.pipeline_flux_prior_redux import FluxPriorReduxPipeline
+    from diffusers.pipelines.flux.pipeline_flux_prior_redux import (
+        FluxPriorReduxPipeline,
+    )
     from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
-    from diffusers.pipelines.controlnet.pipeline_controlnet import StableDiffusionControlNetPipeline
-    from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import StableDiffusionControlNetImg2ImgPipeline
-    from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint import StableDiffusionControlNetInpaintPipeline
-    from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl import StableDiffusionXLControlNetPipeline
-    from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl_img2img import StableDiffusionXLControlNetImg2ImgPipeline
-    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipeline
-    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipeline
-    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_upscale import StableDiffusionUpscalePipeline
-    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upscale import StableDiffusionLatentUpscalePipeline
-    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
-    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import StableDiffusionXLImg2ImgPipeline
-    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_inpaint import StableDiffusionXLInpaintPipeline
+    from diffusers.pipelines.controlnet.pipeline_controlnet import (
+        StableDiffusionControlNetPipeline,
+    )
+    from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import (
+        StableDiffusionControlNetImg2ImgPipeline,
+    )
+    from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint import (
+        StableDiffusionControlNetInpaintPipeline,
+    )
+    from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl import (
+        StableDiffusionXLControlNetPipeline,
+    )
+    from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl_img2img import (
+        StableDiffusionXLControlNetImg2ImgPipeline,
+    )
+    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import (
+        StableDiffusionImg2ImgPipeline,
+    )
+    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import (
+        StableDiffusionInpaintPipeline,
+    )
+    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_upscale import (
+        StableDiffusionUpscalePipeline,
+    )
+    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upscale import (
+        StableDiffusionLatentUpscalePipeline,
+    )
+    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
+        StableDiffusionXLPipeline,
+    )
+    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
+        StableDiffusionXLImg2ImgPipeline,
+    )
+    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_inpaint import (
+        StableDiffusionXLInpaintPipeline,
+    )
 
 log = get_logger(__name__)
 
@@ -74,9 +104,8 @@ log = get_logger(__name__)
 def _get_torch():
     """Lazy import for torch."""
     import torch
+
     return torch
-
-
 
 
 def _enable_pytorch2_attention(pipeline: Any, enabled: bool = True):
