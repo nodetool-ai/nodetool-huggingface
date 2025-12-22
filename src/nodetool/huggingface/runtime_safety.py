@@ -490,7 +490,11 @@ def configure_torch_backends(
     Args:
         capabilities: Pre-computed capabilities (will inspect if not provided)
     """
-    import torch
+    try:
+        import torch
+    except ImportError:
+        log.debug("PyTorch not available, skipping backend configuration")
+        return
     
     if capabilities is None:
         capabilities = inspect_runtime_capabilities()
