@@ -1,0 +1,393 @@
+name: GCP Windows GPU Script Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      entry_script:
+        description: 'Path to PowerShell entry script within repo'
+        required: false
+        default: 'ci/windows/gpu_entry.ps1'
+        type: string
+      vm_name:
+        description: 'VM name (defaults to win-gpu-ci-{run_id})'
+        required: false
+        default: ''
+        type: string
+      machine_type:
+        description: 'GCP machine type'
+        required: false
+        default: 'n1-standard-4'
+        type: string
+      gpu_type:
+        description: 'GPU accelerator type'
+        required: false
+        default: 'nvidia-tesla-t4'
+        type: string
+      gpu_count:
+        description: 'Number of GPUs'
+        required: false
+        default: '1'
+        type: string
+      boot_disk_gb:
+        description: 'Boot disk size in GB'
+        required: false
+        default: '100'
+        type: string
+      timeout_minutes:
+        description: 'Workflow timeout in minutes'
+        required: false
+        default: '90'
+        type: string
+
+env:
+  # NVIDIA Driver URL for Tesla T4 on Windows Server 2022
+  # This is a GCS bucket maintained by GCP with GPU drivers
+  NVIDIA_DRIVER_URL: 'https://storage.googleapis.com/nvidia-drivers-us-public/tesla/latest/windows/525.105.17-data-center-tesla-desktop-win10-win11-64bit-dch-international.exe'
+
+jobs:
+  run-gpu-script:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ fromJson(inputs.timeout_minutes) }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set VM name
+        id: set-vm-name
+        run: |
+          if [ -z "${{ inputs.vm_name }}" ]; then
+            VM_NAME="win-gpu-ci-${{ github.run_id }}"
+          else
+            VM_NAME="${{ inputs.vm_name }}"
+          fi
+          echo "vm_name=${VM_NAME}" >> $GITHUB_OUTPUT
+          echo "VM name: ${VM_NAME}"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_JSON }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Verify GCP authentication
+        run: |
+          gcloud config list
+          gcloud auth list
+
+      - name: Prepare SSH key files
+        id: prepare-ssh
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
+          # Write SSH private key
+          echo "${{ secrets.GCP_VM_SSH_PRIVKEY }}" > ~/.ssh/gcp_vm_key
+          chmod 600 ~/.ssh/gcp_vm_key
+          
+          # Store public key for metadata
+          echo "${{ secrets.GCP_VM_SSH_PUBKEY }}" > ~/.ssh/gcp_vm_key.pub
+          
+          echo "ssh_key_path=${HOME}/.ssh/gcp_vm_key" >> $GITHUB_OUTPUT
+          echo "SSH key prepared"
+
+      - name: Read startup script
+        id: startup-script
+        run: |
+          # Read the startup script content and encode for metadata
+          STARTUP_SCRIPT=$(cat ci/windows/gcp_startup_ssh.ps1)
+          
+          # Write to a temporary file for use with gcloud
+          echo "$STARTUP_SCRIPT" > /tmp/startup_script.ps1
+          
+          echo "Startup script prepared at /tmp/startup_script.ps1"
+
+      - name: Create firewall rule for SSH
+        id: create-firewall
+        run: |
+          FIREWALL_RULE_NAME="allow-ssh-gh-ci-${{ github.run_id }}"
+          NETWORK_TAG="gh-ci-${{ github.run_id }}"
+          
+          echo "firewall_rule=${FIREWALL_RULE_NAME}" >> $GITHUB_OUTPUT
+          echo "network_tag=${NETWORK_TAG}" >> $GITHUB_OUTPUT
+          
+          # Create firewall rule allowing SSH from anywhere (port 22)
+          # In production, you might want to restrict source ranges
+          gcloud compute firewall-rules create ${FIREWALL_RULE_NAME} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --allow=tcp:22 \
+            --direction=INGRESS \
+            --priority=1000 \
+            --target-tags=${NETWORK_TAG} \
+            --description="Temporary SSH access for GitHub Actions run ${{ github.run_id }}" \
+            || echo "Firewall rule may already exist"
+          
+          echo "Firewall rule ${FIREWALL_RULE_NAME} created/verified"
+
+      - name: Create Windows GPU VM
+        id: create-vm
+        run: |
+          VM_NAME="${{ steps.set-vm-name.outputs.vm_name }}"
+          NETWORK_TAG="${{ steps.create-firewall.outputs.network_tag }}"
+          
+          echo "Creating VM: ${VM_NAME}"
+          
+          gcloud compute instances create ${VM_NAME} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --zone=${{ secrets.GCP_ZONE }} \
+            --machine-type=${{ inputs.machine_type }} \
+            --image-family=windows-2022 \
+            --image-project=windows-cloud \
+            --boot-disk-size=${{ inputs.boot_disk_gb }}GB \
+            --boot-disk-type=pd-standard \
+            --accelerator=type=${{ inputs.gpu_type }},count=${{ inputs.gpu_count }} \
+            --maintenance-policy=TERMINATE \
+            --restart-on-failure \
+            --tags=${NETWORK_TAG} \
+            --metadata-from-file=windows-startup-script-ps1=/tmp/startup_script.ps1 \
+            --metadata=ssh_pubkey="${{ secrets.GCP_VM_SSH_PUBKEY }}" \
+            --scopes=https://www.googleapis.com/auth/cloud-platform
+          
+          echo "VM ${VM_NAME} created successfully"
+          echo "vm_created=true" >> $GITHUB_OUTPUT
+
+      - name: Wait for VM to be ready
+        run: |
+          VM_NAME="${{ steps.set-vm-name.outputs.vm_name }}"
+          
+          echo "Waiting for VM to reach RUNNING state..."
+          for i in {1..60}; do
+            STATUS=$(gcloud compute instances describe ${VM_NAME} \
+              --project=${{ secrets.GCP_PROJECT_ID }} \
+              --zone=${{ secrets.GCP_ZONE }} \
+              --format='get(status)')
+            
+            echo "VM status: ${STATUS} (attempt $i/60)"
+            
+            if [ "${STATUS}" = "RUNNING" ]; then
+              echo "VM is RUNNING"
+              break
+            fi
+            
+            if [ $i -eq 60 ]; then
+              echo "ERROR: VM did not reach RUNNING state within timeout"
+              exit 1
+            fi
+            
+            sleep 10
+          done
+
+      - name: Wait for SSH to be ready
+        run: |
+          VM_NAME="${{ steps.set-vm-name.outputs.vm_name }}"
+          SSH_KEY="${{ steps.prepare-ssh.outputs.ssh_key_path }}"
+          
+          # Get VM external IP
+          VM_IP=$(gcloud compute instances describe ${VM_NAME} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --zone=${{ secrets.GCP_ZONE }} \
+            --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+          
+          echo "VM IP: ${VM_IP}"
+          
+          # Wait for SSH to be ready (Windows startup script needs time to run)
+          echo "Waiting for SSH to be ready (this may take several minutes)..."
+          
+          for i in {1..120}; do
+            echo "SSH connection attempt $i/120..."
+            
+            if gcloud compute ssh ${VM_NAME} \
+              --project=${{ secrets.GCP_PROJECT_ID }} \
+              --zone=${{ secrets.GCP_ZONE }} \
+              --ssh-key-file=${SSH_KEY} \
+              --strict-host-key-checking=no \
+              --command="echo SSH connection successful" 2>/dev/null; then
+              echo "SSH is ready!"
+              break
+            fi
+            
+            if [ $i -eq 120 ]; then
+              echo "ERROR: SSH did not become ready within timeout"
+              echo "Attempting to get serial port output for debugging..."
+              gcloud compute instances get-serial-port-output ${VM_NAME} \
+                --project=${{ secrets.GCP_PROJECT_ID }} \
+                --zone=${{ secrets.GCP_ZONE }} \
+                || echo "Could not retrieve serial port output"
+              exit 1
+            fi
+            
+            sleep 15
+          done
+
+      - name: Install NVIDIA driver (idempotent)
+        run: |
+          VM_NAME="${{ steps.set-vm-name.outputs.vm_name }}"
+          SSH_KEY="${{ steps.prepare-ssh.outputs.ssh_key_path }}"
+          DRIVER_URL="${{ env.NVIDIA_DRIVER_URL }}"
+          
+          echo "Checking NVIDIA driver status..."
+          
+          # Check if nvidia-smi already works
+          if gcloud compute ssh ${VM_NAME} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --zone=${{ secrets.GCP_ZONE }} \
+            --ssh-key-file=${SSH_KEY} \
+            --command="powershell -Command \"& nvidia-smi\"" 2>/dev/null; then
+            echo "NVIDIA driver already installed and working"
+            exit 0
+          fi
+          
+          echo "NVIDIA driver not detected, installing..."
+          
+          # Create driver installation script
+          cat > /tmp/install_driver.ps1 << 'EOF'
+          $ErrorActionPreference = "Stop"
+          
+          Write-Host "Downloading NVIDIA driver..."
+          $driverPath = "C:\nvidia_driver.exe"
+          $driverUrl = $env:DRIVER_URL
+          
+          # Download driver
+          Invoke-WebRequest -Uri $driverUrl -OutFile $driverPath -UseBasicParsing
+          
+          Write-Host "Installing NVIDIA driver (silent mode)..."
+          Start-Process -FilePath $driverPath -ArgumentList "/s", "/n" -Wait -NoNewWindow
+          
+          Write-Host "Driver installation complete. System will reboot."
+          
+          # Reboot to load driver
+          shutdown /r /t 30 /c "Rebooting to load NVIDIA driver"
+          EOF
+          
+          # Upload and run installation script
+          gcloud compute scp /tmp/install_driver.ps1 ${VM_NAME}:C:\\install_driver.ps1 \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --zone=${{ secrets.GCP_ZONE }} \
+            --ssh-key-file=${SSH_KEY}
+          
+          # Run installation script with driver URL
+          gcloud compute ssh ${VM_NAME} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --zone=${{ secrets.GCP_ZONE }} \
+            --ssh-key-file=${SSH_KEY} \
+            --command="powershell -Command \"\$env:DRIVER_URL='${DRIVER_URL}'; C:\\install_driver.ps1\""
+          
+          echo "Waiting for VM to reboot (90 seconds)..."
+          sleep 90
+          
+          # Wait for SSH to come back after reboot
+          echo "Waiting for SSH after reboot..."
+          for i in {1..60}; do
+            if gcloud compute ssh ${VM_NAME} \
+              --project=${{ secrets.GCP_PROJECT_ID }} \
+              --zone=${{ secrets.GCP_ZONE }} \
+              --ssh-key-file=${SSH_KEY} \
+              --command="echo Reboot complete" 2>/dev/null; then
+              echo "VM is back online after reboot"
+              break
+            fi
+            
+            if [ $i -eq 60 ]; then
+              echo "ERROR: VM did not come back online after reboot"
+              exit 1
+            fi
+            
+            sleep 10
+          done
+          
+          # Verify nvidia-smi now works
+          echo "Verifying NVIDIA driver installation..."
+          gcloud compute ssh ${VM_NAME} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --zone=${{ secrets.GCP_ZONE }} \
+            --ssh-key-file=${SSH_KEY} \
+            --command="powershell -Command \"& nvidia-smi\""
+
+      - name: Upload repository scripts to VM
+        run: |
+          VM_NAME="${{ steps.set-vm-name.outputs.vm_name }}"
+          SSH_KEY="${{ steps.prepare-ssh.outputs.ssh_key_path }}"
+          
+          echo "Creating remote directory..."
+          gcloud compute ssh ${VM_NAME} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --zone=${{ secrets.GCP_ZONE }} \
+            --ssh-key-file=${SSH_KEY} \
+            --command="powershell -Command \"New-Item -ItemType Directory -Path C:\\ghci\\repo -Force\""
+          
+          echo "Uploading ci directory..."
+          gcloud compute scp --recurse ci/ ${VM_NAME}:C:\\ghci\\repo\\ci \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --zone=${{ secrets.GCP_ZONE }} \
+            --ssh-key-file=${SSH_KEY}
+          
+          echo "Repository scripts uploaded successfully"
+
+      - name: Execute entry script
+        id: execute-script
+        run: |
+          VM_NAME="${{ steps.set-vm-name.outputs.vm_name }}"
+          SSH_KEY="${{ steps.prepare-ssh.outputs.ssh_key_path }}"
+          ENTRY_SCRIPT="${{ inputs.entry_script }}"
+          
+          echo "Executing entry script: ${ENTRY_SCRIPT}"
+          
+          # Convert forward slashes to backslashes for Windows path
+          WINDOWS_SCRIPT_PATH="C:\\ghci\\repo\\${ENTRY_SCRIPT//\//\\}"
+          
+          echo "Windows path: ${WINDOWS_SCRIPT_PATH}"
+          
+          # Execute script and capture output
+          gcloud compute ssh ${VM_NAME} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --zone=${{ secrets.GCP_ZONE }} \
+            --ssh-key-file=${SSH_KEY} \
+            --command="powershell -NoProfile -ExecutionPolicy Bypass -File \"${WINDOWS_SCRIPT_PATH}\""
+          
+          EXIT_CODE=$?
+          
+          if [ ${EXIT_CODE} -ne 0 ]; then
+            echo "ERROR: Entry script failed with exit code ${EXIT_CODE}"
+            exit ${EXIT_CODE}
+          fi
+          
+          echo "Entry script completed successfully"
+
+      - name: Cleanup - Delete VM and resources
+        if: always()
+        run: |
+          VM_NAME="${{ steps.set-vm-name.outputs.vm_name }}"
+          FIREWALL_RULE="${{ steps.create-firewall.outputs.firewall_rule }}"
+          
+          echo "Starting cleanup..."
+          
+          # Delete VM if it was created
+          if [ "${{ steps.create-vm.outputs.vm_created }}" = "true" ]; then
+            echo "Deleting VM: ${VM_NAME}"
+            gcloud compute instances delete ${VM_NAME} \
+              --project=${{ secrets.GCP_PROJECT_ID }} \
+              --zone=${{ secrets.GCP_ZONE }} \
+              --delete-disks=all \
+              --quiet \
+              || echo "VM deletion failed or VM does not exist"
+          fi
+          
+          # Delete firewall rule
+          if [ -n "${FIREWALL_RULE}" ]; then
+            echo "Deleting firewall rule: ${FIREWALL_RULE}"
+            gcloud compute firewall-rules delete ${FIREWALL_RULE} \
+              --project=${{ secrets.GCP_PROJECT_ID }} \
+              --quiet \
+              || echo "Firewall rule deletion failed or rule does not exist"
+          fi
+          
+          echo "Cleanup complete"
+
+      - name: Cleanup - Remove SSH keys
+        if: always()
+        run: |
+          echo "Removing SSH keys..."
+          rm -f ~/.ssh/gcp_vm_key ~/.ssh/gcp_vm_key.pub /tmp/startup_script.ps1 /tmp/install_driver.ps1
+          echo "SSH keys removed"
