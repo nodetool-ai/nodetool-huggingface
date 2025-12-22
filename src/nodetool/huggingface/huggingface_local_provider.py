@@ -15,7 +15,7 @@ import os
 import threading
 import json
 from queue import Queue
-from typing import Any, AsyncGenerator, List, Literal, Set, Dict, Sequence, AsyncIterator, TypeVar, TYPE_CHECKING
+from typing import Any, AsyncGenerator, List, Literal, Set, Dict, Sequence, AsyncIterator, TypeVar, TYPE_CHECKING, Optional
 from io import BytesIO
 from pathlib import Path
 
@@ -53,6 +53,13 @@ from nodetool.config.logging_config import get_logger
 from nodetool.ml.core.model_manager import ModelManager
 from nodetool.io.media_fetch import fetch_uri_bytes_and_mime_sync
 from nodetool.workflows.recommended_models import get_recommended_models
+from nodetool.huggingface.runtime_safety import (
+    inspect_runtime_capabilities,
+    select_safe_dtype,
+    log_runtime_diagnostics,
+    configure_torch_backends,
+    get_cached_capabilities,
+)
 
 if TYPE_CHECKING:
     import torch
@@ -123,6 +130,34 @@ def _is_mps_available() -> bool:
         )
     except Exception:
         return False
+
+
+def _get_safe_dtype(
+    model_type: str = "general",
+    requested_dtype: Optional[torch.dtype] = None,
+) -> torch.dtype:
+    """
+    Get safe dtype for a specific model type with comprehensive logging.
+    
+    This wraps select_safe_dtype and adds model-specific context to logs.
+    
+    Args:
+        model_type: Type hint for logging (e.g., "flux", "sdxl", "general")
+        requested_dtype: Optional user preference
+    
+    Returns:
+        Safe torch dtype
+    """
+    capabilities = get_cached_capabilities()
+    safe_dtype = select_safe_dtype(requested_dtype, capabilities)
+    
+    if requested_dtype and requested_dtype != safe_dtype:
+        log.warning(
+            f"Model type '{model_type}' requested {requested_dtype} but using {safe_dtype} "
+            f"for safety on {capabilities.os_name}"
+        )
+    
+    return safe_dtype
 
 
 def _is_node_model(model_id: str, model_path: str | None, node_cls: Any) -> bool:
@@ -625,6 +660,11 @@ class HuggingFaceLocalProvider(BaseProvider):
             raise ValueError(
                 "ProcessingContext is required for HuggingFace image generation"
             )
+        
+        # Log runtime diagnostics once at startup
+        log_runtime_diagnostics()
+        # Configure torch backends for stable inference
+        configure_torch_backends()
 
         pipeline = ModelManager.get_model(model_id)
 
@@ -673,83 +713,79 @@ class HuggingFaceLocalProvider(BaseProvider):
                         # Standard Flux loading
                         from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
                         torch = _get_torch()
+                        safe_dtype = _get_safe_dtype("flux", torch.bfloat16)
+                        log.info(f"Loading FLUX pipeline with dtype {safe_dtype}")
                         pipeline = FluxPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=(
-                                torch.bfloat16
-                                if _is_cuda_available()
-                                else torch.float32
-                            ),
+                            torch_dtype=safe_dtype,
                         )
                 elif _is_node_model(params.model.id, params.model.path, QwenImage):
                     if _is_nunchaku_transformer(params.model.id, params.model.path):
                         from nodetool.huggingface.nunchaku_pipelines import load_nunchaku_qwen_pipeline
+                        torch = _get_torch()
+                        safe_dtype = _get_safe_dtype("qwen", torch.bfloat16)
+                        log.info(f"Loading Nunchaku Qwen pipeline with dtype {safe_dtype}")
                         pipeline = await load_nunchaku_qwen_pipeline(
                             model_id=params.model.id,
                             path=params.model.path,
                             context=context,
-                            torch_dtype=torch.bfloat16,
+                            torch_dtype=safe_dtype,
                             node_id=node_id,
                         )
                         use_cpu_offload = True
                     else:
                         from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
                         torch = _get_torch()
+                        safe_dtype = _get_safe_dtype("qwen", torch.bfloat16)
+                        log.info(f"Loading Qwen pipeline with dtype {safe_dtype}")
                         pipeline = QwenImagePipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=torch.bfloat16,
+                            torch_dtype=safe_dtype,
                         )
                         use_cpu_offload = True
                 else:
-                    model_type = model_info.pipeline_tag or "unknown"
-
                     # Load pipeline from single file based on model type
                     torch = _get_torch()
                     if "diffusers:StableDiffusionXLPipeline" in model_info.tags:
                         from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
+                        safe_dtype = _get_safe_dtype("sdxl", torch.float16)
                         pipeline = StableDiffusionXLPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=(
-                                torch.float16 if _is_cuda_available() else torch.float32
-                            ),
+                            torch_dtype=safe_dtype,
                         )
                     elif "diffusers:StableDiffusionPipeline" in model_info.tags:
                         from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
+                        safe_dtype = _get_safe_dtype("sd15", torch.float16)
                         pipeline = StableDiffusionPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=(
-                                torch.float16 if _is_cuda_available() else torch.float32
-                            ),
+                            torch_dtype=safe_dtype,
                         )
                     elif "diffusers:StableDiffusion3Pipeline" in model_info.tags:
                         from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import StableDiffusion3Pipeline
+                        safe_dtype = _get_safe_dtype("sd3", torch.float16)
                         pipeline = StableDiffusion3Pipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=(
-                                torch.float16 if _is_cuda_available() else torch.float32
-                            ),
+                            torch_dtype=safe_dtype,
                         )
                     elif "flux" in model_info.tags:
                         from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+                        safe_dtype = _get_safe_dtype("flux", torch.bfloat16)
                         pipeline = FluxPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=(
-                                torch.bfloat16
-                                if _is_cuda_available()
-                                else torch.float32
-                            ),
+                            torch_dtype=safe_dtype,
                         )
                     else:
+                        model_type = model_info.pipeline_tag or "unknown"
                         raise ValueError(
                             f"Unsupported single-file model type: {model_type}"
                         )
             else:
                 # Load pipeline from multi-file model (standard format)
+                torch = _get_torch()
+                safe_dtype = _get_safe_dtype("general", torch.float16)
                 pipeline = AutoPipelineForText2Image.from_pretrained(
                     params.model.id,
-                    torch_dtype=(
-                        torch.float16 if _is_cuda_available() else torch.float32
-                    ),
+                    torch_dtype=safe_dtype,
                     variant=await _detect_cached_variant(params.model.id),
                 )
 
@@ -871,13 +907,11 @@ class HuggingFaceLocalProvider(BaseProvider):
                         # Standard Flux Fill
                         from diffusers.pipelines.flux.pipeline_flux_fill import FluxFillPipeline
                         torch = _get_torch()
+                        safe_dtype = _get_safe_dtype("flux-fill", torch.bfloat16)
+                        log.info(f"Loading FLUX Fill pipeline with dtype {safe_dtype}")
                         pipeline = FluxFillPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=(
-                                torch.bfloat16
-                                if _is_cuda_available()
-                                else torch.float32
-                            ),
+                            torch_dtype=safe_dtype,
                         )
                 elif _is_node_model(params.model.id, params.model.path, QwenImageEdit):
                     if _is_nunchaku_transformer(params.model.id, params.model.path):
@@ -893,9 +927,11 @@ class HuggingFaceLocalProvider(BaseProvider):
                     else:
                         from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import QwenImageEditPipeline
                         torch = _get_torch()
+                        safe_dtype = _get_safe_dtype("qwen-edit", torch.float16)
+                        log.info(f"Loading Qwen Image Edit pipeline with dtype {safe_dtype}")
                         pipeline = QwenImageEditPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=torch.float16,
+                            torch_dtype=safe_dtype,
                         )
                 elif _is_nunchaku_transformer(params.model.id, params.model.path):
                     from nodetool.huggingface.nunchaku_pipelines import load_nunchaku_flux_pipeline
@@ -932,35 +968,30 @@ class HuggingFaceLocalProvider(BaseProvider):
                         raise ValueError(f"Model {params.model.id} has no tags")
 
                     # Load pipeline from single file based on model type
+                    torch = _get_torch()
                     if "diffusers:StableDiffusionPipeline" in model_info.tags:
+                        safe_dtype = _get_safe_dtype("sd15-img2img", torch.float16)
                         pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=(
-                                torch.float16 if _is_cuda_available() else torch.float32
-                            ),
+                            torch_dtype=safe_dtype,
                         )
                     elif "diffusers:StableDiffusionXLPipeline" in model_info.tags:
+                        safe_dtype = _get_safe_dtype("sdxl-img2img", torch.float16)
                         pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=(
-                                torch.float16 if _is_cuda_available() else torch.float32
-                            ),
+                            torch_dtype=safe_dtype,
                         )
                     elif "diffusers:StableDiffusion3Pipeline" in model_info.tags:
+                        safe_dtype = _get_safe_dtype("sd3-img2img", torch.float16)
                         pipeline = StableDiffusion3Img2ImgPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=(
-                                torch.float16 if _is_cuda_available() else torch.float32
-                            ),
+                            torch_dtype=safe_dtype,
                         )
                     elif "flux" in model_info.tags:
+                        safe_dtype = _get_safe_dtype("flux-img2img", torch.bfloat16)
                         pipeline = FluxImg2ImgPipeline.from_single_file(
                             str(cache_path),
-                            torch_dtype=(
-                                torch.bfloat16
-                                if _is_cuda_available()
-                                else torch.float32
-                            ),
+                            torch_dtype=safe_dtype,
                         )
                     else:
                         raise ValueError(
@@ -968,11 +999,11 @@ class HuggingFaceLocalProvider(BaseProvider):
                         )
             else:
                 # Load pipeline from multi-file model (standard format)
+                torch = _get_torch()
+                safe_dtype = _get_safe_dtype("img2img", torch.float16)
                 pipeline = AutoPipelineForImage2Image.from_pretrained(
                     params.model.id,
-                    torch_dtype=(
-                        torch.float16 if _is_cuda_available() else torch.float32
-                    ),
+                    torch_dtype=safe_dtype,
                     variant=await _detect_cached_variant(params.model.id),
                 )
 
@@ -1169,7 +1200,9 @@ class HuggingFaceLocalProvider(BaseProvider):
             log.info(f"Loading automatic speech recognition pipeline: {model}")
 
             # Determine torch dtype based on device
-            torch_dtype = torch.float16 if _is_cuda_available() else torch.float32
+            torch = _get_torch()
+            safe_dtype = _get_safe_dtype("asr", torch.float16)
+            log.info(f"Loading ASR pipeline with dtype {safe_dtype}")
 
             # Load model using helper
             hf_model = await load_model(
@@ -1177,7 +1210,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 context=context,
                 model_class=AutoModelForSpeechSeq2Seq,
                 model_id=model,
-                torch_dtype=torch_dtype,
+                torch_dtype=safe_dtype,
                 skip_cache=False,
                 low_cpu_mem_usage=True,
                 use_safetensors=True,
@@ -1192,7 +1225,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 model=hf_model,
                 tokenizer=processor.tokenizer,
                 feature_extractor=processor.feature_extractor,
-                torch_dtype=torch_dtype,
+                torch_dtype=safe_dtype,
                 device=context.device,
             )
 
@@ -1312,20 +1345,23 @@ class HuggingFaceLocalProvider(BaseProvider):
             log.info(f"Loading text-to-video pipeline: {model_id}")
 
             # Load VAE first
+            torch = _get_torch()
             vae = await asyncio.to_thread(
                 AutoencoderKLWan.from_pretrained,
                 model_id,
                 subfolder="vae",
-                torch_dtype=torch.float32,
+                torch_dtype=torch.float32,  # VAE always uses float32 for precision
                 low_cpu_mem_usage=False,
                 ignore_mismatched_sizes=True,
             )
 
-            # Load WanPipeline
+            # Load WanPipeline with safe dtype
+            safe_dtype = _get_safe_dtype("wan-video", torch.bfloat16)
+            log.info(f"Loading Wan video pipeline with dtype {safe_dtype}")
             pipeline = await asyncio.to_thread(
                 WanPipeline.from_pretrained,
                 model_id,
-                torch_dtype=torch.bfloat16,
+                torch_dtype=safe_dtype,
                 vae=vae,
             )
 
@@ -1668,6 +1704,9 @@ class HuggingFaceLocalProvider(BaseProvider):
 
         if not cached_pipeline:
             log.info(f"Loading HuggingFace pipeline model {repo_id}")
+            torch = _get_torch()
+            safe_compute_dtype = _get_safe_dtype("quantized", torch.bfloat16)
+            
             load_kwargs = {}
             if quantization == "nf4":
                 load_kwargs["model_kwargs"] = {
@@ -1675,7 +1714,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                         load_in_4bit=True,
                         bnb_4bit_quant_type="nf4",
                         bnb_4bit_use_double_quant=True,
-                        bnb_4bit_compute_dtype=torch.bfloat16,
+                        bnb_4bit_compute_dtype=safe_compute_dtype,
                     )
                 }
             elif quantization == "nf8":
@@ -1684,7 +1723,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                         load_in_8bit=True,
                         bnb_8bit_quant_type="nf8",
                         bnb_8bit_use_double_quant=True,
-                        bnb_8bit_compute_dtype=torch.bfloat16,
+                        bnb_8bit_compute_dtype=safe_compute_dtype,
                     )
                 }
             cached_pipeline = await load_pipeline(
@@ -1834,20 +1873,23 @@ class HuggingFaceLocalProvider(BaseProvider):
             model_id=repo_id,
         )
 
+        torch = _get_torch()
+        safe_compute_dtype = _get_safe_dtype("vlm", torch.bfloat16)
+        
         load_kwargs = {"device_map": "auto"}
         if quantization == "nf4":
             load_kwargs["quantization_config"] = BitsAndBytesConfig(
                 load_in_4bit=True,
                 bnb_4bit_quant_type="nf4",
                 bnb_4bit_use_double_quant=True,
-                bnb_4bit_compute_dtype=torch.bfloat16,
+                bnb_4bit_compute_dtype=safe_compute_dtype,
             )
         elif quantization == "nf8":
             load_kwargs["quantization_config"] = BitsAndBytesConfig(
                 load_in_8bit=True,
                 bnb_8bit_quant_type="nf8",
                 bnb_8bit_use_double_quant=True,
-                bnb_8bit_compute_dtype=torch.bfloat16,
+                bnb_8bit_compute_dtype=safe_compute_dtype,
             )
 
         # Load model using AutoModelForCausalLM as requested for VL models

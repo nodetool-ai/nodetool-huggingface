@@ -29,6 +29,7 @@ from nodetool.metadata.types import (
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress
+from nodetool.huggingface.runtime_safety import select_safe_dtype
 
 import logging
 
@@ -479,22 +480,38 @@ def upscale_latents(latents: torch.Tensor, scale_factor: int = 2) -> torch.Tenso
     return upscaled
 
 
-def available_torch_dtype() -> "torch.dtype":
-    import torch
+def _apply_vae_optimizations(pipeline: Any):
+    """Apply VAE slicing and channels_last layout when available."""
+    if pipeline is None:
+        return
 
-    # Prefer BF16 on capable GPUs (PyTorch 2 optimization path), otherwise fall back.
+    vae = getattr(pipeline, "vae", None)
+    if vae is None:
+        return
+
+    if hasattr(vae, "enable_slicing"):
+        try:
+            vae.enable_slicing()
+            log.debug("Enabled VAE slicing")
+        except Exception as e:
+            log.warning("Failed to enable VAE slicing: %s", e)
+
     try:
-        if torch.cuda.is_available():
-            is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
-            if callable(is_bf16_supported) and is_bf16_supported():
-                return torch.bfloat16
-            return torch.float16
-        if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
-            return torch.float16
-    except Exception:
-        pass
+        import torch
+        vae.to(memory_format=torch.channels_last)
+        log.debug("Set VAE to channels_last memory format")
+    except Exception as e:
+        log.warning("Failed to set VAE channels_last memory format: %s", e)
 
-    return torch.float32
+
+def available_torch_dtype() -> "torch.dtype":
+    """
+    Get available torch dtype based on hardware capabilities.
+    
+    DEPRECATED: Use runtime_safety.select_safe_dtype() for production code.
+    This function is kept for backwards compatibility.
+    """
+    return select_safe_dtype()
 
 
 class StableDiffusionBaseNode(HuggingFacePipelineNode):
