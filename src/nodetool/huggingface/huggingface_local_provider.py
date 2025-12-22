@@ -660,6 +660,11 @@ class HuggingFaceLocalProvider(BaseProvider):
             raise ValueError(
                 "ProcessingContext is required for HuggingFace image generation"
             )
+        
+        # Log runtime diagnostics once at startup
+        log_runtime_diagnostics()
+        # Configure torch backends for stable inference
+        configure_torch_backends()
 
         pipeline = ModelManager.get_model(model_id)
 

@@ -480,6 +480,30 @@ def upscale_latents(latents: torch.Tensor, scale_factor: int = 2) -> torch.Tenso
     return upscaled
 
 
+def _apply_vae_optimizations(pipeline: Any):
+    """Apply VAE slicing and channels_last layout when available."""
+    if pipeline is None:
+        return
+
+    vae = getattr(pipeline, "vae", None)
+    if vae is None:
+        return
+
+    if hasattr(vae, "enable_slicing"):
+        try:
+            vae.enable_slicing()
+            log.debug("Enabled VAE slicing")
+        except Exception as e:
+            log.warning("Failed to enable VAE slicing: %s", e)
+
+    try:
+        import torch
+        vae.to(memory_format=torch.channels_last)
+        log.debug("Set VAE to channels_last memory format")
+    except Exception as e:
+        log.warning("Failed to set VAE channels_last memory format: %s", e)
+
+
 def available_torch_dtype() -> "torch.dtype":
     """
     Get available torch dtype based on hardware capabilities.
