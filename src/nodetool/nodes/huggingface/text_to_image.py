@@ -789,6 +789,8 @@ class Flux(HuggingFacePipelineNode):
             _apply_vae_optimizations(self._pipeline)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
+        import torch
+
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
