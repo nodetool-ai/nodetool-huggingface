@@ -1,3 +1,46 @@
+# GCP Windows GPU Script Runner
+#
+# This workflow creates an ephemeral Windows Server 2022 VM with NVIDIA GPU on Google Cloud Platform,
+# runs a specified PowerShell script, and cleans up all resources afterward.
+#
+# REQUIRED GITHUB SECRETS:
+#   - GCP_PROJECT_ID: Your GCP project ID
+#   - GCP_ZONE: GCP zone (e.g., "us-central1-a" or "europe-west4-a")
+#   - GCP_SA_KEY_JSON: Full JSON service account key with Compute Engine permissions
+#   - GCP_VM_SSH_PUBKEY: SSH public key (e.g., "ssh-rsa AAAA... comment")
+#   - GCP_VM_SSH_PRIVKEY: SSH private key in OpenSSH or PEM format
+#
+# OPTIONAL SECRETS:
+#   - GCP_NETWORK_TAGS: Comma-separated network tags for firewall targeting
+#
+# USAGE:
+#   1. Set up the required GitHub Secrets in your repository settings
+#   2. Go to Actions tab → "GCP Windows GPU Script Runner" → "Run workflow"
+#   3. Configure inputs (or use defaults):
+#      - entry_script: Path to PowerShell script to run (default: ci/windows/gpu_entry.ps1)
+#      - vm_name: Custom VM name (default: auto-generated win-gpu-ci-{run_id})
+#      - machine_type: GCP machine type (default: n1-standard-4)
+#      - gpu_type: GPU accelerator (default: nvidia-tesla-t4)
+#      - gpu_count: Number of GPUs (default: 1)
+#      - boot_disk_gb: Boot disk size in GB (default: 100)
+#      - timeout_minutes: Workflow timeout (default: 90)
+#
+# WORKFLOW STEPS:
+#   1. Authenticate to GCP using service account key
+#   2. Create ephemeral Windows Server 2022 VM with GPU
+#   3. Configure OpenSSH Server via startup script
+#   4. Wait for SSH connectivity
+#   5. Install NVIDIA driver (idempotent - checks if already installed)
+#   6. Upload repository scripts to VM
+#   7. Execute specified entry script
+#   8. Clean up VM and firewall rules (runs even on failure)
+#
+# NOTES:
+#   - VM and all resources are always deleted at the end
+#   - Logs are streamed to GitHub Actions
+#   - Workflow fails if entry script returns non-zero exit code
+#   - No Docker, no VM reuse, fresh VM every run
+#
 name: GCP Windows GPU Script Runner
 
 on:
