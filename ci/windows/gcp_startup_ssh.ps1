@@ -100,16 +100,21 @@ $sshdConfigPath = "C:\ProgramData\ssh\sshd_config"
 if (Test-Path $sshdConfigPath) {
     $sshdConfig = Get-Content $sshdConfigPath
     
-    # Ensure PubkeyAuthentication is enabled
-    if ($sshdConfig -notmatch '^\s*PubkeyAuthentication\s+yes') {
+    # Ensure PubkeyAuthentication is enabled (not commented out)
+    $pubkeyEnabled = $sshdConfig | Where-Object { $_ -match '^\s*PubkeyAuthentication\s+yes' -and $_ -notmatch '^\s*#' }
+    if (-not $pubkeyEnabled) {
         Add-Content -Path $sshdConfigPath -Value "`nPubkeyAuthentication yes"
         Write-Host "Enabled PubkeyAuthentication in sshd_config"
+    } else {
+        Write-Host "PubkeyAuthentication already enabled in sshd_config"
     }
     
     # Ensure PasswordAuthentication is disabled for better security (optional)
     # Uncomment if you want to enforce key-only authentication
-    # if ($sshdConfig -notmatch '^\s*PasswordAuthentication\s+no') {
+    # $passwordDisabled = $sshdConfig | Where-Object { $_ -match '^\s*PasswordAuthentication\s+no' -and $_ -notmatch '^\s*#' }
+    # if (-not $passwordDisabled) {
     #     Add-Content -Path $sshdConfigPath -Value "`nPasswordAuthentication no"
+    #     Write-Host "Disabled PasswordAuthentication in sshd_config"
     # }
 }
 

@@ -35,7 +35,19 @@ try {
 # Test 3: Check PyTorch CUDA availability (if Python/PyTorch installed)
 Write-Host "`n--- Test 3: PyTorch CUDA Check (Optional) ---"
 try {
-    $cudaCheck = & python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'CUDA device count: {torch.cuda.device_count()}'); print(f'CUDA device name: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"N/A\"}')" 2>&1
+    # Create a multi-line Python script for better readability
+    $pytorchCheck = @"
+import torch
+print(f'PyTorch version: {torch.__version__}')
+print(f'CUDA available: {torch.cuda.is_available()}')
+print(f'CUDA device count: {torch.cuda.device_count()}')
+if torch.cuda.is_available():
+    print(f'CUDA device name: {torch.cuda.get_device_name(0)}')
+else:
+    print('CUDA device name: N/A')
+"@
+    
+    $cudaCheck = & python -c $pytorchCheck 2>&1
     Write-Host $cudaCheck
     
     if ($LASTEXITCODE -ne 0) {

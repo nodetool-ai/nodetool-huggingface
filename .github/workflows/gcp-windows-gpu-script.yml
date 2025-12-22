@@ -85,7 +85,15 @@ on:
 env:
   # NVIDIA Driver URL for Tesla T4 on Windows Server 2022
   # This is a GCS bucket maintained by GCP with GPU drivers
+  # Update this URL when newer driver versions are available
+  # Check: https://cloud.google.com/compute/docs/gpus/install-drivers-gpu
   NVIDIA_DRIVER_URL: 'https://storage.googleapis.com/nvidia-drivers-us-public/tesla/latest/windows/525.105.17-data-center-tesla-desktop-win10-win11-64bit-dch-international.exe'
+  # Timeout settings (in seconds)
+  SSH_WAIT_TIMEOUT: 1800  # 30 minutes for SSH to become ready
+  SSH_WAIT_INTERVAL: 15   # Check every 15 seconds
+  VM_STATUS_TIMEOUT: 600  # 10 minutes for VM to reach RUNNING
+  VM_STATUS_INTERVAL: 10  # Check every 10 seconds
+  REBOOT_WAIT: 90        # Wait after reboot before checking SSH
 
 jobs:
   run-gpu-script:
@@ -199,33 +207,39 @@ jobs:
       - name: Wait for VM to be ready
         run: |
           VM_NAME="${{ steps.set-vm-name.outputs.vm_name }}"
+          TIMEOUT=${{ env.VM_STATUS_TIMEOUT }}
+          INTERVAL=${{ env.VM_STATUS_INTERVAL }}
+          MAX_ATTEMPTS=$((TIMEOUT / INTERVAL))
           
-          echo "Waiting for VM to reach RUNNING state..."
-          for i in {1..60}; do
+          echo "Waiting for VM to reach RUNNING state (timeout: ${TIMEOUT}s)..."
+          for i in $(seq 1 ${MAX_ATTEMPTS}); do
             STATUS=$(gcloud compute instances describe ${VM_NAME} \
               --project=${{ secrets.GCP_PROJECT_ID }} \
               --zone=${{ secrets.GCP_ZONE }} \
               --format='get(status)')
             
-            echo "VM status: ${STATUS} (attempt $i/60)"
+            echo "VM status: ${STATUS} (attempt $i/${MAX_ATTEMPTS})"
             
             if [ "${STATUS}" = "RUNNING" ]; then
               echo "VM is RUNNING"
               break
             fi
             
-            if [ $i -eq 60 ]; then
-              echo "ERROR: VM did not reach RUNNING state within timeout"
+            if [ $i -eq ${MAX_ATTEMPTS} ]; then
+              echo "ERROR: VM did not reach RUNNING state within ${TIMEOUT}s timeout"
               exit 1
             fi
             
-            sleep 10
+            sleep ${INTERVAL}
           done
 
       - name: Wait for SSH to be ready
         run: |
           VM_NAME="${{ steps.set-vm-name.outputs.vm_name }}"
           SSH_KEY="${{ steps.prepare-ssh.outputs.ssh_key_path }}"
+          TIMEOUT=${{ env.SSH_WAIT_TIMEOUT }}
+          INTERVAL=${{ env.SSH_WAIT_INTERVAL }}
+          MAX_ATTEMPTS=$((TIMEOUT / INTERVAL))
           
           # Get VM external IP
           VM_IP=$(gcloud compute instances describe ${VM_NAME} \
@@ -236,10 +250,10 @@ jobs:
           echo "VM IP: ${VM_IP}"
           
           # Wait for SSH to be ready (Windows startup script needs time to run)
-          echo "Waiting for SSH to be ready (this may take several minutes)..."
+          echo "Waiting for SSH to be ready (timeout: ${TIMEOUT}s, this may take several minutes)..."
           
-          for i in {1..120}; do
-            echo "SSH connection attempt $i/120..."
+          for i in $(seq 1 ${MAX_ATTEMPTS}); do
+            echo "SSH connection attempt $i/${MAX_ATTEMPTS}..."
             
             if gcloud compute ssh ${VM_NAME} \
               --project=${{ secrets.GCP_PROJECT_ID }} \
@@ -251,8 +265,8 @@ jobs:
               break
             fi
             
-            if [ $i -eq 120 ]; then
-              echo "ERROR: SSH did not become ready within timeout"
+            if [ $i -eq ${MAX_ATTEMPTS} ]; then
+              echo "ERROR: SSH did not become ready within ${TIMEOUT}s timeout"
               echo "Attempting to get serial port output for debugging..."
               gcloud compute instances get-serial-port-output ${VM_NAME} \
                 --project=${{ secrets.GCP_PROJECT_ID }} \
@@ -261,7 +275,7 @@ jobs:
               exit 1
             fi
             
-            sleep 15
+            sleep ${INTERVAL}
           done
 
       - name: Install NVIDIA driver (idempotent)
@@ -317,12 +331,16 @@ jobs:
             --ssh-key-file=${SSH_KEY} \
             --command="powershell -Command \"\$env:DRIVER_URL='${DRIVER_URL}'; C:\\install_driver.ps1\""
           
-          echo "Waiting for VM to reboot (90 seconds)..."
-          sleep 90
+          echo "Waiting for VM to reboot (${{ env.REBOOT_WAIT }} seconds)..."
+          sleep ${{ env.REBOOT_WAIT }}
           
           # Wait for SSH to come back after reboot
-          echo "Waiting for SSH after reboot..."
-          for i in {1..60}; do
+          TIMEOUT=${{ env.VM_STATUS_TIMEOUT }}
+          INTERVAL=${{ env.VM_STATUS_INTERVAL }}
+          MAX_ATTEMPTS=$((TIMEOUT / INTERVAL))
+          
+          echo "Waiting for SSH after reboot (timeout: ${TIMEOUT}s)..."
+          for i in $(seq 1 ${MAX_ATTEMPTS}); do
             if gcloud compute ssh ${VM_NAME} \
               --project=${{ secrets.GCP_PROJECT_ID }} \
               --zone=${{ secrets.GCP_ZONE }} \
@@ -332,12 +350,12 @@ jobs:
               break
             fi
             
-            if [ $i -eq 60 ]; then
-              echo "ERROR: VM did not come back online after reboot"
+            if [ $i -eq ${MAX_ATTEMPTS} ]; then
+              echo "ERROR: VM did not come back online after reboot within ${TIMEOUT}s"
               exit 1
             fi
             
-            sleep 10
+            sleep ${INTERVAL}
           done
           
           # Verify nvidia-smi now works
