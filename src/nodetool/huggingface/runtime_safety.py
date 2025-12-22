@@ -109,20 +109,12 @@ def _detect_wddm() -> bool:
 
 
 def _get_cuda_version_from_runtime() -> Optional[str]:
-    """Get CUDA runtime version from the driver."""
-    try:
-        import torch
-        if not torch.cuda.is_available():
-            return None
-        # Get CUDA version as a string like "11.8"
-        version_tuple = torch.version.cuda
-        return version_tuple
-    except Exception:
-        return None
-
-
-def _get_torch_cuda_version() -> Optional[str]:
-    """Get the CUDA version PyTorch was built against."""
+    """
+    Get CUDA version from PyTorch's build configuration.
+    
+    Returns the CUDA version that PyTorch was compiled against.
+    This is the authoritative version for dtype compatibility checks.
+    """
     try:
         import torch
         if hasattr(torch.version, 'cuda'):
@@ -261,7 +253,7 @@ def inspect_runtime_capabilities() -> RuntimeCapabilities:
                 total_vram_mb, available_vram_mb = _get_gpu_memory()
                 bf16_hardware_support = _check_bf16_hardware_support()
                 cuda_version = _get_cuda_version_from_runtime()
-                torch_cuda_version = _get_torch_cuda_version()
+                torch_cuda_version = cuda_version  # Same as CUDA version from torch
         except Exception as e:
             log.warning(f"Failed to query GPU details: {e}")
     

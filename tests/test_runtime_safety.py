@@ -222,6 +222,13 @@ class TestSafeDtypeSelection:
 class TestVRAMEstimation:
     """Test VRAM estimation and validation."""
     
+    # Memory estimation constants (in MB)
+    # These are conservative estimates based on model architecture
+    FLUX_MIN_VRAM_MB = 10000  # FLUX with bfloat16 needs ~10GB minimum
+    FLUX_MAX_VRAM_MB = 20000  # Should be under 20GB with dtype reduction
+    SDXL_MIN_VRAM_MB = 3000   # SDXL with float16 needs ~3GB minimum
+    SDXL_MAX_VRAM_MB = 8000   # Should be under 8GB
+    
     @requires_torch
     def test_estimate_model_memory_flux(self):
         """Test FLUX model memory estimation."""
@@ -229,8 +236,10 @@ class TestVRAMEstimation:
         
         # FLUX with bfloat16
         mem_mb = estimate_model_memory_mb("flux-schnell", torch.bfloat16)
-        assert mem_mb > 10000  # Should be > 10GB
-        assert mem_mb < 20000  # Should be < 20GB (with dtype reduction)
+        assert mem_mb > self.FLUX_MIN_VRAM_MB, \
+            f"FLUX estimate {mem_mb}MB too low (min {self.FLUX_MIN_VRAM_MB}MB)"
+        assert mem_mb < self.FLUX_MAX_VRAM_MB, \
+            f"FLUX estimate {mem_mb}MB too high (max {self.FLUX_MAX_VRAM_MB}MB)"
         
     @requires_torch
     def test_estimate_model_memory_sdxl(self):
@@ -239,8 +248,10 @@ class TestVRAMEstimation:
         
         # SDXL with float16
         mem_mb = estimate_model_memory_mb("sdxl", torch.float16)
-        assert mem_mb > 3000   # Should be > 3GB
-        assert mem_mb < 8000   # Should be < 8GB
+        assert mem_mb > self.SDXL_MIN_VRAM_MB, \
+            f"SDXL estimate {mem_mb}MB too low (min {self.SDXL_MIN_VRAM_MB}MB)"
+        assert mem_mb < self.SDXL_MAX_VRAM_MB, \
+            f"SDXL estimate {mem_mb}MB too high (max {self.SDXL_MAX_VRAM_MB}MB)"
     
     def test_check_vram_sufficient_pass(self):
         """Test VRAM sufficiency check when there's enough memory."""
