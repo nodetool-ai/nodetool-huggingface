@@ -10,6 +10,7 @@ module to work without nunchaku installed.
 from typing import Any, TYPE_CHECKING
 
 from nodetool.config.logging_config import get_logger
+from nodetool.huggingface.runtime_safety import select_safe_dtype, get_cached_capabilities
 
 if TYPE_CHECKING:
     import torch
@@ -112,7 +113,7 @@ async def get_nunchaku_text_encoder(
         model_id=str(cache_path),
         model_class=NunchakuT5EncoderModel,
         node_id=node_id,
-        torch_dtype=torch.bfloat16,
+        torch_dtype=select_safe_dtype(torch.bfloat16),
     )
 
 
@@ -154,7 +155,7 @@ async def get_nunchaku_transformer(
     # Resolve device - nunchaku requires a valid device, not None
     torch = _get_torch()
     if torch_dtype is None:
-        torch_dtype = torch.bfloat16
+        torch_dtype = select_safe_dtype(torch.bfloat16)
     if device is None:
         device = context.device if context.device else ("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -279,7 +280,8 @@ async def load_nunchaku_flux_pipeline(
         )
 
     torch = _get_torch()
-    torch_dtype = torch.bfloat16 if variant in ["schnell", "dev"] else torch.float16
+    torch_dtype = select_safe_dtype(torch.bfloat16 if variant in ["schnell", "dev"] else torch.float16)
+    log.info(f"Loading FLUX pipeline with dtype {torch_dtype} for variant {variant}")
     node_key = _node_identifier(node_id, repo_id)
 
     transformer = await get_nunchaku_transformer(
@@ -344,7 +346,8 @@ async def load_nunchaku_qwen_pipeline(
     hf_token = await context.get_secret("HF_TOKEN")
     torch = _get_torch()
     if torch_dtype is None:
-        torch_dtype = torch.bfloat16
+        torch_dtype = select_safe_dtype(torch.bfloat16)
+    log.info(f"Loading Qwen pipeline with dtype {torch_dtype}")
     if cache_key is None:
         cache_key = f"{repo_id}/{transformer_path}"
 
