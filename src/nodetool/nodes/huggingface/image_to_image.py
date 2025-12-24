@@ -2111,7 +2111,7 @@ class QwenImageEdit(HuggingFacePipelineNode):
         torch_dtype: torch.dtype,
         quantization: QwenImageEditQuantization | None = None,
     ):
-        from nodetool.huggingface.huggingface_local_provider import (
+        from nodetool.huggingface.nunchaku_pipelines import (
             load_nunchaku_qwen_pipeline,
         )
 
@@ -2373,7 +2373,7 @@ class FluxFill(HuggingFacePipelineNode):
         base_model, transformer_model = self._resolve_model_config(self.quantization)
 
         if transformer_model is not None:
-            from nodetool.huggingface.huggingface_local_provider import (
+            from nodetool.huggingface.nunchaku_pipelines import (
                 load_nunchaku_flux_pipeline,
             )
 
