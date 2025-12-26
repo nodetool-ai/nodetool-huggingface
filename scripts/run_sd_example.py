@@ -9,7 +9,6 @@ from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import os
 import asyncio
 from nodetool.metadata.types import HFStableDiffusionXL
 from nodetool.dsl.huggingface.text_to_image import StableDiffusionXL
@@ -21,23 +20,25 @@ async def generate_image():
     print("=" * 60)
     print("Stable Diffusion XL Example")
     print("=" * 60)
-    
+
     # Create the processing context
     context = ProcessingContext(user_id="test_user", auth_token="")
-    
+
     # Create and configure the StableDiffusionXL node
     print("\nConfiguring Stable Diffusion XL node...")
     sdxl = StableDiffusionXL()
-    
+
     # Use a quantized model that's faster and requires less VRAM
     sdxl.model = HFStableDiffusionXL(
         type="hf.stable_diffusion_xl",
         repo_id="nunchaku-tech/nunchaku-sdxl",
         path="svdq-int4_r32-sdxl.safetensors",
     )
-    
+
     # Configure generation parameters
-    sdxl.prompt = "A serene mountain landscape at sunset, highly detailed, photorealistic"
+    sdxl.prompt = (
+        "A serene mountain landscape at sunset, highly detailed, photorealistic"
+    )
     sdxl.negative_prompt = "blurry, low quality, distorted, ugly"
     sdxl.height = 768
     sdxl.width = 768
@@ -45,39 +46,40 @@ async def generate_image():
     sdxl.guidance_scale = 7.5
     sdxl.seed = 42
     sdxl.enable_cpu_offload = True  # Enable CPU offload for better memory management
-    
+
     print(f"\nPrompt: {sdxl.prompt}")
     print(f"Size: {sdxl.width}x{sdxl.height}")
     print(f"Steps: {sdxl.num_inference_steps}")
     print(f"Model: {sdxl.model.repo_id}/{sdxl.model.path}")
-    
+
     # Generate the image
     print("\nGenerating image...")
     print("(This may take a few minutes on first run as the model downloads)")
-    
+
     result = await sdxl.process(context)
-    
+
     # Save the generated image
     output_dir = Path(__file__).parent / "outputs"
     output_dir.mkdir(exist_ok=True)
     output_path = output_dir / "sd_example_output.png"
-    
-    print(f"\nImage generated successfully!")
+
+    print("\nImage generated successfully!")
     print(f"Saving to: {output_path}")
-    
+
     # The result contains an ImageRef, we need to save it
-    if hasattr(result, 'uri'):
+    if hasattr(result, "uri"):
         # If it's an ImageRef with a URI, copy the file
         import shutil
+
         if result.uri.startswith("file://"):
             src_path = result.uri[7:]  # Remove 'file://' prefix
             shutil.copy(src_path, output_path)
             print(f"Output saved to {output_path}")
-    
+
     print("\n" + "=" * 60)
     print("Example completed successfully!")
     print("=" * 60)
-    
+
     return output_path
 
 
@@ -89,6 +91,7 @@ def main():
     except Exception as e:
         print(f"\nError: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc()
         return 1
 
