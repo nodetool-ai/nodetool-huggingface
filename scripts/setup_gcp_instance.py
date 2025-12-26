@@ -165,7 +165,9 @@ echo "Setup completed successfully at $(date)"
 
         # Configure network
         network_interface = compute_v1.NetworkInterface()
-        network_interface.network = "global/networks/default"
+        network_interface.network = (
+            f"projects/{self.project_id}/global/networks/default"
+        )
         # Add external IP for access
         access_config = compute_v1.AccessConfig()
         access_config.name = "External NAT"
