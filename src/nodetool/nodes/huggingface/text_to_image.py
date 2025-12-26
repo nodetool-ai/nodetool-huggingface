@@ -31,8 +31,9 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress, Notification, LogUpdate
 
+import torch
+
 if TYPE_CHECKING:
-    import torch
     import huggingface_hub
     from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
     from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline

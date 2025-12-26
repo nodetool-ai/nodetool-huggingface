@@ -38,8 +38,9 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
 from nodetool.nodes.huggingface.huggingface_node import progress_callback
 from nodetool.workflows.processing_context import ProcessingContext
 
+import torch
+
 if TYPE_CHECKING:
-    import torch
     from RealESRGAN import RealESRGAN
     from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
     from diffusers.models.autoencoders.vae import DecoderOutput
@@ -145,6 +146,7 @@ def _apply_vae_optimizations(pipeline: Any):
             log.warning("Failed to enable VAE slicing: %s", e)
 
     try:
+        torch = _get_torch()
         vae.to(memory_format=torch.channels_last)
         log.debug("Set VAE to channels_last memory format")
     except Exception as e:
