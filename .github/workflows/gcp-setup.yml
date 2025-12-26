@@ -15,6 +15,14 @@ on:
         options:
           - create
           - delete
+          - start
+          - stop
+          - status
+      force:
+        description: 'Force recreate instance (only for create action)'
+        required: false
+        default: false
+        type: boolean
       zone:
         description: 'GCP Zone'
         required: false
@@ -62,7 +70,11 @@ jobs:
           GCP_ACCOUNT_KEY: ${{ secrets.GCP_ACCOUNT_KEY }}
         run: |
           cd scripts
-          python setup_gcp_instance.py ${{ github.event.inputs.action }}
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            python setup_gcp_instance.py ${{ github.event.inputs.action }} --force
+          else
+            python setup_gcp_instance.py ${{ github.event.inputs.action }}
+          fi
       
       - name: Summary
         run: |
@@ -73,7 +85,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ github.event.inputs.action }}" = "create" ]; then
-            echo "Instance created successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "Instance created or reused successfully!" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
             echo "1. SSH into the instance to check the setup status:" >> $GITHUB_STEP_SUMMARY
@@ -85,7 +97,13 @@ jobs:
             echo "3. Check the generated image:" >> $GITHUB_STEP_SUMMARY
             echo "   \`ls -la /opt/nodetool-huggingface/nodetool-huggingface/scripts/outputs/\`" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "⚠️ **Remember to delete the instance when done to avoid charges!**" >> $GITHUB_STEP_SUMMARY
-          else
+            echo "ℹ️ **Note: The instance will automatically stop after completing the script.**" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ github.event.inputs.action }}" = "delete" ]; then
             echo "Instance deleted successfully!" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ github.event.inputs.action }}" = "start" ]; then
+            echo "Instance started successfully!" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ github.event.inputs.action }}" = "stop" ]; then
+            echo "Instance stopped successfully!" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ github.event.inputs.action }}" = "status" ]; then
+            echo "Instance status retrieved successfully!" >> $GITHUB_STEP_SUMMARY
           fi

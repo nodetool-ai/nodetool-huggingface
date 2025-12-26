@@ -37,10 +37,33 @@ This directory contains scripts to set up a Google Cloud Platform (GCP) instance
 
 ### Using the Python Script Locally
 
-#### Create an instance:
+#### Create or reuse an instance:
 ```bash
 cd scripts
 python setup_gcp_instance.py create
+```
+
+The script will automatically reuse an existing instance if it exists. To force recreation:
+```bash
+python setup_gcp_instance.py create --force
+```
+
+#### Start a stopped instance:
+```bash
+cd scripts
+python setup_gcp_instance.py start
+```
+
+#### Stop a running instance:
+```bash
+cd scripts
+python setup_gcp_instance.py stop
+```
+
+#### Check instance status:
+```bash
+cd scripts
+python setup_gcp_instance.py status
 ```
 
 #### Delete an instance:
@@ -55,15 +78,21 @@ python setup_gcp_instance.py delete
 2. Select "GCP Instance Setup" workflow
 3. Click "Run workflow"
 4. Choose the action:
-   - **create**: Creates a new instance and runs the setup
+   - **create**: Creates a new instance or reuses existing one (check "force" to recreate)
+   - **start**: Starts a stopped instance
+   - **stop**: Stops a running instance
+   - **status**: Checks instance status
    - **delete**: Deletes the instance
-5. Optionally specify the GCP zone (defaults to `us-central1-a`)
+5. For create action, optionally check "force" to recreate the instance
+6. Optionally specify the GCP zone (defaults to `us-central1-a`)
 
 ## What the Setup Does
 
 When you create an instance, the script will:
 
-1. **Create a GCP Compute Engine instance** with:
+1. **Check if instance exists** and reuse it if available (unless --force is used)
+
+2. **Create a GCP Compute Engine instance** (if needed) with:
    - Deep Learning VM image with CUDA 12.8 pre-installed
    - NVIDIA Tesla T4 GPU (1x)
    - n1-standard-4 machine type (4 vCPUs, 15 GB RAM)
@@ -77,6 +106,7 @@ When you create an instance, the script will:
    - Creates a Python virtual environment
    - Installs the project using `pip install -e .`
    - Runs the Stable Diffusion example script
+   - **Automatically stops the instance** after completion
 
 3. **Generate a test image** using:
    - Model: `nunchaku-tech/nunchaku-sdxl` (quantized SDXL)

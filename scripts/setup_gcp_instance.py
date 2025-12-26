@@ -142,11 +142,127 @@ cd scripts
 python3 run_sd_example.py
 
 echo "Setup completed successfully at $(date)"
+
+# Stop the instance after completing the script
+echo "Stopping instance..."
+gcloud compute instances stop $(hostname) --zone=$(curl -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/zone | cut -d/ -f4) --quiet
 """
         return script
 
-    def create_instance(self) -> None:
-        """Create and configure the GCP instance."""
+    def instance_exists(self) -> bool:
+        """Check if the instance already exists."""
+        try:
+            self.instances_client.get(
+                project=self.project_id,
+                zone=self.zone,
+                instance=self.instance_name,
+            )
+            return True
+        except Exception:
+            return False
+
+    def get_instance_status(self) -> str:
+        """Get the current status of the instance."""
+        try:
+            instance = self.instances_client.get(
+                project=self.project_id,
+                zone=self.zone,
+                instance=self.instance_name,
+            )
+            return instance.status
+        except Exception:
+            return "NOT_FOUND"
+
+    def start_instance(self) -> None:
+        """Start a stopped instance."""
+        print(f"Starting instance '{self.instance_name}'...")
+        try:
+            operation = self.instances_client.start(
+                project=self.project_id,
+                zone=self.zone,
+                instance=self.instance_name,
+            )
+
+            print("Waiting for instance to start...")
+            self.wait_for_operation(operation)
+            print(f"Instance '{self.instance_name}' started successfully!")
+
+            # Get instance details
+            instance = self.instances_client.get(
+                project=self.project_id,
+                zone=self.zone,
+                instance=self.instance_name,
+            )
+
+            # Get external IP
+            if instance.network_interfaces:
+                if instance.network_interfaces[0].access_configs:
+                    external_ip = (
+                        instance.network_interfaces[0].access_configs[0].nat_ip
+                    )
+                    print(f"External IP: {external_ip}")
+
+        except Exception as e:
+            print(f"Error starting instance: {e}")
+            raise
+
+    def stop_instance(self) -> None:
+        """Stop a running instance."""
+        print(f"Stopping instance '{self.instance_name}'...")
+        try:
+            operation = self.instances_client.stop(
+                project=self.project_id,
+                zone=self.zone,
+                instance=self.instance_name,
+            )
+
+            print("Waiting for instance to stop...")
+            self.wait_for_operation(operation)
+            print(f"Instance '{self.instance_name}' stopped successfully!")
+
+        except Exception as e:
+            print(f"Error stopping instance: {e}")
+            raise
+
+    def create_instance(self, force: bool = False) -> None:
+        """Create and configure the GCP instance, or reuse existing one."""
+        # Check if instance already exists
+        if self.instance_exists():
+            status = self.get_instance_status()
+            print(
+                f"Instance '{self.instance_name}' already exists with status: {status}"
+            )
+
+            if force:
+                print("Force flag set. Deleting existing instance...")
+                self.delete_instance()
+                print("Creating new instance...")
+            else:
+                print("Reusing existing instance...")
+                if status == "TERMINATED" or status == "STOPPED":
+                    self.start_instance()
+                elif status == "RUNNING":
+                    print("Instance is already running!")
+                    # Get instance details
+                    instance = self.instances_client.get(
+                        project=self.project_id,
+                        zone=self.zone,
+                        instance=self.instance_name,
+                    )
+
+                    # Get external IP
+                    if instance.network_interfaces:
+                        if instance.network_interfaces[0].access_configs:
+                            external_ip = (
+                                instance.network_interfaces[0]
+                                .access_configs[0]
+                                .nat_ip
+                            )
+                            print(f"External IP: {external_ip}")
+                else:
+                    print(f"Instance is in {status} state. Waiting...")
+                return
+
         print(f"Creating instance '{self.instance_name}' in {self.zone}...")
 
         # Get the CUDA image
@@ -321,9 +437,18 @@ def main():
 
     # Parse command line arguments
     action = sys.argv[1] if len(sys.argv) > 1 else "create"
+    force = "--force" in sys.argv or "-f" in sys.argv
 
-    if action not in ["create", "delete"]:
-        print(f"Usage: {sys.argv[0]} [create|delete]")
+    if action not in ["create", "delete", "start", "stop", "status"]:
+        print(
+            f"Usage: {sys.argv[0]} [create|delete|start|stop|status] [--force|-f]"
+        )
+        print("\nActions:")
+        print("  create  - Create or reuse instance (use --force to recreate)")
+        print("  delete  - Delete the instance")
+        print("  start   - Start a stopped instance")
+        print("  stop    - Stop a running instance")
+        print("  status  - Check instance status")
         sys.exit(1)
 
     # Create setup manager with credentials
@@ -335,9 +460,25 @@ def main():
 
     # Execute action
     if action == "create":
-        setup.create_instance()
+        setup.create_instance(force=force)
     elif action == "delete":
         setup.delete_instance()
+    elif action == "start":
+        if not setup.instance_exists():
+            print(f"Error: Instance '{setup.instance_name}' does not exist")
+            sys.exit(1)
+        setup.start_instance()
+    elif action == "stop":
+        if not setup.instance_exists():
+            print(f"Error: Instance '{setup.instance_name}' does not exist")
+            sys.exit(1)
+        setup.stop_instance()
+    elif action == "status":
+        if setup.instance_exists():
+            status = setup.get_instance_status()
+            print(f"Instance '{setup.instance_name}' status: {status}")
+        else:
+            print(f"Instance '{setup.instance_name}' does not exist")
 
 
 if __name__ == "__main__":
