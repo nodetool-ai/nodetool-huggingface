@@ -108,19 +108,25 @@ fi
 
 # Create a working directory
 WORK_DIR="/opt/nodetool-huggingface"
-mkdir -p $WORK_DIR
-cd $WORK_DIR
+mkdir -p "$WORK_DIR"
 
-# Clone the repository
-echo "Cloning repository..."
-if [ ! -d "nodetool-huggingface" ]; then
-    git clone https://github.com/nodetool-ai/nodetool-huggingface.git
+# Clone the repository if it does not already exist
+REPO_DIR="$WORK_DIR/nodetool-huggingface"
+echo "Ensuring repository is present at $REPO_DIR..."
+if [ ! -d "$REPO_DIR" ]; then
+    git clone https://github.com/nodetool-ai/nodetool-huggingface.git "$REPO_DIR"
 fi
-cd nodetool-huggingface
 
-# Create virtual environment
-echo "Creating virtual environment..."
-python3 -m venv venv
+# Change into the repository directory
+cd "$REPO_DIR"
+
+# Create virtual environment if needed
+if [ ! -d "venv" ]; then
+    echo "Creating virtual environment..."
+    python3 -m venv venv
+fi
+
+# Activate virtual environment
 source venv/bin/activate
 
 # Upgrade pip
