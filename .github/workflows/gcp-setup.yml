@@ -1,0 +1,77 @@
+name: GCP Instance Setup
+
+# This workflow manages a GCP instance with CUDA 12.8 for running Stable Diffusion.
+# The instance automatically shuts down after 2 hours using GCP's max-run-duration feature.
+
+on:
+  # Manual trigger only - this creates actual GCP resources that cost money
+  workflow_dispatch:
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_ZONE: europe-west4-a
+
+jobs:
+  gcp-setup:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install google-cloud-compute google-auth
+      
+      - name: Verify GCP credentials
+        env:
+          GCP_ACCOUNT_KEY: ${{ secrets.GCP_ACCOUNT_KEY }}
+        run: |
+          # Verify credentials are available
+          if [ -z "$GCP_ACCOUNT_KEY" ]; then
+            echo "Error: GCP_ACCOUNT_KEY secret not set"
+            exit 1
+          fi
+          echo "GCP credentials verified"
+      
+      - name: Start instance
+        env:
+          GCP_ACCOUNT_KEY: ${{ secrets.GCP_ACCOUNT_KEY }}
+        run: |
+          cd scripts
+          python setup_gcp_instance.py start
+      
+      - name: Run SD example
+        env:
+          GCP_ACCOUNT_KEY: ${{ secrets.GCP_ACCOUNT_KEY }}
+        run: |
+          cd scripts
+          python setup_gcp_instance.py run
+      
+      - name: Stop instance
+        env:
+          GCP_ACCOUNT_KEY: ${{ secrets.GCP_ACCOUNT_KEY }}
+        run: |
+          cd scripts
+          python setup_gcp_instance.py stop
+      
+      - name: Summary
+        run: |
+          echo "## GCP Workflow Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Zone: ${{ env.GCP_ZONE }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Workflow executed: start → run → stop" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Instance started" >> $GITHUB_STEP_SUMMARY
+          echo "✅ SD example script executed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Instance stopped" >> $GITHUB_STEP_SUMMARY
