@@ -46,7 +46,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install google-cloud-compute google-auth
       
-      - name: Setup GCP credentials
+      - name: Verify GCP credentials
         env:
           GCP_ACCOUNT_KEY: ${{ secrets.GCP_ACCOUNT_KEY }}
         run: |
@@ -55,12 +55,7 @@ jobs:
             echo "Error: GCP_ACCOUNT_KEY secret not set"
             exit 1
           fi
-          
-          # Create credentials file
-          echo "$GCP_ACCOUNT_KEY" > $HOME/gcp-key.json
-          export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcp-key.json
-          
-          echo "GCP credentials configured"
+          echo "GCP credentials verified"
       
       - name: Run GCP setup script
         env:
@@ -68,11 +63,6 @@ jobs:
         run: |
           cd scripts
           python setup_gcp_instance.py ${{ github.event.inputs.action }}
-      
-      - name: Cleanup credentials
-        if: always()
-        run: |
-          rm -f $HOME/gcp-key.json
       
       - name: Summary
         run: |

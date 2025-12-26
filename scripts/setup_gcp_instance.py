@@ -44,6 +44,7 @@ class GCPInstanceSetup:
         machine_type: str = "n1-standard-4",
         gpu_type: str = "nvidia-tesla-t4",
         gpu_count: int = 1,
+        credentials=None,
     ):
         self.project_id = project_id
         self.zone = zone
@@ -52,9 +53,9 @@ class GCPInstanceSetup:
         self.gpu_type = gpu_type
         self.gpu_count = gpu_count
 
-        # Initialize clients
-        self.instances_client = compute_v1.InstancesClient()
-        self.images_client = compute_v1.ImagesClient()
+        # Initialize clients with credentials
+        self.instances_client = compute_v1.InstancesClient(credentials=credentials)
+        self.images_client = compute_v1.ImagesClient(credentials=credentials)
 
     def get_cuda_image(self) -> str:
         """Get the latest Deep Learning VM image with CUDA 12.9."""
@@ -239,13 +240,18 @@ echo "Setup completed successfully at $(date)"
         """Wait for a GCP operation to complete."""
         start_time = time.time()
 
+        # Get credentials from the instances client
+        credentials = self.instances_client._transport._credentials
+
         while operation.status != compute_v1.Operation.Status.DONE:
             if time.time() - start_time > timeout:
                 raise TimeoutError(f"Operation timed out after {timeout} seconds")
 
             time.sleep(5)
             # Refresh operation status
-            zone_operations_client = compute_v1.ZoneOperationsClient()
+            zone_operations_client = compute_v1.ZoneOperationsClient(
+                credentials=credentials
+            )
             operation = zone_operations_client.get(
                 project=self.project_id,
                 zone=self.zone,
@@ -300,13 +306,6 @@ def main():
             credentials_dict
         )
 
-        # Set credentials for GCP clients
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = ""
-        # We'll pass credentials directly to clients
-        compute_v1.InstancesClient._credentials = credentials
-        compute_v1.ImagesClient._credentials = credentials
-        compute_v1.ZoneOperationsClient._credentials = credentials
-
     except json.JSONDecodeError as e:
         print(f"Error parsing GCP_ACCOUNT_KEY JSON: {e}")
         sys.exit(1)
@@ -321,10 +320,11 @@ def main():
         print(f"Usage: {sys.argv[0]} [create|delete]")
         sys.exit(1)
 
-    # Create setup manager
+    # Create setup manager with credentials
     setup = GCPInstanceSetup(
         project_id=project_id,
         zone=zone,
+        credentials=credentials,
     )
 
     # Execute action

@@ -6,8 +6,10 @@ This script demonstrates basic usage of the nodetool-huggingface package.
 import sys
 from pathlib import Path
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# Add parent directory to path for imports when running from source
+# This allows the script to work both when installed and when run directly
+if __package__ is None or __package__ == "":
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import asyncio
 from nodetool.metadata.types import HFStableDiffusionXL
