@@ -1,7 +1,7 @@
 {
   "name": "nodetool-huggingface",
   "description": "HuggingFace nodes for Nodetool",
-  "version": "0.6.2-rc.12",
+  "version": "0.6.2-rc.14",
   "authors": [
     "Matthias Georgi <matti.georgi@gmail.com>"
   ],
@@ -9,7 +9,7 @@
   "nodes": [
     {
       "title": "Audio LDM",
-      "description": "Generates audio using the AudioLDM model based on text prompts.\n    audio, generation, AI, text-to-audio\n\n    Use cases:\n    - Create custom music or sound effects from text descriptions\n    - Generate background audio for videos, games, or other media\n    - Produce audio content for creative projects\n    - Explore AI-generated audio for music production or sound design",
+      "description": "Generates audio from text prompts using the AudioLDM latent diffusion model.\n    audio, generation, AI, text-to-audio, sound-effects\n\n    Use cases:\n    - Create custom music clips from text descriptions\n    - Generate sound effects for videos, games, and media\n    - Produce background audio for creative projects\n    - Explore AI-generated soundscapes and ambient audio",
       "namespace": "huggingface.text_to_audio",
       "node_type": "huggingface.text_to_audio.AudioLDM",
       "properties": [
@@ -20,7 +20,7 @@
           },
           "default": "Techno music with a strong, upbeat tempo and high melodic riffs",
           "title": "Prompt",
-          "description": "A text prompt describing the desired audio."
+          "description": "Text description of the audio you want to generate."
         },
         {
           "name": "num_inference_steps",
@@ -29,7 +29,7 @@
           },
           "default": 10,
           "title": "Num Inference Steps",
-          "description": "Number of denoising steps. More steps generally improve quality but increase generation time.",
+          "description": "Denoising steps. More steps = better quality but slower. 10-50 is typical.",
           "min": 1.0,
           "max": 100.0
         },
@@ -40,7 +40,7 @@
           },
           "default": 5.0,
           "title": "Audio Length In S",
-          "description": "The desired duration of the generated audio in seconds.",
+          "description": "Duration of the generated audio in seconds (1-30).",
           "min": 1.0,
           "max": 30.0
         },
@@ -51,7 +51,7 @@
           },
           "default": 0,
           "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "description": "Random seed for reproducible generation. Use -1 for random.",
           "min": -1.0
         }
       ],
@@ -95,7 +95,7 @@
     },
     {
       "title": "Audio LDM 2",
-      "description": "Generates audio using the AudioLDM2 model based on text prompts.\n    audio, generation, AI, text-to-audio\n\n    Use cases:\n    - Create custom sound effects based on textual descriptions\n    - Generate background audio for videos or games\n    - Produce audio content for multimedia projects\n    - Explore AI-generated audio for creative sound design",
+      "description": "Generates audio from text prompts using the improved AudioLDM2 model.\n    audio, generation, AI, text-to-audio, sound-effects, sound-design\n\n    Use cases:\n    - Create realistic sound effects from text descriptions\n    - Generate background audio for videos and games\n    - Produce environmental soundscapes for multimedia\n    - Explore creative AI-generated audio for sound design",
       "namespace": "huggingface.text_to_audio",
       "node_type": "huggingface.text_to_audio.AudioLDM2",
       "properties": [
@@ -106,7 +106,7 @@
           },
           "default": "The sound of a hammer hitting a wooden surface.",
           "title": "Prompt",
-          "description": "A text prompt describing the desired audio."
+          "description": "Text description of the audio you want to generate."
         },
         {
           "name": "negative_prompt",
@@ -115,7 +115,7 @@
           },
           "default": "Low quality.",
           "title": "Negative Prompt",
-          "description": "A text prompt describing what you don't want in the audio."
+          "description": "Describe what to avoid in the generated audio (e.g., 'noise, distortion')."
         },
         {
           "name": "num_inference_steps",
@@ -124,7 +124,7 @@
           },
           "default": 200,
           "title": "Num Inference Steps",
-          "description": "Number of denoising steps. More steps generally improve quality but increase generation time.",
+          "description": "Denoising steps. 200 is recommended for quality; lower for speed.",
           "min": 50.0,
           "max": 500.0
         },
@@ -135,7 +135,7 @@
           },
           "default": 10.0,
           "title": "Audio Length In S",
-          "description": "The desired duration of the generated audio in seconds.",
+          "description": "Duration of the generated audio in seconds (1-30).",
           "min": 1.0,
           "max": 30.0
         },
@@ -146,7 +146,7 @@
           },
           "default": 3,
           "title": "Num Waveforms Per Prompt",
-          "description": "Number of audio samples to generate per prompt.",
+          "description": "Number of audio variations to generate. Best result is returned.",
           "min": 1.0,
           "max": 5.0
         },
@@ -157,7 +157,7 @@
           },
           "default": 0,
           "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "description": "Random seed for reproducible generation. Use -1 for random.",
           "min": -1.0
         }
       ],
@@ -201,7 +201,7 @@
     },
     {
       "title": "Dance Diffusion",
-      "description": "Generates audio using the DanceDiffusion model.\n    audio, generation, AI, music, text-to-audio\n\n    Use cases:\n    - Create AI-generated music samples\n    - Produce background music for videos or games\n    - Generate audio content for creative projects\n    - Explore AI-composed musical ideas",
+      "description": "Generates AI-composed music using the DanceDiffusion unconditional audio model.\n    audio, generation, AI, music, text-to-audio, unconditional\n\n    Use cases:\n    - Create AI-generated music samples and loops\n    - Produce background music for videos and games\n    - Generate experimental audio content\n    - Explore AI-composed musical ideas and patterns",
       "namespace": "huggingface.text_to_audio",
       "node_type": "huggingface.text_to_audio.DanceDiffusion",
       "properties": [
@@ -212,7 +212,7 @@
           },
           "default": 4.0,
           "title": "Audio Length In S",
-          "description": "The desired duration of the generated audio in seconds.",
+          "description": "Duration of the generated audio in seconds (1-30).",
           "min": 1.0,
           "max": 30.0
         },
@@ -223,7 +223,7 @@
           },
           "default": 50,
           "title": "Num Inference Steps",
-          "description": "Number of denoising steps. More steps generally improve quality but increase generation time.",
+          "description": "Denoising steps. More steps = better quality but slower. 50-200 is typical.",
           "min": 1.0,
           "max": 1000.0
         },
@@ -234,7 +234,7 @@
           },
           "default": 0,
           "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "description": "Random seed for reproducible generation. Use -1 for random.",
           "min": -1.0
         }
       ],
@@ -277,7 +277,7 @@
     },
     {
       "title": "Music Gen",
-      "description": "Generates audio (music or sound effects) from text descriptions.\n    audio, music, generation, huggingface, text-to-audio\n\n    Use cases:\n    - Create custom background music for videos or games\n    - Generate sound effects based on textual descriptions\n    - Prototype musical ideas quickly",
+      "description": "Generates music and audio from text descriptions using Meta's MusicGen models.\n    audio, music, generation, huggingface, text-to-audio, soundtrack\n\n    Use cases:\n    - Create custom background music for videos, games, and podcasts\n    - Generate sound effects from textual descriptions\n    - Prototype musical ideas and compositions quickly\n    - Produce royalty-free audio content for creative projects\n    - Build AI-powered music generation applications",
       "namespace": "huggingface.text_to_audio",
       "node_type": "huggingface.text_to_audio.MusicGen",
       "properties": [
@@ -294,8 +294,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for the audio generation"
+          "title": "Model",
+          "description": "The MusicGen model variant. Small is fastest; Large offers best quality; Melody can condition on audio input; Stereo produces 2-channel output."
         },
         {
           "name": "prompt",
@@ -303,8 +303,8 @@
             "type": "str"
           },
           "default": "",
-          "title": "Inputs",
-          "description": "The input text to the model"
+          "title": "Text Prompt",
+          "description": "Describe the music you want to generate (e.g., 'upbeat jazz piano with drums' or 'calm ambient soundscape')."
         },
         {
           "name": "max_new_tokens",
@@ -313,7 +313,7 @@
           },
           "default": 1024,
           "title": "Max New Tokens",
-          "description": "The maximum number of tokens to generate"
+          "description": "Controls audio length: ~256 tokens \u2248 5 seconds. Higher values produce longer audio."
         }
       ],
       "outputs": [
@@ -494,7 +494,7 @@
     },
     {
       "title": "Music LDM",
-      "description": "Generates audio (music or sound effects) from text descriptions.\n    audio, music, generation, huggingface, text-to-audio\n\n    Use cases:\n    - Create custom background music for videos or games\n    - Generate sound effects based on textual descriptions\n    - Prototype musical ideas quickly",
+      "description": "Generates music from text descriptions using latent diffusion models.\n    audio, music, generation, huggingface, text-to-audio, diffusion\n\n    Use cases:\n    - Create custom background music for videos and games\n    - Generate music clips based on textual mood descriptions\n    - Produce audio content for multimedia projects\n    - Explore AI-generated music for creative inspiration",
       "namespace": "huggingface.text_to_audio",
       "node_type": "huggingface.text_to_audio.MusicLDM",
       "properties": [
@@ -511,8 +511,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for the audio generation"
+          "title": "Model",
+          "description": "The MusicLDM model to use for audio generation."
         },
         {
           "name": "prompt",
@@ -520,8 +520,8 @@
             "type": "str"
           },
           "default": "",
-          "title": "Inputs",
-          "description": "The input text to the model"
+          "title": "Text Prompt",
+          "description": "Describe the music you want (e.g., 'electronic dance music with heavy bass')."
         },
         {
           "name": "num_inference_steps",
@@ -529,8 +529,8 @@
             "type": "int"
           },
           "default": 10,
-          "title": "Number of Inference Steps",
-          "description": "The number of inference steps to use for the generation"
+          "title": "Inference Steps",
+          "description": "Number of denoising steps. More steps = better quality but slower generation."
         },
         {
           "name": "audio_length_in_s",
@@ -539,7 +539,7 @@
           },
           "default": 5.0,
           "title": "Audio Length",
-          "description": "The length of the generated audio in seconds"
+          "description": "Duration of the generated audio in seconds."
         }
       ],
       "outputs": [
@@ -582,7 +582,7 @@
     },
     {
       "title": "Stable Audio",
-      "description": "Generate audio using Stable Audio model based on text prompts. Features high-quality audio synthesis with configurable parameters.\n    audio, generation, synthesis, text-to-audio, text-to-audio\n\n    Use cases:\n    - Create custom audio content from text\n    - Generate background music and sounds\n    - Produce audio for multimedia projects\n    - Create sound effects and ambience\n    - Generate experimental audio content",
+      "description": "Generates high-quality, long-form audio from text prompts using Stability AI's Stable Audio.\n    audio, generation, synthesis, text-to-audio, music, sound-effects\n\n    Use cases:\n    - Create professional-quality music and soundtracks\n    - Generate ambient sounds and environmental audio\n    - Produce sound effects for multimedia projects\n    - Create experimental and artistic audio content\n    - Generate up to 5 minutes of continuous audio",
       "namespace": "huggingface.text_to_audio",
       "node_type": "huggingface.text_to_audio.StableAudio",
       "properties": [
@@ -593,7 +593,7 @@
           },
           "default": "A peaceful piano melody.",
           "title": "Prompt",
-          "description": "A text prompt describing the desired audio."
+          "description": "Text description of the audio you want to generate."
         },
         {
           "name": "negative_prompt",
@@ -602,7 +602,7 @@
           },
           "default": "Low quality.",
           "title": "Negative Prompt",
-          "description": "A text prompt describing what you don't want in the audio."
+          "description": "Describe what to avoid in the generated audio (e.g., 'noise, distortion')."
         },
         {
           "name": "duration",
@@ -611,7 +611,7 @@
           },
           "default": 10.0,
           "title": "Duration",
-          "description": "The desired duration of the generated audio in seconds.",
+          "description": "Duration of the generated audio in seconds. Stable Audio supports up to 300 seconds.",
           "min": 1.0,
           "max": 300.0
         },
@@ -622,7 +622,7 @@
           },
           "default": 200,
           "title": "Num Inference Steps",
-          "description": "Number of denoising steps. More steps generally improve quality but increase generation time.",
+          "description": "Denoising steps. 200 is recommended for quality; lower values for faster generation.",
           "min": 50.0,
           "max": 500.0
         },
@@ -633,7 +633,7 @@
           },
           "default": 0,
           "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "description": "Random seed for reproducible generation. Use -1 for random.",
           "min": -1.0
         }
       ],
@@ -680,7 +680,7 @@
     },
     {
       "title": "Question Answering",
-      "description": "Answers questions based on a given context.\n    text, question answering, natural language processing\n\n    Use cases:\n    - Automated customer support\n    - Information retrieval from documents\n    - Reading comprehension tasks\n    - Enhancing search functionality",
+      "description": "Extracts answers to questions from a given text context using extractive QA models.\n    text, question-answering, NLP, reading-comprehension\n\n    Use cases:\n    - Build automated FAQ and customer support systems\n    - Extract specific information from documents and articles\n    - Create reading comprehension and study tools\n    - Enable natural language queries over text databases\n    - Analyze contracts and legal documents for key details",
       "namespace": "huggingface.question_answering",
       "node_type": "huggingface.question_answering.QuestionAnswering",
       "properties": [
@@ -697,8 +697,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for question answering"
+          "title": "Model",
+          "description": "The extractive QA model. DistilBERT is fast; BERT-large and RoBERTa offer higher accuracy."
         },
         {
           "name": "context",
@@ -707,7 +707,7 @@
           },
           "default": "",
           "title": "Context",
-          "description": "The context or passage to answer questions from"
+          "description": "The text passage containing the information to answer questions from."
         },
         {
           "name": "question",
@@ -716,7 +716,7 @@
           },
           "default": "",
           "title": "Question",
-          "description": "The question to be answered based on the context"
+          "description": "The question to answer based on the provided context."
         }
       ],
       "outputs": [
@@ -892,7 +892,7 @@
     },
     {
       "title": "Table Question Answering",
-      "description": "Answers questions based on tabular data.\n    table, question answering, natural language processing\n\n    Use cases:\n    - Querying databases using natural language\n    - Analyzing spreadsheet data with questions\n    - Extracting insights from tabular reports\n    - Automated data exploration",
+      "description": "Answers natural language questions about tabular data using table QA models.\n    table, question-answering, NLP, data-analysis\n\n    Use cases:\n    - Query spreadsheets and databases using natural language\n    - Extract insights from financial reports and data tables\n    - Build conversational interfaces for data exploration\n    - Automate data analysis with question-based queries\n    - Enable non-technical users to query structured data",
       "namespace": "huggingface.question_answering",
       "node_type": "huggingface.question_answering.TableQuestionAnswering",
       "properties": [
@@ -909,8 +909,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for table question answering"
+          "title": "Model",
+          "description": "The table QA model. TAPAS models handle complex queries; TAPEX offers fact verification."
         },
         {
           "name": "dataframe",
@@ -925,7 +925,7 @@
             "columns": null
           },
           "title": "Table",
-          "description": "The input table to query"
+          "description": "The table data to query. Columns should have clear, descriptive headers."
         },
         {
           "name": "question",
@@ -934,7 +934,7 @@
           },
           "default": "",
           "title": "Question",
-          "description": "The question to be answered based on the table"
+          "description": "Your question about the table data (e.g., 'What is the total revenue?' or 'Which product sold the most?')."
         }
       ],
       "outputs": [
@@ -1086,7 +1086,7 @@
     },
     {
       "title": "Find Segment",
-      "description": "Extracts a specific segment from a list of segmentation masks.\n    image, segmentation, object detection, mask",
+      "description": "Extracts a specific segment mask by label from a list of segmentation results.\n    image, segmentation, object-detection, mask, filter\n\n    Use cases:\n    - Extract a specific object mask (e.g., 'person', 'car') from segmentation output\n    - Filter segmentation results to focus on a single category\n    - Isolate regions for further processing or compositing",
       "namespace": "huggingface.image_segmentation",
       "node_type": "huggingface.image_segmentation.FindSegment",
       "properties": [
@@ -1102,7 +1102,7 @@
           },
           "default": [],
           "title": "Segmentation Masks",
-          "description": "The segmentation masks to search"
+          "description": "List of segmentation results from Segmentation or SAM2Segmentation nodes."
         },
         {
           "name": "segment_label",
@@ -1111,7 +1111,7 @@
           },
           "default": "",
           "title": "Label",
-          "description": "The label of the segment to extract"
+          "description": "The exact label name to find (e.g., 'person', 'wall', 'sky'). Must match a label in the segments list."
         }
       ],
       "outputs": [
@@ -1129,7 +1129,7 @@
     },
     {
       "title": "SAM2 Segmentation",
-      "description": "Performs semantic segmentation on images using SAM2 (Segment Anything Model 2).\n    image, segmentation, object detection, scene parsing, mask\n\n    Use cases:\n    - Automatic segmentation of objects in images\n    - Instance segmentation for computer vision tasks\n    - Interactive segmentation with point prompts\n    - Scene understanding and object detection",
+      "description": "Performs automatic instance segmentation using Meta's Segment Anything Model 2 (SAM2).\n    image, segmentation, object-detection, scene-parsing, mask, SAM2\n\n    Use cases:\n    - Automatically segment all distinct objects in an image\n    - Generate high-quality masks without manual prompts\n    - Extract individual objects for image editing workflows\n    - Build interactive segmentation applications\n    - Enable precise object selection in creative tools",
       "namespace": "huggingface.image_segmentation",
       "node_type": "huggingface.image_segmentation.SAM2Segmentation",
       "properties": [
@@ -1145,7 +1145,7 @@
             "data": null
           },
           "title": "Input Image",
-          "description": "The input image to segment"
+          "description": "The image to segment. SAM2 automatically identifies and masks all distinct objects."
         }
       ],
       "outputs": [
@@ -1191,7 +1191,7 @@
     },
     {
       "title": "Image Segmentation",
-      "description": "Performs semantic segmentation on images, identifying and labeling different regions.\n    image, segmentation, object detection, scene parsing\n\n    Use cases:\n    - Segmenting objects in images\n    - Segmenting facial features in images",
+      "description": "Performs semantic segmentation on images, identifying and labeling different regions with pixel-level precision.\n    image, segmentation, object-detection, scene-parsing, computer-vision\n\n    Use cases:\n    - Segment and identify objects, people, or regions in images\n    - Extract clothing items or body parts for fashion applications\n    - Parse indoor/outdoor scenes into semantic components\n    - Enable background removal or replacement in photos\n    - Build autonomous driving perception systems",
       "namespace": "huggingface.image_segmentation",
       "node_type": "huggingface.image_segmentation.Segmentation",
       "properties": [
@@ -1208,8 +1208,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for the segmentation"
+          "title": "Model",
+          "description": "The segmentation model. SegFormer-ADE for general scenes, specialized models for clothing or body parts."
         },
         {
           "name": "image",
@@ -1223,7 +1223,7 @@
             "data": null
           },
           "title": "Image",
-          "description": "The input image to segment"
+          "description": "The input image to segment. Larger images may require more processing time."
         }
       ],
       "outputs": [
@@ -1310,7 +1310,7 @@
     },
     {
       "title": "Visualize Segmentation",
-      "description": "Visualizes segmentation masks on images with labels.\n    image, segmentation, visualization, mask\n\n    Use cases:\n    - Visualize results of image segmentation models\n    - Analyze and compare different segmentation techniques\n    - Create labeled images for presentations or reports",
+      "description": "Renders segmentation masks as colored overlays on the original image with labeled regions.\n    image, segmentation, visualization, mask, annotation\n\n    Use cases:\n    - Visualize and verify segmentation model results\n    - Create labeled images for documentation or presentations\n    - Compare different segmentation techniques visually\n    - Generate annotated images for training data review",
       "namespace": "huggingface.image_segmentation",
       "node_type": "huggingface.image_segmentation.VisualizeSegmentation",
       "properties": [
@@ -1326,7 +1326,7 @@
             "data": null
           },
           "title": "Image",
-          "description": "The input image to visualize"
+          "description": "The original image to overlay segmentation masks on."
         },
         {
           "name": "segments",
@@ -1340,7 +1340,7 @@
           },
           "default": [],
           "title": "Segmentation Masks",
-          "description": "The segmentation masks to visualize"
+          "description": "List of segmentation results to visualize. Each segment gets a distinct color and label."
         }
       ],
       "outputs": [
@@ -1358,7 +1358,7 @@
     },
     {
       "title": "Chroma",
-      "description": "Generates images from text prompts using Chroma, a text-to-image model based on Flux.\n    image, generation, AI, text-to-image, flux, chroma, transformer\n\n    Use cases:\n    - Generate high-quality images with Flux-based architecture\n    - Create images with advanced attention masking for enhanced fidelity\n    - Generate images with optimized memory usage\n    - Create professional-quality images with precise color control",
+      "description": "Generates high-quality images from text prompts using Chroma, a Flux-based architecture with enhanced color control.\n    image, generation, AI, text-to-image, flux, chroma, transformer, artistic\n\n    Use cases:\n    - Generate professional-quality images with precise color control\n    - Create artistic images with advanced attention mechanisms\n    - Produce images with optimized memory usage via CPU offload\n    - Build creative applications requiring high-fidelity output",
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.Chroma",
       "properties": [
@@ -1369,7 +1369,7 @@
           },
           "default": "A high-fashion close-up portrait of a blonde woman in clear sunglasses. The image uses a bold teal and red color split for dramatic lighting. The background is a simple teal-green. The photo is sharp and well-composed, and is designed for viewing with anaglyph 3D glasses for optimal effect. It looks professionally done.",
           "title": "Prompt",
-          "description": "A text prompt describing the desired image."
+          "description": "Detailed text description of the image to generate."
         },
         {
           "name": "negative_prompt",
@@ -1378,7 +1378,7 @@
           },
           "default": "low quality, ugly, unfinished, out of focus, deformed, disfigure, blurry, smudged, restricted palette, flat colors",
           "title": "Negative Prompt",
-          "description": "A text prompt describing what to avoid in the image."
+          "description": "Describe what to avoid (e.g., 'blurry, low quality, distorted')."
         },
         {
           "name": "guidance_scale",
@@ -1387,7 +1387,7 @@
           },
           "default": 3.0,
           "title": "Guidance Scale",
-          "description": "The scale for classifier-free guidance.",
+          "description": "Prompt adherence strength. 2-5 is typical for Chroma.",
           "min": 0.0,
           "max": 30.0
         },
@@ -1398,7 +1398,7 @@
           },
           "default": 40,
           "title": "Num Inference Steps",
-          "description": "The number of denoising steps.",
+          "description": "Denoising steps. 30-50 is typical; more = better quality but slower.",
           "min": 1.0,
           "max": 100.0
         },
@@ -1409,7 +1409,7 @@
           },
           "default": 1024,
           "title": "Height",
-          "description": "The height of the generated image.",
+          "description": "Output image height in pixels.",
           "min": 256.0,
           "max": 2048.0
         },
@@ -1420,7 +1420,7 @@
           },
           "default": 1024,
           "title": "Width",
-          "description": "The width of the generated image.",
+          "description": "Output image width in pixels.",
           "min": 256.0,
           "max": 2048.0
         },
@@ -1431,7 +1431,7 @@
           },
           "default": -1,
           "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "description": "Random seed for reproducible generation. Use -1 for random.",
           "min": -1.0
         },
         {
@@ -1441,7 +1441,7 @@
           },
           "default": 512,
           "title": "Max Sequence Length",
-          "description": "Maximum sequence length to use with the prompt.",
+          "description": "Maximum prompt length in tokens.",
           "min": 1.0,
           "max": 512.0
         },
@@ -1452,7 +1452,7 @@
           },
           "default": true,
           "title": "Enable Cpu Offload",
-          "description": "Enable CPU offload to reduce VRAM usage."
+          "description": "Offload model components to CPU to reduce VRAM usage."
         },
         {
           "name": "enable_attention_slicing",
@@ -1461,7 +1461,7 @@
           },
           "default": true,
           "title": "Enable Attention Slicing",
-          "description": "Enable attention slicing to reduce memory usage."
+          "description": "Process attention in slices to reduce memory usage."
         }
       ],
       "outputs": [
@@ -1512,7 +1512,7 @@
     },
     {
       "title": "Flux",
-      "description": "Generates images using FLUX models with support for Nunchaku quantization.\n    image, generation, AI, text-to-image, flux, quantization\n\n    Use cases:\n    - High-quality image generation with FLUX models\n    - Memory-efficient generation using Nunchaku quantization\n    - Fast generation with FLUX.1-schnell\n    - High-fidelity generation with FLUX.1-dev\n    - Controlled generation with Fill, Canny, or Depth variants",
+      "description": "Generates high-quality images using Black Forest Labs' FLUX diffusion models with Nunchaku quantization.\n    image, generation, AI, text-to-image, flux, quantization, high-quality\n\n    Use cases:\n    - Generate high-fidelity images with excellent text rendering\n    - Create images with memory-efficient INT4/FP4 quantization\n    - Fast generation with FLUX.1-schnell (4 steps)\n    - High-quality generation with FLUX.1-dev\n    - Build production image generation systems",
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.Flux",
       "properties": [
@@ -1528,7 +1528,7 @@
           },
           "default": "dev",
           "title": "Variant",
-          "description": "The FLUX variant to use."
+          "description": "FLUX variant: 'schnell' for fast 4-step generation, 'dev' for higher quality with more steps."
         },
         {
           "name": "quantization",
@@ -1543,7 +1543,7 @@
           },
           "default": "int4",
           "title": "Quantization",
-          "description": "The quantization level to use."
+          "description": "Quantization level: INT4/FP4 for lower VRAM, FP16 for full precision."
         },
         {
           "name": "enable_cpu_offload",
@@ -1552,7 +1552,7 @@
           },
           "default": true,
           "title": "Enable Cpu Offload",
-          "description": "Enable CPU offload for the pipeline. This can reduce VRAM usage."
+          "description": "Offload model components to CPU to reduce VRAM usage."
         },
         {
           "name": "prompt",
@@ -1561,7 +1561,7 @@
           },
           "default": "A cat holding a sign that says hello world",
           "title": "Prompt",
-          "description": "A text prompt describing the desired image."
+          "description": "Text description of the image to generate. FLUX excels at text rendering."
         },
         {
           "name": "guidance_scale",
@@ -1570,7 +1570,7 @@
           },
           "default": 3.5,
           "title": "Guidance Scale",
-          "description": "The scale for classifier-free guidance. Use 0.0 for schnell, 3.5 for dev.",
+          "description": "Prompt adherence strength. Use 0.0 for schnell, 3-4 for dev.",
           "min": 0.0,
           "max": 20.0
         },
@@ -1581,7 +1581,7 @@
           },
           "default": 1024,
           "title": "Width",
-          "description": "The width of the generated image.",
+          "description": "Output image width in pixels. 1024 is recommended.",
           "min": 64.0,
           "max": 2048.0
         },
@@ -1592,7 +1592,7 @@
           },
           "default": 1024,
           "title": "Height",
-          "description": "The height of the generated image.",
+          "description": "Output image height in pixels. 1024 is recommended.",
           "min": 64.0,
           "max": 2048.0
         },
@@ -1603,7 +1603,7 @@
           },
           "default": 20,
           "title": "Num Inference Steps",
-          "description": "The number of denoising steps. 4 steps is forced for schnell models.",
+          "description": "Denoising steps. Schnell uses 4 steps; dev uses 20-50.",
           "min": 1.0,
           "max": 100.0
         },
@@ -1614,7 +1614,7 @@
           },
           "default": 512,
           "title": "Max Sequence Length",
-          "description": "Maximum sequence length for the prompt. Use 256 for schnell, 512 for dev.",
+          "description": "Maximum prompt length. Use 256 for schnell, 512 for dev.",
           "min": 1.0,
           "max": 512.0
         },
@@ -1625,7 +1625,7 @@
           },
           "default": -1,
           "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "description": "Random seed for reproducible generation. Use -1 for random.",
           "min": -1.0
         }
       ],
@@ -2302,7 +2302,7 @@
     },
     {
       "title": "Load Text To Image Model",
-      "description": "Load HuggingFace model for image-to-image generation from a repo_id.\n\n    Use cases:\n    - Loads a pipeline directly from a repo_id\n    - Used for AutoPipelineForImage2Image",
+      "description": "Loads and validates a Hugging Face text-to-image model for use in downstream nodes.\n    model-loader, text-to-image, pipeline\n\n    Use cases:\n    - Pre-load text-to-image models before running pipelines\n    - Validate model availability and compatibility\n    - Configure model settings for Text2Image processing",
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.LoadTextToImageModel",
       "properties": [
@@ -2313,7 +2313,7 @@
           },
           "default": "",
           "title": "Repo Id",
-          "description": "The repository ID of the model to use for image-to-image generation."
+          "description": "The Hugging Face repository ID for the text-to-image model."
         }
       ],
       "outputs": [
@@ -2330,7 +2330,7 @@
     },
     {
       "title": "Qwen-Image",
-      "description": "Generates images from text prompts using Qwen-Image with support for Nunchaku quantization.\n    image, generation, AI, text-to-image, qwen, quantization\n\n    Use cases:\n    - High-quality, general-purpose text-to-image generation\n    - Memory-efficient generation using Nunchaku quantization\n    - Quick prototyping leveraging AutoPipeline\n    - Works out-of-the-box with the official Qwen model",
+      "description": "Generates images from text prompts using Alibaba's Qwen-Image model with Nunchaku quantization support.\n    image, generation, AI, text-to-image, qwen, quantization, multilingual\n\n    Use cases:\n    - Generate high-quality images with strong multilingual prompt support\n    - Memory-efficient generation using INT4/FP4 quantization\n    - Create images with precise semantic understanding\n    - Build production image generation systems",
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.QwenImage",
       "properties": [
@@ -2347,7 +2347,7 @@
           },
           "default": "int4",
           "title": "Quantization",
-          "description": "The quantization level to use."
+          "description": "Quantization level: INT4/FP4 for lower VRAM, FP16 for full precision."
         },
         {
           "name": "prompt",
@@ -2356,7 +2356,7 @@
           },
           "default": "A cat holding a sign that says hello world",
           "title": "Prompt",
-          "description": "A text prompt describing the desired image."
+          "description": "Text description of the image to generate."
         },
         {
           "name": "negative_prompt",
@@ -2365,7 +2365,7 @@
           },
           "default": "",
           "title": "Negative Prompt",
-          "description": "A text prompt describing what to avoid in the image."
+          "description": "Describe what to avoid in the image (e.g., 'blurry, low quality')."
         },
         {
           "name": "true_cfg_scale",
@@ -2374,7 +2374,7 @@
           },
           "default": 1.0,
           "title": "True Cfg Scale",
-          "description": "True CFG scale for Qwen-Image models.",
+          "description": "True CFG scale for enhanced prompt following.",
           "min": 0.0,
           "max": 10.0
         },
@@ -2385,7 +2385,7 @@
           },
           "default": 50,
           "title": "Num Inference Steps",
-          "description": "The number of denoising steps.",
+          "description": "Denoising steps. 30-50 is typical.",
           "min": 1.0,
           "max": 100.0
         },
@@ -2396,7 +2396,7 @@
           },
           "default": 1024,
           "title": "Height",
-          "description": "The height of the generated image.",
+          "description": "Output image height in pixels.",
           "min": 256.0,
           "max": 2048.0
         },
@@ -2407,7 +2407,7 @@
           },
           "default": 1024,
           "title": "Width",
-          "description": "The width of the generated image.",
+          "description": "Output image width in pixels.",
           "min": 256.0,
           "max": 2048.0
         },
@@ -2418,7 +2418,7 @@
           },
           "default": -1,
           "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "description": "Random seed for reproducible generation. Use -1 for random.",
           "min": -1.0
         }
       ],
@@ -2603,7 +2603,7 @@
     },
     {
       "title": "Stable Diffusion",
-      "description": "Generates images from text prompts using Stable Diffusion.\n    image, generation, AI, text-to-image, SD\n\n    Use cases:\n    - Creating custom illustrations for various projects\n    - Generating concept art for creative endeavors\n    - Producing unique visual content for marketing materials\n    - Exploring AI-generated art for personal or professional use",
+      "description": "Generates images from text prompts using Stable Diffusion 1.x/2.x models.\n    image, generation, AI, text-to-image, SD, creative\n\n    Use cases:\n    - Create custom illustrations and artwork from text descriptions\n    - Generate concept art for games, films, and creative projects\n    - Produce unique visual content for marketing and media\n    - Explore AI-generated art with extensive community models\n    - Build image generation applications with well-understood architecture",
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.StableDiffusion",
       "properties": [
@@ -2819,7 +2819,7 @@
           },
           "default": 512,
           "title": "Width",
-          "description": "Width of the generated image.",
+          "description": "Output image width in pixels. 512 is standard for SD 1.x.",
           "min": 256.0,
           "max": 1024.0
         },
@@ -2830,7 +2830,7 @@
           },
           "default": 512,
           "title": "Height",
-          "description": "Height of the generated image",
+          "description": "Output image height in pixels. 512 is standard for SD 1.x.",
           "min": 256.0,
           "max": 1024.0
         }
@@ -2952,7 +2952,7 @@
     },
     {
       "title": "Stable Diffusion XL",
-      "description": "Generates images from text prompts using Stable Diffusion XL.\n    image, generation, AI, text-to-image, SDXL\n\n    Use cases:\n    - Creating custom illustrations for marketing materials\n    - Generating concept art for game and film development\n    - Producing unique stock imagery for websites and publications\n    - Visualizing interior design concepts for clients",
+      "description": "Generates high-resolution images from text prompts using Stable Diffusion XL.\n    image, generation, AI, text-to-image, SDXL, high-resolution\n\n    Use cases:\n    - Create detailed, high-resolution images (1024x1024) from text\n    - Generate marketing visuals and product imagery\n    - Produce concept art and illustrations with enhanced detail\n    - Create stock imagery and visual content for publications\n    - Build professional image generation applications",
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.StableDiffusionXL",
       "properties": [
@@ -3541,7 +3541,7 @@
     },
     {
       "title": "Text to Image",
-      "description": "Generates images from text prompts using AutoPipeline for automatic pipeline selection.\n    image, generation, AI, text-to-image, auto\n\n    Use cases:\n    - Automatic selection of the best pipeline for a given model\n    - Flexible image generation without pipeline-specific knowledge\n    - Quick prototyping with various text-to-image models\n    - Streamlined workflow for different model architectures",
+      "description": "Generates images from text prompts using AutoPipeline for automatic model detection.\n    image, generation, AI, text-to-image, auto, flexible\n\n    Use cases:\n    - Generate images with automatic pipeline selection for any supported model\n    - Quickly prototype with various text-to-image architectures\n    - Build flexible workflows that adapt to different model types\n    - Create images without needing pipeline-specific configuration",
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.Text2Image",
       "properties": [
@@ -3559,7 +3559,7 @@
             "ignore_patterns": null
           },
           "title": "Model",
-          "description": "The model to use for text-to-image generation."
+          "description": "The text-to-image model. AutoPipeline automatically selects the correct pipeline type."
         },
         {
           "name": "prompt",
@@ -3568,7 +3568,7 @@
           },
           "default": "A cat holding a sign that says hello world",
           "title": "Prompt",
-          "description": "A text prompt describing the desired image."
+          "description": "Text description of the image to generate. Be specific for better results."
         },
         {
           "name": "negative_prompt",
@@ -3577,7 +3577,7 @@
           },
           "default": "",
           "title": "Negative Prompt",
-          "description": "A text prompt describing what to avoid in the image."
+          "description": "Describe what to avoid in the image (e.g., 'blurry, low quality')."
         },
         {
           "name": "num_inference_steps",
@@ -3586,7 +3586,7 @@
           },
           "default": 50,
           "title": "Num Inference Steps",
-          "description": "The number of denoising steps.",
+          "description": "Denoising steps. 20-50 is typical; more steps = better quality but slower.",
           "min": 1.0,
           "max": 100.0
         },
@@ -3597,7 +3597,7 @@
           },
           "default": 7.5,
           "title": "Guidance Scale",
-          "description": "The scale for classifier-free guidance.",
+          "description": "How strongly to follow the prompt. 7-9 is typical for SD models.",
           "min": 1.0,
           "max": 20.0
         },
@@ -3608,7 +3608,7 @@
           },
           "default": 512,
           "title": "Width",
-          "description": "The width of the generated image.",
+          "description": "Output image width in pixels.",
           "min": 64.0,
           "max": 2048.0
         },
@@ -3619,7 +3619,7 @@
           },
           "default": 512,
           "title": "Height",
-          "description": "The height of the generated image.",
+          "description": "Output image height in pixels.",
           "min": 64.0,
           "max": 2048.0
         },
@@ -3630,7 +3630,7 @@
           },
           "default": -1,
           "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "description": "Random seed for reproducible generation. Use -1 for random.",
           "min": -1.0
         }
       ],
@@ -3658,7 +3658,7 @@
     },
     {
       "title": "CogVideoX",
-      "description": "Generates videos from text prompts using CogVideoX, a large diffusion transformer model.\n    video, generation, AI, text-to-video, transformer, diffusion\n\n    Use cases:\n    - Create high-quality videos from text descriptions\n    - Generate longer and more consistent videos\n    - Produce cinematic content for creative projects\n    - Create animated scenes for storytelling\n    - Generate video content for marketing and media",
+      "description": "Generates high-quality videos from text prompts using the CogVideoX diffusion transformer.\n    video, generation, AI, text-to-video, transformer, diffusion, cinematic\n\n    Use cases:\n    - Create videos from detailed text descriptions\n    - Generate cinematic content for creative projects\n    - Produce animated scenes for storytelling and marketing\n    - Build AI video generation applications\n    - Create visual content for social media",
       "namespace": "huggingface.text_to_video",
       "node_type": "huggingface.text_to_video.CogVideoX",
       "properties": [
@@ -3669,7 +3669,7 @@
           },
           "default": "A detailed wooden toy ship with intricately carved masts and sails is seen gliding smoothly over a plush, blue carpet that mimics the waves of the sea. The ship's hull is painted a rich brown, with tiny windows. The carpet, soft and textured, provides a perfect backdrop, resembling an oceanic expanse. Surrounding the ship are various other toys and children's items, hinting at a playful environment. The scene captures the innocence and imagination of childhood, with the toy ship's journey symbolizing endless adventures in a whimsical, indoor setting.",
           "title": "Prompt",
-          "description": "A text prompt describing the desired video."
+          "description": "Detailed text description of the video to generate. More descriptive prompts produce better results."
         },
         {
           "name": "negative_prompt",
@@ -3678,7 +3678,7 @@
           },
           "default": "",
           "title": "Negative Prompt",
-          "description": "A text prompt describing what to avoid in the video."
+          "description": "Describe what to avoid in the video (e.g., 'blurry, low quality, distorted')."
         },
         {
           "name": "num_frames",
@@ -3687,7 +3687,7 @@
           },
           "default": 49,
           "title": "Num Frames",
-          "description": "The number of frames in the video. Must be divisible by 8 + 1 (e.g., 49, 81, 113).",
+          "description": "Total frames in the output. Must be 8n+1 (49, 81, 113). More frames = longer video.",
           "min": 49.0,
           "max": 113.0
         },
@@ -3698,7 +3698,7 @@
           },
           "default": 6.0,
           "title": "Guidance Scale",
-          "description": "The scale for classifier-free guidance.",
+          "description": "How strongly to follow the prompt. 5-8 is typical; higher = more adherence.",
           "min": 1.0,
           "max": 20.0
         },
@@ -3709,7 +3709,7 @@
           },
           "default": 50,
           "title": "Num Inference Steps",
-          "description": "The number of denoising steps.",
+          "description": "Denoising steps. 50 is recommended; lower for faster generation.",
           "min": 1.0,
           "max": 100.0
         },
@@ -3720,7 +3720,7 @@
           },
           "default": 480,
           "title": "Height",
-          "description": "The height of the generated video in pixels.",
+          "description": "Output video height in pixels.",
           "min": 256.0,
           "max": 1024.0
         },
@@ -3731,7 +3731,7 @@
           },
           "default": 720,
           "title": "Width",
-          "description": "The width of the generated video in pixels.",
+          "description": "Output video width in pixels.",
           "min": 256.0,
           "max": 1024.0
         },
@@ -3742,7 +3742,7 @@
           },
           "default": 8,
           "title": "Fps",
-          "description": "Frames per second for the output video.",
+          "description": "Frames per second for the output video file.",
           "min": 1.0,
           "max": 30.0
         },
@@ -3753,7 +3753,7 @@
           },
           "default": -1,
           "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "description": "Random seed for reproducible generation. Use -1 for random.",
           "min": -1.0
         },
         {
@@ -3763,7 +3763,7 @@
           },
           "default": 226,
           "title": "Max Sequence Length",
-          "description": "Maximum sequence length in encoded prompt.",
+          "description": "Maximum prompt encoding length. Higher allows longer prompts.",
           "min": 1.0,
           "max": 512.0
         },
@@ -3774,7 +3774,7 @@
           },
           "default": true,
           "title": "Enable Cpu Offload",
-          "description": "Enable CPU offload to reduce VRAM usage."
+          "description": "Offload model components to CPU to reduce VRAM usage."
         },
         {
           "name": "enable_vae_slicing",
@@ -3783,7 +3783,7 @@
           },
           "default": true,
           "title": "Enable Vae Slicing",
-          "description": "Enable VAE slicing to reduce VRAM usage."
+          "description": "Process VAE in slices to reduce peak memory usage."
         },
         {
           "name": "enable_vae_tiling",
@@ -3792,7 +3792,7 @@
           },
           "default": true,
           "title": "Enable Vae Tiling",
-          "description": "Enable VAE tiling to reduce VRAM usage for large videos."
+          "description": "Process VAE in tiles for large videos. Reduces memory but may affect quality."
         }
       ],
       "outputs": [
@@ -3874,7 +3874,7 @@
     },
     {
       "title": "Wan (Text-to-Video)",
-      "description": "Generates videos from text prompts using Wan text-to-video pipeline.\n    video, generation, AI, text-to-video, diffusion, Wan\n\n    Use cases:\n    - Create high-quality videos from text descriptions\n    - Efficient 1.3B model for consumer GPUs or 14B for maximum quality",
+      "description": "Generates videos from text prompts using Wan text-to-video diffusion models.\n    video, generation, AI, text-to-video, diffusion, Wan, cinematic\n\n    Use cases:\n    - Create high-quality videos from text descriptions\n    - Generate cinematic content for creative and commercial projects\n    - Produce animated scenes for storytelling and marketing\n    - Build AI video generation applications\n    - Create visual content for social media and entertainment\n\n    **Note:** Model variants offer different quality/resource tradeoffs. A14B is balanced; 14B offers maximum quality.",
       "namespace": "huggingface.text_to_video",
       "node_type": "huggingface.text_to_video.Wan_T2V",
       "properties": [
@@ -3885,7 +3885,7 @@
           },
           "default": "A robot standing on a mountain top at sunset, cinematic lighting, high detail",
           "title": "Prompt",
-          "description": "A text prompt describing the desired video."
+          "description": "Detailed text description of the video to generate."
         },
         {
           "name": "model_variant",
@@ -3900,7 +3900,7 @@
           },
           "default": "Wan-AI/Wan2.2-T2V-A14B-Diffusers",
           "title": "Model Variant",
-          "description": "Select the Wan model to use."
+          "description": "The Wan model variant. A14B is balanced; TI2V-5B is smaller/faster."
         },
         {
           "name": "negative_prompt",
@@ -3909,7 +3909,7 @@
           },
           "default": "",
           "title": "Negative Prompt",
-          "description": "A text prompt describing what to avoid in the video."
+          "description": "Describe what to avoid in the video (e.g., 'blurry, distorted')."
         },
         {
           "name": "num_frames",
@@ -3918,7 +3918,7 @@
           },
           "default": 49,
           "title": "Num Frames",
-          "description": "The number of frames in the video.",
+          "description": "Total frames in the output video. More frames = longer duration.",
           "min": 16.0,
           "max": 129.0
         },
@@ -3929,7 +3929,7 @@
           },
           "default": 5.0,
           "title": "Guidance Scale",
-          "description": "The scale for classifier-free guidance.",
+          "description": "How strongly to follow the prompt. 4-7 is typical.",
           "min": 1.0,
           "max": 20.0
         },
@@ -3940,7 +3940,7 @@
           },
           "default": 30,
           "title": "Num Inference Steps",
-          "description": "The number of denoising steps.",
+          "description": "Denoising steps. 30 is fast; 50+ for higher quality.",
           "min": 1.0,
           "max": 100.0
         },
@@ -3951,7 +3951,7 @@
           },
           "default": 480,
           "title": "Height",
-          "description": "The height of the generated video in pixels.",
+          "description": "Output video height in pixels.",
           "min": 256.0,
           "max": 1080.0
         },
@@ -3962,7 +3962,7 @@
           },
           "default": 720,
           "title": "Width",
-          "description": "The width of the generated video in pixels.",
+          "description": "Output video width in pixels.",
           "min": 256.0,
           "max": 1920.0
         },
@@ -3973,7 +3973,7 @@
           },
           "default": 16,
           "title": "Fps",
-          "description": "Frames per second for the output video.",
+          "description": "Frames per second for the output video file.",
           "min": 1.0,
           "max": 60.0
         },
@@ -3984,7 +3984,7 @@
           },
           "default": -1,
           "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "description": "Random seed for reproducible generation. Use -1 for random.",
           "min": -1.0
         },
         {
@@ -3994,7 +3994,7 @@
           },
           "default": 512,
           "title": "Max Sequence Length",
-          "description": "Maximum sequence length in encoded prompt.",
+          "description": "Maximum prompt encoding length. Higher allows longer prompts.",
           "min": 64.0,
           "max": 1024.0
         },
@@ -4005,7 +4005,7 @@
           },
           "default": true,
           "title": "Enable Cpu Offload",
-          "description": "Enable CPU offload to reduce VRAM usage."
+          "description": "Offload model components to CPU to reduce VRAM usage."
         },
         {
           "name": "enable_vae_slicing",
@@ -4014,7 +4014,7 @@
           },
           "default": true,
           "title": "Enable Vae Slicing",
-          "description": "Enable VAE slicing to reduce VRAM usage."
+          "description": "Process VAE in slices to reduce peak memory usage."
         },
         {
           "name": "enable_vae_tiling",
@@ -4023,7 +4023,7 @@
           },
           "default": false,
           "title": "Enable Vae Tiling",
-          "description": "Enable VAE tiling to reduce VRAM usage for large videos."
+          "description": "Process VAE in tiles for large videos. May affect quality."
         }
       ],
       "outputs": [
@@ -4129,7 +4129,7 @@
     },
     {
       "title": "Image Classifier",
-      "description": "Classifies images into predefined categories.\n    image, classification, labeling, categorization\n\n    Use cases:\n    - Content moderation by detecting inappropriate images\n    - Organizing photo libraries by automatically tagging images",
+      "description": "Classifies images into predefined categories using vision transformer models.\n    image, classification, labeling, categorization, computer-vision\n\n    Use cases:\n    - Automatically tag and organize photo libraries\n    - Detect inappropriate or NSFW content for moderation\n    - Classify product images in e-commerce catalogs\n    - Identify age, gender, or other attributes in photos\n    - Sort images by scene type, object presence, or style",
       "namespace": "huggingface.image_classification",
       "node_type": "huggingface.image_classification.ImageClassifier",
       "properties": [
@@ -4146,8 +4146,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for the classification"
+          "title": "Model",
+          "description": "The image classification model. ViT and ResNet models offer general classification; specialized models exist for NSFW detection, age estimation, etc."
         },
         {
           "name": "image",
@@ -4161,7 +4161,7 @@
             "data": null
           },
           "title": "Image",
-          "description": "The input image to classify"
+          "description": "The image to classify. Supports common formats like JPEG, PNG, WebP."
         }
       ],
       "outputs": [
@@ -4437,7 +4437,7 @@
     },
     {
       "title": "Zero-Shot Image Classifier",
-      "description": "Classifies images into categories without the need for training data.\n    image, classification, labeling, categorization\n\n    Use cases:\n    - Quickly categorize images without training data\n    - Identify objects in images without predefined labels\n    - Automate image tagging for large datasets",
+      "description": "Classifies images into custom categories without requiring task-specific training data.\n    image, classification, labeling, categorization, zero-shot, flexible\n\n    Use cases:\n    - Categorize images with custom, user-defined labels on the fly\n    - Quickly prototype image classification systems without training\n    - Identify objects or scenes without predefined model categories\n    - Build flexible image tagging workflows with dynamic categories\n    - Test hypotheses about image content using natural language labels",
       "namespace": "huggingface.image_classification",
       "node_type": "huggingface.image_classification.ZeroShotImageClassifier",
       "properties": [
@@ -4454,8 +4454,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for the classification"
+          "title": "Model",
+          "description": "The zero-shot classification model. CLIP-based models (OpenAI, LAION) enable flexible label matching using vision-language understanding."
         },
         {
           "name": "image",
@@ -4469,7 +4469,7 @@
             "data": null
           },
           "title": "Image",
-          "description": "The input image to classify"
+          "description": "The image to classify. Supports common formats like JPEG, PNG, WebP."
         },
         {
           "name": "candidate_labels",
@@ -4478,7 +4478,7 @@
           },
           "default": "",
           "title": "Candidate Labels",
-          "description": "The candidate labels to classify the image against, separated by commas"
+          "description": "Comma-separated list of labels to classify against (e.g., 'cat,dog,bird,fish'). Use descriptive labels for better results."
         }
       ],
       "outputs": [
@@ -4589,7 +4589,7 @@
     },
     {
       "title": "Fill Mask",
-      "description": "Fills in a masked token in a given text.\n    text, fill-mask, natural language processing\n\n    Use cases:\n    - Text completion\n    - Sentence prediction\n    - Language understanding tasks\n    - Generating text options",
+      "description": "Predicts the most likely words to fill masked positions in text using language models.\n    text, fill-mask, NLP, language-modeling, word-prediction\n\n    Use cases:\n    - Complete sentences with contextually appropriate words\n    - Generate word suggestions for text editing tools\n    - Test language understanding and word associations\n    - Build autocomplete and text prediction features\n    - Explore semantic relationships between words in context",
       "namespace": "huggingface.fill_mask",
       "node_type": "huggingface.fill_mask.FillMask",
       "properties": [
@@ -4606,8 +4606,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID",
-          "description": "The model ID to use for fill-mask task"
+          "title": "Model",
+          "description": "The masked language model to use. BERT, RoBERTa, and DistilBERT variants are supported."
         },
         {
           "name": "inputs",
@@ -4615,8 +4615,8 @@
             "type": "str"
           },
           "default": "The capital of France is [MASK].",
-          "title": "Inputs",
-          "description": "The input text with [MASK] token to be filled"
+          "title": "Input Text",
+          "description": "Text containing [MASK] token(s) to be predicted. Different models may use different mask tokens (e.g., BERT uses [MASK], RoBERTa uses <mask>)."
         },
         {
           "name": "top_k",
@@ -4625,7 +4625,7 @@
           },
           "default": 5,
           "title": "Top K",
-          "description": "Number of top predictions to return"
+          "description": "Number of most likely predictions to return for each masked position."
         }
       ],
       "outputs": [
@@ -4796,7 +4796,7 @@
     },
     {
       "title": "Image To Text",
-      "description": "Generates textual descriptions from images.\n    image, captioning, OCR, image-to-text\n\n    Use cases:\n    - Generate captions for images\n    - Extract text from images (OCR)\n    - Describe image content for visually impaired users\n    - Build accessibility features for visual content",
+      "description": "Generates textual descriptions and captions from images using vision-language models.\n    image, captioning, OCR, image-to-text, accessibility\n\n    Use cases:\n    - Automatically generate captions for photos and artwork\n    - Extract visible text from images (OCR-style functionality)\n    - Create alt-text descriptions for web accessibility\n    - Build image search engines with text-based queries\n    - Generate descriptions for visually impaired users",
       "namespace": "huggingface.image_to_text",
       "node_type": "huggingface.image_to_text.ImageToText",
       "properties": [
@@ -4818,8 +4818,8 @@
             ],
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for image-to-text generation"
+          "title": "Model",
+          "description": "The image captioning model. BLIP models offer good quality; BLIP2 provides enhanced understanding; GIT is faster."
         },
         {
           "name": "image",
@@ -4833,7 +4833,7 @@
             "data": null
           },
           "title": "Input Image",
-          "description": "The image to generate text from"
+          "description": "The image to generate text from. Supports JPEG, PNG, WebP and other common formats."
         },
         {
           "name": "max_new_tokens",
@@ -4842,7 +4842,7 @@
           },
           "default": 1024,
           "title": "Max New Tokens",
-          "description": "The maximum number of tokens to generate (if supported by model)"
+          "description": "Maximum length of the generated caption in tokens. Higher values allow longer descriptions."
         }
       ],
       "outputs": [
@@ -4983,7 +4983,7 @@
     },
     {
       "title": "Load Image To Text Model",
-      "description": "",
+      "description": "Loads and validates a Hugging Face image-to-text model for use in downstream nodes.\n    model-loader, captioning, OCR, image-to-text\n\n    Use cases:\n    - Pre-load image captioning models before running pipelines\n    - Validate model availability and compatibility\n    - Configure model settings for ImageToText processing",
       "namespace": "huggingface.image_to_text",
       "node_type": "huggingface.image_to_text.LoadImageToTextModel",
       "properties": [
@@ -4993,8 +4993,8 @@
             "type": "str"
           },
           "default": "Salesforce/blip-image-captioning-base",
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for image-to-text generation"
+          "title": "Model ID",
+          "description": "The Hugging Face repository ID for the image-to-text model (e.g., BLIP, GIT, ViT-GPT2)."
         }
       ],
       "outputs": [
@@ -5011,7 +5011,7 @@
     },
     {
       "title": "Image To Text",
-      "description": "Generates text descriptions from images.\n    image, text, captioning, vision-language\n\n    Use cases:\n    - Automatic image captioning\n    - Assisting visually impaired users\n    - Enhancing image search capabilities\n    - Generating alt text for web images",
+      "description": "Generates descriptive text captions from images using vision-language models.\n    image, text, captioning, vision-language, accessibility\n\n    Use cases:\n    - Generate natural language descriptions of image content\n    - Create alt-text for web accessibility compliance\n    - Build automatic image cataloging and search systems\n    - Enable content discovery through text-based image queries",
       "namespace": "huggingface.multimodal",
       "node_type": "huggingface.multimodal.ImageToText",
       "properties": [
@@ -5028,8 +5028,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for image-to-text generation"
+          "title": "Model",
+          "description": "The image captioning model. BLIP variants offer good quality/speed balance."
         },
         {
           "name": "image",
@@ -5043,7 +5043,7 @@
             "data": null
           },
           "title": "Input Image",
-          "description": "The image to generate text from"
+          "description": "The image to generate a caption for."
         },
         {
           "name": "max_new_tokens",
@@ -5052,7 +5052,7 @@
           },
           "default": 1024,
           "title": "Max New Tokens",
-          "description": "The maximum number of tokens to generate"
+          "description": "Maximum length of the generated caption in tokens."
         }
       ],
       "outputs": [
@@ -5186,7 +5186,7 @@
     },
     {
       "title": "Visual Question Answering",
-      "description": "Answers questions about images.\n    image, text, question answering, multimodal\n\n    Use cases:\n    - Image content analysis\n    - Automated image captioning\n    - Visual information retrieval\n    - Accessibility tools for visually impaired users",
+      "description": "Answers natural language questions about image content using vision-language models.\n    image, text, question-answering, multimodal, VQA\n\n    Use cases:\n    - Query image content with natural language questions\n    - Extract specific information from photos and diagrams\n    - Build interactive image exploration interfaces\n    - Create accessibility tools for visual content understanding",
       "namespace": "huggingface.multimodal",
       "node_type": "huggingface.multimodal.VisualQuestionAnswering",
       "properties": [
@@ -5203,8 +5203,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for visual question answering"
+          "title": "Model",
+          "description": "The visual question answering model. BLIP-VQA provides good general performance."
         },
         {
           "name": "image",
@@ -5218,7 +5218,7 @@
             "data": null
           },
           "title": "Image",
-          "description": "The image to analyze"
+          "description": "The image to ask questions about."
         },
         {
           "name": "question",
@@ -5227,7 +5227,7 @@
           },
           "default": "",
           "title": "Question",
-          "description": "The question to be answered about the image"
+          "description": "Your question about the image content (e.g., 'What color is the car?')."
         }
       ],
       "outputs": [
@@ -5275,7 +5275,7 @@
     },
     {
       "title": "Audio Classifier",
-      "description": "Classifies audio into predefined categories.\n    audio, classification, labeling, categorization\n\n    Use cases:\n    - Classify music genres\n    - Detect speech vs. non-speech audio\n    - Identify environmental sounds\n    - Emotion recognition in speech\n\n    Recommended models\n    - MIT/ast-finetuned-audioset-10-10-0.4593\n    - ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition",
+      "description": "Classifies audio into predefined categories using pretrained transformer models.\n    audio, classification, labeling, categorization, sound-recognition\n\n    Use cases:\n    - Classify music by genre or mood\n    - Detect speech vs. non-speech audio segments\n    - Identify environmental sounds (e.g., car horn, dog bark)\n    - Recognize emotions in speech recordings\n    - Content moderation for audio platforms",
       "namespace": "huggingface.audio_classification",
       "node_type": "huggingface.audio_classification.AudioClassifier",
       "properties": [
@@ -5292,8 +5292,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for audio classification"
+          "title": "Model",
+          "description": "The Hugging Face model for audio classification. Recommended: MIT/ast-finetuned-audioset for general sounds, wav2vec2-lg-xlsr-en-speech-emotion-recognition for speech emotions."
         },
         {
           "name": "audio",
@@ -5307,7 +5307,7 @@
             "data": null
           },
           "title": "Audio",
-          "description": "The input audio to classify"
+          "description": "The audio file to classify. Supports common formats like WAV, MP3, FLAC."
         },
         {
           "name": "top_k",
@@ -5316,7 +5316,7 @@
           },
           "default": 10,
           "title": "Top K",
-          "description": "The number of top results to return"
+          "description": "Number of top classification results to return, ranked by confidence score."
         }
       ],
       "outputs": [
@@ -5400,7 +5400,7 @@
     },
     {
       "title": "Zero Shot Audio Classifier",
-      "description": "Classifies audio into categories without the need for training data.\n    audio, classification, labeling, categorization, zero-shot\n\n    Use cases:\n    - Quickly categorize audio without training data\n    - Identify sounds or music genres without predefined labels\n    - Automate audio tagging for large datasets",
+      "description": "Classifies audio into custom categories without requiring task-specific training data.\n    audio, classification, labeling, categorization, zero-shot, flexible\n\n    Use cases:\n    - Categorize audio with custom, user-defined labels on the fly\n    - Identify sounds or music genres without predefined model training\n    - Quickly prototype audio classification systems\n    - Automate tagging for large audio datasets with dynamic categories",
       "namespace": "huggingface.audio_classification",
       "node_type": "huggingface.audio_classification.ZeroShotAudioClassifier",
       "properties": [
@@ -5417,8 +5417,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for the classification"
+          "title": "Model",
+          "description": "The Hugging Face model for zero-shot audio classification. Uses CLIP-based models for flexible label matching."
         },
         {
           "name": "audio",
@@ -5432,7 +5432,7 @@
             "data": null
           },
           "title": "Audio",
-          "description": "The input audio to classify"
+          "description": "The audio file to classify. Supports common formats like WAV, MP3, FLAC."
         },
         {
           "name": "candidate_labels",
@@ -5441,7 +5441,7 @@
           },
           "default": "",
           "title": "Candidate Labels",
-          "description": "The candidate labels to classify the audio against, separated by commas"
+          "description": "Comma-separated list of labels to classify against (e.g., 'music,speech,noise,silence')."
         }
       ],
       "outputs": [
@@ -5497,7 +5497,7 @@
     },
     {
       "title": "Wan (Image-to-Video)",
-      "description": "Generates a video from an input image using Wan image-to-video pipelines.\n    video, generation, AI, image-to-video, diffusion, Wan\n\n    Use cases:\n    - Turn a single image into a dynamic clip with prompt guidance\n    - Choose between Wan 2.2 A14B, Wan 2.1 14B 480P, and Wan 2.1 14B 720P models",
+      "description": "Transforms a static image into a dynamic video clip using Wan image-to-video diffusion models.\n    video, generation, AI, image-to-video, diffusion, Wan, animation\n\n    Use cases:\n    - Animate photographs and artwork into short video clips\n    - Create motion from still images with text-guided direction\n    - Generate video content for social media from static images\n    - Bring product images to life with realistic movement\n    - Create dynamic visual effects from single frames\n\n    **Note:** Model variants offer different quality/speed tradeoffs. A14B is balanced; 720P provides higher resolution.",
       "namespace": "huggingface.image_to_video",
       "node_type": "huggingface.image_to_video.Wan_I2V",
       "properties": [
@@ -5513,7 +5513,7 @@
             "data": null
           },
           "title": "Input Image",
-          "description": "The input image to generate the video from."
+          "description": "The source image to animate. Image content guides the video's appearance."
         },
         {
           "name": "prompt",
@@ -5522,7 +5522,7 @@
           },
           "default": "An astronaut walking on the moon, cinematic lighting, high detail",
           "title": "Prompt",
-          "description": "A text prompt describing the desired video."
+          "description": "Text description guiding how the image should animate and move."
         },
         {
           "name": "model_variant",
@@ -5537,7 +5537,7 @@
           },
           "default": "Wan-AI/Wan2.2-I2V-A14B-Diffusers",
           "title": "Model Variant",
-          "description": "Select the Wan I2V model to use."
+          "description": "The Wan I2V model variant. A14B is balanced; 720P offers higher resolution output."
         },
         {
           "name": "negative_prompt",
@@ -5546,7 +5546,7 @@
           },
           "default": "",
           "title": "Negative Prompt",
-          "description": "A text prompt describing what to avoid in the video."
+          "description": "Describe what to avoid in the generated video (e.g., 'blurry, distorted')."
         },
         {
           "name": "num_frames",
@@ -5555,7 +5555,7 @@
           },
           "default": 81,
           "title": "Num Frames",
-          "description": "The number of frames in the video.",
+          "description": "Total frames in the output video. More frames = longer duration.",
           "min": 16.0,
           "max": 129.0
         },
@@ -5566,7 +5566,7 @@
           },
           "default": 5.0,
           "title": "Guidance Scale",
-          "description": "The scale for classifier-free guidance.",
+          "description": "How strongly to follow the prompt. Higher values = more prompt adherence.",
           "min": 1.0,
           "max": 20.0
         },
@@ -5577,7 +5577,7 @@
           },
           "default": 50,
           "title": "Num Inference Steps",
-          "description": "The number of denoising steps.",
+          "description": "Denoising steps. More steps = better quality but slower generation.",
           "min": 1.0,
           "max": 100.0
         },
@@ -5588,7 +5588,7 @@
           },
           "default": 480,
           "title": "Height",
-          "description": "The height of the generated video in pixels.",
+          "description": "Output video height in pixels.",
           "min": 256.0,
           "max": 1080.0
         },
@@ -5599,7 +5599,7 @@
           },
           "default": 832,
           "title": "Width",
-          "description": "The width of the generated video in pixels.",
+          "description": "Output video width in pixels.",
           "min": 256.0,
           "max": 1920.0
         },
@@ -5610,7 +5610,7 @@
           },
           "default": 16,
           "title": "Fps",
-          "description": "Frames per second for the output video.",
+          "description": "Frames per second for the output video file.",
           "min": 1.0,
           "max": 60.0
         },
@@ -5621,7 +5621,7 @@
           },
           "default": -1,
           "title": "Seed",
-          "description": "Seed for the random number generator. Use -1 for a random seed.",
+          "description": "Random seed for reproducibility. Use -1 for random generation.",
           "min": -1.0
         },
         {
@@ -5631,7 +5631,7 @@
           },
           "default": 512,
           "title": "Max Sequence Length",
-          "description": "Maximum sequence length in encoded prompt.",
+          "description": "Maximum prompt encoding length. Higher allows longer prompts.",
           "min": 64.0,
           "max": 1024.0
         },
@@ -5642,7 +5642,7 @@
           },
           "default": true,
           "title": "Enable Cpu Offload",
-          "description": "Enable CPU offload to reduce VRAM usage."
+          "description": "Offload model components to CPU to reduce VRAM usage."
         },
         {
           "name": "enable_vae_slicing",
@@ -5651,7 +5651,7 @@
           },
           "default": true,
           "title": "Enable Vae Slicing",
-          "description": "Enable VAE slicing to reduce VRAM usage."
+          "description": "Process VAE in slices to reduce peak memory usage."
         },
         {
           "name": "enable_vae_tiling",
@@ -5660,7 +5660,7 @@
           },
           "default": false,
           "title": "Enable Vae Tiling",
-          "description": "Enable VAE tiling to reduce VRAM usage for large videos."
+          "description": "Process VAE in tiles for very large videos. May affect quality."
         }
       ],
       "outputs": [
@@ -13447,7 +13447,7 @@
     },
     {
       "title": "Sentence Similarity",
-      "description": "Compares the similarity between two sentences.\n    text, sentence similarity, embeddings, natural language processing\n\n    Use cases:\n    - Duplicate detection in text data\n    - Semantic search\n    - Sentiment analysis",
+      "description": "Generates dense vector embeddings from text for semantic similarity comparisons.\n    text, sentence-similarity, embeddings, NLP, semantic-search\n\n    Use cases:\n    - Compute semantic similarity between sentences or documents\n    - Build semantic search and recommendation engines\n    - Detect duplicate or near-duplicate content\n    - Cluster documents by meaning rather than keywords\n    - Create text embeddings for downstream ML tasks",
       "namespace": "huggingface.sentence_similarity",
       "node_type": "huggingface.sentence_similarity.SentenceSimilarity",
       "properties": [
@@ -13464,8 +13464,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for sentence similarity"
+          "title": "Model",
+          "description": "The sentence embedding model. all-mpnet-base-v2 offers high quality; MiniLM variants are faster; BGE-m3 is multilingual."
         },
         {
           "name": "inputs",
@@ -13474,7 +13474,7 @@
           },
           "default": "",
           "title": "Input Text",
-          "description": "The text to compare"
+          "description": "The text to generate embeddings for. Can be a sentence, paragraph, or short document."
         }
       ],
       "outputs": [
@@ -13732,7 +13732,7 @@
     },
     {
       "title": "Feature Extraction",
-      "description": "Extracts features from text using pre-trained models.\n    text, feature extraction, embeddings, natural language processing\n\n    Use cases:\n    - Text similarity comparison\n    - Clustering text documents\n    - Input for machine learning models\n    - Semantic search applications",
+      "description": "Extracts dense vector embeddings from text using transformer models for downstream ML tasks.\n    text, feature-extraction, embeddings, NLP, semantic-search\n\n    Use cases:\n    - Compute text embeddings for semantic similarity comparisons\n    - Cluster documents by meaning rather than keywords\n    - Generate input features for machine learning classifiers\n    - Build semantic search engines and recommendation systems\n    - Create vector databases for retrieval-augmented generation (RAG)",
       "namespace": "huggingface.feature_extraction",
       "node_type": "huggingface.feature_extraction.FeatureExtraction",
       "properties": [
@@ -13749,8 +13749,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for feature extraction"
+          "title": "Model",
+          "description": "The embedding model to use. mxbai-embed-large-v1 and BGE models offer excellent quality; smaller models trade accuracy for speed."
         },
         {
           "name": "inputs",
@@ -13759,7 +13759,7 @@
           },
           "default": "",
           "title": "Input Text",
-          "description": "The text to extract features from"
+          "description": "The text to extract embeddings from. Can be a sentence, paragraph, or document."
         }
       ],
       "outputs": [
@@ -13892,7 +13892,7 @@
     },
     {
       "title": "Depth Estimation",
-      "description": "Estimates depth from a single image.\n    image, depth estimation, 3D, huggingface\n\n    Use cases:\n    - Generate depth maps for 3D modeling\n    - Assist in augmented reality applications\n    - Enhance computer vision systems for robotics\n    - Improve scene understanding in autonomous vehicles",
+      "description": "Generates depth maps from single RGB images using monocular depth estimation models.\n    image, depth-estimation, 3D, huggingface, computer-vision\n\n    Use cases:\n    - Create depth maps for 3D modeling and scene reconstruction\n    - Enable augmented reality applications with depth awareness\n    - Improve robotic navigation and obstacle detection\n    - Enhance scene understanding in autonomous vehicles\n    - Generate depth-based visual effects for images and video",
       "namespace": "huggingface.depth_estimation",
       "node_type": "huggingface.depth_estimation.DepthEstimation",
       "properties": [
@@ -13909,8 +13909,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for depth estimation"
+          "title": "Model",
+          "description": "The depth estimation model to use. Depth-Anything V2 models offer state-of-the-art accuracy; DPT-large is a reliable alternative."
         },
         {
           "name": "image",
@@ -13924,7 +13924,7 @@
             "data": null
           },
           "title": "Image",
-          "description": "The input image for depth estimation"
+          "description": "The input RGB image to estimate depth from. Any standard image format is supported."
         }
       ],
       "outputs": [
@@ -14047,7 +14047,7 @@
     },
     {
       "title": "Bark",
-      "description": "Bark is a text-to-audio model created by Suno. Bark can generate highly realistic, multilingual speech as well as other audio - including music, background noise and simple sound effects. The model can also produce nonverbal communications like laughing, sighing and crying.\n    tts, audio, speech, huggingface\n\n    Use cases:\n    - Create voice content for apps and websites\n    - Develop voice assistants with natural-sounding speech\n    - Generate automated announcements for public spaces",
+      "description": "Generates realistic multilingual speech and non-verbal audio from text using Suno's Bark model.\n    tts, audio, speech, huggingface, multilingual, voice-synthesis\n\n    Use cases:\n    - Create natural-sounding voice content for apps and videos\n    - Generate multilingual speech for global applications\n    - Produce expressive speech with emotions (laughing, sighing, crying)\n    - Add realistic voice to chatbots and virtual assistants\n    - Create audio content with background music and sound effects",
       "namespace": "huggingface.text_to_speech",
       "node_type": "huggingface.text_to_speech.Bark",
       "properties": [
@@ -14064,8 +14064,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for the image generation"
+          "title": "Model",
+          "description": "The Bark model variant. bark-small is faster; bark offers higher quality. Both support multilingual output."
         },
         {
           "name": "prompt",
@@ -14073,8 +14073,8 @@
             "type": "str"
           },
           "default": "",
-          "title": "Inputs",
-          "description": "The input text to the model"
+          "title": "Text Prompt",
+          "description": "The text to convert to speech. Can include non-verbal markers like [laughs] or [sighs]."
         }
       ],
       "outputs": [
@@ -14174,7 +14174,7 @@
     },
     {
       "title": "Kokoro TTS",
-      "description": "Kokoro is an open-weight, fast, and lightweight TTS model (~82M params) with Apache-2.0 weights.\n    It supports multiple languages via `misaki` and provides high-quality speech with selectable voices.\n    tts, audio, speech, huggingface, kokoro\n\n    Reference: https://huggingface.co/hexgrad/Kokoro-82M\n\n    Use cases:\n    - Natural-sounding speech synthesis for apps, assistants, and narration\n    - Low-latency TTS in production or local projects\n    - Multi-language TTS with configurable voices and speed",
+      "description": "Generates high-quality speech from text using the lightweight Kokoro TTS model.\n    tts, audio, speech, huggingface, kokoro, multilingual, voice\n\n    Use cases:\n    - Generate natural-sounding speech for applications and assistants\n    - Create voice content with multiple voice options and styles\n    - Build low-latency TTS systems for real-time applications\n    - Produce multilingual speech in various languages\n    - Generate narration for videos, presentations, and e-learning\n\n    **Note:** Kokoro is a fast, lightweight model (~82M params) with Apache-2.0 license.\n    See https://huggingface.co/hexgrad/Kokoro-82M for voice samples.",
       "namespace": "huggingface.text_to_speech",
       "node_type": "huggingface.text_to_speech.KokoroTTS",
       "properties": [
@@ -14191,8 +14191,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Hugging Face",
-          "description": "The Kokoro repo to use (e.g., hexgrad/Kokoro-82M)"
+          "title": "Model",
+          "description": "The Kokoro model repository."
         },
         {
           "name": "text",
@@ -14201,7 +14201,7 @@
           },
           "default": "Hello from Kokoro.",
           "title": "Text",
-          "description": "Input text to synthesize"
+          "description": "The text to convert to speech."
         },
         {
           "name": "lang_code",
@@ -14230,8 +14230,8 @@
             "type_name": "nodetool.nodes.huggingface.text_to_speech.KokoroTTS.LanguageCode"
           },
           "default": "a",
-          "title": "Language Code",
-          "description": "Language code for G2P. Examples: 'a' (American English), 'b' (British English), 'e' (es), 'f' (fr-fr), 'h' (hi), 'i' (it), 'p' (pt-br), 'j' (ja), 'z' (zh)."
+          "title": "Language",
+          "description": "Language for pronunciation. Choose based on your text's language."
         },
         {
           "name": "voice",
@@ -14293,7 +14293,7 @@
           },
           "default": "af_heart",
           "title": "Voice",
-          "description": "Voice name (see VOICES.md on the model page). Examples: af_heart, af_bella, af_jessica."
+          "description": "The voice to use. af_* = American female, am_* = American male, bf_* = British female, etc."
         },
         {
           "name": "speed",
@@ -14302,7 +14302,7 @@
           },
           "default": 1.0,
           "title": "Speed",
-          "description": "Speech speed multiplier (0.5\u20132.0)",
+          "description": "Speech speed multiplier: 0.5 = half speed, 1.0 = normal, 2.0 = double speed.",
           "min": 0.5,
           "max": 2.0
         }
@@ -14361,7 +14361,7 @@
     },
     {
       "title": "Text To Speech",
-      "description": "A generic Text-to-Speech node that can work with various Hugging Face TTS models.\n    tts, audio, speech, huggingface, speak, voice\n\n    Use cases:\n    - Generate speech from text for various applications\n    - Create voice content for apps, websites, or virtual assistants\n    - Produce audio narrations for videos, presentations, or e-learning content",
+      "description": "Converts text to speech using various Hugging Face TTS models for multiple languages.\n    tts, audio, speech, huggingface, voice, speak\n\n    Use cases:\n    - Generate speech from text for applications and websites\n    - Create voice content for virtual assistants and chatbots\n    - Produce audio narrations for videos and presentations\n    - Build accessibility features with text-to-speech output\n    - Generate multilingual speech using MMS-TTS models",
       "namespace": "huggingface.text_to_speech",
       "node_type": "huggingface.text_to_speech.TextToSpeech",
       "properties": [
@@ -14378,8 +14378,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for text-to-speech generation"
+          "title": "Model",
+          "description": "The TTS model to use. facebook/mms-tts-* models support many languages (eng=English, fra=French, deu=German, kor=Korean, etc.)."
         },
         {
           "name": "text",
@@ -14388,7 +14388,7 @@
           },
           "default": "Hello, this is a test of the text-to-speech system.",
           "title": "Input Text",
-          "description": "The text to convert to speech"
+          "description": "The text to convert to speech."
         }
       ],
       "outputs": [
@@ -14524,7 +14524,7 @@
     },
     {
       "title": "Base Qwen VL",
-      "description": "Base class for Qwen VL nodes.",
+      "description": "Base class for Qwen vision-language models supporting image and video understanding.\n    image, video, multimodal, VLM, Qwen",
       "namespace": "huggingface.image_text_to_text",
       "node_type": "huggingface.image_text_to_text.BaseQwenVL",
       "properties": [
@@ -14540,7 +14540,7 @@
             "data": null
           },
           "title": "Input Image",
-          "description": "The image to analyze."
+          "description": "An image to analyze. Leave empty if providing video input."
         },
         {
           "name": "video",
@@ -14556,7 +14556,7 @@
             "format": null
           },
           "title": "Input Video",
-          "description": "The video to analyze."
+          "description": "A video to analyze. Leave empty if providing image input."
         },
         {
           "name": "prompt",
@@ -14565,7 +14565,7 @@
           },
           "default": "Describe this image.",
           "title": "Prompt",
-          "description": "Instruction or question for the model."
+          "description": "Your question or instruction about the visual content."
         },
         {
           "name": "min_pixels",
@@ -14574,7 +14574,7 @@
           },
           "default": 0,
           "title": "Min Pixels",
-          "description": "Minimum number of pixels for image resizing."
+          "description": "Minimum pixel count for image resizing. Use 0 for automatic sizing."
         },
         {
           "name": "max_pixels",
@@ -14583,7 +14583,7 @@
           },
           "default": 0,
           "title": "Max Pixels",
-          "description": "Maximum number of pixels for image resizing."
+          "description": "Maximum pixel count for image resizing. Use 0 for automatic sizing."
         },
         {
           "name": "max_new_tokens",
@@ -14592,7 +14592,7 @@
           },
           "default": 128,
           "title": "Max New Tokens",
-          "description": "Maximum number of tokens to generate.",
+          "description": "Maximum length of the generated response in tokens.",
           "min": 1.0
         }
       ],
@@ -14620,7 +14620,7 @@
     },
     {
       "title": "Image Text To Text",
-      "description": "Answers questions or follows instructions given both an image and text.\n    image, text, visual question answering, multimodal, VLM\n\n    Use cases:\n    - Visual question answering with free-form reasoning\n    - Zero-shot object localization or structure extraction via instructions\n    - OCR-free document understanding when combined with prompts\n    - Multi-turn, instruction-following conversations grounded in an image",
+      "description": "Generates text responses based on an image and text prompt using vision-language models.\n    image, text, visual-question-answering, multimodal, VLM, captioning\n\n    Use cases:\n    - Answer questions about image content with detailed explanations\n    - Generate comprehensive image descriptions and captions\n    - Extract structured information (objects, text, layout) from images\n    - Perform OCR-free document understanding via natural language\n    - Build multi-turn visual conversations and assistants",
       "namespace": "huggingface.image_text_to_text",
       "node_type": "huggingface.image_text_to_text.ImageTextToText",
       "properties": [
@@ -14638,7 +14638,7 @@
             "ignore_patterns": null
           },
           "title": "Model",
-          "description": "The image-text-to-text model to use."
+          "description": "The vision-language model to use. SmolVLM is lightweight; LLaVA variants offer different capability levels."
         },
         {
           "name": "image",
@@ -14652,7 +14652,7 @@
             "data": null
           },
           "title": "Input Image",
-          "description": "The image to analyze."
+          "description": "The image to analyze and discuss."
         },
         {
           "name": "prompt",
@@ -14661,7 +14661,7 @@
           },
           "default": "Describe this image.",
           "title": "Prompt",
-          "description": "Instruction or question for the model about the image."
+          "description": "Your question or instruction about the image. Be specific for better results."
         },
         {
           "name": "max_new_tokens",
@@ -14670,7 +14670,7 @@
           },
           "default": 256,
           "title": "Max New Tokens",
-          "description": "Maximum number of tokens to generate.",
+          "description": "Maximum length of the generated response in tokens.",
           "min": 1.0
         }
       ],
@@ -14923,7 +14923,7 @@
     },
     {
       "title": "Load Image Text To Text Model",
-      "description": "Load a Hugging Face image-text-to-text model/pipeline by repo_id.\n\n    Use cases:\n    - Produces a configurable `HFImageTextToText` model reference for downstream nodes\n    - Ensures the selected model can be loaded with the \"image-text-to-text\" task",
+      "description": "Loads and validates a Hugging Face image-text-to-text model for use in downstream nodes.\n    model-loader, vision-language, multimodal, VLM\n\n    Use cases:\n    - Pre-load vision-language models for image understanding tasks\n    - Validate model availability before running pipelines\n    - Configure model settings for ImageTextToText processing",
       "namespace": "huggingface.image_text_to_text",
       "node_type": "huggingface.image_text_to_text.LoadImageTextToTextModel",
       "properties": [
@@ -14933,8 +14933,8 @@
             "type": "str"
           },
           "default": "HuggingFaceTB/SmolVLM-Instruct",
-          "title": "Model ID on Hugging Face",
-          "description": "The model repository ID to use for image-text-to-text generation."
+          "title": "Model ID",
+          "description": "The Hugging Face repository ID for the vision-language model (e.g., SmolVLM, LLaVA variants)."
         }
       ],
       "outputs": [
@@ -14951,7 +14951,7 @@
     },
     {
       "title": "Qwen 2 5 VL",
-      "description": "Qwen2.5-VL: A versatile vision-language model for image and video understanding.\n\n    Capabilities:\n    - Visual understanding of objects, text, charts, and layouts\n    - Video comprehension and event capturing\n    - Visual localization (bounding boxes, points)\n    - Structured output generation",
+      "description": "Analyzes images and videos using Alibaba's Qwen2.5-VL vision-language model.\n    image, video, multimodal, VLM, Qwen, visual-understanding\n\n    Use cases:\n    - Understand visual content including objects, text, charts, and layouts\n    - Comprehend videos with temporal event tracking and scene changes\n    - Localize objects with bounding boxes or point annotations\n    - Generate structured output (JSON, tables) from visual data\n    - Read and interpret documents, diagrams, and UI screenshots\n\n    **Note:** BNB-4bit variants from Unsloth reduce memory usage significantly.",
       "namespace": "huggingface.image_text_to_text",
       "node_type": "huggingface.image_text_to_text.Qwen2_5_VL",
       "properties": [
@@ -14967,7 +14967,7 @@
             "data": null
           },
           "title": "Input Image",
-          "description": "The image to analyze."
+          "description": "An image to analyze. Leave empty if providing video input."
         },
         {
           "name": "video",
@@ -14983,7 +14983,7 @@
             "format": null
           },
           "title": "Input Video",
-          "description": "The video to analyze."
+          "description": "A video to analyze. Leave empty if providing image input."
         },
         {
           "name": "prompt",
@@ -14992,7 +14992,7 @@
           },
           "default": "Describe this image.",
           "title": "Prompt",
-          "description": "Instruction or question for the model."
+          "description": "Your question or instruction about the visual content."
         },
         {
           "name": "min_pixels",
@@ -15001,7 +15001,7 @@
           },
           "default": 0,
           "title": "Min Pixels",
-          "description": "Minimum number of pixels for image resizing."
+          "description": "Minimum pixel count for image resizing. Use 0 for automatic sizing."
         },
         {
           "name": "max_pixels",
@@ -15010,7 +15010,7 @@
           },
           "default": 0,
           "title": "Max Pixels",
-          "description": "Maximum number of pixels for image resizing."
+          "description": "Maximum pixel count for image resizing. Use 0 for automatic sizing."
         },
         {
           "name": "max_new_tokens",
@@ -15019,7 +15019,7 @@
           },
           "default": 128,
           "title": "Max New Tokens",
-          "description": "Maximum number of tokens to generate.",
+          "description": "Maximum length of the generated response in tokens.",
           "min": 1.0
         },
         {
@@ -15036,7 +15036,7 @@
             "ignore_patterns": null
           },
           "title": "Model",
-          "description": "The Qwen2.5-VL model to use."
+          "description": "The Qwen2.5-VL model variant. Larger models (32B, 72B) offer better accuracy; BNB-4bit variants reduce memory usage."
         }
       ],
       "outputs": [
@@ -15447,7 +15447,7 @@
     },
     {
       "title": "Qwen 3 VL",
-      "description": "Qwen3-VL: Next-generation multimodal vision-language model for images and video.\n\n    Capabilities:\n    - Advanced visual reasoning across images and video\n    - Instruction-following with improved spatial-temporal grounding\n    - Supports DeepStack visual features and long-context chat templating",
+      "description": "Analyzes images and videos using Alibaba's next-generation Qwen3-VL vision-language model.\n    image, video, multimodal, VLM, Qwen, visual-reasoning, thinking\n\n    Use cases:\n    - Advanced visual reasoning across images and video content\n    - Instruction-following with improved spatial-temporal grounding\n    - Complex multi-step visual analysis with chain-of-thought reasoning\n    - Document, chart, and diagram understanding with enhanced accuracy\n    - Long-context visual conversations with memory\n\n    **Note:** Thinking variants include extended reasoning capabilities. BNB-4bit variants reduce memory usage.",
       "namespace": "huggingface.image_text_to_text",
       "node_type": "huggingface.image_text_to_text.Qwen3_VL",
       "properties": [
@@ -15463,7 +15463,7 @@
             "data": null
           },
           "title": "Input Image",
-          "description": "The image to analyze."
+          "description": "An image to analyze. Leave empty if providing video input."
         },
         {
           "name": "video",
@@ -15479,7 +15479,7 @@
             "format": null
           },
           "title": "Input Video",
-          "description": "The video to analyze."
+          "description": "A video to analyze. Leave empty if providing image input."
         },
         {
           "name": "prompt",
@@ -15488,7 +15488,7 @@
           },
           "default": "Describe this image.",
           "title": "Prompt",
-          "description": "Instruction or question for the model."
+          "description": "Your question or instruction about the visual content."
         },
         {
           "name": "min_pixels",
@@ -15497,7 +15497,7 @@
           },
           "default": 0,
           "title": "Min Pixels",
-          "description": "Minimum number of pixels for image resizing."
+          "description": "Minimum pixel count for image resizing. Use 0 for automatic sizing."
         },
         {
           "name": "max_pixels",
@@ -15506,7 +15506,7 @@
           },
           "default": 0,
           "title": "Max Pixels",
-          "description": "Maximum number of pixels for image resizing."
+          "description": "Maximum pixel count for image resizing. Use 0 for automatic sizing."
         },
         {
           "name": "max_new_tokens",
@@ -15515,7 +15515,7 @@
           },
           "default": 128,
           "title": "Max New Tokens",
-          "description": "Maximum number of tokens to generate.",
+          "description": "Maximum length of the generated response in tokens.",
           "min": 1.0
         },
         {
@@ -15532,7 +15532,7 @@
             "ignore_patterns": null
           },
           "title": "Model",
-          "description": "The Qwen3-VL model to use."
+          "description": "The Qwen3-VL model variant. Thinking variants add chain-of-thought; BNB-4bit reduces memory; larger models improve accuracy."
         }
       ],
       "outputs": [
@@ -16131,7 +16131,7 @@
     },
     {
       "title": "Text Classifier",
-      "description": "Classifies text into predefined categories using a Hugging Face model.\n    text, classification, zero-shot, natural language processing",
+      "description": "Classifies text into predefined categories using fine-tuned transformer models.\n    text, classification, sentiment, NLP, emotion\n\n    Use cases:\n    - Analyze sentiment in social media posts and reviews\n    - Detect emotions in customer feedback and conversations\n    - Classify support tickets by category or priority\n    - Filter spam or inappropriate content\n    - Categorize news articles by topic",
       "namespace": "huggingface.text_classification",
       "node_type": "huggingface.text_classification.TextClassifier",
       "properties": [
@@ -16148,8 +16148,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for the classification"
+          "title": "Model",
+          "description": "The text classification model. Use sentiment models for opinion analysis; emotion models for feeling detection."
         },
         {
           "name": "prompt",
@@ -16157,8 +16157,8 @@
             "type": "str"
           },
           "default": "",
-          "title": "Inputs",
-          "description": "The input text to the model"
+          "title": "Input Text",
+          "description": "The text to classify."
         }
       ],
       "outputs": [
@@ -16247,7 +16247,7 @@
     },
     {
       "title": "Zero Shot Text Classifier",
-      "description": "Performs zero-shot classification on text.\n    text, classification, zero-shot, natural language processing\n\n    Use cases:\n    - Classify text into custom categories without training\n    - Topic detection in documents\n    - Sentiment analysis with custom sentiment labels\n    - Intent classification in conversational AI",
+      "description": "Classifies text into custom categories without requiring task-specific training data.\n    text, classification, zero-shot, NLP, flexible\n\n    Use cases:\n    - Classify text into custom, user-defined categories on the fly\n    - Detect topics in documents without predefined training\n    - Perform sentiment analysis with custom sentiment labels\n    - Build flexible intent classification for conversational AI\n    - Prototype classification systems with dynamic categories",
       "namespace": "huggingface.text_classification",
       "node_type": "huggingface.text_classification.ZeroShotTextClassifier",
       "properties": [
@@ -16264,8 +16264,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for zero-shot classification"
+          "title": "Model",
+          "description": "The zero-shot classification model. BART-large-mnli is reliable; DeBERTa variants offer improved accuracy; mDeBERTa is multilingual."
         },
         {
           "name": "inputs",
@@ -16274,7 +16274,7 @@
           },
           "default": "",
           "title": "Input Text",
-          "description": "The text to classify"
+          "description": "The text to classify."
         },
         {
           "name": "candidate_labels",
@@ -16283,7 +16283,7 @@
           },
           "default": "",
           "title": "Candidate Labels",
-          "description": "Comma-separated list of candidate labels for classification"
+          "description": "Comma-separated list of labels to classify against (e.g., 'positive,negative,neutral' or 'sports,politics,technology')."
         },
         {
           "name": "multi_label",
@@ -16292,7 +16292,7 @@
           },
           "default": false,
           "title": "Multi-label Classification",
-          "description": "Whether to perform multi-label classification"
+          "description": "Allow multiple labels to be assigned to the same text (useful when text can belong to multiple categories)."
         }
       ],
       "outputs": [
@@ -16581,7 +16581,7 @@
     },
     {
       "title": "Translation",
-      "description": "Translates text from one language to another.\n    text, translation, natural language processing\n\n    Use cases:\n    - Multilingual content creation\n    - Cross-language communication\n    - Localization of applications and websites\n\n    Note: some models support more languages than others.",
+      "description": "Translates text between languages using sequence-to-sequence transformer models.\n    text, translation, NLP, multilingual, localization\n\n    Use cases:\n    - Translate content for multilingual websites and applications\n    - Enable cross-language communication in chat systems\n    - Localize documents and product descriptions\n    - Build multilingual content pipelines\n    - Support international user bases with automatic translation\n\n    **Note:** Different models support different language pairs. T5 models handle many language combinations.",
       "namespace": "huggingface.translation",
       "node_type": "huggingface.translation.Translation",
       "properties": [
@@ -16602,8 +16602,8 @@
             ],
             "ignore_patterns": null
           },
-          "title": "Model ID on HuggingFace",
-          "description": "The model ID to use for translation"
+          "title": "Model",
+          "description": "The translation model. T5 models support many language pairs; larger variants offer better quality."
         },
         {
           "name": "inputs",
@@ -16612,7 +16612,7 @@
           },
           "default": "",
           "title": "Input Text",
-          "description": "The text to translate"
+          "description": "The text to translate."
         },
         {
           "name": "source_lang",
@@ -16660,7 +16660,7 @@
           },
           "default": "en",
           "title": "Source Language",
-          "description": "The source language code (e.g., 'en' for English)"
+          "description": "The language of the input text."
         },
         {
           "name": "target_lang",
@@ -16708,7 +16708,7 @@
           },
           "default": "fr",
           "title": "Target Language",
-          "description": "The target language code (e.g., 'fr' for French)"
+          "description": "The language to translate the text into."
         }
       ],
       "outputs": [
@@ -16870,7 +16870,7 @@
     },
     {
       "title": "Reranker",
-      "description": "Reranks pairs of text based on their semantic similarity.\n    text, ranking, reranking, natural language processing\n\n    Use cases:\n    - Improve search results ranking\n    - Question-answer pair scoring\n    - Document relevance ranking",
+      "description": "Scores and ranks text pairs by semantic relevance using cross-encoder reranking models.\n    text, ranking, reranking, NLP, search\n\n    Use cases:\n    - Improve search result quality by reranking initial retrieval results\n    - Score question-answer pair relevance for QA systems\n    - Rank document relevance for information retrieval\n    - Build two-stage retrieval pipelines (retrieve then rerank)\n    - Filter and prioritize candidates in recommendation systems",
       "namespace": "huggingface.ranking",
       "node_type": "huggingface.ranking.Reranker",
       "properties": [
@@ -16887,8 +16887,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for reranking"
+          "title": "Model",
+          "description": "The reranking model. BGE-reranker-v2-m3 is multilingual; base and large variants offer different speed/accuracy tradeoffs."
         },
         {
           "name": "query",
@@ -16897,7 +16897,7 @@
           },
           "default": "",
           "title": "Query Text",
-          "description": "The query text to compare against candidates"
+          "description": "The query or question to compare candidates against."
         },
         {
           "name": "candidates",
@@ -16911,7 +16911,7 @@
           },
           "default": [],
           "title": "Candidate Texts",
-          "description": "List of candidate texts to rank"
+          "description": "List of text candidates to rank by relevance to the query."
         }
       ],
       "outputs": [
@@ -17046,7 +17046,7 @@
     },
     {
       "title": "Text Generation",
-      "description": "Generates text based on a given prompt.\n    text, generation, natural language processing\n\n    Use cases:\n    - Creative writing assistance\n    - Automated content generation\n    - Chatbots and conversational AI\n    - Code generation and completion",
+      "description": "Generates text continuations and responses from prompts using large language models.\n    text, generation, NLP, LLM, chatbot, creative-writing\n\n    Use cases:\n    - Generate creative writing, stories, and content\n    - Build chatbots and conversational AI assistants\n    - Create code completions and programming assistance\n    - Produce automated content for various applications\n    - Answer questions and provide explanations",
       "namespace": "huggingface.text_generation",
       "node_type": "huggingface.text_generation.TextGeneration",
       "properties": [
@@ -17063,8 +17063,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for the text generation. Supports both regular models and GGUF quantized models (detected by .gguf file extension)."
+          "title": "Model",
+          "description": "The language model to use. Instruction-tuned models (Instruct) follow prompts better; Base models are for completion tasks. BNB-4bit variants reduce memory."
         },
         {
           "name": "prompt",
@@ -17073,7 +17073,7 @@
           },
           "default": "",
           "title": "Prompt",
-          "description": "The input text prompt for generation"
+          "description": "The input text to generate from. For instruct models, phrase as a request; for base models, provide text to continue."
         },
         {
           "name": "max_new_tokens",
@@ -17082,7 +17082,7 @@
           },
           "default": 512,
           "title": "Max New Tokens",
-          "description": "The maximum number of new tokens to generate"
+          "description": "Maximum number of tokens to generate in the response."
         },
         {
           "name": "temperature",
@@ -17091,7 +17091,7 @@
           },
           "default": 1.0,
           "title": "Temperature",
-          "description": "Controls randomness in generation. Lower values make it more deterministic.",
+          "description": "Controls randomness: lower values (0.1-0.5) for focused responses, higher (0.7-1.5) for creative output.",
           "min": 0.0,
           "max": 2.0
         },
@@ -17102,7 +17102,7 @@
           },
           "default": 1.0,
           "title": "Top P",
-          "description": "Controls diversity of generated text. Lower values make it more focused.",
+          "description": "Nucleus sampling: limits token selection to top probability mass. Lower values (0.1-0.5) increase focus.",
           "min": 0.0,
           "max": 1.0
         },
@@ -17113,7 +17113,7 @@
           },
           "default": true,
           "title": "Do Sample",
-          "description": "Whether to use sampling or greedy decoding"
+          "description": "Enable sampling for varied outputs. Disable for deterministic, greedy decoding."
         }
       ],
       "outputs": [
@@ -18978,7 +18978,7 @@
     },
     {
       "title": "Chunks To SRT",
-      "description": "Convert audio chunks to SRT (SubRip Subtitle) format\n    subtitle, srt, whisper, transcription\n\n    **Use Cases:**\n    - Generate subtitles for videos\n    - Create closed captions from audio transcriptions\n    - Convert speech-to-text output to a standardized subtitle format\n\n    **Features:**\n    - Converts Whisper audio chunks to SRT format\n    - Supports customizable time offset\n    - Generates properly formatted SRT file content",
+      "description": "Converts Whisper audio chunks to SubRip Subtitle (SRT) format for video captioning.\n    subtitle, srt, whisper, transcription, captions\n\n    Use cases:\n    - Generate .srt subtitle files for video players\n    - Create closed captions for accessibility compliance\n    - Convert Whisper transcription output to industry-standard format\n    - Build automated subtitle generation pipelines",
       "namespace": "huggingface.automatic_speech_recognition",
       "node_type": "huggingface.automatic_speech_recognition.ChunksToSRT",
       "properties": [
@@ -18994,7 +18994,7 @@
           },
           "default": [],
           "title": "Audio Chunks",
-          "description": "List of audio chunks from Whisper transcription"
+          "description": "List of timestamped audio chunks from Whisper transcription output."
         },
         {
           "name": "time_offset",
@@ -19003,7 +19003,7 @@
           },
           "default": 0.0,
           "title": "Time Offset",
-          "description": "Time offset in seconds to apply to all timestamps"
+          "description": "Offset in seconds to add to all timestamps (useful when audio is from a clip within a longer video)."
         }
       ],
       "outputs": [
@@ -19021,7 +19021,7 @@
     },
     {
       "title": "Whisper",
-      "description": "Convert speech to text\n    asr, automatic-speech-recognition, speech-to-text, translate, transcribe, audio, huggingface\n\n    **Use Cases:**\n    - Voice input for a chatbot\n    - Transcribe or translate audio files\n    - Create subtitles for videos\n\n    **Features:**\n    - Multilingual speech recognition\n    - Speech translation\n    - Language identification\n\n    **Note**\n    - Language selection is sorted by word error rate in the FLEURS benchmark\n    - There are many variants of Whisper that are optimized for different use cases.\n\n    **Links:**\n    - https://github.com/openai/whisper\n    - https://platform.openai.com/docs/guides/speech-to-text/supported-languages",
+      "description": "Converts speech to text using OpenAI's Whisper models with multilingual support.\n    asr, automatic-speech-recognition, speech-to-text, translate, transcribe, audio, huggingface\n\n    Use cases:\n    - Transcribe audio files into text for documentation or analysis\n    - Enable voice input for chatbots and virtual assistants\n    - Create subtitles and closed captions for videos\n    - Translate speech from one language to English\n    - Build voice-controlled applications\n\n    **Note:** Language selection follows Whisper's FLEURS benchmark word error rate ranking.\n    Multiple model variants are available, optimized for different speed/accuracy trade-offs.\n\n    **Links:**\n    - https://github.com/openai/whisper\n    - https://platform.openai.com/docs/guides/speech-to-text/supported-languages",
       "namespace": "huggingface.automatic_speech_recognition",
       "node_type": "huggingface.automatic_speech_recognition.Whisper",
       "properties": [
@@ -19038,8 +19038,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for the speech recognition."
+          "title": "Model",
+          "description": "The Whisper model variant to use. Larger models (large-v3) offer better accuracy; smaller models (small, tiny) are faster. Turbo variants balance speed and quality."
         },
         {
           "name": "audio",
@@ -19053,7 +19053,7 @@
             "data": null
           },
           "title": "Audio Input",
-          "description": "The input audio to transcribe."
+          "description": "The audio file to transcribe. Supports WAV, MP3, FLAC and other common formats."
         },
         {
           "name": "task",
@@ -19067,7 +19067,7 @@
           },
           "default": "transcribe",
           "title": "Task",
-          "description": "The task to perform: 'transcribe' for speech-to-text or 'translate' for speech translation."
+          "description": "Choose 'transcribe' for speech-to-text in the original language, or 'translate' to convert any language to English."
         },
         {
           "name": "language",
@@ -19141,7 +19141,7 @@
           },
           "default": "auto_detect",
           "title": "Language",
-          "description": "The language of the input audio. If not specified, the model will attempt to detect it automatically."
+          "description": "Specify the audio's language for better accuracy, or use 'auto_detect' to let the model identify it automatically."
         },
         {
           "name": "timestamps",
@@ -19156,7 +19156,7 @@
           },
           "default": "none",
           "title": "Timestamps",
-          "description": "The type of timestamps to return for the generated text."
+          "description": "Choose 'word' for word-level timing, 'sentence' for phrase-level timing, or 'none' to disable timestamps."
         }
       ],
       "outputs": [
@@ -21248,7 +21248,7 @@
     },
     {
       "title": "Object Detection",
-      "description": "Detects and localizes objects in images.\n    image, object detection, bounding boxes, huggingface\n\n    Use cases:\n    - Identify and count objects in images\n    - Locate specific items in complex scenes\n    - Assist in autonomous vehicle vision systems\n    - Enhance security camera footage analysis",
+      "description": "Detects and localizes objects in images with bounding boxes and confidence scores.\n    image, object-detection, bounding-boxes, huggingface, computer-vision\n\n    Use cases:\n    - Count and identify objects in photographs and videos\n    - Locate specific items in complex scenes for robotics\n    - Analyze security camera footage for monitoring systems\n    - Detect tables and structures in documents\n    - Build automated inventory and inspection systems",
       "namespace": "huggingface.object_detection",
       "node_type": "huggingface.object_detection.ObjectDetection",
       "properties": [
@@ -21265,8 +21265,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for object detection"
+          "title": "Model",
+          "description": "The object detection model. DETR models offer high accuracy; YOLOS variants are faster. Specialized models exist for tables and fashion items."
         },
         {
           "name": "image",
@@ -21279,8 +21279,8 @@
             "asset_id": null,
             "data": null
           },
-          "title": "Inputs",
-          "description": "The input image for object detection"
+          "title": "Image",
+          "description": "The image to detect objects in. Supports common formats like JPEG, PNG."
         },
         {
           "name": "threshold",
@@ -21289,7 +21289,7 @@
           },
           "default": 0.9,
           "title": "Confidence Threshold",
-          "description": "Minimum confidence score for detected objects"
+          "description": "Minimum confidence score (0-1) for detected objects. Higher values return fewer but more certain detections."
         },
         {
           "name": "top_k",
@@ -21298,7 +21298,7 @@
           },
           "default": 5,
           "title": "Top K",
-          "description": "The number of top predictions to return"
+          "description": "Maximum number of detected objects to return, sorted by confidence."
         }
       ],
       "outputs": [
@@ -21533,7 +21533,7 @@
     },
     {
       "title": "Visualize Object Detection",
-      "description": "Visualizes object detection results on images.\n    image, object detection, bounding boxes, visualization, mask",
+      "description": "Renders object detection results as labeled bounding boxes overlaid on the original image.\n    image, object-detection, bounding-boxes, visualization, annotation\n\n    Use cases:\n    - Visualize and verify object detection model outputs\n    - Create annotated images for documentation and presentations\n    - Debug and analyze detection accuracy and coverage\n    - Generate labeled images for training data review",
       "namespace": "huggingface.object_detection",
       "node_type": "huggingface.object_detection.VisualizeObjectDetection",
       "properties": [
@@ -21549,7 +21549,7 @@
             "data": null
           },
           "title": "Image",
-          "description": "The input image to visualize"
+          "description": "The original image to draw detection boxes on."
         },
         {
           "name": "objects",
@@ -21563,7 +21563,7 @@
           },
           "default": {},
           "title": "Detected Objects",
-          "description": "The detected objects to visualize"
+          "description": "List of detected objects from ObjectDetection or ZeroShotObjectDetection nodes."
         }
       ],
       "outputs": [
@@ -21581,7 +21581,7 @@
     },
     {
       "title": "Zero-Shot Object Detection",
-      "description": "Detects objects in images without the need for training data.\n    image, object detection, bounding boxes, zero-shot, mask\n\n    Use cases:\n    - Quickly detect objects in images without training data\n    - Identify objects in images without predefined labels\n    - Automate object detection for large datasets",
+      "description": "Detects objects in images using custom labels without requiring task-specific training.\n    image, object-detection, bounding-boxes, zero-shot, flexible\n\n    Use cases:\n    - Detect custom objects without training a specialized model\n    - Search for specific items described in natural language\n    - Build flexible object detection systems with dynamic categories\n    - Prototype detection applications with arbitrary object classes",
       "namespace": "huggingface.object_detection",
       "node_type": "huggingface.object_detection.ZeroShotObjectDetection",
       "properties": [
@@ -21598,8 +21598,8 @@
             "allow_patterns": null,
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for object detection"
+          "title": "Model",
+          "description": "The zero-shot detection model. OWL-ViT/OWLv2 models use CLIP for flexible label matching; Grounding-DINO offers strong performance."
         },
         {
           "name": "image",
@@ -21612,8 +21612,8 @@
             "asset_id": null,
             "data": null
           },
-          "title": "Inputs",
-          "description": "The input image for object detection"
+          "title": "Image",
+          "description": "The image to detect objects in."
         },
         {
           "name": "threshold",
@@ -21622,7 +21622,7 @@
           },
           "default": 0.1,
           "title": "Confidence Threshold",
-          "description": "Minimum confidence score for detected objects"
+          "description": "Minimum confidence score (0-1) for detections. Lower values find more objects but may include false positives."
         },
         {
           "name": "top_k",
@@ -21631,7 +21631,7 @@
           },
           "default": 5,
           "title": "Top K",
-          "description": "The number of top predictions to return"
+          "description": "Maximum number of detected objects to return per label."
         },
         {
           "name": "candidate_labels",
@@ -21640,7 +21640,7 @@
           },
           "default": "",
           "title": "Candidate Labels",
-          "description": "The candidate labels to detect in the image, separated by commas"
+          "description": "Comma-separated list of object labels to detect (e.g., 'cat,dog,person,car'). Use descriptive phrases for better results."
         }
       ],
       "outputs": [
@@ -21840,7 +21840,7 @@
     },
     {
       "title": "Token Classification",
-      "description": "Performs token classification tasks such as Named Entity Recognition (NER).\n    text, token classification, named entity recognition, natural language processing\n\n    Use cases:\n    - Named Entity Recognition in text\n    - Part-of-speech tagging\n    - Chunking and shallow parsing\n    - Information extraction from unstructured text",
+      "description": "Performs token-level classification tasks such as Named Entity Recognition (NER).\n    text, token-classification, NER, NLP, entity-extraction\n\n    Use cases:\n    - Extract named entities (people, organizations, locations) from text\n    - Identify parts of speech in sentences\n    - Perform chunking and shallow parsing for text analysis\n    - Extract structured information from unstructured documents\n    - Build information extraction pipelines for documents",
       "namespace": "huggingface.token_classification",
       "node_type": "huggingface.token_classification.TokenClassification",
       "properties": [
@@ -21862,8 +21862,8 @@
             ],
             "ignore_patterns": null
           },
-          "title": "Model ID on Huggingface",
-          "description": "The model ID to use for token classification"
+          "title": "Model",
+          "description": "The token classification model. BERT-large-cased-finetuned-conll03 offers high-quality NER for English text."
         },
         {
           "name": "inputs",
@@ -21872,7 +21872,7 @@
           },
           "default": "",
           "title": "Input Text",
-          "description": "The input text for token classification"
+          "description": "The text to extract entities from."
         },
         {
           "name": "aggregation_strategy",
@@ -21888,7 +21888,7 @@
           },
           "default": "simple",
           "title": "Aggregation Strategy",
-          "description": "Strategy to aggregate tokens into entities"
+          "description": "How to combine token predictions into entities: 'simple' merges adjacent tokens; 'first'/'average'/'max' control subword handling."
         }
       ],
       "outputs": [
