@@ -52,6 +52,7 @@ class GCPInstanceSetup:
         self.machine_type = machine_type
         self.gpu_type = gpu_type
         self.gpu_count = gpu_count
+        self.credentials = credentials
 
         # Initialize clients with credentials
         self.instances_client = compute_v1.InstancesClient(credentials=credentials)
@@ -220,7 +221,7 @@ echo "Setup completed successfully at $(date)"
             if instance.network_interfaces:
                 if instance.network_interfaces[0].access_configs:
                     external_ip = (
-                        instance.network_interfaces[0].access_configs[0].nat_i_p
+                        instance.network_interfaces[0].access_configs[0].nat_ip
                     )
                     print(f"External IP: {external_ip}")
 
@@ -240,17 +241,14 @@ echo "Setup completed successfully at $(date)"
         """Wait for a GCP operation to complete."""
         start_time = time.time()
 
-        # Get credentials from the instances client
-        credentials = self.instances_client._transport._credentials
-
         while operation.status != compute_v1.Operation.Status.DONE:
             if time.time() - start_time > timeout:
                 raise TimeoutError(f"Operation timed out after {timeout} seconds")
 
             time.sleep(5)
-            # Refresh operation status
+            # Refresh operation status using credentials stored during initialization
             zone_operations_client = compute_v1.ZoneOperationsClient(
-                credentials=credentials
+                credentials=self.credentials
             )
             operation = zone_operations_client.get(
                 project=self.project_id,
