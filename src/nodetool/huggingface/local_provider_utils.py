@@ -1,6 +1,7 @@
 """
 Shared helpers for the local HuggingFace provider and nodes.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -131,7 +132,9 @@ async def _ensure_file_cached(
         cache_path = await HF_FAST_CACHE.resolve(repo_id, file_path)
         if cache_path:
             return cache_path
-        return None
+        raise ValueError(
+            f"Failed to cache model file {repo_id}/{file_path} after download attempt"
+        )
 
     raise ValueError(f"Model {repo_id}/{file_path} must be downloaded first")
 
