@@ -1,6 +1,6 @@
 name: GCP Instance Setup
 
-# This workflow sets up a GCP instance with CUDA 12.9, installs nodetool-huggingface,
+# This workflow sets up a GCP instance with CUDA 12.8, installs nodetool-huggingface,
 # and runs a Stable Diffusion example.
 
 on:

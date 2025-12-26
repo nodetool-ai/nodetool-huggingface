@@ -1,6 +1,6 @@
 # GCP Instance Setup for Nodetool HuggingFace
 
-This directory contains scripts to set up a Google Cloud Platform (GCP) instance with CUDA 12.9, install the nodetool-huggingface project, and run Stable Diffusion examples.
+This directory contains scripts to set up a Google Cloud Platform (GCP) instance with CUDA 12.8, install the nodetool-huggingface project, and run Stable Diffusion examples.
 
 ## Files
 
@@ -64,7 +64,7 @@ python setup_gcp_instance.py delete
 When you create an instance, the script will:
 
 1. **Create a GCP Compute Engine instance** with:
-   - Deep Learning VM image with CUDA 12.9 pre-installed
+   - Deep Learning VM image with CUDA 12.8 pre-installed
    - NVIDIA Tesla T4 GPU (1x)
    - n1-standard-4 machine type (4 vCPUs, 15 GB RAM)
    - 50 GB boot disk

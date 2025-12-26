@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Script to setup a GCP instance with CUDA 12.9, install nodetool-huggingface,
+Script to setup a GCP instance with CUDA 12.8, install nodetool-huggingface,
 download a Stable Diffusion model, and run an example.
 
 This script uses the Google Cloud Python SDK to:
-1. Create a GCP Compute Engine instance with CUDA 12.9 pre-installed
+1. Create a GCP Compute Engine instance with CUDA 12.8 pre-installed
 2. Install the nodetool-huggingface project
 3. Download a recommended Stable Diffusion model
 4. Run a Stable Diffusion example
@@ -59,11 +59,11 @@ class GCPInstanceSetup:
         self.images_client = compute_v1.ImagesClient(credentials=credentials)
 
     def get_cuda_image(self) -> str:
-        """Get the latest Deep Learning VM image with CUDA 12.9."""
+        """Get the latest Deep Learning VM image with CUDA 12.8."""
         # Deep Learning VM images from Google with CUDA pre-installed
         # These are maintained by Google and include CUDA 12.x
         project = "deeplearning-platform-release"
-        family = "common-cu129-v20250108-debian-11-py311"
+        family = "common-cu128"
 
         try:
             # Try to get the image from the family
@@ -71,7 +71,7 @@ class GCPInstanceSetup:
             print(f"Using image: {image.self_link}")
             return image.self_link
         except Exception as e:
-            print(f"Warning: Could not find specific CUDA 12.9 image: {e}")
+            print(f"Warning: Could not find specific CUDA 12.8 image: {e}")
             # Fallback to a known working Deep Learning image
             return f"projects/{project}/global/images/family/pytorch-latest-gpu"
 
