@@ -1,6 +1,7 @@
 """
 Image-to-image pipeline loading for local HuggingFace models.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -45,12 +46,21 @@ async def load_image_to_image_pipeline(
     if not model_id:
         raise ValueError("Please select a model")
 
+    use_cpu_offload = False
+
+    # Determine expected CPU offload behavior based on model_id/model_path,
+    # so that cached pipelines return the correct flag as well.
+    if model_path:
+        from nodetool.nodes.huggingface.image_to_image import QwenImageEdit
+
+        if _is_node_model(model_id, model_path, QwenImageEdit):
+            use_cpu_offload = True
+
     cache_key = cache_key or f"image-to-image:{model_id}:{model_path or 'repo'}"
     cached = ModelManager.get_model(cache_key)
     if cached:
-        return cached, False
+        return cached, use_cpu_offload
 
-    use_cpu_offload = False
     pipeline: Any
 
     if model_path:
@@ -80,7 +90,9 @@ async def load_image_to_image_pipeline(
                 torch = _get_torch()
                 pipeline = FluxFillPipeline.from_single_file(
                     str(cache_path),
-                    torch_dtype=torch.bfloat16 if _is_cuda_available() else torch.float32,
+                    torch_dtype=(
+                        torch.bfloat16 if _is_cuda_available() else torch.float32
+                    ),
                 )
         elif _is_node_model(model_id, model_path, QwenImageEdit):
             from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import (
@@ -95,6 +107,7 @@ async def load_image_to_image_pipeline(
                     node_id=node_id,
                     pipeline_class=QwenImageEditPipeline,
                     base_model_id="Qwen/Qwen-Image-Edit",
+                    torch_dtype=_get_torch().bfloat16,
                 )
                 use_cpu_offload = True
             else:
@@ -103,6 +116,7 @@ async def load_image_to_image_pipeline(
                     str(cache_path),
                     torch_dtype=torch.float16,
                 )
+                use_cpu_offload = True
         elif is_nunchaku_transformer(model_id, model_path):
             pipeline = await load_nunchaku_flux_pipeline(
                 context=context,
@@ -124,9 +138,11 @@ async def load_image_to_image_pipeline(
 
                 pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
                     str(cache_path),
-                    torch_dtype=_get_torch().float16
-                    if _is_cuda_available()
-                    else _get_torch().float32,
+                    torch_dtype=(
+                        _get_torch().float16
+                        if _is_cuda_available()
+                        else _get_torch().float32
+                    ),
                 )
             elif "diffusers:StableDiffusionXLPipeline" in model_info.tags:
                 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
@@ -135,9 +151,11 @@ async def load_image_to_image_pipeline(
 
                 pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
                     str(cache_path),
-                    torch_dtype=_get_torch().float16
-                    if _is_cuda_available()
-                    else _get_torch().float32,
+                    torch_dtype=(
+                        _get_torch().float16
+                        if _is_cuda_available()
+                        else _get_torch().float32
+                    ),
                 )
             elif "diffusers:StableDiffusion3Pipeline" in model_info.tags:
                 from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3_img2img import (
@@ -146,9 +164,11 @@ async def load_image_to_image_pipeline(
 
                 pipeline = StableDiffusion3Img2ImgPipeline.from_single_file(
                     str(cache_path),
-                    torch_dtype=_get_torch().float16
-                    if _is_cuda_available()
-                    else _get_torch().float32,
+                    torch_dtype=(
+                        _get_torch().float16
+                        if _is_cuda_available()
+                        else _get_torch().float32
+                    ),
                 )
             elif "flux" in model_info.tags:
                 from diffusers.pipelines.flux.pipeline_flux_img2img import (
@@ -157,9 +177,11 @@ async def load_image_to_image_pipeline(
 
                 pipeline = FluxImg2ImgPipeline.from_single_file(
                     str(cache_path),
-                    torch_dtype=_get_torch().bfloat16
-                    if _is_cuda_available()
-                    else _get_torch().float32,
+                    torch_dtype=(
+                        _get_torch().bfloat16
+                        if _is_cuda_available()
+                        else _get_torch().float32
+                    ),
                 )
             else:
                 raise ValueError(

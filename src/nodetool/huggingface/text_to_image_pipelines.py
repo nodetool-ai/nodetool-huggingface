@@ -1,6 +1,7 @@
 """
 Text-to-image pipeline loading for local HuggingFace models.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -24,6 +25,7 @@ from nodetool.integrations.huggingface.huggingface_models import (
 from nodetool.ml.core.model_manager import ModelManager
 from nodetool.workflows.processing_context import ProcessingContext
 
+
 async def load_text_to_image_pipeline(
     *,
     context: ProcessingContext,
@@ -43,12 +45,20 @@ async def load_text_to_image_pipeline(
     if not model_id:
         raise ValueError("Please select a model")
 
+    # Determine whether this model configuration should use CPU offload.
+    use_cpu_offload = False
+    if model_path:
+        # Import here to avoid module-level dependency when not needed.
+        from nodetool.nodes.huggingface.text_to_image import QwenImage
+
+        if _is_node_model(model_id, model_path, QwenImage):
+            use_cpu_offload = True
+
     cache_key = cache_key or f"text-to-image:{model_id}:{model_path or 'repo'}"
     cached = ModelManager.get_model(cache_key)
     if cached:
-        return cached, False
+        return cached, use_cpu_offload
 
-    use_cpu_offload = False
     pipeline: Any
 
     if model_path:
@@ -85,7 +95,9 @@ async def load_text_to_image_pipeline(
                 torch = _get_torch()
                 pipeline = FluxPipeline.from_single_file(
                     str(cache_path),
-                    torch_dtype=torch.bfloat16 if _is_cuda_available() else torch.float32,
+                    torch_dtype=(
+                        torch.bfloat16 if _is_cuda_available() else torch.float32
+                    ),
                 )
         elif _is_node_model(model_id, model_path, QwenImage):
             from diffusers.pipelines.qwenimage.pipeline_qwenimage import (
@@ -119,7 +131,9 @@ async def load_text_to_image_pipeline(
 
                 pipeline = StableDiffusionXLPipeline.from_single_file(
                     str(cache_path),
-                    torch_dtype=torch.float16 if _is_cuda_available() else torch.float32,
+                    torch_dtype=(
+                        torch.float16 if _is_cuda_available() else torch.float32
+                    ),
                 )
             elif "diffusers:StableDiffusionPipeline" in model_info.tags:
                 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
@@ -128,7 +142,9 @@ async def load_text_to_image_pipeline(
 
                 pipeline = StableDiffusionPipeline.from_single_file(
                     str(cache_path),
-                    torch_dtype=torch.float16 if _is_cuda_available() else torch.float32,
+                    torch_dtype=(
+                        torch.float16 if _is_cuda_available() else torch.float32
+                    ),
                 )
             elif "diffusers:StableDiffusion3Pipeline" in model_info.tags:
                 from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import (
@@ -137,14 +153,18 @@ async def load_text_to_image_pipeline(
 
                 pipeline = StableDiffusion3Pipeline.from_single_file(
                     str(cache_path),
-                    torch_dtype=torch.float16 if _is_cuda_available() else torch.float32,
+                    torch_dtype=(
+                        torch.float16 if _is_cuda_available() else torch.float32
+                    ),
                 )
             elif "flux" in model_info.tags:
                 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 
                 pipeline = FluxPipeline.from_single_file(
                     str(cache_path),
-                    torch_dtype=torch.bfloat16 if _is_cuda_available() else torch.float32,
+                    torch_dtype=(
+                        torch.bfloat16 if _is_cuda_available() else torch.float32
+                    ),
                 )
             else:
                 raise ValueError(
