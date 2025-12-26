@@ -39,7 +39,7 @@ class GCPInstanceSetup:
     def __init__(
         self,
         project_id: str,
-        zone: str = "us-central1-a",
+        zone: str = "europe-west4-a",
         instance_name: str = "nodetool-hf-instance",
         machine_type: str = "n1-standard-4",
         gpu_type: str = "nvidia-tesla-t4",
@@ -168,6 +168,70 @@ echo "Setup completed successfully at $(date)"
             return instance.status
         except Exception:
             return "NOT_FOUND"
+
+    def start_instance(self) -> None:
+        """Start a stopped instance."""
+        if not self.instance_exists():
+            print(f"Error: Instance '{self.instance_name}' does not exist")
+            sys.exit(1)
+        
+        status = self.get_instance_status()
+        if status == "RUNNING":
+            print(f"Instance '{self.instance_name}' is already running!")
+            self._print_instance_info()
+            return
+        
+        print(f"Starting instance '{self.instance_name}'...")
+        self._start_instance()
+
+    def stop_instance(self) -> None:
+        """Stop a running instance."""
+        if not self.instance_exists():
+            print(f"Error: Instance '{self.instance_name}' does not exist")
+            sys.exit(1)
+        
+        status = self.get_instance_status()
+        if status == "TERMINATED" or status == "STOPPED":
+            print(f"Instance '{self.instance_name}' is already stopped!")
+            return
+        
+        print(f"Stopping instance '{self.instance_name}'...")
+        try:
+            operation = self.instances_client.stop(
+                project=self.project_id,
+                zone=self.zone,
+                instance=self.instance_name,
+            )
+
+            print("Waiting for instance to stop...")
+            self.wait_for_operation(operation)
+            print(f"Instance '{self.instance_name}' stopped successfully!")
+
+        except Exception as e:
+            print(f"Error stopping instance: {e}")
+            raise
+
+    def run_script(self) -> None:
+        """Run the SD example script on an existing running instance."""
+        if not self.instance_exists():
+            print(f"Error: Instance '{self.instance_name}' does not exist")
+            print("Please start the instance first with 'start' command")
+            sys.exit(1)
+        
+        status = self.get_instance_status()
+        if status != "RUNNING":
+            print(f"Error: Instance '{self.instance_name}' is not running (status: {status})")
+            print("Please start the instance first with 'start' command")
+            sys.exit(1)
+        
+        print(f"Running SD example script on instance '{self.instance_name}'...")
+        print("\nTo run the script, SSH into the instance and execute:")
+        print(f"  gcloud compute ssh {self.instance_name} --zone {self.zone}")
+        print("  cd /opt/nodetool-huggingface/nodetool-huggingface/scripts")
+        print("  source ../venv/bin/activate")
+        print("  python run_sd_example.py")
+        print("\nOr run it directly:")
+        print(f"  gcloud compute ssh {self.instance_name} --zone {self.zone} --command 'cd /opt/nodetool-huggingface/nodetool-huggingface && source venv/bin/activate && cd scripts && python run_sd_example.py'")
 
     def _start_instance(self) -> None:
         """Start a stopped instance (internal helper)."""
@@ -343,7 +407,7 @@ def main():
     """Main entry point."""
     # Get configuration from environment
     project_id = os.environ.get("GCP_PROJECT_ID")
-    zone = os.environ.get("GCP_ZONE", "us-central1-a")
+    zone = os.environ.get("GCP_ZONE", "europe-west4-a")
     service_account_key = os.environ.get("GCP_ACCOUNT_KEY")
 
     if not project_id:
@@ -368,6 +432,17 @@ def main():
         print(f"Error setting up credentials: {e}")
         sys.exit(1)
 
+    # Parse command line arguments
+    action = sys.argv[1] if len(sys.argv) > 1 else "start"
+
+    if action not in ["start", "run", "stop"]:
+        print(f"Usage: {sys.argv[0]} [start|run|stop]")
+        print("\nActions:")
+        print("  start - Create (if needed) and start the instance")
+        print("  run   - Run the SD example script on the running instance")
+        print("  stop  - Stop the running instance")
+        sys.exit(1)
+
     # Create setup manager with credentials
     setup = GCPInstanceSetup(
         project_id=project_id,
@@ -375,8 +450,17 @@ def main():
         credentials=credentials,
     )
 
-    # Run the instance (creates if needed, starts if stopped)
-    setup.run_instance()
+    # Execute action
+    if action == "start":
+        # Check if instance exists, create if not, start if stopped
+        if not setup.instance_exists():
+            setup.create_instance()
+        else:
+            setup.start_instance()
+    elif action == "run":
+        setup.run_script()
+    elif action == "stop":
+        setup.stop_instance()
 
 
 if __name__ == "__main__":
