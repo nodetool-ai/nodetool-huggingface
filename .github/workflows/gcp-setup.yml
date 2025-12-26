@@ -1,6 +1,6 @@
 name: GCP Instance Setup
 
-# This workflow manages a GCP instance with CUDA 12.8 for running Stable Diffusion.
+# This workflow manages a GCP instance with CUDA 12.1 for running Stable Diffusion.
 # The instance automatically shuts down after 2 hours using GCP's max-run-duration feature.
 
 on:

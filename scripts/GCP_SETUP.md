@@ -1,6 +1,6 @@
 # GCP Instance Setup for Nodetool HuggingFace
 
-This directory contains scripts to manage a Google Cloud Platform (GCP) instance with CUDA 12.8 for running Stable Diffusion examples. The instance automatically shuts down after 2 hours using GCP's max-run-duration feature.
+This directory contains scripts to manage a Google Cloud Platform (GCP) instance with CUDA 12.1 for running Stable Diffusion examples. The instance automatically shuts down after 2 hours using GCP's max-run-duration feature.
 
 ## Files
 
@@ -76,7 +76,7 @@ When you start the instance, the script will:
 
 1. **Check if instance exists** - creates new if needed, starts if stopped
 2. **Create a GCP Compute Engine instance** (if needed) with:
-   - Deep Learning VM image with CUDA 12.8 pre-installed
+   - Deep Learning VM image with CUDA 12.1 pre-installed
    - NVIDIA Tesla T4 GPU (1x)
    - n1-standard-4 machine type (4 vCPUs, 15 GB RAM)
    - 50 GB boot disk
