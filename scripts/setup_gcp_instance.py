@@ -142,10 +142,6 @@ cd scripts
 python3 run_sd_example.py
 
 echo "Setup completed successfully at $(date)"
-
-# Stop the instance after completing the script
-echo "Stopping instance..."
-gcloud compute instances stop $(hostname) --zone=$(curl -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/zone | cut -d/ -f4) --quiet
 """
         return script
 
@@ -173,9 +169,8 @@ gcloud compute instances stop $(hostname) --zone=$(curl -H "Metadata-Flavor: Goo
         except Exception:
             return "NOT_FOUND"
 
-    def start_instance(self) -> None:
-        """Start a stopped instance."""
-        print(f"Starting instance '{self.instance_name}'...")
+    def _start_instance(self) -> None:
+        """Start a stopped instance (internal helper)."""
         try:
             operation = self.instances_client.start(
                 project=self.project_id,
@@ -186,8 +181,15 @@ gcloud compute instances stop $(hostname) --zone=$(curl -H "Metadata-Flavor: Goo
             print("Waiting for instance to start...")
             self.wait_for_operation(operation)
             print(f"Instance '{self.instance_name}' started successfully!")
+            self._print_instance_info()
 
-            # Get instance details
+        except Exception as e:
+            print(f"Error starting instance: {e}")
+            raise
+
+    def _print_instance_info(self) -> None:
+        """Print instance information."""
+        try:
             instance = self.instances_client.get(
                 project=self.project_id,
                 zone=self.zone,
@@ -202,30 +204,16 @@ gcloud compute instances stop $(hostname) --zone=$(curl -H "Metadata-Flavor: Goo
                     )
                     print(f"External IP: {external_ip}")
 
-        except Exception as e:
-            print(f"Error starting instance: {e}")
-            raise
-
-    def stop_instance(self) -> None:
-        """Stop a running instance."""
-        print(f"Stopping instance '{self.instance_name}'...")
-        try:
-            operation = self.instances_client.stop(
-                project=self.project_id,
-                zone=self.zone,
-                instance=self.instance_name,
+            print("\nInstance setup is running in the background.")
+            print("You can check the startup script logs with:")
+            print(
+                f"  gcloud compute ssh {self.instance_name} --zone {self.zone} --command 'tail -f /var/log/startup-script.log'"
             )
-
-            print("Waiting for instance to stop...")
-            self.wait_for_operation(operation)
-            print(f"Instance '{self.instance_name}' stopped successfully!")
-
         except Exception as e:
-            print(f"Error stopping instance: {e}")
-            raise
+            print(f"Warning: Could not retrieve instance info: {e}")
 
-    def create_instance(self, force: bool = False) -> None:
-        """Create and configure the GCP instance, or reuse existing one."""
+    def run_instance(self) -> None:
+        """Run the GCP instance - creates if doesn't exist, starts if stopped."""
         # Check if instance already exists
         if self.instance_exists():
             status = self.get_instance_status()
@@ -233,36 +221,17 @@ gcloud compute instances stop $(hostname) --zone=$(curl -H "Metadata-Flavor: Goo
                 f"Instance '{self.instance_name}' already exists with status: {status}"
             )
 
-            if force:
-                print("Force flag set. Deleting existing instance...")
-                self.delete_instance()
-                print("Creating new instance...")
+            if status == "TERMINATED" or status == "STOPPED":
+                print("Starting existing instance...")
+                self._start_instance()
+            elif status == "RUNNING":
+                print("Instance is already running!")
+                self._print_instance_info()
             else:
-                print("Reusing existing instance...")
-                if status == "TERMINATED" or status == "STOPPED":
-                    self.start_instance()
-                elif status == "RUNNING":
-                    print("Instance is already running!")
-                    # Get instance details
-                    instance = self.instances_client.get(
-                        project=self.project_id,
-                        zone=self.zone,
-                        instance=self.instance_name,
-                    )
+                print(f"Instance is in {status} state. Waiting for it to be ready...")
+            return
 
-                    # Get external IP
-                    if instance.network_interfaces:
-                        if instance.network_interfaces[0].access_configs:
-                            external_ip = (
-                                instance.network_interfaces[0]
-                                .access_configs[0]
-                                .nat_ip
-                            )
-                            print(f"External IP: {external_ip}")
-                else:
-                    print(f"Instance is in {status} state. Waiting...")
-                return
-
+        # Create new instance
         print(f"Creating instance '{self.instance_name}' in {self.zone}...")
 
         # Get the CUDA image
@@ -305,10 +274,13 @@ gcloud compute instances stop $(hostname) --zone=$(curl -H "Metadata-Flavor: Goo
         instance.network_interfaces = [network_interface]
         instance.guest_accelerators = [accelerator]
 
-        # Set scheduling to allow GPU
+        # Set scheduling to allow GPU and auto-shutdown
         instance.scheduling = compute_v1.Scheduling()
         instance.scheduling.on_host_maintenance = "TERMINATE"
         instance.scheduling.automatic_restart = True
+        # Set max run duration to 2 hours (7200 seconds) for auto-shutdown
+        instance.scheduling.max_run_duration = compute_v1.Duration()
+        instance.scheduling.max_run_duration.seconds = 7200
 
         # Add startup script
         metadata = compute_v1.Metadata()
@@ -333,27 +305,7 @@ gcloud compute instances stop $(hostname) --zone=$(curl -H "Metadata-Flavor: Goo
             self.wait_for_operation(operation)
 
             print(f"Instance '{self.instance_name}' created successfully!")
-
-            # Get instance details
-            instance = self.instances_client.get(
-                project=self.project_id,
-                zone=self.zone,
-                instance=self.instance_name,
-            )
-
-            # Get external IP
-            if instance.network_interfaces:
-                if instance.network_interfaces[0].access_configs:
-                    external_ip = (
-                        instance.network_interfaces[0].access_configs[0].nat_ip
-                    )
-                    print(f"External IP: {external_ip}")
-
-            print("\nInstance setup is running in the background.")
-            print("You can check the startup script logs with:")
-            print(
-                f"  gcloud compute ssh {self.instance_name} --zone {self.zone} --command 'tail -f /var/log/startup-script.log'"
-            )
+            self._print_instance_info()
 
         except Exception as e:
             print(f"Error creating instance: {e}")
@@ -386,25 +338,6 @@ gcloud compute instances stop $(hostname) --zone=$(curl -H "Metadata-Flavor: Goo
         if operation.error:
             raise Exception(f"Operation failed: {operation.error}")
 
-    def delete_instance(self) -> None:
-        """Delete the instance."""
-        print(f"Deleting instance '{self.instance_name}'...")
-
-        try:
-            operation = self.instances_client.delete(
-                project=self.project_id,
-                zone=self.zone,
-                instance=self.instance_name,
-            )
-
-            print("Waiting for instance deletion to complete...")
-            self.wait_for_operation(operation)
-            print(f"Instance '{self.instance_name}' deleted successfully!")
-
-        except Exception as e:
-            print(f"Error deleting instance: {e}")
-            raise
-
 
 def main():
     """Main entry point."""
@@ -435,22 +368,6 @@ def main():
         print(f"Error setting up credentials: {e}")
         sys.exit(1)
 
-    # Parse command line arguments
-    action = sys.argv[1] if len(sys.argv) > 1 else "create"
-    force = "--force" in sys.argv or "-f" in sys.argv
-
-    if action not in ["create", "delete", "start", "stop", "status"]:
-        print(
-            f"Usage: {sys.argv[0]} [create|delete|start|stop|status] [--force|-f]"
-        )
-        print("\nActions:")
-        print("  create  - Create or reuse instance (use --force to recreate)")
-        print("  delete  - Delete the instance")
-        print("  start   - Start a stopped instance")
-        print("  stop    - Stop a running instance")
-        print("  status  - Check instance status")
-        sys.exit(1)
-
     # Create setup manager with credentials
     setup = GCPInstanceSetup(
         project_id=project_id,
@@ -458,27 +375,8 @@ def main():
         credentials=credentials,
     )
 
-    # Execute action
-    if action == "create":
-        setup.create_instance(force=force)
-    elif action == "delete":
-        setup.delete_instance()
-    elif action == "start":
-        if not setup.instance_exists():
-            print(f"Error: Instance '{setup.instance_name}' does not exist")
-            sys.exit(1)
-        setup.start_instance()
-    elif action == "stop":
-        if not setup.instance_exists():
-            print(f"Error: Instance '{setup.instance_name}' does not exist")
-            sys.exit(1)
-        setup.stop_instance()
-    elif action == "status":
-        if setup.instance_exists():
-            status = setup.get_instance_status()
-            print(f"Instance '{setup.instance_name}' status: {status}")
-        else:
-            print(f"Instance '{setup.instance_name}' does not exist")
+    # Run the instance (creates if needed, starts if stopped)
+    setup.run_instance()
 
 
 if __name__ == "__main__":

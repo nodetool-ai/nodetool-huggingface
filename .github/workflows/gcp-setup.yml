@@ -1,28 +1,13 @@
 name: GCP Instance Setup
 
 # This workflow sets up a GCP instance with CUDA 12.8, installs nodetool-huggingface,
-# and runs a Stable Diffusion example.
+# and runs a Stable Diffusion example. The instance will automatically shut down after
+# 2 hours using GCP's max-run-duration feature.
 
 on:
   # Manual trigger only - this creates actual GCP resources that cost money
   workflow_dispatch:
     inputs:
-      action:
-        description: 'Action to perform'
-        required: true
-        default: 'create'
-        type: choice
-        options:
-          - create
-          - delete
-          - start
-          - stop
-          - status
-      force:
-        description: 'Force recreate instance (only for create action)'
-        required: false
-        default: false
-        type: boolean
       zone:
         description: 'GCP Zone'
         required: false
@@ -70,40 +55,24 @@ jobs:
           GCP_ACCOUNT_KEY: ${{ secrets.GCP_ACCOUNT_KEY }}
         run: |
           cd scripts
-          if [ "${{ github.event.inputs.force }}" = "true" ]; then
-            python setup_gcp_instance.py ${{ github.event.inputs.action }} --force
-          else
-            python setup_gcp_instance.py ${{ github.event.inputs.action }}
-          fi
+          python setup_gcp_instance.py
       
       - name: Summary
         run: |
-          echo "## GCP Setup Complete" >> $GITHUB_STEP_SUMMARY
+          echo "## GCP Instance Running" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Action: ${{ github.event.inputs.action }}" >> $GITHUB_STEP_SUMMARY
           echo "Zone: ${{ env.GCP_ZONE }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ github.event.inputs.action }}" = "create" ]; then
-            echo "Instance created or reused successfully!" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
-            echo "1. SSH into the instance to check the setup status:" >> $GITHUB_STEP_SUMMARY
-            echo "   \`gcloud compute ssh nodetool-hf-instance --zone ${{ env.GCP_ZONE }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "2. View the startup script logs:" >> $GITHUB_STEP_SUMMARY
-            echo "   \`tail -f /var/log/startup-script.log\`" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "3. Check the generated image:" >> $GITHUB_STEP_SUMMARY
-            echo "   \`ls -la /opt/nodetool-huggingface/nodetool-huggingface/scripts/outputs/\`" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "ℹ️ **Note: The instance will automatically stop after completing the script.**" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ github.event.inputs.action }}" = "delete" ]; then
-            echo "Instance deleted successfully!" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ github.event.inputs.action }}" = "start" ]; then
-            echo "Instance started successfully!" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ github.event.inputs.action }}" = "stop" ]; then
-            echo "Instance stopped successfully!" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ github.event.inputs.action }}" = "status" ]; then
-            echo "Instance status retrieved successfully!" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "Instance created or reused successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. SSH into the instance to check the setup status:" >> $GITHUB_STEP_SUMMARY
+          echo "   \`gcloud compute ssh nodetool-hf-instance --zone ${{ env.GCP_ZONE }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "2. View the startup script logs:" >> $GITHUB_STEP_SUMMARY
+          echo "   \`tail -f /var/log/startup-script.log\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "3. Check the generated image:" >> $GITHUB_STEP_SUMMARY
+          echo "   \`ls -la /opt/nodetool-huggingface/nodetool-huggingface/scripts/outputs/\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "ℹ️ **Note: The instance will automatically shut down after 2 hours (max-run-duration).**" >> $GITHUB_STEP_SUMMARY

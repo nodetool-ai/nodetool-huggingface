@@ -1,10 +1,10 @@
 # GCP Instance Setup for Nodetool HuggingFace
 
-This directory contains scripts to set up a Google Cloud Platform (GCP) instance with CUDA 12.8, install the nodetool-huggingface project, and run Stable Diffusion examples.
+This directory contains scripts to set up a Google Cloud Platform (GCP) instance with CUDA 12.8, install the nodetool-huggingface project, and run Stable Diffusion examples. The instance automatically shuts down after 2 hours using GCP's max-run-duration feature.
 
 ## Files
 
-- **`setup_gcp_instance.py`**: Python script to create/delete GCP instances with CUDA support
+- **`setup_gcp_instance.py`**: Python script to run GCP instances with CUDA support
 - **`run_sd_example.py`**: Example script that generates an image using Stable Diffusion XL
 
 ## Prerequisites
@@ -37,68 +37,38 @@ This directory contains scripts to set up a Google Cloud Platform (GCP) instance
 
 ### Using the Python Script Locally
 
-#### Create or reuse an instance:
+#### Run the instance:
 ```bash
 cd scripts
-python setup_gcp_instance.py create
+python setup_gcp_instance.py
 ```
 
-The script will automatically reuse an existing instance if it exists. To force recreation:
-```bash
-python setup_gcp_instance.py create --force
-```
-
-#### Start a stopped instance:
-```bash
-cd scripts
-python setup_gcp_instance.py start
-```
-
-#### Stop a running instance:
-```bash
-cd scripts
-python setup_gcp_instance.py stop
-```
-
-#### Check instance status:
-```bash
-cd scripts
-python setup_gcp_instance.py status
-```
-
-#### Delete an instance:
-```bash
-cd scripts
-python setup_gcp_instance.py delete
-```
+The script will automatically:
+- Create a new instance if it doesn't exist
+- Start the instance if it's stopped
+- Reuse the instance if it's already running
 
 ### Using GitHub Actions
 
 1. Go to the "Actions" tab in your GitHub repository
 2. Select "GCP Instance Setup" workflow
 3. Click "Run workflow"
-4. Choose the action:
+4. Optionally specify the GCP zone (defaults to `us-central1-a`)
    - **create**: Creates a new instance or reuses existing one (check "force" to recreate)
-   - **start**: Starts a stopped instance
-   - **stop**: Stops a running instance
-   - **status**: Checks instance status
-   - **delete**: Deletes the instance
-5. For create action, optionally check "force" to recreate the instance
-6. Optionally specify the GCP zone (defaults to `us-central1-a`)
-
 ## What the Setup Does
 
-When you create an instance, the script will:
+When you run the instance, the script will:
 
-1. **Check if instance exists** and reuse it if available (unless --force is used)
+1. **Check if instance exists** and reuse it if available
 
 2. **Create a GCP Compute Engine instance** (if needed) with:
    - Deep Learning VM image with CUDA 12.8 pre-installed
    - NVIDIA Tesla T4 GPU (1x)
    - n1-standard-4 machine type (4 vCPUs, 15 GB RAM)
    - 50 GB boot disk
+   - **Auto-shutdown after 2 hours** (max-run-duration)
 
-2. **Run a startup script** that:
+3. **Run a startup script** that:
    - Updates system packages
    - Installs Python 3, pip, and git
    - Verifies CUDA and GPU availability
@@ -106,16 +76,15 @@ When you create an instance, the script will:
    - Creates a Python virtual environment
    - Installs the project using `pip install -e .`
    - Runs the Stable Diffusion example script
-   - **Automatically stops the instance** after completion
 
-3. **Generate a test image** using:
+4. **Generate a test image** using:
    - Model: `nunchaku-tech/nunchaku-sdxl` (quantized SDXL)
    - Prompt: "A serene mountain landscape at sunset, highly detailed, photorealistic"
    - Output: Saved to `/opt/nodetool-huggingface/nodetool-huggingface/scripts/outputs/sd_example_output.png`
 
 ## Monitoring the Setup
 
-After creating an instance, you can monitor the setup progress:
+After running the instance, you can monitor the setup progress:
 
 1. SSH into the instance:
    ```bash
@@ -131,6 +100,13 @@ After creating an instance, you can monitor the setup progress:
    ```bash
    ls -la /opt/nodetool-huggingface/nodetool-huggingface/scripts/outputs/
    ```
+
+## Auto-Shutdown
+
+The instance is configured with a **max-run-duration of 2 hours**. This means:
+- The instance will automatically shut down 2 hours after it starts
+- This prevents runaway costs if you forget to stop the instance
+- The instance can be restarted by running the script again
 
 ## Running the Example Manually
 
