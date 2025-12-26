@@ -283,7 +283,16 @@ async def load_pipeline(
         target_device = _resolve_hf_device(context, device or context.device)
         return _ensure_model_on_device(cached_model, target_device)
 
-    # target_device = _resolve_hf_device(context, device or context.device)
+    # Pre-load memory check: ensure sufficient memory is available BEFORE loading
+    # This prevents OOM crashes that kill the process before exceptions can be caught
+    target_device = _resolve_hf_device(context, device or context.device)
+    # Always check system RAM - models load into RAM first even for GPU
+    ModelManager.free_memory_if_needed(reason=f"Pre-load RAM check for pipeline {model_id}")
+    if "cuda" in str(target_device):
+        ModelManager.free_vram_if_needed(
+            reason=f"Pre-load VRAM check for pipeline {model_id}",
+            aggressive=False,
+        )
 
     if (
         isinstance(model_id, str)
@@ -414,6 +423,16 @@ async def load_model(
         cached_model = ModelManager.get_model(cache_key)
         if cached_model:
             return _ensure_model_on_device(cached_model, target_device)
+
+    # Pre-load memory check: ensure sufficient memory is available BEFORE loading
+    # This prevents OOM crashes that kill the process before exceptions can be caught
+    # Always check system RAM - models load into RAM first even for GPU
+    ModelManager.free_memory_if_needed(reason=f"Pre-load RAM check for {model_id}")
+    if "cuda" in str(target_device):
+        ModelManager.free_vram_if_needed(
+            reason=f"Pre-load VRAM check for {model_id}",
+            aggressive=False,
+        )
 
     async def _do_load() -> T:
         """Inner function that performs the actual model loading."""
