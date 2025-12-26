@@ -3,15 +3,18 @@
 Example script to run Stable Diffusion XL image generation.
 This script demonstrates basic usage of the nodetool-huggingface package.
 """
+import asyncio
+import shutil
 import sys
 from pathlib import Path
 
 # Add parent directory to path for imports when running from source
-# This allows the script to work both when installed and when run directly
+# This allows the script to work both when installed via pip and when run directly
+# from the repository. The startup script installs the package with 'pip install -e .'
+# so this path modification is typically only needed during local development.
 if __package__ is None or __package__ == "":
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import asyncio
 from nodetool.metadata.types import HFStableDiffusionXL
 from nodetool.dsl.huggingface.text_to_image import StableDiffusionXL
 from nodetool.workflows.processing_context import ProcessingContext
@@ -71,8 +74,6 @@ async def generate_image():
     # The result contains an ImageRef, we need to save it
     if hasattr(result, "uri"):
         # If it's an ImageRef with a URI, copy the file
-        import shutil
-
         if result.uri.startswith("file://"):
             src_path = result.uri[7:]  # Remove 'file://' prefix
             shutil.copy(src_path, output_path)
