@@ -276,26 +276,8 @@ echo "Setup completed successfully at $(date)"
         except Exception as e:
             print(f"Warning: Could not retrieve instance info: {e}")
 
-    def run_instance(self) -> None:
-        """Run the GCP instance - creates if doesn't exist, starts if stopped."""
-        # Check if instance already exists
-        if self.instance_exists():
-            status = self.get_instance_status()
-            print(
-                f"Instance '{self.instance_name}' already exists with status: {status}"
-            )
-
-            if status == "TERMINATED" or status == "STOPPED":
-                print("Starting existing instance...")
-                self._start_instance()
-            elif status == "RUNNING":
-                print("Instance is already running!")
-                self._print_instance_info()
-            else:
-                print(f"Instance is in {status} state. Waiting for it to be ready...")
-            return
-
-        # Create new instance
+    def create_instance(self) -> None:
+        """Create a new GCP instance with CUDA and GPU."""
         print(f"Creating instance '{self.instance_name}' in {self.zone}...")
 
         # Get the CUDA image
