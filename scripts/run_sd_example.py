@@ -71,11 +71,12 @@ async def generate_image():
     print("\nImage generated successfully!")
     print(f"Saving to: {output_path}")
 
-    # The result contains an ImageRef, we need to save it
-    if hasattr(result, "uri"):
+    # The result contains an ImageRef under the "image" key, we need to save it
+    image_ref = result.get("image") if isinstance(result, dict) else None
+    if image_ref is not None and hasattr(image_ref, "uri"):
         # If it's an ImageRef with a URI, copy the file
-        if result.uri.startswith("file://"):
-            src_path = result.uri[7:]  # Remove 'file://' prefix
+        if image_ref.uri.startswith("file://"):
+            src_path = image_ref.uri[7:]  # Remove 'file://' prefix
             shutil.copy(src_path, output_path)
             print(f"Output saved to {output_path}")
 
