@@ -1,7 +1,7 @@
 {
   "name": "nodetool-huggingface",
   "description": "HuggingFace nodes for Nodetool",
-  "version": "0.6.2-rc.14",
+  "version": "0.6.2-rc.15",
   "authors": [
     "Matthias Georgi <matti.georgi@gmail.com>"
   ],
@@ -922,6 +922,7 @@
             "uri": "",
             "asset_id": null,
             "data": null,
+            "metadata": null,
             "columns": null
           },
           "title": "Table",
@@ -1142,7 +1143,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Input Image",
           "description": "The image to segment. SAM2 automatically identifies and masks all distinct objects."
@@ -1220,7 +1222,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Image",
           "description": "The input image to segment. Larger images may require more processing time."
@@ -1323,7 +1326,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Image",
           "description": "The original image to overlay segmentation masks on."
@@ -1989,7 +1993,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Control Image",
           "description": "The control image to guide the generation process."
@@ -2739,7 +2744,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Ip Adapter Image",
           "description": "When provided the image will be fed into the IP adapter"
@@ -3136,7 +3142,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Ip Adapter Image",
           "description": "When provided the image will be fed into the IP adapter"
@@ -4158,7 +4165,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Image",
           "description": "The image to classify. Supports common formats like JPEG, PNG, WebP."
@@ -4466,7 +4474,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Image",
           "description": "The image to classify. Supports common formats like JPEG, PNG, WebP."
@@ -4830,7 +4839,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Input Image",
           "description": "The image to generate text from. Supports JPEG, PNG, WebP and other common formats."
@@ -5040,7 +5050,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Input Image",
           "description": "The image to generate a caption for."
@@ -5215,7 +5226,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Image",
           "description": "The image to ask questions about."
@@ -5304,7 +5316,8 @@
             "type": "audio",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Audio",
           "description": "The audio file to classify. Supports common formats like WAV, MP3, FLAC."
@@ -5429,7 +5442,8 @@
             "type": "audio",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Audio",
           "description": "The audio file to classify. Supports common formats like WAV, MP3, FLAC."
@@ -5510,7 +5524,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Input Image",
           "description": "The source image to animate. Image content guides the video's appearance."
@@ -5823,7 +5838,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Input Image",
           "description": "The input image to fill/inpaint"
@@ -5837,7 +5853,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Mask Image",
           "description": "The mask image indicating areas to be filled (white areas will be filled)"
@@ -6044,7 +6061,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Input Image",
           "description": "The input image to edit"
@@ -6292,7 +6310,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Input Image",
           "description": "The input image to transform"
@@ -6565,7 +6584,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Input Image",
           "description": "The input image to edit"
@@ -6835,7 +6855,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Input Image",
           "description": "The input image to transform"
@@ -7079,7 +7100,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Ip Adapter Image",
           "description": "When provided the image will be fed into the IP adapter"
@@ -7177,7 +7199,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Control Image",
           "description": "The control image to guide the generation process."
@@ -7646,7 +7669,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Ip Adapter Image",
           "description": "When provided the image will be fed into the IP adapter"
@@ -7728,7 +7752,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Image",
           "description": "The input image to be transformed."
@@ -7769,7 +7794,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Control Image",
           "description": "The control image to guide the transformation."
@@ -8227,7 +8253,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Ip Adapter Image",
           "description": "When provided the image will be fed into the IP adapter"
@@ -8322,7 +8349,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Init Image",
           "description": "The initial image to be inpainted."
@@ -8336,7 +8364,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Mask Image",
           "description": "The mask image indicating areas to be inpainted."
@@ -8350,7 +8379,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Control Image",
           "description": "The control image to guide the inpainting process."
@@ -8622,7 +8652,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Ip Adapter Image",
           "description": "When provided the image will be fed into the IP adapter"
@@ -8704,7 +8735,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Init Image",
           "description": "The initial image for Image-to-Image generation."
@@ -8974,7 +9006,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Ip Adapter Image",
           "description": "When provided the image will be fed into the IP adapter"
@@ -9056,7 +9089,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Init Image",
           "description": "The initial image to be inpainted."
@@ -9070,7 +9104,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Mask Image",
           "description": "The mask image indicating areas to be inpainted."
@@ -9367,7 +9402,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Image",
           "description": "The initial image for Image-to-Image generation."
@@ -9640,7 +9676,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Ip Adapter Image",
           "description": "When provided the image will be fed into the IP adapter"
@@ -9722,7 +9759,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Control Image",
           "description": "The control image to guide the generation process."
@@ -10760,7 +10798,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Ip Adapter Image",
           "description": "When provided the image will be fed into the IP adapter"
@@ -10826,7 +10865,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Init Image",
           "description": "The initial image for Image-to-Image generation."
@@ -10867,7 +10907,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Control Image",
           "description": "The control image to guide the transformation."
@@ -11907,7 +11948,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Ip Adapter Image",
           "description": "When provided the image will be fed into the IP adapter"
@@ -11973,7 +12015,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Init Image",
           "description": "The initial image for Image-to-Image generation."
@@ -12523,7 +12566,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Ip Adapter Image",
           "description": "When provided the image will be fed into the IP adapter"
@@ -12589,7 +12633,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Image",
           "description": "The initial image to be inpainted."
@@ -12603,7 +12648,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Mask Image",
           "description": "The mask image indicating areas to be inpainted."
@@ -12983,7 +13029,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Input Image",
           "description": "The input image to transform"
@@ -13339,7 +13386,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Image",
           "description": "Input image to encode."
@@ -13921,7 +13969,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Image",
           "description": "The input RGB image to estimate depth from. Any standard image format is supported."
@@ -14537,7 +14586,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Input Image",
           "description": "An image to analyze. Leave empty if providing video input."
@@ -14552,6 +14602,7 @@
             "uri": "",
             "asset_id": null,
             "data": null,
+            "metadata": null,
             "duration": null,
             "format": null
           },
@@ -14649,7 +14700,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Input Image",
           "description": "The image to analyze and discuss."
@@ -14964,7 +15016,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Input Image",
           "description": "An image to analyze. Leave empty if providing video input."
@@ -14979,6 +15032,7 @@
             "uri": "",
             "asset_id": null,
             "data": null,
+            "metadata": null,
             "duration": null,
             "format": null
           },
@@ -15460,7 +15514,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Input Image",
           "description": "An image to analyze. Leave empty if providing video input."
@@ -15475,6 +15530,7 @@
             "uri": "",
             "asset_id": null,
             "data": null,
+            "metadata": null,
             "duration": null,
             "format": null
           },
@@ -19050,7 +19106,8 @@
             "type": "audio",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Audio Input",
           "description": "The audio file to transcribe. Supports WAV, MP3, FLAC and other common formats."
@@ -21196,7 +21253,8 @@
             "type": "document",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Document"
         },
@@ -21277,7 +21335,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Image",
           "description": "The image to detect objects in. Supports common formats like JPEG, PNG."
@@ -21546,7 +21605,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Image",
           "description": "The original image to draw detection boxes on."
@@ -21610,7 +21670,8 @@
             "type": "image",
             "uri": "",
             "asset_id": null,
-            "data": null
+            "data": null,
+            "metadata": null
           },
           "title": "Image",
           "description": "The image to detect objects in."
