@@ -2646,7 +2646,8 @@ class FluxKontext(HuggingFacePipelineNode):
             assert transformer_model.path is not None
             assert text_encoder_model is not None
 
-            # Check cache first to avoid loading transformer/text_encoder if pipeline already cached
+            # Check cache first to avoid loading transformer/text_encoder if pipeline already cached.
+            # Note: torch_dtype is always bfloat16 for quantized FluxKontext, so it's not included in cache_key
             cache_key = f"{base_model.repo_id}:{quantization.value}:kontext-v1"
             cached_pipeline = ModelManager.get_model(cache_key)
             if cached_pipeline:

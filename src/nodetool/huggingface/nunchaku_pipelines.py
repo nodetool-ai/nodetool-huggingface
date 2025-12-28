@@ -304,7 +304,9 @@ async def load_nunchaku_flux_pipeline(
     try:
         pipeline = pipeline_class.from_pretrained(base_model_id, **pipeline_kwargs)
         if cache_key:
-            # Use node_id if provided, otherwise use the cache_key itself as the node identifier
+            # Use node_id if provided for tracking purposes in ModelManager.
+            # The cache_key is always used as the primary lookup key for the model.
+            # If node_id is None, use cache_key as a fallback identifier.
             effective_node_id = node_id or cache_key
             ModelManager.set_model(effective_node_id, cache_key, pipeline)
         return pipeline
@@ -383,7 +385,9 @@ async def load_nunchaku_qwen_pipeline(
             pipeline.enable_sequential_cpu_offload()
 
         if cache_key:
-            # Use node_id if provided, otherwise use the cache_key itself as the node identifier
+            # Use node_id if provided for tracking purposes in ModelManager.
+            # The cache_key is always used as the primary lookup key for the model.
+            # If node_id is None, use cache_key as a fallback identifier.
             effective_node_id = node_id or cache_key
             ModelManager.set_model(effective_node_id, cache_key, pipeline)
         return pipeline
