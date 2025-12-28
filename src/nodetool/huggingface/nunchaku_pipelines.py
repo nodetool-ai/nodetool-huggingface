@@ -303,8 +303,10 @@ async def load_nunchaku_flux_pipeline(
 
     try:
         pipeline = pipeline_class.from_pretrained(base_model_id, **pipeline_kwargs)
-        if cache_key and node_id:
-            ModelManager.set_model(node_id, cache_key, pipeline)
+        if cache_key:
+            # Use node_id if provided, otherwise use the cache_key itself as the node identifier
+            effective_node_id = node_id or cache_key
+            ModelManager.set_model(effective_node_id, cache_key, pipeline)
         return pipeline
     except _get_torch().OutOfMemoryError as exc:  # type: ignore[attr-defined]
         raise ValueError(
@@ -380,8 +382,10 @@ async def load_nunchaku_qwen_pipeline(
             pipeline._exclude_from_cpu_offload.append("transformer")
             pipeline.enable_sequential_cpu_offload()
 
-        if cache_key and node_id:
-            ModelManager.set_model(node_id, cache_key, pipeline)
+        if cache_key:
+            # Use node_id if provided, otherwise use the cache_key itself as the node identifier
+            effective_node_id = node_id or cache_key
+            ModelManager.set_model(effective_node_id, cache_key, pipeline)
         return pipeline
     except _get_torch().OutOfMemoryError as exc:
         raise ValueError(
