@@ -102,6 +102,9 @@ class HuggingFacePipelineNode(BaseNode):
         """
         Execute the underlying HF pipeline in a background thread to avoid
         blocking the asyncio event loop.
+        
+        Performs explicit memory cleanup after pipeline execution to prevent
+        GPU memory accumulation across multiple runs.
         """
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
@@ -109,10 +112,19 @@ class HuggingFacePipelineNode(BaseNode):
         pipeline = self._pipeline
 
         def _call():
+            import gc
             import torch
 
             with torch.inference_mode():
-                return pipeline(*args, **kwargs)
+                result = pipeline(*args, **kwargs)
+            
+            # Explicit memory cleanup to prevent leaks across runs
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.ipc_collect()
+            
+            return result
 
         return await asyncio.to_thread(_call)
 

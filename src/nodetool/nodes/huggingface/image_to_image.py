@@ -2618,6 +2618,8 @@ class FluxKontext(HuggingFacePipelineNode):
         return (self._get_base_model(), None)
 
     async def preload_model(self, context: ProcessingContext):
+        from nodetool.ml.core.model_manager import ModelManager
+
         hf_token = await context.get_secret("HF_TOKEN")
         if not hf_token:
             model_url = f"https://huggingface.co/{self.get_model_id()}"
@@ -2643,42 +2645,52 @@ class FluxKontext(HuggingFacePipelineNode):
         ):
             assert transformer_model.path is not None
             assert text_encoder_model is not None
-            from nodetool.huggingface.nunchaku_pipelines import (
-                get_nunchaku_transformer,
-                get_nunchaku_text_encoder,
-            )
-            from nunchaku import NunchakuFluxTransformer2dModel
 
-            transformer = await get_nunchaku_transformer(
-                context=context,
-                model_class=NunchakuFluxTransformer2dModel,
-                node_id=self.id,
-                repo_id=transformer_model.repo_id,
-                path=transformer_model.path,
-            )
-
-            text_encoder_2 = await get_nunchaku_text_encoder(
-                context=context,
-                node_id=self.id,
-                repo_id=text_encoder_model.repo_id,
-                path=text_encoder_model.path,
-            )
-
-            base_model_id = base_model.repo_id or "black-forest-labs/FLUX.1-Kontext-dev"
-
-            try:
-                self._pipeline = FluxKontextPipeline.from_pretrained(
-                    base_model_id,
-                    transformer=transformer,
-                    text_encoder_2=text_encoder_2,
-                    torch_dtype=torch_dtype,
-                    token=hf_token,
+            # Check cache first to avoid loading transformer/text_encoder if pipeline already cached.
+            # Note: torch_dtype is always bfloat16 for quantized FluxKontext, so it's not included in cache_key
+            cache_key = f"{base_model.repo_id}:{quantization.value}:kontext-v1"
+            cached_pipeline = ModelManager.get_model(cache_key)
+            if cached_pipeline:
+                self._pipeline = cached_pipeline
+            else:
+                from nodetool.huggingface.nunchaku_pipelines import (
+                    get_nunchaku_transformer,
+                    get_nunchaku_text_encoder,
                 )
-            except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
-                raise ValueError(
-                    "VRAM out of memory while loading Flux Kontext with the Nunchaku transformer. "
-                    "Try enabling CPU offload or reduce image size."
-                ) from e
+                from nunchaku import NunchakuFluxTransformer2dModel
+
+                transformer = await get_nunchaku_transformer(
+                    context=context,
+                    model_class=NunchakuFluxTransformer2dModel,
+                    node_id=self.id,
+                    repo_id=transformer_model.repo_id,
+                    path=transformer_model.path,
+                )
+
+                text_encoder_2 = await get_nunchaku_text_encoder(
+                    context=context,
+                    node_id=self.id,
+                    repo_id=text_encoder_model.repo_id,
+                    path=text_encoder_model.path,
+                )
+
+                base_model_id = base_model.repo_id or "black-forest-labs/FLUX.1-Kontext-dev"
+
+                try:
+                    self._pipeline = FluxKontextPipeline.from_pretrained(
+                        base_model_id,
+                        transformer=transformer,
+                        text_encoder_2=text_encoder_2,
+                        torch_dtype=torch_dtype,
+                        token=hf_token,
+                    )
+                    # Cache the pipeline for future runs
+                    ModelManager.set_model(self.id, cache_key, self._pipeline)
+                except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                    raise ValueError(
+                        "VRAM out of memory while loading Flux Kontext with the Nunchaku transformer. "
+                        "Try enabling CPU offload or reduce image size."
+                    ) from e
         else:
             base_model_id = base_model.repo_id or "black-forest-labs/FLUX.1-Kontext-dev"
             self._pipeline = await self.load_model(

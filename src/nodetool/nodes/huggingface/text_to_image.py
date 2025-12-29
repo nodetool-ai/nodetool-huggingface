@@ -825,8 +825,9 @@ class Flux(HuggingFacePipelineNode):
 
         # Generate the image off the event loop
         def _run_pipeline_sync():
+            import gc
             with torch.inference_mode():
-                return self._pipeline(
+                result = self._pipeline(
                     prompt=self.prompt,
                     guidance_scale=guidance_scale,
                     height=self.height,
@@ -837,6 +838,12 @@ class Flux(HuggingFacePipelineNode):
                     callback_on_step_end=progress_callback,  # type: ignore
                     callback_on_step_end_tensor_inputs=["latents"],
                 )
+            # Explicit memory cleanup to prevent leaks across runs
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.ipc_collect()
+            return result
 
         try:
             output = await asyncio.to_thread(_run_pipeline_sync)
