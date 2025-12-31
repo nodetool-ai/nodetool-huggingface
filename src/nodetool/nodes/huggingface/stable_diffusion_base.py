@@ -4,7 +4,7 @@ from enum import Enum
 import os
 from random import randint
 import asyncio
-from typing import Any, TYPE_CHECKING, ClassVar
+from typing import Any, TYPE_CHECKING
 
 
 from pydantic import Field
@@ -27,6 +27,7 @@ from nodetool.metadata.types import (
 )
 
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.image_to_image import _apply_vae_optimizations
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress
 
