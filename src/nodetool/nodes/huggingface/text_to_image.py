@@ -689,8 +689,8 @@ class Flux(HuggingFacePipelineNode):
             return base_model, None
 
     def get_model_id(self) -> str:
-        repo_id, _, _ = self._resolve_model_config()
-        return repo_id
+        flux_model, _ = self._resolve_model_config()
+        return flux_model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
         import torch
@@ -747,11 +747,14 @@ class Flux(HuggingFacePipelineNode):
             )
 
         else:
-            # Standard loading
+            # Standard loading (FP16)
+            # transformer_model contains the base model for FP16 case
+            repo_id = transformer_model.repo_id
             # Ensure model is present in cache
             if not await HF_FAST_CACHE.resolve(repo_id, "model_index.json"):
                 raise ValueError(f"Model {repo_id} must be downloaded")
 
+            hf_token = await context.get_secret("HF_TOKEN")
             log.info(f"Loading FLUX pipeline from {repo_id}...")
             self._pipeline = await self.load_model(
                 context=context,

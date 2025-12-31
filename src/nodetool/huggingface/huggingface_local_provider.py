@@ -344,7 +344,7 @@ class HuggingFaceLocalProvider(BaseProvider):
 
             # Convert AudioRef to numpy array
             audio_bytes = await context.asset_to_bytes(audio_ref)
-            audio = AudioSegment.from_file(io.BytesIO(audio_bytes))
+            audio = AudioSegment.from_file(BytesIO(audio_bytes))
 
             # Convert to mono if stereo
             if audio.channels > 1:
@@ -861,7 +861,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 elif isinstance(part, MessageImageContent):
                     # Load image to PIL
                     data = self._load_image_data(part.image)
-                    img = Image.open(io.BytesIO(data))
+                    img = Image.open(BytesIO(data))
                     # Store PIL image directly; will be extracted later
                     content_list.append({"type": "image", "image": img})
                     has_images = True
