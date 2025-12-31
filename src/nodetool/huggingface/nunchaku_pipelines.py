@@ -70,7 +70,7 @@ async def get_nunchaku_text_encoder(
         dict: Pipeline kwargs with text_encoder_2 if nunchaku T5 encoder is found
     """
     _require_nunchaku()
-    
+
     from nunchaku import NunchakuT5EncoderModel
     from nunchaku.utils import get_precision
     from huggingface_hub import hf_hub_download
@@ -140,7 +140,7 @@ async def get_nunchaku_transformer(
         dict: Pipeline kwargs with transformer if nunchaku SVDQ transformer is found
     """
     _require_nunchaku()
-    
+
     from nunchaku.utils import get_precision
 
     # Resolve device - nunchaku requires a valid device, not None
@@ -208,7 +208,7 @@ async def load_nunchaku_flux_pipeline(
 ) -> Any:
     """Load a FLUX pipeline with a Nunchaku transformer/text encoder pair."""
     _require_nunchaku()
-    
+
     from nunchaku import NunchakuFluxTransformer2dModel
     from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
     from nodetool.ml.core.model_manager import ModelManager
@@ -287,7 +287,7 @@ async def load_nunchaku_qwen_pipeline(
         torch_dtype: The torch dtype to use
     """
     _require_nunchaku()
-    
+
     from nunchaku import NunchakuQwenImageTransformer2DModel
     from nunchaku.utils import get_gpu_memory
     from nodetool.ml.core.model_manager import ModelManager

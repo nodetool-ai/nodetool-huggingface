@@ -108,3 +108,27 @@ nodetool = [
     "assets/nodetool-huggingface/Transcribe Audio.jpg",
     "assets/nodetool-huggingface/Style Transfer.jpg",
 ]
+
+[tool.ruff]
+# Exclude auto-generated files, notebooks, scripts, and third-party code
+exclude = [
+    "src/nodetool/dsl/",
+    "notebooks/",
+    "scripts/",
+    "src/RealESRGAN/",
+    "test_qwen.py",
+]
+
+[tool.ruff.lint]
+# Enable a minimal set of rules initially
+select = ["E", "F", "W"]
+# Ignore specific rules that have many violations
+ignore = [
+    "E402",  # Module level import not at top of file
+    "E501",  # Line too long
+    "E721",  # Use `is` and `is not` for type comparisons
+    "E722",  # Do not use bare `except`
+    "F401",  # Module imported but unused
+    "F811",  # Redefinition of unused name
+    "F841",  # Local variable assigned but never used
+]

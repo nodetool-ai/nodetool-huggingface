@@ -1,0 +1,11 @@
+# ty type checker configuration
+# See: https://docs.astral.sh/ty/
+
+[rules]
+# Ignore unresolved imports since dependencies are not always installed in CI
+unresolved-import = "ignore"
+# Ignore type errors until codebase is fully typed
+invalid-argument-type = "ignore"
+invalid-return-type = "ignore"
+unresolved-attribute = "ignore"
+possibly-missing-attribute = "ignore"

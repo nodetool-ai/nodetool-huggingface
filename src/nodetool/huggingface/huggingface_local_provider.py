@@ -1427,10 +1427,10 @@ if __name__ == "__main__":
 
     async def test_image_to_image():
         """Test the image_to_image method."""
+        provider = HuggingFaceLocalProvider()
         models = await provider.get_available_image_models()
         print(models)
         model = models[0]
-        provider = HuggingFaceLocalProvider()
         context = ProcessingContext()
         context.device = "mps"
         image_bytes = open("image.png", "rb").read()
