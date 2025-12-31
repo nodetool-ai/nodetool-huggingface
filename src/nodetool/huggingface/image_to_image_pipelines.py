@@ -1,7 +1,35 @@
 """
 Image-to-image pipeline loading for local HuggingFace models.
-"""
 
+This module handles the loading of various HuggingFace diffusers pipelines for image-to-image generation.
+It employs a robust strategy to determine the correct pipeline class:
+
+1. **Explicit Node Matching (First Priority):**
+   - It checks if the requested model (repo_id + path) matches any "recommended model" defined
+     in our specific nodes (e.g., FluxFill, QwenImageEdit).
+   - If a match is found using `_is_node_model`, the model is loaded using the exact pipeline
+     class and configuration required by that node.
+   - This allows explicit overrides for models that might be generic but require specific handling
+     (e.g., forcing Nunchaku quantization for specific variants).
+
+2. **Metadata Tag Matching:**
+   - If no node match is found, it fetches the model's metadata from HuggingFace.
+   - It inspects the `tags` or `pipeline_tag` fields for specific markers like:
+     - "diffusers:StableDiffusionXLPipeline"
+     - "diffusers:StableDiffusionPipeline"
+     - "flux"
+   - These tags map directly to their corresponding diffusers pipeline classes (Img2Img or Inpaint).
+
+3. **Fallback Heuristics:**
+   - If the tags are generic (e.g., just "image-to-image" or "text-to-image") and lack specific diffusers markers:
+     - It checks against known nodes like `StableDiffusionXL` and generic `StableDiffusion` (and related nodes like ControlNet/Inpaint)
+       to see if we know this model.
+     - If still unknown, it attempts to load as SDXL Img2Img first.
+     - If SDXL loading fails, it falls back to standard Stable Diffusion Img2Img.
+
+This multi-layered approach ensures we reliably load both well-tagged models and ambiguous custom checkpoints
+using our internal knowledge base of node definitions.
+"""
 from __future__ import annotations
 
 from typing import Any
@@ -33,8 +61,6 @@ async def load_image_to_image_pipeline(
     model_id: str,
     model_path: str | None,
     node_id: str | None,
-    revision: str | None = None,
-    cache_dir: str | None = None,
     cache_key: str | None = None,
     device: str | None = None,
 ) -> tuple[Any, bool]:
@@ -69,8 +95,6 @@ async def load_image_to_image_pipeline(
             cache_path = await _ensure_file_cached(
                 model_id,
                 model_path,
-                revision=revision,
-                cache_dir=cache_dir,
             )
 
         from nodetool.nodes.huggingface.image_to_image import FluxFill, QwenImageEdit
@@ -183,6 +207,76 @@ async def load_image_to_image_pipeline(
                         else _get_torch().float32
                     ),
                 )
+            elif model_info.pipeline_tag in ["text-to-image", "image-to-image"]:
+                # Fallback for generic models
+                from nodetool.nodes.huggingface.image_to_image import (
+                    StableDiffusionControlNetImg2ImgNode,
+                    StableDiffusionImg2ImgNode,
+                    StableDiffusionInpaintNode,
+                )
+                from nodetool.nodes.huggingface.text_to_image import (
+                    StableDiffusion,
+                    StableDiffusionXL,
+                )
+
+                if _is_node_model(model_id, model_path, StableDiffusionXL):
+                     from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
+                        StableDiffusionXLImg2ImgPipeline,
+                    )
+                     pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
+                        str(cache_path),
+                        torch_dtype=(
+                            _get_torch().float16
+                            if _is_cuda_available()
+                            else _get_torch().float32
+                        ),
+                    )
+                elif (
+                    _is_node_model(model_id, model_path, StableDiffusion)
+                    or _is_node_model(model_id, model_path, StableDiffusionImg2ImgNode)
+                    or _is_node_model(
+                        model_id, model_path, StableDiffusionControlNetImg2ImgNode
+                    )
+                    or _is_node_model(model_id, model_path, StableDiffusionInpaintNode)
+                ):
+                    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import (
+                        StableDiffusionImg2ImgPipeline,
+                    )
+                    pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
+                        str(cache_path),
+                        torch_dtype=(
+                            _get_torch().float16
+                            if _is_cuda_available()
+                            else _get_torch().float32
+                        ),
+                    )
+                else:
+                    try:
+                        from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
+                            StableDiffusionXLImg2ImgPipeline,
+                        )
+
+                        pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=(
+                                _get_torch().float16
+                                if _is_cuda_available()
+                                else _get_torch().float32
+                            ),
+                        )
+                    except Exception:
+                        from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import (
+                            StableDiffusionImg2ImgPipeline,
+                        )
+
+                        pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=(
+                                _get_torch().float16
+                                if _is_cuda_available()
+                                else _get_torch().float32
+                            ),
+                        )
             else:
                 raise ValueError(
                     f"Unsupported single-file model type: {model_info.pipeline_tag}"

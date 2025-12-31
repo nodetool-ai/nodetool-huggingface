@@ -119,13 +119,23 @@ class HuggingFaceLocalProvider(BaseProvider):
                 "ProcessingContext is required for HuggingFace image generation"
             )
 
+
+        model_id = params.model.id
+        # Sanitize model_id for composite IDs used in Model Packs.
+        # When checking out specific single-file models (e.g. quantized versions),
+        # the model.id is often formatted as "repo_id:filename" to ensure uniqueness
+        # in the UI/State, while model.path holds the filename.
+        # We need to extract just the repo_id for the hugginface_hub/diffusers calls.
+        if params.model.path and ":" in model_id:
+            parts = model_id.split(":")
+            if len(parts) == 2 and parts[1] == params.model.path:
+                model_id = parts[0]
+
         pipeline, _ = await load_text_to_image_pipeline(
             context=context,
-            model_id=params.model.id,
+            model_id=model_id,
             model_path=params.model.path,
             node_id=node_id,
-            revision=params.revision,
-            cache_dir=params.cache_dir,
         )
 
         # Set up generator for reproducibility
@@ -196,13 +206,22 @@ class HuggingFaceLocalProvider(BaseProvider):
         # Convert input image bytes to PIL Image
         pil_image = Image.open(BytesIO(image))
 
+        model_id = params.model.id
+        # Sanitize model_id for composite IDs used in Model Packs.
+        # When checking out specific single-file models (e.g. quantized versions),
+        # the model.id is often formatted as "repo_id:filename" to ensure uniqueness
+        # in the UI/State, while model.path holds the filename.
+        # We need to extract just the repo_id for the hugginface_hub/diffusers calls.
+        if params.model.path and ":" in model_id:
+            parts = model_id.split(":")
+            if len(parts) == 2 and parts[1] == params.model.path:
+                model_id = parts[0]
+
         pipeline, _ = await load_image_to_image_pipeline(
             context=context,
-            model_id=params.model.id,
+            model_id=model_id,
             model_path=params.model.path,
             node_id=node_id,
-            revision=params.revision,
-            cache_dir=params.cache_dir,
         )
 
         # Set up generator for reproducibility

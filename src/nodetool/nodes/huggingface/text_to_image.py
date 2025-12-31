@@ -12,7 +12,6 @@ from nodetool.config.logging_config import get_logger
 from nodetool.metadata.types import (
     HFT5,
     HFFlux,
-    HFQwen2_5_VL,
     HFQwenImage,
     HFStableDiffusionXL,
     HFTextToImage,
@@ -138,6 +137,10 @@ class StableDiffusion(StableDiffusionBaseNode):
         latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
+            StableDiffusionPipeline,
+        )
+
         await super().preload_model(context)
         self._pipeline = await self.load_model(
             context=context,
@@ -182,6 +185,10 @@ class StableDiffusionXL(StableDiffusionXLBase):
         return "Stable Diffusion XL"
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
+            StableDiffusionXLPipeline,
+        )
+
         torch_dtype = self.get_torch_dtype()
         base_model, pipeline_model_id, transformer_model = self._prepare_sdxl_models()
         await self._load_sdxl_pipeline(
@@ -569,6 +576,8 @@ class Flux(HuggingFacePipelineNode):
                         allow_patterns=FLUX_SCHNELL_ALLOW_PATTERNS,
                     ),
                     UnifiedModel(
+                        # Composite ID (repo_id:filename) used to distinguish this specific file variant
+                        # from other files in the same repo, ensuring unique identification in State.
                         id="nunchaku-tech/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
                         type="hf.flux",
                         name="Nunchaku Schnell Transformer (INT4)",
@@ -577,6 +586,7 @@ class Flux(HuggingFacePipelineNode):
                         size_on_disk=6400000000,
                     ),
                     UnifiedModel(
+                        # Composite ID for T5 encoder variant
                         id="nunchaku-tech/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
                         type="hf.t5",
                         name="Nunchaku T5-XXL Encoder (INT4)",
@@ -684,6 +694,7 @@ class Flux(HuggingFacePipelineNode):
 
     async def preload_model(self, context: ProcessingContext):
         import torch
+        from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 
         transformer_model, text_encoder_model = self._resolve_model_config()
 
@@ -940,6 +951,8 @@ class Chroma(HuggingFacePipelineNode):
         return "lodestones/Chroma"
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
+
         torch_dtype = available_torch_dtype()
         # Load the pipeline with reduced precision when available
         self._pipeline = await self.load_model(
@@ -1102,6 +1115,8 @@ class QwenImage(HuggingFacePipelineNode):
             "*.txt",
             "scheduler/*",
             "vae/*",
+            "text_encoder/*",
+            "text_encoder_2/*",
             "tokenizer/*",
             "tokenizer_2/*",
         ]
@@ -1118,9 +1133,6 @@ class QwenImage(HuggingFacePipelineNode):
                 repo_id="nunchaku-tech/nunchaku-qwen-image",
                 path="svdq-fp4_r32-qwen-image.safetensors",
             ),
-            HFQwen2_5_VL(
-                repo_id="Qwen/Qwen2.5-VL-7B-Instruct",
-            ),
         ]
 
     @classmethod
@@ -1133,6 +1145,8 @@ class QwenImage(HuggingFacePipelineNode):
             "*.txt",
             "scheduler/*",
             "vae/*",
+            "text_encoder/*",
+            "text_encoder_2/*",
             "tokenizer/*",
             "tokenizer_2/*",
         ]
@@ -1148,7 +1162,7 @@ class QwenImage(HuggingFacePipelineNode):
                     UnifiedModel(
                         id="Qwen/Qwen-Image",
                         type="hf.qwen_image",
-                        name="Qwen-Image Base (configs/VAE/tokenizer)",
+                        name="Qwen-Image Base (configs/VAE/tokenizer/text_encoder)",
                         repo_id="Qwen/Qwen-Image",
                         allow_patterns=QWEN_IMAGE_ALLOW_PATTERNS,
                     ),
@@ -1159,12 +1173,6 @@ class QwenImage(HuggingFacePipelineNode):
                         repo_id="nunchaku-tech/nunchaku-qwen-image",
                         path="svdq-int4_r32-qwen-image.safetensors",
                         size_on_disk=6500000000,
-                    ),
-                    UnifiedModel(
-                        id="Qwen/Qwen2.5-VL-7B-Instruct",
-                        type="hf.qwen_vl",
-                        name="Qwen2.5-VL-7B-Instruct (Text Encoder)",
-                        repo_id="Qwen/Qwen2.5-VL-7B-Instruct",
                     ),
                 ],
                 total_size=6500000000,
@@ -1218,6 +1226,8 @@ class QwenImage(HuggingFacePipelineNode):
             await self._load_full_precision_pipeline(context)
 
     async def _load_full_precision_pipeline(self, context: ProcessingContext):
+        from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
+
         log.info(
             f"Loading Qwen-Image pipeline from {self.get_model_id()} without quantization..."
         )
@@ -1250,6 +1260,7 @@ class QwenImage(HuggingFacePipelineNode):
         from nodetool.huggingface.nunchaku_pipelines import (
             load_nunchaku_qwen_pipeline,
         )
+        from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
 
         model = self._resolve_model_config()
 
@@ -1451,6 +1462,8 @@ class FluxControl(HuggingFacePipelineNode):
         return ["control_image"]
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
+
         hf_token = await context.get_secret("HF_TOKEN")
         if not hf_token:
             model_url = f"https://huggingface.co/{self.get_model_id()}"

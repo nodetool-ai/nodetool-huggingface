@@ -1,5 +1,32 @@
 """
 Text-to-image pipeline loading for local HuggingFace models.
+
+This module handles the loading of various HuggingFace diffusers pipelines for text-to-image generation.
+It employs a robust strategy to determine the correct pipeline class:
+
+1. **Explicit Node Matching (First Priority):**
+   - It checks if the requested model (repo_id + path) matches any "recommended model" defined
+     in our specific nodes (e.g., Flux, QwenImage).
+   - If a match is found using `_is_node_model`, the model is loaded using the exact pipeline
+     class and configuration required by that node (e.g., `FluxPipeline` or `QwenImagePipeline`).
+   - This allows explicit overrides for models that might be generic but require specific handling.
+
+2. **Metadata Tag Matching:**
+   - If no node match is found, it fetches the model's metadata from HuggingFace.
+   - It inspects the `tags` or `pipeline_tag` fields for specific markers like:
+     - "diffusers:StableDiffusionXLPipeline"
+     - "diffusers:StableDiffusionPipeline"
+     - "flux"
+   - These tags map directly to their corresponding diffusers pipeline classes.
+
+3. **Fallback Heuristics:**
+   - If the tags are generic (e.g., just "text-to-image") and lack specific diffusers markers:
+     - It checks against `StableDiffusionXL` and `StableDiffusion` nodes again to see if we know this model.
+     - If still unknown, it attempts to load as SDXL first (common for single-file safetensors).
+     - If SDXL loading fails, it falls back to standard Stable Diffusion 1.5/2.x.
+
+This multi-layered approach ensures we reliably load both well-tagged models and ambiguous custom checkpoints
+using our internal knowledge base of node definitions.
 """
 
 from __future__ import annotations
@@ -32,8 +59,6 @@ async def load_text_to_image_pipeline(
     model_id: str,
     model_path: str | None,
     node_id: str | None,
-    revision: str | None = None,
-    cache_dir: str | None = None,
     cache_key: str | None = None,
     device: str | None = None,
 ) -> tuple[Any, bool]:
@@ -67,8 +92,6 @@ async def load_text_to_image_pipeline(
             cache_path = await _ensure_file_cached(
                 model_id,
                 model_path,
-                revision=revision,
-                cache_dir=cache_dir,
             )
 
         model_info = await fetch_model_info(model_id)
@@ -166,6 +189,64 @@ async def load_text_to_image_pipeline(
                         torch.bfloat16 if _is_cuda_available() else torch.float32
                     ),
                 )
+            elif model_info.pipeline_tag == "text-to-image":
+                # Fallback for generic text-to-image models (likely SDXL or SD1.5) if no specific diffusers tag found
+                # Check against known node models first
+                from nodetool.nodes.huggingface.image_to_image import (
+                    StableDiffusionControlNet,
+                )
+                from nodetool.nodes.huggingface.text_to_image import (
+                    StableDiffusion,
+                    StableDiffusionXL,
+                )
+
+                if _is_node_model(model_id, model_path, StableDiffusionXL):
+                     from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
+                        StableDiffusionXLPipeline,
+                    )
+                     pipeline = StableDiffusionXLPipeline.from_single_file(
+                        str(cache_path),
+                        torch_dtype=(
+                            torch.float16 if _is_cuda_available() else torch.float32
+                        ),
+                    )
+                elif _is_node_model(model_id, model_path, StableDiffusion) or _is_node_model(
+                    model_id, model_path, StableDiffusionControlNet
+                ):
+                    from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
+                        StableDiffusionPipeline,
+                    )
+                    pipeline = StableDiffusionPipeline.from_single_file(
+                        str(cache_path),
+                        torch_dtype=(
+                            torch.float16 if _is_cuda_available() else torch.float32
+                        ),
+                    )
+                else:
+                    # Attempt to load as SDXL first as it's common for single-file safetensors
+                    try:
+                        from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
+                            StableDiffusionXLPipeline,
+                        )
+
+                        pipeline = StableDiffusionXLPipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=(
+                                torch.float16 if _is_cuda_available() else torch.float32
+                            ),
+                        )
+                    except Exception:
+                        # Fallback to standard SD
+                        from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
+                            StableDiffusionPipeline,
+                        )
+
+                        pipeline = StableDiffusionPipeline.from_single_file(
+                            str(cache_path),
+                            torch_dtype=(
+                                torch.float16 if _is_cuda_available() else torch.float32
+                            ),
+                        )
             else:
                 raise ValueError(
                     f"Unsupported single-file model type: {model_info.pipeline_tag}"
