@@ -146,14 +146,38 @@ This package provides a rich set of HuggingFace nodes for integration with Nodet
     - `microsoft/tapex-large-finetuned-tabfact`
   - Use cases: Database queries, spreadsheet analysis
 
+- **Document Question Answering** - Answer questions about document images
+  - Combines OCR and visual layout understanding
+  - Recommended models:
+    - `impira/layoutlm-document-qa` - General document QA
+    - `impira/layoutlm-invoices` - Invoice processing
+    - `naver-clova-ix/donut-base-finetuned-docvqa` - Document understanding
+  - Returns answers with confidence scores
+  - Use cases: Extract info from scanned documents, forms, invoices, receipts
+
 #### Text Transformation
 - **Translation** - Translate text between languages
   - Multiple language pairs
   - Use cases: Localization, multilingual content
 
 - **Summarization** - Generate concise summaries of long text
+  - Recommended models:
+    - `facebook/bart-large-cnn` - News article summarization
+    - `google/pegasus-xsum` - Extreme summarization
+    - `sshleifer/distilbart-cnn-12-6` - Faster summarization
+    - `philschmid/bart-large-cnn-samsum` - Dialogue summarization
+  - Configurable summary length (min/max tokens)
   - Extractive and abstractive summarization
-  - Use cases: Document summarization, news digests
+  - Use cases: Document summarization, news digests, meeting notes
+
+- **Text2Text Generation** - General-purpose text transformation
+  - Transforms input text to output text using seq2seq models
+  - Recommended models:
+    - `google-t5/t5-base` - General text transformation
+    - `google/flan-t5-base` - Instruction-tuned T5
+    - `google/flan-t5-large` - Larger instruction-tuned T5
+  - Task prefixes for T5 models (e.g., 'summarize:', 'translate English to German:')
+  - Use cases: Grammar correction, paraphrasing, question generation, text simplification
 
 ### 🖼️ Image Analysis
 
