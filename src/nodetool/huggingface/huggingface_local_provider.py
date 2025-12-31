@@ -42,6 +42,7 @@ from nodetool.integrations.huggingface.huggingface_models import (
 from nodetool.huggingface.image_to_image_pipelines import (
     load_image_to_image_pipeline,
 )
+from nodetool.nodes.huggingface.image_to_image import pipeline_progress_callback
 from nodetool.huggingface.local_provider_utils import (
     _get_torch,
     _is_cuda_available,
@@ -259,9 +260,6 @@ class HuggingFaceLocalProvider(BaseProvider):
         pil_output.save(img_buffer, format="PNG")
         image_bytes = img_buffer.getvalue()
 
-        self.usage["total_requests"] += 1
-        self.usage["total_images"] += 1
-
         return image_bytes
 
     async def text_to_speech(
@@ -405,17 +403,20 @@ class HuggingFaceLocalProvider(BaseProvider):
         log.debug(f"Transcribing audio with HuggingFace Whisper model: {model}")
 
         # Get or load the pipeline
-        asr_pipeline = ModelManager.get_model(model_id)
+        asr_pipeline = ModelManager.get_model(model)
 
         if not asr_pipeline:
             log.info(f"Loading automatic speech recognition pipeline: {model}")
+
+            import torch
+            from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline as create_pipeline
 
             # Determine torch dtype based on device
             torch_dtype = torch.float16 if _is_cuda_available() else torch.float32
 
             # Load model using helper
             hf_model = await load_model(
-                node_id=cache_key,
+                node_id=None,
                 context=context,
                 model_class=AutoModelForSpeechSeq2Seq,
                 model_id=model,
@@ -439,7 +440,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             )
 
             # Cache the pipeline
-            ModelManager.set_model(node_id, cache_key, asr_pipeline)
+            ModelManager.set_model(None, model, asr_pipeline)
 
         audio_segment = AudioSegment.from_file(BytesIO(audio))
         # Whisper expects 16kHz mono audio
@@ -548,15 +549,17 @@ class HuggingFaceLocalProvider(BaseProvider):
             )
 
         # Get or load the pipeline
-        pipeline = ModelManager.get_model(model_id)
+        pipeline = ModelManager.get_model(model)
 
         if not pipeline:
-            log.info(f"Loading text-to-video pipeline: {model_id}")
+            import torch
+
+            log.info(f"Loading text-to-video pipeline: {model}")
 
             # Load VAE first
             vae = await asyncio.to_thread(
                 AutoencoderKLWan.from_pretrained,
-                model_id,
+                model,
                 subfolder="vae",
                 torch_dtype=torch.float32,
                 low_cpu_mem_usage=False,
@@ -566,7 +569,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             # Load WanPipeline
             pipeline = await asyncio.to_thread(
                 WanPipeline.from_pretrained,
-                model_id,
+                model,
                 torch_dtype=torch.bfloat16,
                 vae=vae,
             )
@@ -604,9 +607,10 @@ class HuggingFaceLocalProvider(BaseProvider):
                 pass
 
             # Cache the pipeline
-            ModelManager.set_model(node_id, cache_key, pipeline)
+            ModelManager.set_model(node_id, model, pipeline)
 
         # Set up generator for reproducibility
+        import torch
         generator = None
         if seed is not None and seed != -1:
             generator = torch.Generator(device="cpu").manual_seed(seed)
@@ -850,6 +854,7 @@ class HuggingFaceLocalProvider(BaseProvider):
 
             # Handle list content
             content_list = []
+            has_images = False
             for part in message.content:
                 if isinstance(part, MessageTextContent):
                     content_list.append({"type": "text", "text": part.text})
@@ -859,8 +864,18 @@ class HuggingFaceLocalProvider(BaseProvider):
                     img = Image.open(io.BytesIO(data))
                     # Store PIL image directly; will be extracted later
                     content_list.append({"type": "image", "image": img})
+                    has_images = True
 
-            return {"role": "user", "content": content_list}
+            # For text-only models, content must be a string, not a list
+            # Only use list format if there are images (for VLM models)
+            if has_images:
+                return {"role": "user", "content": content_list}
+            else:
+                # Extract text parts and join them
+                text_parts = [
+                    part["text"] for part in content_list if part.get("type") == "text"
+                ]
+                return {"role": "user", "content": "\n".join(text_parts)}
 
         elif message.role == "assistant":
             # For assistant, we mainly handle text content and tool calls if we supported them
@@ -904,7 +919,8 @@ class HuggingFaceLocalProvider(BaseProvider):
         node_id: str | None,
         quantization: str = "fp16",
     ) -> AsyncIterator[Chunk]:
-        from transformers import BitsAndBytesConfig
+        import torch
+        from transformers import BitsAndBytesConfig, TextStreamer
 
         cached_pipeline = ModelManager.get_model(repo_id)
 
@@ -1042,7 +1058,8 @@ class HuggingFaceLocalProvider(BaseProvider):
         quantization: str = "fp16",
     ) -> AsyncIterator[Chunk]:
         """Stream generation for image-text-to-text models."""
-        from transformers import BitsAndBytesConfig, AutoProcessor, AutoModelForCausalLM
+        import torch
+        from transformers import BitsAndBytesConfig, AutoProcessor, AutoModelForCausalLM, TextStreamer
 
         # Extract images and clean messages
         # Convert messages and extract images

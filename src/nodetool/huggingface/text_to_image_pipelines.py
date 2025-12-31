@@ -147,7 +147,17 @@ async def load_text_to_image_pipeline(
                 use_cpu_offload = True
         else:
             torch = _get_torch()
-            if "diffusers:StableDiffusionXLPipeline" in model_info.tags:
+            # Check for Nunchaku Flux transformers before tag-based routing
+            # Nunchaku models may not be in Flux node's recommended list, but they
+            # still need to be loaded with the special Nunchaku pipeline
+            if is_nunchaku_transformer(model_id, model_path):
+                pipeline = await load_nunchaku_flux_pipeline(
+                    context=context,
+                    repo_id=model_id,
+                    transformer_path=model_path,
+                    node_id=node_id,
+                )
+            elif "diffusers:StableDiffusionXLPipeline" in model_info.tags:
                 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
                     StableDiffusionXLPipeline,
                 )

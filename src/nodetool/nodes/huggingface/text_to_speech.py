@@ -9,9 +9,9 @@ from nodetool.workflows.processing_context import ProcessingContext
 
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Mapping, TypedDict
 from pydantic import Field
+import numpy as np
 
 if TYPE_CHECKING:
-    import numpy as np
     from kokoro.pipeline import KPipeline
     from transformers.pipelines.text_to_audio import TextToAudioPipeline
     from transformers.pipelines.base import Pipeline
@@ -225,6 +225,8 @@ class KokoroTTS(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
+        from kokoro.pipeline import KPipeline
+
         # Initialize and cache the Kokoro pipeline
         device = context.device
         self._kpipeline = KPipeline(
