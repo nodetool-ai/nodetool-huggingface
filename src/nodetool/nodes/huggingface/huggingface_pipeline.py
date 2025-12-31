@@ -8,10 +8,7 @@ from nodetool.nodes.huggingface.huggingface_node import (
 )
 from nodetool.workflows.processing_context import ProcessingContext
 from typing import TYPE_CHECKING, Any, TypeVar
-from nodetool.huggingface.huggingface_local_provider import (
-    load_pipeline,
-    load_model,
-)
+from nodetool.huggingface.local_provider_utils import load_model, load_pipeline
 
 if TYPE_CHECKING:
     import torch

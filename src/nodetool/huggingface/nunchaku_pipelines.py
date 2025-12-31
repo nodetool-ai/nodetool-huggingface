@@ -10,18 +10,18 @@ module to work without nunchaku installed.
 from typing import Any, TYPE_CHECKING
 
 from nodetool.config.logging_config import get_logger
+from nodetool.huggingface.flux_utils import (
+    detect_flux_variant,
+    flux_variant_to_base_model_id,
+)
+from nodetool.huggingface.local_provider_utils import _get_torch, load_model
+from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 
 if TYPE_CHECKING:
     import torch
     from nodetool.workflows.processing_context import ProcessingContext
 
 log = get_logger(__name__)
-
-
-def _get_torch():
-    """Lazy import for torch."""
-    import torch
-    return torch
 
 
 # Check if nunchaku is available
@@ -74,10 +74,6 @@ async def get_nunchaku_text_encoder(
     from nunchaku import NunchakuT5EncoderModel
     from nunchaku.utils import get_precision
     from huggingface_hub import hf_hub_download
-    from nodetool.huggingface.huggingface_local_provider import (
-        load_model,
-        HF_FAST_CACHE,
-    )
 
     if repo_id is None:
         repo_id = "nunchaku-tech/nunchaku-t5"
@@ -146,10 +142,6 @@ async def get_nunchaku_transformer(
     _require_nunchaku()
     
     from nunchaku.utils import get_precision
-    from nodetool.huggingface.huggingface_local_provider import (
-        load_model,
-        HF_FAST_CACHE,
-    )
 
     # Resolve device - nunchaku requires a valid device, not None
     torch = _get_torch()
@@ -200,47 +192,6 @@ async def get_nunchaku_transformer(
     return transformer
 
 
-def _is_nunchaku_transformer(repo_id: str, file_path: str | None) -> bool:
-    """Detect Nunchaku FLUX transformer files."""
-    if not file_path:
-        return False
-    repo_lower = repo_id.lower()
-    return (
-        "nunchaku" in repo_lower
-        and "flux" in repo_lower
-        and "svdq" in file_path.lower()
-    )
-
-
-def _detect_flux_variant(repo_id: str, file_path: str | None) -> str:
-    """Detect which FLUX base model should be used."""
-    candidates = [repo_id, file_path or ""]
-    for value in candidates:
-        lower = value.lower()
-        if "schnell" in lower:
-            return "schnell"
-        if "fill" in lower:
-            return "fill"
-        if "canny" in lower:
-            return "canny"
-        if "depth" in lower:
-            return "depth"
-        if "dev" in lower:
-            return "dev"
-    return "dev"
-
-
-def _flux_variant_to_base_model_id(variant: str) -> str:
-    """Map detected variant names to canonical FLUX repos."""
-    mapping = {
-        "schnell": "black-forest-labs/FLUX.1-schnell",
-        "fill": "black-forest-labs/FLUX.1-Fill-dev",
-        "canny": "black-forest-labs/FLUX.1-Canny-dev",
-        "depth": "black-forest-labs/FLUX.1-Depth-dev",
-        "dev": "black-forest-labs/FLUX.1-dev",
-    }
-    return mapping.get(variant, "black-forest-labs/FLUX.1-dev")
-
 
 def _node_identifier(node_id: str | None, repo_id: str) -> str:
     """Derive a unique identifier for caching based on node ID or repo."""
@@ -269,8 +220,8 @@ async def load_nunchaku_flux_pipeline(
         cached_pipeline = ModelManager.get_model(cache_key)
         if cached_pipeline:
             return cached_pipeline
-    variant = _detect_flux_variant(repo_id, transformer_path)
-    base_model_id = _flux_variant_to_base_model_id(variant)
+    variant = detect_flux_variant(repo_id, transformer_path)
+    base_model_id = flux_variant_to_base_model_id(variant)
     hf_token = await context.get_secret("HF_TOKEN")
     if variant != "schnell" and not hf_token:
         raise ValueError(

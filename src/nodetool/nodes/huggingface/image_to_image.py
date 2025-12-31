@@ -355,6 +355,8 @@ class LoadImageToImageModel(HuggingFacePipelineNode):
     )
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
+
         torch_dtype = available_torch_dtype()
         await self.load_model(
             context=context,
@@ -586,6 +588,11 @@ class StableDiffusionControlNet(StableDiffusionBaseNode):
             self._pipeline.text_encoder.to(device)
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.models.controlnets.controlnet import ControlNetModel
+        from diffusers.pipelines.controlnet.pipeline_controlnet import (
+            StableDiffusionControlNetPipeline,
+        )
+
         await super().preload_model(context)
         # Use PyTorch 2 attention optimizations while keeping MPS/controlnet compatibility
         controlnet_dtype = (
@@ -668,6 +675,10 @@ class StableDiffusionImg2ImgNode(StableDiffusionBaseNode):
         latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import (
+            StableDiffusionImg2ImgPipeline,
+        )
+
         await super().preload_model(context)
         self._pipeline = await self.load_model(
             context=context,
@@ -758,6 +769,10 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
         latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint import (
+            StableDiffusionControlNetInpaintPipeline,
+        )
+
         await super().preload_model(context)
         controlnet_dtype = (
             torch.float32 if context.device == "mps" else available_torch_dtype()
@@ -2043,6 +2058,75 @@ class QwenImageEdit(HuggingFacePipelineNode):
             ),
         ]
 
+    @classmethod
+    def get_model_packs(cls):
+        """Return curated Qwen-Image-Edit model packs for one-click download."""
+        from nodetool.types.model import ModelPack, UnifiedModel
+
+        QWEN_IMAGE_EDIT_ALLOW_PATTERNS = [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "text_encoder_2/*",
+            "tokenizer/*",
+            "tokenizer_2/*",
+        ]
+
+        return [
+            ModelPack(
+                id="qwen_image_edit_nunchaku_int4",
+                title="Qwen-Image-Edit (Nunchaku INT4)",
+                description="Qwen-Image-Edit with INT4 quantization via Nunchaku for memory-efficient image editing.",
+                category="image_editing",
+                tags=["qwen", "image-to-image", "int4", "nunchaku", "editing"],
+                models=[
+                    UnifiedModel(
+                        id="Qwen/Qwen-Image-Edit",
+                        type="hf.qwen_image_edit",
+                        name="Qwen-Image-Edit Base (configs/VAE/tokenizer/text_encoder)",
+                        repo_id="Qwen/Qwen-Image-Edit",
+                        allow_patterns=QWEN_IMAGE_EDIT_ALLOW_PATTERNS,
+                    ),
+                    UnifiedModel(
+                        id="nunchaku-tech/nunchaku-qwen-image-edit:svdq-int4_r32-qwen-image-edit.safetensors",
+                        type="hf.qwen_image_edit",
+                        name="Nunchaku Qwen-Image-Edit Transformer (INT4)",
+                        repo_id="nunchaku-tech/nunchaku-qwen-image-edit",
+                        path="svdq-int4_r32-qwen-image-edit.safetensors",
+                        size_on_disk=6500000000,
+                    ),
+                ],
+                total_size=6500000000,
+            ),
+            ModelPack(
+                id="qwen_image_edit_nunchaku_fp4",
+                title="Qwen-Image-Edit (Nunchaku FP4)",
+                description="Qwen-Image-Edit with FP4 quantization via Nunchaku for memory-efficient image editing.",
+                category="image_editing",
+                tags=["qwen", "image-to-image", "fp4", "nunchaku", "editing"],
+                models=[
+                    UnifiedModel(
+                        id="Qwen/Qwen-Image-Edit",
+                        type="hf.qwen_image_edit",
+                        name="Qwen-Image-Edit Base (configs/VAE/tokenizer/text_encoder)",
+                        repo_id="Qwen/Qwen-Image-Edit",
+                        allow_patterns=QWEN_IMAGE_EDIT_ALLOW_PATTERNS,
+                    ),
+                    UnifiedModel(
+                        id="nunchaku-tech/nunchaku-qwen-image-edit:svdq-fp4_r32-qwen-image-edit.safetensors",
+                        type="hf.qwen_image_edit",
+                        name="Nunchaku Qwen-Image-Edit Transformer (FP4)",
+                        repo_id="nunchaku-tech/nunchaku-qwen-image-edit",
+                        path="svdq-fp4_r32-qwen-image-edit.safetensors",
+                        size_on_disk=6500000000,
+                    ),
+                ],
+                total_size=6500000000,
+            ),
+        ]
+
     def _get_base_model(self) -> HFQwenImageEdit:
         return HFQwenImageEdit(
             repo_id="Qwen/Qwen-Image-Edit",
@@ -2077,6 +2161,10 @@ class QwenImageEdit(HuggingFacePipelineNode):
     async def _load_full_precision_pipeline(
         self, context: ProcessingContext, torch_dtype: torch.dtype
     ):
+        from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import (
+            QwenImageEditPipeline,
+        )
+
         base_model = self._get_base_model()
         model_id = base_model.repo_id or "Qwen/Qwen-Image-Edit"
         log.info(
@@ -2113,8 +2201,11 @@ class QwenImageEdit(HuggingFacePipelineNode):
         torch_dtype: torch.dtype,
         quantization: QwenImageEditQuantization | None = None,
     ):
-        from nodetool.huggingface.huggingface_local_provider import (
+        from nodetool.huggingface.nunchaku_pipelines import (
             load_nunchaku_qwen_pipeline,
+        )
+        from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import (
+            QwenImageEditPipeline,
         )
 
         transformer_model = self._resolve_model_config(quantization)
@@ -2371,11 +2462,13 @@ class FluxFill(HuggingFacePipelineNode):
         return base_model, transformer
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.flux.pipeline_flux_fill import FluxFillPipeline
+
         torch_dtype = torch.bfloat16
         base_model, transformer_model = self._resolve_model_config(self.quantization)
 
         if transformer_model is not None:
-            from nodetool.huggingface.huggingface_local_provider import (
+            from nodetool.huggingface.nunchaku_pipelines import (
                 load_nunchaku_flux_pipeline,
             )
 
@@ -2618,6 +2711,8 @@ class FluxKontext(HuggingFacePipelineNode):
         return (self._get_base_model(), None)
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.flux.pipeline_flux_kontext import FluxKontextPipeline
+
         hf_token = await context.get_secret("HF_TOKEN")
         if not hf_token:
             model_url = f"https://huggingface.co/{self.get_model_id()}"
