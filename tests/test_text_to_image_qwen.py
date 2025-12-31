@@ -5,7 +5,7 @@ from tests.test_utils import main
 async def test_qwen_image_quantization():
     qwen = QwenImage()
     qwen.quantization = QwenQuantization.INT4
-    
+
     # Verify that the model ID and path are resolved correctly
     model_config = qwen._resolve_model_config()
     assert model_config.repo_id == "nunchaku-tech/nunchaku-qwen-image"
@@ -30,7 +30,7 @@ async def test_qwen_image_quantization():
             self.transformer.to(device)
             self.text_encoder.to(device)
             self.vae.to(device)
-            
+
     class MockTransformer:
         def to(self, device):
             pass

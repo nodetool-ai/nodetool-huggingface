@@ -817,7 +817,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             self._pipeline.enable_attention_slicing()
 
         loras = [
-            lora for lora in self.loras if not lora.lora.path in self._loaded_adapters
+            lora for lora in self.loras if lora.lora.path not in self._loaded_adapters
         ]
         log.debug(f"New LoRAs to load: {len(loras)}")
         await load_loras(self._pipeline, loras)
@@ -1466,7 +1466,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             self._pipeline.enable_model_cpu_offload()
 
         loras = [
-            lora for lora in self.loras if not lora.lora.path in self._loaded_adapters
+            lora for lora in self.loras if lora.lora.path not in self._loaded_adapters
         ]
         log.debug(f"New LoRAs to load (XL): {len(loras)}")
         await load_loras(self._pipeline, loras)

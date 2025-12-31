@@ -44,7 +44,7 @@ class HuggingFaceLogHandler(logging.Handler):
                 severity=severity,  # type: ignore
             )
             self.context.post_message(log_update)
-        except Exception as e:
+        except Exception:
             # Avoid infinite recursion if there's an error in logging
             pass
 
