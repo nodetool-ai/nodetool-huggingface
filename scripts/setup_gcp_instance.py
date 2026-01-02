@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Script to setup a GCP instance with CUDA 12.1, install nodetool-huggingface,
+Script to setup a GCP instance with CUDA 12.8 and PyTorch, install nodetool-huggingface,
 download a Stable Diffusion model, and run an example.
 
 This script uses the Google Cloud Python SDK to:
-1. Create a GCP Compute Engine instance with CUDA 12.1 pre-installed
+1. Create a GCP Compute Engine instance with CUDA 12.8 and PyTorch 2.7 pre-installed
 2. Install the nodetool-huggingface project
 3. Download a recommended Stable Diffusion model
 4. Run a Stable Diffusion example
@@ -39,7 +39,7 @@ class GCPInstanceSetup:
     def __init__(
         self,
         project_id: str,
-        zone: str = "europe-west4-a",
+        zone: str = "us-east1-c",
         instance_name: str = "nodetool-hf-instance",
         machine_type: str = "n1-standard-4",
         gpu_type: str = "nvidia-tesla-t4",
@@ -59,11 +59,11 @@ class GCPInstanceSetup:
         self.images_client = compute_v1.ImagesClient(credentials=credentials)
 
     def get_cuda_image(self) -> str:
-        """Get the latest Deep Learning VM image with CUDA 12.1."""
+        """Get the latest Deep Learning VM image with CUDA 12.8 and PyTorch."""
         # Deep Learning VM images from Google with CUDA pre-installed
-        # These are maintained by Google and include CUDA 12.x
+        # Using PyTorch 2.7 with CUDA 12.8 (supported until August 2026)
         project = "deeplearning-platform-release"
-        family = "common-cu121"
+        family = "pytorch-2-7-cu128-ubuntu-2204-nvidia-570"
 
         try:
             # Try to get the image from the family
@@ -71,9 +71,9 @@ class GCPInstanceSetup:
             print(f"Using image: {image.self_link}")
             return image.self_link
         except Exception as e:
-            print(f"Warning: Could not find specific CUDA 12.1 image: {e}")
-            # Fallback to a known working Deep Learning image
-            return f"projects/{project}/global/images/family/pytorch-latest-gpu"
+            print(f"Warning: Could not find specific PyTorch CUDA image: {e}")
+            # Fallback to the family path
+            return f"projects/{project}/global/images/family/{family}"
 
     def create_startup_script(self) -> str:
         """Create the startup script for the instance."""
@@ -292,7 +292,7 @@ echo "Setup completed successfully at $(date)"
         disk.auto_delete = True
         disk.initialize_params = compute_v1.AttachedDiskInitializeParams()
         disk.initialize_params.source_image = image_uri
-        disk.initialize_params.disk_size_gb = 50  # 50GB boot disk
+        disk.initialize_params.disk_size_gb = 200  # 200GB boot disk with space for ML models
 
         # Configure network
         network_interface = compute_v1.NetworkInterface()
@@ -324,9 +324,11 @@ echo "Setup completed successfully at $(date)"
         instance.scheduling = compute_v1.Scheduling()
         instance.scheduling.on_host_maintenance = "TERMINATE"
         instance.scheduling.automatic_restart = True
-        # Set max run duration to 2 hours (7200 seconds) for auto-shutdown
+        # Set max run duration to 15 minutes (900 seconds) for auto-shutdown
         instance.scheduling.max_run_duration = compute_v1.Duration()
-        instance.scheduling.max_run_duration.seconds = 7200
+        instance.scheduling.max_run_duration.seconds = 900
+        # Specify what happens when max run duration is reached (STOP or DELETE)
+        instance.scheduling.instance_termination_action = "STOP"
 
         # Add startup script
         metadata = compute_v1.Metadata()
@@ -389,7 +391,7 @@ def main():
     """Main entry point."""
     # Get configuration from environment
     project_id = os.environ.get("GCP_PROJECT_ID")
-    zone = os.environ.get("GCP_ZONE", "europe-west4-a")
+    zone = os.environ.get("GCP_ZONE", "us-east1-c")
     service_account_key = os.environ.get("GCP_ACCOUNT_KEY")
 
     if not project_id:
