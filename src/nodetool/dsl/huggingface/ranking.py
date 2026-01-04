@@ -22,13 +22,15 @@ from nodetool.workflows.base_node import BaseNode
 class Reranker(SingleOutputGraphNode[dict[str, float]], GraphNode[dict[str, float]]):
     """
 
-    Reranks pairs of text based on their semantic similarity.
-    text, ranking, reranking, natural language processing
+    Scores and ranks text pairs by semantic relevance using cross-encoder reranking models.
+    text, ranking, reranking, NLP, search
 
     Use cases:
-    - Improve search results ranking
-    - Question-answer pair scoring
-    - Document relevance ranking
+    - Improve search result quality by reranking initial retrieval results
+    - Score question-answer pair relevance for QA systems
+    - Rank document relevance for information retrieval
+    - Build two-stage retrieval pipelines (retrieve then rerank)
+    - Filter and prioritize candidates in recommendation systems
     """
 
     model: types.HFReranker | OutputHandle[types.HFReranker] = connect_field(
@@ -40,13 +42,14 @@ class Reranker(SingleOutputGraphNode[dict[str, float]], GraphNode[dict[str, floa
             allow_patterns=None,
             ignore_patterns=None,
         ),
-        description="The model ID to use for reranking",
+        description="The reranking model. BGE-reranker-v2-m3 is multilingual; base and large variants offer different speed/accuracy tradeoffs.",
     )
     query: str | OutputHandle[str] = connect_field(
-        default="", description="The query text to compare against candidates"
+        default="", description="The query or question to compare candidates against."
     )
     candidates: list[str] | OutputHandle[list[str]] = connect_field(
-        default=[], description="List of candidate texts to rank"
+        default=[],
+        description="List of text candidates to rank by relevance to the query.",
     )
 
     @classmethod

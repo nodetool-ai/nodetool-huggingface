@@ -26,14 +26,15 @@ class QuestionAnswering(
 ):
     """
 
-    Answers questions based on a given context.
-    text, question answering, natural language processing
+    Extracts answers to questions from a given text context using extractive QA models.
+    text, question-answering, NLP, reading-comprehension
 
     Use cases:
-    - Automated customer support
-    - Information retrieval from documents
-    - Reading comprehension tasks
-    - Enhancing search functionality
+    - Build automated FAQ and customer support systems
+    - Extract specific information from documents and articles
+    - Create reading comprehension and study tools
+    - Enable natural language queries over text databases
+    - Analyze contracts and legal documents for key details
     """
 
     model: types.HFQuestionAnswering | OutputHandle[types.HFQuestionAnswering] = (
@@ -46,14 +47,15 @@ class QuestionAnswering(
                 allow_patterns=None,
                 ignore_patterns=None,
             ),
-            description="The model ID to use for question answering",
+            description="The extractive QA model. DistilBERT is fast; BERT-large and RoBERTa offer higher accuracy.",
         )
     )
     context: str | OutputHandle[str] = connect_field(
-        default="", description="The context or passage to answer questions from"
+        default="",
+        description="The text passage containing the information to answer questions from.",
     )
     question: str | OutputHandle[str] = connect_field(
-        default="", description="The question to be answered based on the context"
+        default="", description="The question to answer based on the provided context."
     )
 
     @property
@@ -101,14 +103,15 @@ class TableQuestionAnswering(
 ):
     """
 
-    Answers questions based on tabular data.
-    table, question answering, natural language processing
+    Answers natural language questions about tabular data using table QA models.
+    table, question-answering, NLP, data-analysis
 
     Use cases:
-    - Querying databases using natural language
-    - Analyzing spreadsheet data with questions
-    - Extracting insights from tabular reports
-    - Automated data exploration
+    - Query spreadsheets and databases using natural language
+    - Extract insights from financial reports and data tables
+    - Build conversational interfaces for data exploration
+    - Automate data analysis with question-based queries
+    - Enable non-technical users to query structured data
     """
 
     model: (
@@ -122,16 +125,22 @@ class TableQuestionAnswering(
             allow_patterns=None,
             ignore_patterns=None,
         ),
-        description="The model ID to use for table question answering",
+        description="The table QA model. TAPAS models handle complex queries; TAPEX offers fact verification.",
     )
     dataframe: types.DataframeRef | OutputHandle[types.DataframeRef] = connect_field(
         default=types.DataframeRef(
-            type="dataframe", uri="", asset_id=None, data=None, columns=None
+            type="dataframe",
+            uri="",
+            asset_id=None,
+            data=None,
+            metadata=None,
+            columns=None,
         ),
-        description="The input table to query",
+        description="The table data to query. Columns should have clear, descriptive headers.",
     )
     question: str | OutputHandle[str] = connect_field(
-        default="", description="The question to be answered based on the table"
+        default="",
+        description="Your question about the table data (e.g., 'What is the total revenue?' or 'Which product sold the most?').",
     )
 
     @property

@@ -59,11 +59,15 @@ class FluxFill(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef])
         description="A text prompt describing what should fill the masked area.",
     )
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The input image to fill/inpaint",
     )
     mask_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The mask image indicating areas to be filled (white areas will be filled)",
     )
     height: int | OutputHandle[int] = connect_field(
@@ -124,7 +128,9 @@ class FluxKontext(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRe
     )
 
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The input image to edit",
     )
     prompt: str | OutputHandle[str] = connect_field(
@@ -199,7 +205,9 @@ class ImageToImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageR
         description="Text prompt describing what should not appear in the generated image.",
     )
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The input image to transform",
     )
     strength: float | OutputHandle[float] = connect_field(
@@ -360,7 +368,9 @@ class QwenImageEdit(SingleOutputGraphNode[types.ImageRef], GraphNode[types.Image
     )
 
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The input image to edit",
     )
     prompt: str | OutputHandle[str] = connect_field(
@@ -425,7 +435,9 @@ class RealESRGANNode(SingleOutputGraphNode[types.ImageRef], GraphNode[types.Imag
     """
 
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The input image to transform",
     )
     model: types.HFRealESRGAN | OutputHandle[types.HFRealESRGAN] = connect_field(
@@ -535,7 +547,9 @@ class StableDiffusionControlNet(
         )
     )
     ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="When provided the image will be fed into the IP adapter",
     )
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
@@ -577,7 +591,9 @@ class StableDiffusionControlNet(
         description="The ControlNet model to use for guidance.",
     )
     control_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The control image to guide the generation process.",
     )
     controlnet_conditioning_scale: float | OutputHandle[float] = connect_field(
@@ -694,7 +710,9 @@ class StableDiffusionControlNetImg2ImgNode(
         )
     )
     ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="When provided the image will be fed into the IP adapter",
     )
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
@@ -725,7 +743,9 @@ class StableDiffusionControlNetImg2ImgNode(
         description="The type of output to generate.",
     )
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The input image to be transformed.",
     )
     strength: float | OutputHandle[float] = connect_field(
@@ -743,7 +763,9 @@ class StableDiffusionControlNetImg2ImgNode(
         description="The ControlNet model to use for guidance.",
     )
     control_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The control image to guide the transformation.",
     )
 
@@ -861,7 +883,9 @@ class StableDiffusionControlNetInpaintNode(
         )
     )
     ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="When provided the image will be fed into the IP adapter",
     )
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
@@ -898,15 +922,21 @@ class StableDiffusionControlNetInpaintNode(
         description="The ControlNet model to use for guidance.",
     )
     init_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The initial image to be inpainted.",
     )
     mask_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The mask image indicating areas to be inpainted.",
     )
     control_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The control image to guide the inpainting process.",
     )
     controlnet_conditioning_scale: float | OutputHandle[float] = connect_field(
@@ -1025,7 +1055,9 @@ class StableDiffusionImg2ImgNode(
         )
     )
     ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="When provided the image will be fed into the IP adapter",
     )
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
@@ -1056,7 +1088,9 @@ class StableDiffusionImg2ImgNode(
         description="The type of output to generate.",
     )
     init_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The initial image for Image-to-Image generation.",
     )
     strength: float | OutputHandle[float] = connect_field(
@@ -1173,7 +1207,9 @@ class StableDiffusionInpaintNode(
         )
     )
     ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="When provided the image will be fed into the IP adapter",
     )
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
@@ -1204,11 +1240,15 @@ class StableDiffusionInpaintNode(
         description="The type of output to generate.",
     )
     init_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The initial image to be inpainted.",
     )
     mask_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The mask image indicating areas to be inpainted.",
     )
     strength: float | OutputHandle[float] = connect_field(
@@ -1331,7 +1371,9 @@ class StableDiffusionUpscale(
         default=7.5, description="Guidance scale for generation."
     )
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The initial image for Image-to-Image generation.",
     )
     scheduler: (
@@ -1457,7 +1499,9 @@ class StableDiffusionXLControlNet(
         )
     )
     ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="When provided the image will be fed into the IP adapter",
     )
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
@@ -1493,7 +1537,9 @@ class StableDiffusionXLControlNet(
         description="The ControlNet model to use for guidance.",
     )
     control_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The control image to guide the generation process.",
     )
     controlnet_conditioning_scale: float | OutputHandle[float] = connect_field(
@@ -1627,7 +1673,9 @@ class StableDiffusionXLControlNetImg2ImgNode(
         )
     )
     ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="When provided the image will be fed into the IP adapter",
     )
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
@@ -1652,7 +1700,9 @@ class StableDiffusionXLControlNetImg2ImgNode(
         description="The type of output to generate.",
     )
     init_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The initial image for Image-to-Image generation.",
     )
     strength: float | OutputHandle[float] = connect_field(
@@ -1671,7 +1721,9 @@ class StableDiffusionXLControlNetImg2ImgNode(
         description="The ControlNet model to use for guidance.",
     )
     control_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The control image to guide the transformation.",
     )
     controlnet_conditioning_scale: float | OutputHandle[float] = connect_field(
@@ -1807,7 +1859,9 @@ class StableDiffusionXLImg2Img(
         )
     )
     ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="When provided the image will be fed into the IP adapter",
     )
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
@@ -1832,7 +1886,9 @@ class StableDiffusionXLImg2Img(
         description="The type of output to generate.",
     )
     init_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The initial image for Image-to-Image generation.",
     )
     strength: float | OutputHandle[float] = connect_field(
@@ -1966,7 +2022,9 @@ class StableDiffusionXLInpainting(
         )
     )
     ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="When provided the image will be fed into the IP adapter",
     )
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
@@ -1991,11 +2049,15 @@ class StableDiffusionXLInpainting(
         description="The type of output to generate.",
     )
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The initial image to be inpainted.",
     )
     mask_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The mask image indicating areas to be inpainted.",
     )
     strength: float | OutputHandle[float] = connect_field(
@@ -2046,7 +2108,9 @@ class Swin2SR(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
 
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The input image to transform",
     )
     prompt: str | OutputHandle[str] = connect_field(
@@ -2145,7 +2209,9 @@ class VAEEncode(SingleOutputGraphNode[types.TorchTensor], GraphNode[types.TorchT
         description="The VAE model to use.",
     )
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="Input image to encode.",
     )
     scale_factor: float | OutputHandle[float] = connect_field(

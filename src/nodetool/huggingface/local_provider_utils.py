@@ -14,6 +14,7 @@ from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nodetool.ml.core.model_manager import ModelManager
 from nodetool.types.job import JobUpdate
 from nodetool.workflows.processing_context import ProcessingContext
+from nodetool.workflows.types import NodeProgress
 from huggingface_hub import _CACHED_NO_EXIST, hf_hub_download
 
 if TYPE_CHECKING:
@@ -444,3 +445,65 @@ def _is_node_model(model_id: str, model_path: str | None, node_cls: Any) -> bool
             else:
                 return True
     return False
+
+
+def pipeline_progress_callback(
+    node_id: str, total_steps: int, context: ProcessingContext
+):
+    def callback(
+        pipeline: "Any", step: int, timestep: int, kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
+        context.post_message(
+            NodeProgress(
+                node_id=node_id,
+                progress=step,
+                total=total_steps,
+            )
+        )
+        return kwargs
+
+    return callback
+
+
+def _enable_pytorch2_attention(pipeline: Any, enabled: bool = True):
+    """Enable PyTorch 2 scaled dot product attention to speed up inference."""
+    if not enabled or pipeline is None:
+        return
+
+    enable_sdpa = getattr(pipeline, "enable_sdpa", None)
+
+    if callable(enable_sdpa):
+        try:
+            enable_sdpa()
+            pipeline_name = type(pipeline).__name__
+            log.info(
+                "Enabled PyTorch 2 scaled dot product attention for %s", pipeline_name
+            )
+        except Exception as e:
+            log.warning("Failed to enable scaled dot product attention: %s", e)
+    else:
+        log.info("Scaled dot product attention not available on this pipeline")
+
+
+def _apply_vae_optimizations(pipeline: Any):
+    """Apply VAE slicing and channels_last layout when available."""
+    if pipeline is None:
+        return
+
+    vae = getattr(pipeline, "vae", None)
+    if vae is None:
+        return
+
+    if hasattr(vae, "enable_slicing"):
+        try:
+            vae.enable_slicing()
+            log.debug("Enabled VAE slicing")
+        except Exception as e:
+            log.warning("Failed to enable VAE slicing: %s", e)
+
+    try:
+        torch = _get_torch()
+        vae.to(memory_format=torch.channels_last)
+        log.debug("Set VAE to channels_last memory format")
+    except Exception as e:
+        log.warning("Failed to set VAE channels_last memory format: %s", e)

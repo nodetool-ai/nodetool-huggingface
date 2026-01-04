@@ -22,31 +22,30 @@ from nodetool.workflows.base_node import BaseNode
 class AudioLDM(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef]):
     """
 
-    Generates audio using the AudioLDM model based on text prompts.
-    audio, generation, AI, text-to-audio
+    Generates audio from text prompts using the AudioLDM latent diffusion model.
+    audio, generation, AI, text-to-audio, sound-effects
 
     Use cases:
-    - Create custom music or sound effects from text descriptions
-    - Generate background audio for videos, games, or other media
-    - Produce audio content for creative projects
-    - Explore AI-generated audio for music production or sound design
+    - Create custom music clips from text descriptions
+    - Generate sound effects for videos, games, and media
+    - Produce background audio for creative projects
+    - Explore AI-generated soundscapes and ambient audio
     """
 
     prompt: str | OutputHandle[str] = connect_field(
         default="Techno music with a strong, upbeat tempo and high melodic riffs",
-        description="A text prompt describing the desired audio.",
+        description="Text description of the audio you want to generate.",
     )
     num_inference_steps: int | OutputHandle[int] = connect_field(
         default=10,
-        description="Number of denoising steps. More steps generally improve quality but increase generation time.",
+        description="Denoising steps. More steps = better quality but slower. 10-50 is typical.",
     )
     audio_length_in_s: float | OutputHandle[float] = connect_field(
-        default=5.0,
-        description="The desired duration of the generated audio in seconds.",
+        default=5.0, description="Duration of the generated audio in seconds (1-30)."
     )
     seed: int | OutputHandle[int] = connect_field(
         default=0,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
     )
 
     @classmethod
@@ -68,38 +67,38 @@ from nodetool.workflows.base_node import BaseNode
 class AudioLDM2(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef]):
     """
 
-    Generates audio using the AudioLDM2 model based on text prompts.
-    audio, generation, AI, text-to-audio
+    Generates audio from text prompts using the improved AudioLDM2 model.
+    audio, generation, AI, text-to-audio, sound-effects, sound-design
 
     Use cases:
-    - Create custom sound effects based on textual descriptions
-    - Generate background audio for videos or games
-    - Produce audio content for multimedia projects
-    - Explore AI-generated audio for creative sound design
+    - Create realistic sound effects from text descriptions
+    - Generate background audio for videos and games
+    - Produce environmental soundscapes for multimedia
+    - Explore creative AI-generated audio for sound design
     """
 
     prompt: str | OutputHandle[str] = connect_field(
         default="The sound of a hammer hitting a wooden surface.",
-        description="A text prompt describing the desired audio.",
+        description="Text description of the audio you want to generate.",
     )
     negative_prompt: str | OutputHandle[str] = connect_field(
         default="Low quality.",
-        description="A text prompt describing what you don't want in the audio.",
+        description="Describe what to avoid in the generated audio (e.g., 'noise, distortion').",
     )
     num_inference_steps: int | OutputHandle[int] = connect_field(
         default=200,
-        description="Number of denoising steps. More steps generally improve quality but increase generation time.",
+        description="Denoising steps. 200 is recommended for quality; lower for speed.",
     )
     audio_length_in_s: float | OutputHandle[float] = connect_field(
-        default=10.0,
-        description="The desired duration of the generated audio in seconds.",
+        default=10.0, description="Duration of the generated audio in seconds (1-30)."
     )
     num_waveforms_per_prompt: int | OutputHandle[int] = connect_field(
-        default=3, description="Number of audio samples to generate per prompt."
+        default=3,
+        description="Number of audio variations to generate. Best result is returned.",
     )
     seed: int | OutputHandle[int] = connect_field(
         default=0,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
     )
 
     @classmethod
@@ -121,27 +120,26 @@ from nodetool.workflows.base_node import BaseNode
 class DanceDiffusion(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef]):
     """
 
-    Generates audio using the DanceDiffusion model.
-    audio, generation, AI, music, text-to-audio
+    Generates AI-composed music using the DanceDiffusion unconditional audio model.
+    audio, generation, AI, music, text-to-audio, unconditional
 
     Use cases:
-    - Create AI-generated music samples
-    - Produce background music for videos or games
-    - Generate audio content for creative projects
-    - Explore AI-composed musical ideas
+    - Create AI-generated music samples and loops
+    - Produce background music for videos and games
+    - Generate experimental audio content
+    - Explore AI-composed musical ideas and patterns
     """
 
     audio_length_in_s: float | OutputHandle[float] = connect_field(
-        default=4.0,
-        description="The desired duration of the generated audio in seconds.",
+        default=4.0, description="Duration of the generated audio in seconds (1-30)."
     )
     num_inference_steps: int | OutputHandle[int] = connect_field(
         default=50,
-        description="Number of denoising steps. More steps generally improve quality but increase generation time.",
+        description="Denoising steps. More steps = better quality but slower. 50-200 is typical.",
     )
     seed: int | OutputHandle[int] = connect_field(
         default=0,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
     )
 
     @classmethod
@@ -163,13 +161,15 @@ from nodetool.workflows.base_node import BaseNode
 class MusicGen(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef]):
     """
 
-    Generates audio (music or sound effects) from text descriptions.
-    audio, music, generation, huggingface, text-to-audio
+    Generates music and audio from text descriptions using Meta's MusicGen models.
+    audio, music, generation, huggingface, text-to-audio, soundtrack
 
     Use cases:
-    - Create custom background music for videos or games
-    - Generate sound effects based on textual descriptions
-    - Prototype musical ideas quickly
+    - Create custom background music for videos, games, and podcasts
+    - Generate sound effects from textual descriptions
+    - Prototype musical ideas and compositions quickly
+    - Produce royalty-free audio content for creative projects
+    - Build AI-powered music generation applications
     """
 
     model: types.HFTextToAudio | OutputHandle[types.HFTextToAudio] = connect_field(
@@ -181,13 +181,15 @@ class MusicGen(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef])
             allow_patterns=None,
             ignore_patterns=None,
         ),
-        description="The model ID to use for the audio generation",
+        description="The MusicGen model variant. Small is fastest; Large offers best quality; Melody can condition on audio input; Stereo produces 2-channel output.",
     )
     prompt: str | OutputHandle[str] = connect_field(
-        default="", description="The input text to the model"
+        default="",
+        description="Describe the music you want to generate (e.g., 'upbeat jazz piano with drums' or 'calm ambient soundscape').",
     )
     max_new_tokens: int | OutputHandle[int] = connect_field(
-        default=1024, description="The maximum number of tokens to generate"
+        default=1024,
+        description="Controls audio length: ~256 tokens ≈ 5 seconds. Higher values produce longer audio.",
     )
 
     @classmethod
@@ -209,13 +211,14 @@ from nodetool.workflows.base_node import BaseNode
 class MusicLDM(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef]):
     """
 
-    Generates audio (music or sound effects) from text descriptions.
-    audio, music, generation, huggingface, text-to-audio
+    Generates music from text descriptions using latent diffusion models.
+    audio, music, generation, huggingface, text-to-audio, diffusion
 
     Use cases:
-    - Create custom background music for videos or games
-    - Generate sound effects based on textual descriptions
-    - Prototype musical ideas quickly
+    - Create custom background music for videos and games
+    - Generate music clips based on textual mood descriptions
+    - Produce audio content for multimedia projects
+    - Explore AI-generated music for creative inspiration
     """
 
     model: types.HFTextToAudio | OutputHandle[types.HFTextToAudio] = connect_field(
@@ -227,17 +230,18 @@ class MusicLDM(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef])
             allow_patterns=None,
             ignore_patterns=None,
         ),
-        description="The model ID to use for the audio generation",
+        description="The MusicLDM model to use for audio generation.",
     )
     prompt: str | OutputHandle[str] = connect_field(
-        default="", description="The input text to the model"
+        default="",
+        description="Describe the music you want (e.g., 'electronic dance music with heavy bass').",
     )
     num_inference_steps: int | OutputHandle[int] = connect_field(
         default=10,
-        description="The number of inference steps to use for the generation",
+        description="Number of denoising steps. More steps = better quality but slower generation.",
     )
     audio_length_in_s: float | OutputHandle[float] = connect_field(
-        default=5.0, description="The length of the generated audio in seconds"
+        default=5.0, description="Duration of the generated audio in seconds."
     )
 
     @classmethod
@@ -259,36 +263,36 @@ from nodetool.workflows.base_node import BaseNode
 class StableAudioNode(SingleOutputGraphNode[types.AudioRef], GraphNode[types.AudioRef]):
     """
 
-    Generate audio using Stable Audio model based on text prompts. Features high-quality audio synthesis with configurable parameters.
-    audio, generation, synthesis, text-to-audio, text-to-audio
+    Generates high-quality, long-form audio from text prompts using Stability AI's Stable Audio.
+    audio, generation, synthesis, text-to-audio, music, sound-effects
 
     Use cases:
-    - Create custom audio content from text
-    - Generate background music and sounds
-    - Produce audio for multimedia projects
-    - Create sound effects and ambience
-    - Generate experimental audio content
+    - Create professional-quality music and soundtracks
+    - Generate ambient sounds and environmental audio
+    - Produce sound effects for multimedia projects
+    - Create experimental and artistic audio content
+    - Generate up to 5 minutes of continuous audio
     """
 
     prompt: str | OutputHandle[str] = connect_field(
         default="A peaceful piano melody.",
-        description="A text prompt describing the desired audio.",
+        description="Text description of the audio you want to generate.",
     )
     negative_prompt: str | OutputHandle[str] = connect_field(
         default="Low quality.",
-        description="A text prompt describing what you don't want in the audio.",
+        description="Describe what to avoid in the generated audio (e.g., 'noise, distortion').",
     )
     duration: float | OutputHandle[float] = connect_field(
         default=10.0,
-        description="The desired duration of the generated audio in seconds.",
+        description="Duration of the generated audio in seconds. Stable Audio supports up to 300 seconds.",
     )
     num_inference_steps: int | OutputHandle[int] = connect_field(
         default=200,
-        description="Number of denoising steps. More steps generally improve quality but increase generation time.",
+        description="Denoising steps. 200 is recommended for quality; lower values for faster generation.",
     )
     seed: int | OutputHandle[int] = connect_field(
         default=0,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
     )
 
     @classmethod

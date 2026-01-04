@@ -21,7 +21,7 @@ from nodetool.metadata.types import (
     TorchTensor,
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
-from nodetool.nodes.huggingface.image_to_image import pipeline_progress_callback
+from nodetool.huggingface.local_provider_utils import pipeline_progress_callback
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     available_torch_dtype,
     StableDiffusionBaseNode,
@@ -1015,7 +1015,9 @@ class Chroma(HuggingFacePipelineNode):
             "width": self.width,
             "generator": generator,
             "max_sequence_length": self.max_sequence_length,
-            "callback_on_step_end": pipeline_progress_callback(self.id, self.num_inference_steps, context),  # type: ignore
+            "callback_on_step_end": pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            ),  # type: ignore
             "callback_on_step_end_tensor_inputs": ["latents"],
         }
 

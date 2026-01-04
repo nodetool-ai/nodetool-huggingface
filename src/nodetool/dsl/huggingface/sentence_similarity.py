@@ -24,13 +24,15 @@ class SentenceSimilarity(
 ):
     """
 
-    Compares the similarity between two sentences.
-    text, sentence similarity, embeddings, natural language processing
+    Generates dense vector embeddings from text for semantic similarity comparisons.
+    text, sentence-similarity, embeddings, NLP, semantic-search
 
     Use cases:
-    - Duplicate detection in text data
-    - Semantic search
-    - Sentiment analysis
+    - Compute semantic similarity between sentences or documents
+    - Build semantic search and recommendation engines
+    - Detect duplicate or near-duplicate content
+    - Cluster documents by meaning rather than keywords
+    - Create text embeddings for downstream ML tasks
     """
 
     model: types.HFSentenceSimilarity | OutputHandle[types.HFSentenceSimilarity] = (
@@ -43,11 +45,12 @@ class SentenceSimilarity(
                 allow_patterns=None,
                 ignore_patterns=None,
             ),
-            description="The model ID to use for sentence similarity",
+            description="The sentence embedding model. all-mpnet-base-v2 offers high quality; MiniLM variants are faster; BGE-m3 is multilingual.",
         )
     )
     inputs: str | OutputHandle[str] = connect_field(
-        default="", description="The text to compare"
+        default="",
+        description="The text to generate embeddings for. Can be a sentence, paragraph, or short document.",
     )
 
     @classmethod

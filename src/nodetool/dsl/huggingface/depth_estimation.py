@@ -22,14 +22,15 @@ from nodetool.workflows.base_node import BaseNode
 class DepthEstimation(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
 
-    Estimates depth from a single image.
-    image, depth estimation, 3D, huggingface
+    Generates depth maps from single RGB images using monocular depth estimation models.
+    image, depth-estimation, 3D, huggingface, computer-vision
 
     Use cases:
-    - Generate depth maps for 3D modeling
-    - Assist in augmented reality applications
-    - Enhance computer vision systems for robotics
-    - Improve scene understanding in autonomous vehicles
+    - Create depth maps for 3D modeling and scene reconstruction
+    - Enable augmented reality applications with depth awareness
+    - Improve robotic navigation and obstacle detection
+    - Enhance scene understanding in autonomous vehicles
+    - Generate depth-based visual effects for images and video
     """
 
     model: types.HFDepthEstimation | OutputHandle[types.HFDepthEstimation] = (
@@ -42,12 +43,14 @@ class DepthEstimation(SingleOutputGraphNode[types.ImageRef], GraphNode[types.Ima
                 allow_patterns=None,
                 ignore_patterns=None,
             ),
-            description="The model ID to use for depth estimation",
+            description="The depth estimation model to use. Depth-Anything V2 models offer state-of-the-art accuracy; DPT-large is a reliable alternative.",
         )
     )
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The input image for depth estimation",
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
+        description="The input RGB image to estimate depth from. Any standard image format is supported.",
     )
 
     @classmethod

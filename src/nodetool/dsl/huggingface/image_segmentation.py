@@ -22,16 +22,25 @@ from nodetool.workflows.base_node import BaseNode
 class FindSegment(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
 
-    Extracts a specific segment from a list of segmentation masks.
-    image, segmentation, object detection, mask
+    Extracts a specific segment mask by label from a list of segmentation results.
+    image, segmentation, object-detection, mask, filter
+
+    Use cases:
+    - Extract a specific object mask (e.g., 'person', 'car') from segmentation output
+    - Filter segmentation results to focus on a single category
+    - Isolate regions for further processing or compositing
     """
 
     segments: (
         list[types.ImageSegmentationResult]
         | OutputHandle[list[types.ImageSegmentationResult]]
-    ) = connect_field(default=[], description="The segmentation masks to search")
+    ) = connect_field(
+        default=[],
+        description="List of segmentation results from Segmentation or SAM2Segmentation nodes.",
+    )
     segment_label: str | OutputHandle[str] = connect_field(
-        default="", description="The label of the segment to extract"
+        default="",
+        description="The exact label name to find (e.g., 'person', 'wall', 'sky'). Must match a label in the segments list.",
     )
 
     @classmethod
@@ -55,19 +64,22 @@ class SAM2Segmentation(
 ):
     """
 
-    Performs semantic segmentation on images using SAM2 (Segment Anything Model 2).
-    image, segmentation, object detection, scene parsing, mask
+    Performs automatic instance segmentation using Meta's Segment Anything Model 2 (SAM2).
+    image, segmentation, object-detection, scene-parsing, mask, SAM2
 
     Use cases:
-    - Automatic segmentation of objects in images
-    - Instance segmentation for computer vision tasks
-    - Interactive segmentation with point prompts
-    - Scene understanding and object detection
+    - Automatically segment all distinct objects in an image
+    - Generate high-quality masks without manual prompts
+    - Extract individual objects for image editing workflows
+    - Build interactive segmentation applications
+    - Enable precise object selection in creative tools
     """
 
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The input image to segment",
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
+        description="The image to segment. SAM2 automatically identifies and masks all distinct objects.",
     )
 
     @classmethod
@@ -92,12 +104,15 @@ class Segmentation(
 ):
     """
 
-    Performs semantic segmentation on images, identifying and labeling different regions.
-    image, segmentation, object detection, scene parsing
+    Performs semantic segmentation on images, identifying and labeling different regions with pixel-level precision.
+    image, segmentation, object-detection, scene-parsing, computer-vision
 
     Use cases:
-    - Segmenting objects in images
-    - Segmenting facial features in images
+    - Segment and identify objects, people, or regions in images
+    - Extract clothing items or body parts for fashion applications
+    - Parse indoor/outdoor scenes into semantic components
+    - Enable background removal or replacement in photos
+    - Build autonomous driving perception systems
     """
 
     model: types.HFImageSegmentation | OutputHandle[types.HFImageSegmentation] = (
@@ -110,12 +125,14 @@ class Segmentation(
                 allow_patterns=None,
                 ignore_patterns=None,
             ),
-            description="The model ID to use for the segmentation",
+            description="The segmentation model. SegFormer-ADE for general scenes, specialized models for clothing or body parts.",
         )
     )
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The input image to segment",
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
+        description="The input image to segment. Larger images may require more processing time.",
     )
 
     @classmethod
@@ -139,23 +156,29 @@ class VisualizeSegmentation(
 ):
     """
 
-    Visualizes segmentation masks on images with labels.
-    image, segmentation, visualization, mask
+    Renders segmentation masks as colored overlays on the original image with labeled regions.
+    image, segmentation, visualization, mask, annotation
 
     Use cases:
-    - Visualize results of image segmentation models
-    - Analyze and compare different segmentation techniques
-    - Create labeled images for presentations or reports
+    - Visualize and verify segmentation model results
+    - Create labeled images for documentation or presentations
+    - Compare different segmentation techniques visually
+    - Generate annotated images for training data review
     """
 
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The input image to visualize",
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
+        description="The original image to overlay segmentation masks on.",
     )
     segments: (
         list[types.ImageSegmentationResult]
         | OutputHandle[list[types.ImageSegmentationResult]]
-    ) = connect_field(default=[], description="The segmentation masks to visualize")
+    ) = connect_field(
+        default=[],
+        description="List of segmentation results to visualize. Each segment gets a distinct color and label.",
+    )
 
     @classmethod
     def get_node_class(cls) -> type[BaseNode]:

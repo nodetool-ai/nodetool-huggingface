@@ -23,31 +23,43 @@ class BaseQwenVL(
     GraphNode[nodetool.nodes.huggingface.image_text_to_text.BaseQwenVL.OutputType]
 ):
     """
-    Base class for Qwen VL nodes.
+
+    Base class for Qwen vision-language models supporting image and video understanding.
+    image, video, multimodal, VLM, Qwen
     """
 
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The image to analyze.",
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
+        description="An image to analyze. Leave empty if providing video input.",
     )
     video: types.VideoRef | OutputHandle[types.VideoRef] = connect_field(
         default=types.VideoRef(
-            type="video", uri="", asset_id=None, data=None, duration=None, format=None
+            type="video",
+            uri="",
+            asset_id=None,
+            data=None,
+            metadata=None,
+            duration=None,
+            format=None,
         ),
-        description="The video to analyze.",
+        description="A video to analyze. Leave empty if providing image input.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="Describe this image.",
-        description="Instruction or question for the model.",
+        description="Your question or instruction about the visual content.",
     )
-    min_pixels: int | OutputHandle[int] | None = connect_field(
-        default=None, description="Minimum number of pixels for image resizing."
+    min_pixels: int | OutputHandle[int] = connect_field(
+        default=0,
+        description="Minimum pixel count for image resizing. Use 0 for automatic sizing.",
     )
-    max_pixels: int | OutputHandle[int] | None = connect_field(
-        default=None, description="Maximum number of pixels for image resizing."
+    max_pixels: int | OutputHandle[int] = connect_field(
+        default=0,
+        description="Maximum pixel count for image resizing. Use 0 for automatic sizing.",
     )
     max_new_tokens: int | OutputHandle[int] = connect_field(
-        default=128, description="Maximum number of tokens to generate."
+        default=128, description="Maximum length of the generated response in tokens."
     )
 
     @property
@@ -85,14 +97,15 @@ class ImageTextToText(
 ):
     """
 
-    Answers questions or follows instructions given both an image and text.
-    image, text, visual question answering, multimodal, VLM
+    Generates text responses based on an image and text prompt using vision-language models.
+    image, text, visual-question-answering, multimodal, VLM, captioning
 
     Use cases:
-    - Visual question answering with free-form reasoning
-    - Zero-shot object localization or structure extraction via instructions
-    - OCR-free document understanding when combined with prompts
-    - Multi-turn, instruction-following conversations grounded in an image
+    - Answer questions about image content with detailed explanations
+    - Generate comprehensive image descriptions and captions
+    - Extract structured information (objects, text, layout) from images
+    - Perform OCR-free document understanding via natural language
+    - Build multi-turn visual conversations and assistants
     """
 
     model: types.HFImageTextToText | OutputHandle[types.HFImageTextToText] = (
@@ -105,19 +118,21 @@ class ImageTextToText(
                 allow_patterns=None,
                 ignore_patterns=None,
             ),
-            description="The image-text-to-text model to use.",
+            description="The vision-language model to use. SmolVLM is lightweight; LLaVA variants offer different capability levels.",
         )
     )
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The image to analyze.",
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
+        description="The image to analyze and discuss.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="Describe this image.",
-        description="Instruction or question for the model about the image.",
+        description="Your question or instruction about the image. Be specific for better results.",
     )
     max_new_tokens: int | OutputHandle[int] = connect_field(
-        default=256, description="Maximum number of tokens to generate."
+        default=256, description="Maximum length of the generated response in tokens."
     )
 
     @property
@@ -155,16 +170,18 @@ class LoadImageTextToTextModel(
 ):
     """
 
-    Load a Hugging Face image-text-to-text model/pipeline by repo_id.
+    Loads and validates a Hugging Face image-text-to-text model for use in downstream nodes.
+    model-loader, vision-language, multimodal, VLM
 
     Use cases:
-    - Produces a configurable `HFImageTextToText` model reference for downstream nodes
-    - Ensures the selected model can be loaded with the "image-text-to-text" task
+    - Pre-load vision-language models for image understanding tasks
+    - Validate model availability before running pipelines
+    - Configure model settings for ImageTextToText processing
     """
 
     repo_id: str | OutputHandle[str] = connect_field(
         default="HuggingFaceTB/SmolVLM-Instruct",
-        description="The model repository ID to use for image-text-to-text generation.",
+        description="The Hugging Face repository ID for the vision-language model (e.g., SmolVLM, LLaVA variants).",
     )
 
     @classmethod
@@ -188,37 +205,51 @@ class Qwen2_5_VL(
 ):
     """
 
-    Qwen2.5-VL: A versatile vision-language model for image and video understanding.
+    Analyzes images and videos using Alibaba's Qwen2.5-VL vision-language model.
+    image, video, multimodal, VLM, Qwen, visual-understanding
 
-    Capabilities:
-    - Visual understanding of objects, text, charts, and layouts
-    - Video comprehension and event capturing
-    - Visual localization (bounding boxes, points)
-    - Structured output generation
+    Use cases:
+    - Understand visual content including objects, text, charts, and layouts
+    - Comprehend videos with temporal event tracking and scene changes
+    - Localize objects with bounding boxes or point annotations
+    - Generate structured output (JSON, tables) from visual data
+    - Read and interpret documents, diagrams, and UI screenshots
+
+    **Note:** BNB-4bit variants from Unsloth reduce memory usage significantly.
     """
 
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The image to analyze.",
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
+        description="An image to analyze. Leave empty if providing video input.",
     )
     video: types.VideoRef | OutputHandle[types.VideoRef] = connect_field(
         default=types.VideoRef(
-            type="video", uri="", asset_id=None, data=None, duration=None, format=None
+            type="video",
+            uri="",
+            asset_id=None,
+            data=None,
+            metadata=None,
+            duration=None,
+            format=None,
         ),
-        description="The video to analyze.",
+        description="A video to analyze. Leave empty if providing image input.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="Describe this image.",
-        description="Instruction or question for the model.",
+        description="Your question or instruction about the visual content.",
     )
-    min_pixels: int | OutputHandle[int] | None = connect_field(
-        default=None, description="Minimum number of pixels for image resizing."
+    min_pixels: int | OutputHandle[int] = connect_field(
+        default=0,
+        description="Minimum pixel count for image resizing. Use 0 for automatic sizing.",
     )
-    max_pixels: int | OutputHandle[int] | None = connect_field(
-        default=None, description="Maximum number of pixels for image resizing."
+    max_pixels: int | OutputHandle[int] = connect_field(
+        default=0,
+        description="Maximum pixel count for image resizing. Use 0 for automatic sizing.",
     )
     max_new_tokens: int | OutputHandle[int] = connect_field(
-        default=128, description="Maximum number of tokens to generate."
+        default=128, description="Maximum length of the generated response in tokens."
     )
     model: types.HFQwen2_5_VL | OutputHandle[types.HFQwen2_5_VL] = connect_field(
         default=types.HFQwen2_5_VL(
@@ -229,7 +260,7 @@ class Qwen2_5_VL(
             allow_patterns=None,
             ignore_patterns=None,
         ),
-        description="The Qwen2.5-VL model to use.",
+        description="The Qwen2.5-VL model variant. Larger models (32B, 72B) offer better accuracy; BNB-4bit variants reduce memory usage.",
     )
 
     @property
@@ -267,36 +298,51 @@ class Qwen3_VL(
 ):
     """
 
-    Qwen3-VL: Next-generation multimodal vision-language model for images and video.
+    Analyzes images and videos using Alibaba's next-generation Qwen3-VL vision-language model.
+    image, video, multimodal, VLM, Qwen, visual-reasoning, thinking
 
-    Capabilities:
-    - Advanced visual reasoning across images and video
+    Use cases:
+    - Advanced visual reasoning across images and video content
     - Instruction-following with improved spatial-temporal grounding
-    - Supports DeepStack visual features and long-context chat templating
+    - Complex multi-step visual analysis with chain-of-thought reasoning
+    - Document, chart, and diagram understanding with enhanced accuracy
+    - Long-context visual conversations with memory
+
+    **Note:** Thinking variants include extended reasoning capabilities. BNB-4bit variants reduce memory usage.
     """
 
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The image to analyze.",
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
+        description="An image to analyze. Leave empty if providing video input.",
     )
     video: types.VideoRef | OutputHandle[types.VideoRef] = connect_field(
         default=types.VideoRef(
-            type="video", uri="", asset_id=None, data=None, duration=None, format=None
+            type="video",
+            uri="",
+            asset_id=None,
+            data=None,
+            metadata=None,
+            duration=None,
+            format=None,
         ),
-        description="The video to analyze.",
+        description="A video to analyze. Leave empty if providing image input.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="Describe this image.",
-        description="Instruction or question for the model.",
+        description="Your question or instruction about the visual content.",
     )
-    min_pixels: int | OutputHandle[int] | None = connect_field(
-        default=None, description="Minimum number of pixels for image resizing."
+    min_pixels: int | OutputHandle[int] = connect_field(
+        default=0,
+        description="Minimum pixel count for image resizing. Use 0 for automatic sizing.",
     )
-    max_pixels: int | OutputHandle[int] | None = connect_field(
-        default=None, description="Maximum number of pixels for image resizing."
+    max_pixels: int | OutputHandle[int] = connect_field(
+        default=0,
+        description="Maximum pixel count for image resizing. Use 0 for automatic sizing.",
     )
     max_new_tokens: int | OutputHandle[int] = connect_field(
-        default=128, description="Maximum number of tokens to generate."
+        default=128, description="Maximum length of the generated response in tokens."
     )
     model: types.HFQwen3_VL | OutputHandle[types.HFQwen3_VL] = connect_field(
         default=types.HFQwen3_VL(
@@ -307,7 +353,7 @@ class Qwen3_VL(
             allow_patterns=None,
             ignore_patterns=None,
         ),
-        description="The Qwen3-VL model to use.",
+        description="The Qwen3-VL model variant. Thinking variants add chain-of-thought; BNB-4bit reduces memory; larger models improve accuracy.",
     )
 
     @property

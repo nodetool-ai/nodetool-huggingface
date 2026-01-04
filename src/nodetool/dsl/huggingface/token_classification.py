@@ -24,14 +24,15 @@ class TokenClassification(
 ):
     """
 
-    Performs token classification tasks such as Named Entity Recognition (NER).
-    text, token classification, named entity recognition, natural language processing
+    Performs token-level classification tasks such as Named Entity Recognition (NER).
+    text, token-classification, NER, NLP, entity-extraction
 
     Use cases:
-    - Named Entity Recognition in text
-    - Part-of-speech tagging
-    - Chunking and shallow parsing
-    - Information extraction from unstructured text
+    - Extract named entities (people, organizations, locations) from text
+    - Identify parts of speech in sentences
+    - Perform chunking and shallow parsing for text analysis
+    - Extract structured information from unstructured documents
+    - Build information extraction pipelines for documents
     """
 
     AggregationStrategy: typing.ClassVar[type] = (
@@ -48,17 +49,17 @@ class TokenClassification(
                 allow_patterns=["*.bin", "*.json", "**/*.json", "*.safetensors"],
                 ignore_patterns=None,
             ),
-            description="The model ID to use for token classification",
+            description="The token classification model. BERT-large-cased-finetuned-conll03 offers high-quality NER for English text.",
         )
     )
     inputs: str | OutputHandle[str] = connect_field(
-        default="", description="The input text for token classification"
+        default="", description="The text to extract entities from."
     )
     aggregation_strategy: (
         nodetool.nodes.huggingface.token_classification.TokenClassification.AggregationStrategy
     ) = Field(
         default=nodetool.nodes.huggingface.token_classification.TokenClassification.AggregationStrategy.SIMPLE,
-        description="Strategy to aggregate tokens into entities",
+        description="How to combine token predictions into entities: 'simple' merges adjacent tokens; 'first'/'average'/'max' control subword handling.",
     )
 
     @classmethod

@@ -22,27 +22,25 @@ from nodetool.workflows.base_node import BaseNode
 class ChunksToSRT(SingleOutputGraphNode[str], GraphNode[str]):
     """
 
-    Convert audio chunks to SRT (SubRip Subtitle) format
-    subtitle, srt, whisper, transcription
+    Converts Whisper audio chunks to SubRip Subtitle (SRT) format for video captioning.
+    subtitle, srt, whisper, transcription, captions
 
-    **Use Cases:**
-    - Generate subtitles for videos
-    - Create closed captions from audio transcriptions
-    - Convert speech-to-text output to a standardized subtitle format
-
-    **Features:**
-    - Converts Whisper audio chunks to SRT format
-    - Supports customizable time offset
-    - Generates properly formatted SRT file content
+    Use cases:
+    - Generate .srt subtitle files for video players
+    - Create closed captions for accessibility compliance
+    - Convert Whisper transcription output to industry-standard format
+    - Build automated subtitle generation pipelines
     """
 
     chunks: list[types.AudioChunk] | OutputHandle[list[types.AudioChunk]] = (
         connect_field(
-            default=[], description="List of audio chunks from Whisper transcription"
+            default=[],
+            description="List of timestamped audio chunks from Whisper transcription output.",
         )
     )
     time_offset: float | OutputHandle[float] = connect_field(
-        default=0.0, description="Time offset in seconds to apply to all timestamps"
+        default=0.0,
+        description="Offset in seconds to add to all timestamps (useful when audio is from a clip within a longer video).",
     )
 
     @classmethod
@@ -68,22 +66,18 @@ class Whisper(
 ):
     """
 
-    Convert speech to text
+    Converts speech to text using OpenAI's Whisper models with multilingual support.
     asr, automatic-speech-recognition, speech-to-text, translate, transcribe, audio, huggingface
 
-    **Use Cases:**
-    - Voice input for a chatbot
-    - Transcribe or translate audio files
-    - Create subtitles for videos
+    Use cases:
+    - Transcribe audio files into text for documentation or analysis
+    - Enable voice input for chatbots and virtual assistants
+    - Create subtitles and closed captions for videos
+    - Translate speech from one language to English
+    - Build voice-controlled applications
 
-    **Features:**
-    - Multilingual speech recognition
-    - Speech translation
-    - Language identification
-
-    **Note**
-    - Language selection is sorted by word error rate in the FLEURS benchmark
-    - There are many variants of Whisper that are optimized for different use cases.
+    **Note:** Language selection follows Whisper's FLEURS benchmark word error rate ranking.
+    Multiple model variants are available, optimized for different speed/accuracy trade-offs.
 
     **Links:**
     - https://github.com/openai/whisper
@@ -112,26 +106,28 @@ class Whisper(
             allow_patterns=None,
             ignore_patterns=None,
         ),
-        description="The model ID to use for the speech recognition.",
+        description="The Whisper model variant to use. Larger models (large-v3) offer better accuracy; smaller models (small, tiny) are faster. Turbo variants balance speed and quality.",
     )
     audio: types.AudioRef | OutputHandle[types.AudioRef] = connect_field(
-        default=types.AudioRef(type="audio", uri="", asset_id=None, data=None),
-        description="The input audio to transcribe.",
+        default=types.AudioRef(
+            type="audio", uri="", asset_id=None, data=None, metadata=None
+        ),
+        description="The audio file to transcribe. Supports WAV, MP3, FLAC and other common formats.",
     )
     task: nodetool.nodes.huggingface.automatic_speech_recognition.Task = Field(
         default=nodetool.nodes.huggingface.automatic_speech_recognition.Task.TRANSCRIBE,
-        description="The task to perform: 'transcribe' for speech-to-text or 'translate' for speech translation.",
+        description="Choose 'transcribe' for speech-to-text in the original language, or 'translate' to convert any language to English.",
     )
     language: (
         nodetool.nodes.huggingface.automatic_speech_recognition.WhisperLanguage
     ) = Field(
         default=nodetool.nodes.huggingface.automatic_speech_recognition.WhisperLanguage.NONE,
-        description="The language of the input audio. If not specified, the model will attempt to detect it automatically.",
+        description="Specify the audio's language for better accuracy, or use 'auto_detect' to let the model identify it automatically.",
     )
     timestamps: nodetool.nodes.huggingface.automatic_speech_recognition.Timestamps = (
         Field(
             default=nodetool.nodes.huggingface.automatic_speech_recognition.Timestamps.NONE,
-            description="The type of timestamps to return for the generated text.",
+            description="Choose 'word' for word-level timing, 'sentence' for phrase-level timing, or 'none' to disable timestamps.",
         )
     )
 

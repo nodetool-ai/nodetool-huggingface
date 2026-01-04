@@ -42,12 +42,12 @@ from nodetool.integrations.huggingface.huggingface_models import (
 from nodetool.huggingface.image_to_image_pipelines import (
     load_image_to_image_pipeline,
 )
-from nodetool.nodes.huggingface.image_to_image import pipeline_progress_callback
 from nodetool.huggingface.local_provider_utils import (
     _get_torch,
     _is_cuda_available,
     load_model,
     load_pipeline,
+    pipeline_progress_callback,
 )
 from nodetool.huggingface.text_to_image_pipelines import (
     load_text_to_image_pipeline,
@@ -119,7 +119,6 @@ class HuggingFaceLocalProvider(BaseProvider):
             raise ValueError(
                 "ProcessingContext is required for HuggingFace image generation"
             )
-
 
         model_id = params.model.id
         # Sanitize model_id for composite IDs used in Model Packs.
@@ -409,7 +408,11 @@ class HuggingFaceLocalProvider(BaseProvider):
             log.info(f"Loading automatic speech recognition pipeline: {model}")
 
             import torch
-            from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline as create_pipeline
+            from transformers import (
+                AutoModelForSpeechSeq2Seq,
+                AutoProcessor,
+                pipeline as create_pipeline,
+            )
 
             # Determine torch dtype based on device
             torch_dtype = torch.float16 if _is_cuda_available() else torch.float32
@@ -611,6 +614,7 @@ class HuggingFaceLocalProvider(BaseProvider):
 
         # Set up generator for reproducibility
         import torch
+
         generator = None
         if seed is not None and seed != -1:
             generator = torch.Generator(device="cpu").manual_seed(seed)
@@ -983,9 +987,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                     self.next_tokens_are_prompt = False
                     return
 
-                text = self.tokenizer.decode(
-                    value, skip_special_tokens=True
-                )  # pyright: ignore[reportAttributeAccessIssue]
+                text = self.tokenizer.decode(value, skip_special_tokens=True)  # pyright: ignore[reportAttributeAccessIssue]
                 if text:
                     self.token_queue.put(text)
 
@@ -1059,7 +1061,12 @@ class HuggingFaceLocalProvider(BaseProvider):
     ) -> AsyncIterator[Chunk]:
         """Stream generation for image-text-to-text models."""
         import torch
-        from transformers import BitsAndBytesConfig, AutoProcessor, AutoModelForCausalLM, TextStreamer
+        from transformers import (
+            BitsAndBytesConfig,
+            AutoProcessor,
+            AutoModelForCausalLM,
+            TextStreamer,
+        )
 
         # Extract images and clean messages
         # Convert messages and extract images

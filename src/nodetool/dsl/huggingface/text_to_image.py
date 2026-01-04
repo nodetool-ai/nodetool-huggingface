@@ -22,48 +22,50 @@ from nodetool.workflows.base_node import BaseNode
 class Chroma(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
 
-    Generates images from text prompts using Chroma, a text-to-image model based on Flux.
-    image, generation, AI, text-to-image, flux, chroma, transformer
+    Generates high-quality images from text prompts using Chroma, a Flux-based architecture with enhanced color control.
+    image, generation, AI, text-to-image, flux, chroma, transformer, artistic
 
     Use cases:
-    - Generate high-quality images with Flux-based architecture
-    - Create images with advanced attention masking for enhanced fidelity
-    - Generate images with optimized memory usage
-    - Create professional-quality images with precise color control
+    - Generate professional-quality images with precise color control
+    - Create artistic images with advanced attention mechanisms
+    - Produce images with optimized memory usage via CPU offload
+    - Build creative applications requiring high-fidelity output
     """
 
     prompt: str | OutputHandle[str] = connect_field(
         default="A high-fashion close-up portrait of a blonde woman in clear sunglasses. The image uses a bold teal and red color split for dramatic lighting. The background is a simple teal-green. The photo is sharp and well-composed, and is designed for viewing with anaglyph 3D glasses for optimal effect. It looks professionally done.",
-        description="A text prompt describing the desired image.",
+        description="Detailed text description of the image to generate.",
     )
     negative_prompt: str | OutputHandle[str] = connect_field(
         default="low quality, ugly, unfinished, out of focus, deformed, disfigure, blurry, smudged, restricted palette, flat colors",
-        description="A text prompt describing what to avoid in the image.",
+        description="Describe what to avoid (e.g., 'blurry, low quality, distorted').",
     )
     guidance_scale: float | OutputHandle[float] = connect_field(
-        default=3.0, description="The scale for classifier-free guidance."
+        default=3.0, description="Prompt adherence strength. 2-5 is typical for Chroma."
     )
     num_inference_steps: int | OutputHandle[int] = connect_field(
-        default=40, description="The number of denoising steps."
+        default=40,
+        description="Denoising steps. 30-50 is typical; more = better quality but slower.",
     )
     height: int | OutputHandle[int] = connect_field(
-        default=1024, description="The height of the generated image."
+        default=1024, description="Output image height in pixels."
     )
     width: int | OutputHandle[int] = connect_field(
-        default=1024, description="The width of the generated image."
+        default=1024, description="Output image width in pixels."
     )
     seed: int | OutputHandle[int] = connect_field(
         default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
     )
     max_sequence_length: int | OutputHandle[int] = connect_field(
-        default=512, description="Maximum sequence length to use with the prompt."
+        default=512, description="Maximum prompt length in tokens."
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
-        default=True, description="Enable CPU offload to reduce VRAM usage."
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
     )
     enable_attention_slicing: bool | OutputHandle[bool] = connect_field(
-        default=True, description="Enable attention slicing to reduce memory usage."
+        default=True, description="Process attention in slices to reduce memory usage."
     )
 
     @classmethod
@@ -85,15 +87,15 @@ from nodetool.workflows.base_node import BaseNode
 class Flux(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
 
-    Generates images using FLUX models with support for Nunchaku quantization.
-    image, generation, AI, text-to-image, flux, quantization
+    Generates high-quality images using Black Forest Labs' FLUX diffusion models with Nunchaku quantization.
+    image, generation, AI, text-to-image, flux, quantization, high-quality
 
     Use cases:
-    - High-quality image generation with FLUX models
-    - Memory-efficient generation using Nunchaku quantization
-    - Fast generation with FLUX.1-schnell
-    - High-fidelity generation with FLUX.1-dev
-    - Controlled generation with Fill, Canny, or Depth variants
+    - Generate high-fidelity images with excellent text rendering
+    - Create images with memory-efficient INT4/FP4 quantization
+    - Fast generation with FLUX.1-schnell (4 steps)
+    - High-quality generation with FLUX.1-dev
+    - Build production image generation systems
     """
 
     FluxVariant: typing.ClassVar[type] = (
@@ -105,41 +107,40 @@ class Flux(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
 
     variant: nodetool.nodes.huggingface.text_to_image.FluxVariant = Field(
         default=nodetool.nodes.huggingface.text_to_image.FluxVariant.DEV,
-        description="The FLUX variant to use.",
+        description="FLUX variant: 'schnell' for fast 4-step generation, 'dev' for higher quality with more steps.",
     )
     quantization: nodetool.nodes.huggingface.text_to_image.FluxQuantization = Field(
         default=nodetool.nodes.huggingface.text_to_image.FluxQuantization.INT4,
-        description="The quantization level to use.",
+        description="Quantization level: INT4/FP4 for lower VRAM, FP16 for full precision.",
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
         default=True,
-        description="Enable CPU offload for the pipeline. This can reduce VRAM usage.",
+        description="Offload model components to CPU to reduce VRAM usage.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="A cat holding a sign that says hello world",
-        description="A text prompt describing the desired image.",
+        description="Text description of the image to generate. FLUX excels at text rendering.",
     )
     guidance_scale: float | OutputHandle[float] = connect_field(
         default=3.5,
-        description="The scale for classifier-free guidance. Use 0.0 for schnell, 3.5 for dev.",
+        description="Prompt adherence strength. Use 0.0 for schnell, 3-4 for dev.",
     )
     width: int | OutputHandle[int] = connect_field(
-        default=1024, description="The width of the generated image."
+        default=1024, description="Output image width in pixels. 1024 is recommended."
     )
     height: int | OutputHandle[int] = connect_field(
-        default=1024, description="The height of the generated image."
+        default=1024, description="Output image height in pixels. 1024 is recommended."
     )
     num_inference_steps: int | OutputHandle[int] = connect_field(
-        default=20,
-        description="The number of denoising steps. 4 steps is forced for schnell models.",
+        default=20, description="Denoising steps. Schnell uses 4 steps; dev uses 20-50."
     )
     max_sequence_length: int | OutputHandle[int] = connect_field(
         default=512,
-        description="Maximum sequence length for the prompt. Use 256 for schnell, 512 for dev.",
+        description="Maximum prompt length. Use 256 for schnell, 512 for dev.",
     )
     seed: int | OutputHandle[int] = connect_field(
         default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
     )
 
     @classmethod
@@ -193,7 +194,9 @@ class FluxControl(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRe
         description="A text prompt describing the desired image.",
     )
     control_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="The control image to guide the generation process.",
     )
     guidance_scale: float | OutputHandle[float] = connect_field(
@@ -243,16 +246,18 @@ class LoadTextToImageModel(
 ):
     """
 
-    Load HuggingFace model for image-to-image generation from a repo_id.
+    Loads and validates a Hugging Face text-to-image model for use in downstream nodes.
+    model-loader, text-to-image, pipeline
 
     Use cases:
-    - Loads a pipeline directly from a repo_id
-    - Used for AutoPipelineForImage2Image
+    - Pre-load text-to-image models before running pipelines
+    - Validate model availability and compatibility
+    - Configure model settings for Text2Image processing
     """
 
     repo_id: str | OutputHandle[str] = connect_field(
         default="",
-        description="The repository ID of the model to use for image-to-image generation.",
+        description="The Hugging Face repository ID for the text-to-image model.",
     )
 
     @classmethod
@@ -274,14 +279,14 @@ from nodetool.workflows.base_node import BaseNode
 class QwenImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]):
     """
 
-    Generates images from text prompts using Qwen-Image with support for Nunchaku quantization.
-    image, generation, AI, text-to-image, qwen, quantization
+    Generates images from text prompts using Alibaba's Qwen-Image model with Nunchaku quantization support.
+    image, generation, AI, text-to-image, qwen, quantization, multilingual
 
     Use cases:
-    - High-quality, general-purpose text-to-image generation
-    - Memory-efficient generation using Nunchaku quantization
-    - Quick prototyping leveraging AutoPipeline
-    - Works out-of-the-box with the official Qwen model
+    - Generate high-quality images with strong multilingual prompt support
+    - Memory-efficient generation using INT4/FP4 quantization
+    - Create images with precise semantic understanding
+    - Build production image generation systems
     """
 
     QwenQuantization: typing.ClassVar[type] = (
@@ -290,30 +295,31 @@ class QwenImage(SingleOutputGraphNode[types.ImageRef], GraphNode[types.ImageRef]
 
     quantization: nodetool.nodes.huggingface.text_to_image.QwenQuantization = Field(
         default=nodetool.nodes.huggingface.text_to_image.QwenQuantization.INT4,
-        description="The quantization level to use.",
+        description="Quantization level: INT4/FP4 for lower VRAM, FP16 for full precision.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="A cat holding a sign that says hello world",
-        description="A text prompt describing the desired image.",
+        description="Text description of the image to generate.",
     )
     negative_prompt: str | OutputHandle[str] = connect_field(
-        default="", description="A text prompt describing what to avoid in the image."
+        default="",
+        description="Describe what to avoid in the image (e.g., 'blurry, low quality').",
     )
     true_cfg_scale: float | OutputHandle[float] = connect_field(
-        default=1.0, description="True CFG scale for Qwen-Image models."
+        default=1.0, description="True CFG scale for enhanced prompt following."
     )
     num_inference_steps: int | OutputHandle[int] = connect_field(
-        default=50, description="The number of denoising steps."
+        default=50, description="Denoising steps. 30-50 is typical."
     )
     height: int | OutputHandle[int] = connect_field(
-        default=1024, description="The height of the generated image."
+        default=1024, description="Output image height in pixels."
     )
     width: int | OutputHandle[int] = connect_field(
-        default=1024, description="The width of the generated image."
+        default=1024, description="Output image width in pixels."
     )
     seed: int | OutputHandle[int] = connect_field(
         default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
     )
 
     @classmethod
@@ -338,14 +344,15 @@ class StableDiffusion(
 ):
     """
 
-    Generates images from text prompts using Stable Diffusion.
-    image, generation, AI, text-to-image, SD
+    Generates images from text prompts using Stable Diffusion 1.x/2.x models.
+    image, generation, AI, text-to-image, SD, creative
 
     Use cases:
-    - Creating custom illustrations for various projects
-    - Generating concept art for creative endeavors
-    - Producing unique visual content for marketing materials
-    - Exploring AI-generated art for personal or professional use
+    - Create custom illustrations and artwork from text descriptions
+    - Generate concept art for games, films, and creative projects
+    - Produce unique visual content for marketing and media
+    - Explore AI-generated art with extensive community models
+    - Build image generation applications with well-understood architecture
     """
 
     StableDiffusionScheduler: typing.ClassVar[type] = (
@@ -410,7 +417,9 @@ class StableDiffusion(
         )
     )
     ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="When provided the image will be fed into the IP adapter",
     )
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
@@ -441,10 +450,12 @@ class StableDiffusion(
         description="The type of output to generate.",
     )
     width: int | OutputHandle[int] = connect_field(
-        default=512, description="Width of the generated image."
+        default=512,
+        description="Output image width in pixels. 512 is standard for SD 1.x.",
     )
     height: int | OutputHandle[int] = connect_field(
-        default=512, description="Height of the generated image"
+        default=512,
+        description="Output image height in pixels. 512 is standard for SD 1.x.",
     )
 
     @property
@@ -483,14 +494,15 @@ class StableDiffusionXL(
 ):
     """
 
-    Generates images from text prompts using Stable Diffusion XL.
-    image, generation, AI, text-to-image, SDXL
+    Generates high-resolution images from text prompts using Stable Diffusion XL.
+    image, generation, AI, text-to-image, SDXL, high-resolution
 
     Use cases:
-    - Creating custom illustrations for marketing materials
-    - Generating concept art for game and film development
-    - Producing unique stock imagery for websites and publications
-    - Visualizing interior design concepts for clients
+    - Create detailed, high-resolution images (1024x1024) from text
+    - Generate marketing visuals and product imagery
+    - Produce concept art and illustrations with enhanced detail
+    - Create stock imagery and visual content for publications
+    - Build professional image generation applications
     """
 
     StableDiffusionXLQuantization: typing.ClassVar[type] = (
@@ -572,7 +584,9 @@ class StableDiffusionXL(
         )
     )
     ip_adapter_image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
         description="When provided the image will be fed into the IP adapter",
     )
     ip_adapter_scale: float | OutputHandle[float] = connect_field(
@@ -632,14 +646,14 @@ class Text2Image(
 ):
     """
 
-    Generates images from text prompts using AutoPipeline for automatic pipeline selection.
-    image, generation, AI, text-to-image, auto
+    Generates images from text prompts using AutoPipeline for automatic model detection.
+    image, generation, AI, text-to-image, auto, flexible
 
     Use cases:
-    - Automatic selection of the best pipeline for a given model
-    - Flexible image generation without pipeline-specific knowledge
-    - Quick prototyping with various text-to-image models
-    - Streamlined workflow for different model architectures
+    - Generate images with automatic pipeline selection for any supported model
+    - Quickly prototype with various text-to-image architectures
+    - Build flexible workflows that adapt to different model types
+    - Create images without needing pipeline-specific configuration
     """
 
     model: types.HFTextToImage | OutputHandle[types.HFTextToImage] = connect_field(
@@ -651,30 +665,33 @@ class Text2Image(
             allow_patterns=None,
             ignore_patterns=None,
         ),
-        description="The model to use for text-to-image generation.",
+        description="The text-to-image model. AutoPipeline automatically selects the correct pipeline type.",
     )
     prompt: str | OutputHandle[str] = connect_field(
         default="A cat holding a sign that says hello world",
-        description="A text prompt describing the desired image.",
+        description="Text description of the image to generate. Be specific for better results.",
     )
     negative_prompt: str | OutputHandle[str] = connect_field(
-        default="", description="A text prompt describing what to avoid in the image."
+        default="",
+        description="Describe what to avoid in the image (e.g., 'blurry, low quality').",
     )
     num_inference_steps: int | OutputHandle[int] = connect_field(
-        default=50, description="The number of denoising steps."
+        default=50,
+        description="Denoising steps. 20-50 is typical; more steps = better quality but slower.",
     )
     guidance_scale: float | OutputHandle[float] = connect_field(
-        default=7.5, description="The scale for classifier-free guidance."
+        default=7.5,
+        description="How strongly to follow the prompt. 7-9 is typical for SD models.",
     )
     width: int | OutputHandle[int] = connect_field(
-        default=512, description="The width of the generated image."
+        default=512, description="Output image width in pixels."
     )
     height: int | OutputHandle[int] = connect_field(
-        default=512, description="The height of the generated image."
+        default=512, description="Output image height in pixels."
     )
     seed: int | OutputHandle[int] = connect_field(
         default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
     )
 
     @property

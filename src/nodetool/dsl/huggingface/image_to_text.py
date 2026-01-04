@@ -22,14 +22,15 @@ from nodetool.workflows.base_node import BaseNode
 class ImageToText(SingleOutputGraphNode[str], GraphNode[str]):
     """
 
-    Generates textual descriptions from images.
-    image, captioning, OCR, image-to-text
+    Generates textual descriptions and captions from images using vision-language models.
+    image, captioning, OCR, image-to-text, accessibility
 
     Use cases:
-    - Generate captions for images
-    - Extract text from images (OCR)
-    - Describe image content for visually impaired users
-    - Build accessibility features for visual content
+    - Automatically generate captions for photos and artwork
+    - Extract visible text from images (OCR-style functionality)
+    - Create alt-text descriptions for web accessibility
+    - Build image search engines with text-based queries
+    - Generate descriptions for visually impaired users
     """
 
     model: types.HFImageToText | OutputHandle[types.HFImageToText] = connect_field(
@@ -41,15 +42,17 @@ class ImageToText(SingleOutputGraphNode[str], GraphNode[str]):
             allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
             ignore_patterns=None,
         ),
-        description="The model ID to use for image-to-text generation",
+        description="The image captioning model. BLIP models offer good quality; BLIP2 provides enhanced understanding; GIT is faster.",
     )
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The image to generate text from",
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
+        description="The image to generate text from. Supports JPEG, PNG, WebP and other common formats.",
     )
     max_new_tokens: int | OutputHandle[int] = connect_field(
         default=1024,
-        description="The maximum number of tokens to generate (if supported by model)",
+        description="Maximum length of the generated caption in tokens. Higher values allow longer descriptions.",
     )
 
     @classmethod
@@ -71,9 +74,20 @@ from nodetool.workflows.base_node import BaseNode
 class LoadImageToTextModel(
     SingleOutputGraphNode[types.HFImageToText], GraphNode[types.HFImageToText]
 ):
+    """
+
+    Loads and validates a Hugging Face image-to-text model for use in downstream nodes.
+    model-loader, captioning, OCR, image-to-text
+
+    Use cases:
+    - Pre-load image captioning models before running pipelines
+    - Validate model availability and compatibility
+    - Configure model settings for ImageToText processing
+    """
+
     repo_id: str | OutputHandle[str] = connect_field(
         default="Salesforce/blip-image-captioning-base",
-        description="The model ID to use for image-to-text generation",
+        description="The Hugging Face repository ID for the image-to-text model (e.g., BLIP, GIT, ViT-GPT2).",
     )
 
     @classmethod

@@ -24,8 +24,15 @@ class TextClassifier(
 ):
     """
 
-    Classifies text into predefined categories using a Hugging Face model.
-    text, classification, zero-shot, natural language processing
+    Classifies text into predefined categories using fine-tuned transformer models.
+    text, classification, sentiment, NLP, emotion
+
+    Use cases:
+    - Analyze sentiment in social media posts and reviews
+    - Detect emotions in customer feedback and conversations
+    - Classify support tickets by category or priority
+    - Filter spam or inappropriate content
+    - Categorize news articles by topic
     """
 
     model: types.HFTextClassification | OutputHandle[types.HFTextClassification] = (
@@ -38,11 +45,11 @@ class TextClassifier(
                 allow_patterns=None,
                 ignore_patterns=None,
             ),
-            description="The model ID to use for the classification",
+            description="The text classification model. Use sentiment models for opinion analysis; emotion models for feeling detection.",
         )
     )
     prompt: str | OutputHandle[str] = connect_field(
-        default="", description="The input text to the model"
+        default="", description="The text to classify."
     )
 
     @classmethod
@@ -66,14 +73,15 @@ class ZeroShotTextClassifier(
 ):
     """
 
-    Performs zero-shot classification on text.
-    text, classification, zero-shot, natural language processing
+    Classifies text into custom categories without requiring task-specific training data.
+    text, classification, zero-shot, NLP, flexible
 
     Use cases:
-    - Classify text into custom categories without training
-    - Topic detection in documents
-    - Sentiment analysis with custom sentiment labels
-    - Intent classification in conversational AI
+    - Classify text into custom, user-defined categories on the fly
+    - Detect topics in documents without predefined training
+    - Perform sentiment analysis with custom sentiment labels
+    - Build flexible intent classification for conversational AI
+    - Prototype classification systems with dynamic categories
     """
 
     model: (
@@ -87,17 +95,18 @@ class ZeroShotTextClassifier(
             allow_patterns=None,
             ignore_patterns=None,
         ),
-        description="The model ID to use for zero-shot classification",
+        description="The zero-shot classification model. BART-large-mnli is reliable; DeBERTa variants offer improved accuracy; mDeBERTa is multilingual.",
     )
     inputs: str | OutputHandle[str] = connect_field(
-        default="", description="The text to classify"
+        default="", description="The text to classify."
     )
     candidate_labels: str | OutputHandle[str] = connect_field(
         default="",
-        description="Comma-separated list of candidate labels for classification",
+        description="Comma-separated list of labels to classify against (e.g., 'positive,negative,neutral' or 'sports,politics,technology').",
     )
     multi_label: bool | OutputHandle[bool] = connect_field(
-        default=False, description="Whether to perform multi-label classification"
+        default=False,
+        description="Allow multiple labels to be assigned to the same text (useful when text can belong to multiple categories).",
     )
 
     @classmethod

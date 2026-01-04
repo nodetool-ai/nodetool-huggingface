@@ -24,12 +24,15 @@ class ImageClassifier(
 ):
     """
 
-    Classifies images into predefined categories.
-    image, classification, labeling, categorization
+    Classifies images into predefined categories using vision transformer models.
+    image, classification, labeling, categorization, computer-vision
 
     Use cases:
-    - Content moderation by detecting inappropriate images
-    - Organizing photo libraries by automatically tagging images
+    - Automatically tag and organize photo libraries
+    - Detect inappropriate or NSFW content for moderation
+    - Classify product images in e-commerce catalogs
+    - Identify age, gender, or other attributes in photos
+    - Sort images by scene type, object presence, or style
     """
 
     model: types.HFImageClassification | OutputHandle[types.HFImageClassification] = (
@@ -42,12 +45,14 @@ class ImageClassifier(
                 allow_patterns=None,
                 ignore_patterns=None,
             ),
-            description="The model ID to use for the classification",
+            description="The image classification model. ViT and ResNet models offer general classification; specialized models exist for NSFW detection, age estimation, etc.",
         )
     )
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The input image to classify",
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
+        description="The image to classify. Supports common formats like JPEG, PNG, WebP.",
     )
 
     @classmethod
@@ -71,13 +76,15 @@ class ZeroShotImageClassifier(
 ):
     """
 
-    Classifies images into categories without the need for training data.
-    image, classification, labeling, categorization
+    Classifies images into custom categories without requiring task-specific training data.
+    image, classification, labeling, categorization, zero-shot, flexible
 
     Use cases:
-    - Quickly categorize images without training data
-    - Identify objects in images without predefined labels
-    - Automate image tagging for large datasets
+    - Categorize images with custom, user-defined labels on the fly
+    - Quickly prototype image classification systems without training
+    - Identify objects or scenes without predefined model categories
+    - Build flexible image tagging workflows with dynamic categories
+    - Test hypotheses about image content using natural language labels
     """
 
     model: (
@@ -92,15 +99,17 @@ class ZeroShotImageClassifier(
             allow_patterns=None,
             ignore_patterns=None,
         ),
-        description="The model ID to use for the classification",
+        description="The zero-shot classification model. CLIP-based models (OpenAI, LAION) enable flexible label matching using vision-language understanding.",
     )
     image: types.ImageRef | OutputHandle[types.ImageRef] = connect_field(
-        default=types.ImageRef(type="image", uri="", asset_id=None, data=None),
-        description="The input image to classify",
+        default=types.ImageRef(
+            type="image", uri="", asset_id=None, data=None, metadata=None
+        ),
+        description="The image to classify. Supports common formats like JPEG, PNG, WebP.",
     )
     candidate_labels: str | OutputHandle[str] = connect_field(
         default="",
-        description="The candidate labels to classify the image against, separated by commas",
+        description="Comma-separated list of labels to classify against (e.g., 'cat,dog,bird,fish'). Use descriptive labels for better results.",
     )
 
     @classmethod

@@ -22,59 +22,64 @@ from nodetool.workflows.base_node import BaseNode
 class CogVideoX(SingleOutputGraphNode[types.VideoRef], GraphNode[types.VideoRef]):
     """
 
-    Generates videos from text prompts using CogVideoX, a large diffusion transformer model.
-    video, generation, AI, text-to-video, transformer, diffusion
+    Generates high-quality videos from text prompts using the CogVideoX diffusion transformer.
+    video, generation, AI, text-to-video, transformer, diffusion, cinematic
 
     Use cases:
-    - Create high-quality videos from text descriptions
-    - Generate longer and more consistent videos
-    - Produce cinematic content for creative projects
-    - Create animated scenes for storytelling
-    - Generate video content for marketing and media
+    - Create videos from detailed text descriptions
+    - Generate cinematic content for creative projects
+    - Produce animated scenes for storytelling and marketing
+    - Build AI video generation applications
+    - Create visual content for social media
     """
 
     prompt: str | OutputHandle[str] = connect_field(
         default="A detailed wooden toy ship with intricately carved masts and sails is seen gliding smoothly over a plush, blue carpet that mimics the waves of the sea. The ship's hull is painted a rich brown, with tiny windows. The carpet, soft and textured, provides a perfect backdrop, resembling an oceanic expanse. Surrounding the ship are various other toys and children's items, hinting at a playful environment. The scene captures the innocence and imagination of childhood, with the toy ship's journey symbolizing endless adventures in a whimsical, indoor setting.",
-        description="A text prompt describing the desired video.",
+        description="Detailed text description of the video to generate. More descriptive prompts produce better results.",
     )
     negative_prompt: str | OutputHandle[str] = connect_field(
-        default="", description="A text prompt describing what to avoid in the video."
+        default="",
+        description="Describe what to avoid in the video (e.g., 'blurry, low quality, distorted').",
     )
     num_frames: int | OutputHandle[int] = connect_field(
         default=49,
-        description="The number of frames in the video. Must be divisible by 8 + 1 (e.g., 49, 81, 113).",
+        description="Total frames in the output. Must be 8n+1 (49, 81, 113). More frames = longer video.",
     )
     guidance_scale: float | OutputHandle[float] = connect_field(
-        default=6.0, description="The scale for classifier-free guidance."
+        default=6.0,
+        description="How strongly to follow the prompt. 5-8 is typical; higher = more adherence.",
     )
     num_inference_steps: int | OutputHandle[int] = connect_field(
-        default=50, description="The number of denoising steps."
+        default=50,
+        description="Denoising steps. 50 is recommended; lower for faster generation.",
     )
     height: int | OutputHandle[int] = connect_field(
-        default=480, description="The height of the generated video in pixels."
+        default=480, description="Output video height in pixels."
     )
     width: int | OutputHandle[int] = connect_field(
-        default=720, description="The width of the generated video in pixels."
+        default=720, description="Output video width in pixels."
     )
     fps: int | OutputHandle[int] = connect_field(
-        default=8, description="Frames per second for the output video."
+        default=8, description="Frames per second for the output video file."
     )
     seed: int | OutputHandle[int] = connect_field(
         default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
     )
     max_sequence_length: int | OutputHandle[int] = connect_field(
-        default=226, description="Maximum sequence length in encoded prompt."
+        default=226,
+        description="Maximum prompt encoding length. Higher allows longer prompts.",
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
-        default=True, description="Enable CPU offload to reduce VRAM usage."
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
     )
     enable_vae_slicing: bool | OutputHandle[bool] = connect_field(
-        default=True, description="Enable VAE slicing to reduce VRAM usage."
+        default=True, description="Process VAE in slices to reduce peak memory usage."
     )
     enable_vae_tiling: bool | OutputHandle[bool] = connect_field(
         default=True,
-        description="Enable VAE tiling to reduce VRAM usage for large videos.",
+        description="Process VAE in tiles for large videos. Reduces memory but may affect quality.",
     )
 
     @classmethod
@@ -96,12 +101,17 @@ from nodetool.workflows.base_node import BaseNode
 class Wan_T2V(SingleOutputGraphNode[types.VideoRef], GraphNode[types.VideoRef]):
     """
 
-    Generates videos from text prompts using Wan text-to-video pipeline.
-    video, generation, AI, text-to-video, diffusion, Wan
+    Generates videos from text prompts using Wan text-to-video diffusion models.
+    video, generation, AI, text-to-video, diffusion, Wan, cinematic
 
     Use cases:
     - Create high-quality videos from text descriptions
-    - Efficient 1.3B model for consumer GPUs or 14B for maximum quality
+    - Generate cinematic content for creative and commercial projects
+    - Produce animated scenes for storytelling and marketing
+    - Build AI video generation applications
+    - Create visual content for social media and entertainment
+
+    **Note:** Model variants offer different quality/resource tradeoffs. A14B is balanced; 14B offers maximum quality.
     """
 
     WanModel: typing.ClassVar[type] = (
@@ -110,49 +120,53 @@ class Wan_T2V(SingleOutputGraphNode[types.VideoRef], GraphNode[types.VideoRef]):
 
     prompt: str | OutputHandle[str] = connect_field(
         default="A robot standing on a mountain top at sunset, cinematic lighting, high detail",
-        description="A text prompt describing the desired video.",
+        description="Detailed text description of the video to generate.",
     )
     model_variant: nodetool.nodes.huggingface.text_to_video.Wan_T2V.WanModel = Field(
         default=nodetool.nodes.huggingface.text_to_video.Wan_T2V.WanModel.WAN_2_2_T2V_A14B,
-        description="Select the Wan model to use.",
+        description="The Wan model variant. A14B is balanced; TI2V-5B is smaller/faster.",
     )
     negative_prompt: str | OutputHandle[str] = connect_field(
-        default="", description="A text prompt describing what to avoid in the video."
+        default="",
+        description="Describe what to avoid in the video (e.g., 'blurry, distorted').",
     )
     num_frames: int | OutputHandle[int] = connect_field(
-        default=49, description="The number of frames in the video."
+        default=49,
+        description="Total frames in the output video. More frames = longer duration.",
     )
     guidance_scale: float | OutputHandle[float] = connect_field(
-        default=5.0, description="The scale for classifier-free guidance."
+        default=5.0, description="How strongly to follow the prompt. 4-7 is typical."
     )
     num_inference_steps: int | OutputHandle[int] = connect_field(
-        default=30, description="The number of denoising steps."
+        default=30, description="Denoising steps. 30 is fast; 50+ for higher quality."
     )
     height: int | OutputHandle[int] = connect_field(
-        default=480, description="The height of the generated video in pixels."
+        default=480, description="Output video height in pixels."
     )
     width: int | OutputHandle[int] = connect_field(
-        default=720, description="The width of the generated video in pixels."
+        default=720, description="Output video width in pixels."
     )
     fps: int | OutputHandle[int] = connect_field(
-        default=16, description="Frames per second for the output video."
+        default=16, description="Frames per second for the output video file."
     )
     seed: int | OutputHandle[int] = connect_field(
         default=-1,
-        description="Seed for the random number generator. Use -1 for a random seed.",
+        description="Random seed for reproducible generation. Use -1 for random.",
     )
     max_sequence_length: int | OutputHandle[int] = connect_field(
-        default=512, description="Maximum sequence length in encoded prompt."
+        default=512,
+        description="Maximum prompt encoding length. Higher allows longer prompts.",
     )
     enable_cpu_offload: bool | OutputHandle[bool] = connect_field(
-        default=True, description="Enable CPU offload to reduce VRAM usage."
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
     )
     enable_vae_slicing: bool | OutputHandle[bool] = connect_field(
-        default=True, description="Enable VAE slicing to reduce VRAM usage."
+        default=True, description="Process VAE in slices to reduce peak memory usage."
     )
     enable_vae_tiling: bool | OutputHandle[bool] = connect_field(
         default=False,
-        description="Enable VAE tiling to reduce VRAM usage for large videos.",
+        description="Process VAE in tiles for large videos. May affect quality.",
     )
 
     @classmethod

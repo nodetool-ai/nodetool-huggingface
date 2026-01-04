@@ -27,7 +27,7 @@ from nodetool.metadata.types import (
 )
 
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
-from nodetool.nodes.huggingface.image_to_image import _apply_vae_optimizations
+from nodetool.huggingface.local_provider_utils import _apply_vae_optimizations
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress
 
@@ -411,7 +411,7 @@ async def load_loras(
     lora_weights = []
     for i, lora in enumerate(loras):
         log.debug(
-            f"Processing LoRA {i+1}/{len(loras)}: {lora.lora.repo_id}/{lora.lora.path}"
+            f"Processing LoRA {i + 1}/{len(loras)}: {lora.lora.repo_id}/{lora.lora.path}"
         )
         cache_path = await HF_FAST_CACHE.resolve(
             lora.lora.repo_id,
@@ -499,7 +499,6 @@ def available_torch_dtype() -> "torch.dtype":
 
 
 class StableDiffusionBaseNode(HuggingFacePipelineNode):
-
     def get_torch_dtype(self) -> "torch.dtype":
         return available_torch_dtype()
 
@@ -922,7 +921,6 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
 
 
 class StableDiffusionXLBase(HuggingFacePipelineNode):
-
     def get_torch_dtype(self) -> torch.dtype:
         return available_torch_dtype()
 

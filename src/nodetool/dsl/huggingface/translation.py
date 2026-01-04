@@ -22,15 +22,17 @@ from nodetool.workflows.base_node import BaseNode
 class Translation(SingleOutputGraphNode[str], GraphNode[str]):
     """
 
-    Translates text from one language to another.
-    text, translation, natural language processing
+    Translates text between languages using sequence-to-sequence transformer models.
+    text, translation, NLP, multilingual, localization
 
     Use cases:
-    - Multilingual content creation
-    - Cross-language communication
-    - Localization of applications and websites
+    - Translate content for multilingual websites and applications
+    - Enable cross-language communication in chat systems
+    - Localize documents and product descriptions
+    - Build multilingual content pipelines
+    - Support international user bases with automatic translation
 
-    Note: some models support more languages than others.
+    **Note:** Different models support different language pairs. T5 models handle many language combinations.
     """
 
     LanguageCode: typing.ClassVar[type] = (
@@ -49,21 +51,21 @@ class Translation(SingleOutputGraphNode[str], GraphNode[str]):
             allow_patterns=["*.json", "*.txt", "*.safetensors"],
             ignore_patterns=None,
         ),
-        description="The model ID to use for translation",
+        description="The translation model. T5 models support many language pairs; larger variants offer better quality.",
     )
     inputs: str | OutputHandle[str] = connect_field(
-        default="", description="The text to translate"
+        default="", description="The text to translate."
     )
     source_lang: nodetool.nodes.huggingface.translation.Translation.LanguageCode = (
         Field(
             default=nodetool.nodes.huggingface.translation.Translation.LanguageCode.ENGLISH,
-            description="The source language code (e.g., 'en' for English)",
+            description="The language of the input text.",
         )
     )
     target_lang: nodetool.nodes.huggingface.translation.Translation.LanguageCode = (
         Field(
             default=nodetool.nodes.huggingface.translation.Translation.LanguageCode.FRENCH,
-            description="The target language code (e.g., 'fr' for French)",
+            description="The language to translate the text into.",
         )
     )
 

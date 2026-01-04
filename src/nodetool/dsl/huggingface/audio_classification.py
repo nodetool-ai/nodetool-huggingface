@@ -24,18 +24,15 @@ class AudioClassifier(
 ):
     """
 
-    Classifies audio into predefined categories.
-    audio, classification, labeling, categorization
+    Classifies audio into predefined categories using pretrained transformer models.
+    audio, classification, labeling, categorization, sound-recognition
 
     Use cases:
-    - Classify music genres
-    - Detect speech vs. non-speech audio
-    - Identify environmental sounds
-    - Emotion recognition in speech
-
-    Recommended models
-    - MIT/ast-finetuned-audioset-10-10-0.4593
-    - ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition
+    - Classify music by genre or mood
+    - Detect speech vs. non-speech audio segments
+    - Identify environmental sounds (e.g., car horn, dog bark)
+    - Recognize emotions in speech recordings
+    - Content moderation for audio platforms
     """
 
     model: types.HFAudioClassification | OutputHandle[types.HFAudioClassification] = (
@@ -48,15 +45,18 @@ class AudioClassifier(
                 allow_patterns=None,
                 ignore_patterns=None,
             ),
-            description="The model ID to use for audio classification",
+            description="The Hugging Face model for audio classification. Recommended: MIT/ast-finetuned-audioset for general sounds, wav2vec2-lg-xlsr-en-speech-emotion-recognition for speech emotions.",
         )
     )
     audio: types.AudioRef | OutputHandle[types.AudioRef] = connect_field(
-        default=types.AudioRef(type="audio", uri="", asset_id=None, data=None),
-        description="The input audio to classify",
+        default=types.AudioRef(
+            type="audio", uri="", asset_id=None, data=None, metadata=None
+        ),
+        description="The audio file to classify. Supports common formats like WAV, MP3, FLAC.",
     )
     top_k: int | OutputHandle[int] = connect_field(
-        default=10, description="The number of top results to return"
+        default=10,
+        description="Number of top classification results to return, ranked by confidence score.",
     )
 
     @classmethod
@@ -80,13 +80,14 @@ class ZeroShotAudioClassifier(
 ):
     """
 
-    Classifies audio into categories without the need for training data.
-    audio, classification, labeling, categorization, zero-shot
+    Classifies audio into custom categories without requiring task-specific training data.
+    audio, classification, labeling, categorization, zero-shot, flexible
 
     Use cases:
-    - Quickly categorize audio without training data
-    - Identify sounds or music genres without predefined labels
-    - Automate audio tagging for large datasets
+    - Categorize audio with custom, user-defined labels on the fly
+    - Identify sounds or music genres without predefined model training
+    - Quickly prototype audio classification systems
+    - Automate tagging for large audio datasets with dynamic categories
     """
 
     model: (
@@ -101,15 +102,17 @@ class ZeroShotAudioClassifier(
             allow_patterns=None,
             ignore_patterns=None,
         ),
-        description="The model ID to use for the classification",
+        description="The Hugging Face model for zero-shot audio classification. Uses CLIP-based models for flexible label matching.",
     )
     audio: types.AudioRef | OutputHandle[types.AudioRef] = connect_field(
-        default=types.AudioRef(type="audio", uri="", asset_id=None, data=None),
-        description="The input audio to classify",
+        default=types.AudioRef(
+            type="audio", uri="", asset_id=None, data=None, metadata=None
+        ),
+        description="The audio file to classify. Supports common formats like WAV, MP3, FLAC.",
     )
     candidate_labels: str | OutputHandle[str] = connect_field(
         default="",
-        description="The candidate labels to classify the audio against, separated by commas",
+        description="Comma-separated list of labels to classify against (e.g., 'music,speech,noise,silence').",
     )
 
     @classmethod

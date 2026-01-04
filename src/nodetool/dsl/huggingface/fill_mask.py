@@ -22,14 +22,15 @@ from nodetool.workflows.base_node import BaseNode
 class FillMask(SingleOutputGraphNode[dict[str, Any]], GraphNode[dict[str, Any]]):
     """
 
-    Fills in a masked token in a given text.
-    text, fill-mask, natural language processing
+    Predicts the most likely words to fill masked positions in text using language models.
+    text, fill-mask, NLP, language-modeling, word-prediction
 
     Use cases:
-    - Text completion
-    - Sentence prediction
-    - Language understanding tasks
-    - Generating text options
+    - Complete sentences with contextually appropriate words
+    - Generate word suggestions for text editing tools
+    - Test language understanding and word associations
+    - Build autocomplete and text prediction features
+    - Explore semantic relationships between words in context
     """
 
     model: types.HFFillMask | OutputHandle[types.HFFillMask] = connect_field(
@@ -41,14 +42,15 @@ class FillMask(SingleOutputGraphNode[dict[str, Any]], GraphNode[dict[str, Any]])
             allow_patterns=None,
             ignore_patterns=None,
         ),
-        description="The model ID to use for fill-mask task",
+        description="The masked language model to use. BERT, RoBERTa, and DistilBERT variants are supported.",
     )
     inputs: str | OutputHandle[str] = connect_field(
         default="The capital of France is [MASK].",
-        description="The input text with [MASK] token to be filled",
+        description="Text containing [MASK] token(s) to be predicted. Different models may use different mask tokens (e.g., BERT uses [MASK], RoBERTa uses <mask>).",
     )
     top_k: int | OutputHandle[int] = connect_field(
-        default=5, description="Number of top predictions to return"
+        default=5,
+        description="Number of most likely predictions to return for each masked position.",
     )
 
     @classmethod
