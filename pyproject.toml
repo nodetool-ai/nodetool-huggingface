@@ -132,3 +132,17 @@ ignore = [
     "F811",  # Redefinition of unused name
     "F841",  # Local variable assigned but never used
 ]
+
+# Basedpyright configuration for type checking
+[tool.basedpyright]
+typeCheckingMode = "standard"
+reportUnknownMemberType = "none"
+reportUnknownVariableType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownParameterType = "none"
+reportUnknownLambdaType = "none"
+reportMissingTypeStubs = "none"
+reportUnusedImport = "none"
+reportUnusedVariable = "none"
+reportUnusedFunction = "none"
+reportUnusedClass = "none"
