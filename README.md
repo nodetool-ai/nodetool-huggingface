@@ -445,6 +445,71 @@ Some models (like FLUX) require accepting terms on HuggingFace:
 - **Balanced**: FP16 models on GPU
 - **Best Quality**: Full precision models with high inference steps
 
+## Memory Tracking
+
+This package includes advanced memory tracking capabilities to help optimize model loading and prevent out-of-memory errors.
+
+### Features
+
+- **Accurate Per-Model Tracking**: Measures memory at all lifecycle points (load, device placement, warmup, peak usage)
+- **Multi-Device Support**: Tracks VRAM (CUDA), MPS (Apple Silicon), and system RAM
+- **CPU Offload Detection**: Automatically detects Accelerate hooks and Nunchaku offload patterns
+- **Shared Component Detection**: Identifies reused components (VAEs, text encoders) to avoid double-counting
+- **Peak Memory Recording**: Captures maximum memory usage with safety margins
+
+### Environment Variables
+
+Control memory tracking behavior with these environment variables:
+
+```bash
+# Skip warmup inference (faster loading, less accurate memory tracking)
+export NODETOOL_SKIP_WARMUP=1
+
+# Smoke test mode (disables warmup and uses minimal resources)
+export NODETOOL_SMOKE_TEST=1
+```
+
+### Memory Statistics
+
+Memory tracking automatically logs detailed statistics for each loaded model:
+
+```
+[node_123] Memory tracking complete in 1.23s: total=4096.0MB, peak=4500.0MB, vram=3800.0MB, ram=296.0MB
+Model stabilityai/stable-diffusion-xl-base-1.0 loaded: 4096.0MB total, 4500.0MB peak, offload=full_gpu
+```
+
+The tracker provides:
+- **Total Memory**: Combined VRAM + RAM usage with 1.2x safety margin
+- **Peak Memory**: Maximum allocation during warmup/inference
+- **Offload Status**: `full_gpu`, `cpu_offload`, `sequential_offload`, `cpu_only`, or `mps`
+- **Component Breakdown**: Memory usage by pipeline component (transformer, VAE, etc.)
+
+### For Developers
+
+The `ModelMemoryTracker` class can be used directly for custom memory profiling:
+
+```python
+from nodetool.huggingface.model_memory_tracker import ModelMemoryTracker
+
+tracker = ModelMemoryTracker("my_node", "my_model_id", "cuda")
+tracker.start()
+
+# Load your model
+model = load_model(...)
+tracker.after_load()
+
+# Move to device
+model = model.to("cuda")
+tracker.after_device_placement()
+
+# Run warmup
+await tracker.warmup_inference(model, model_class)
+
+# Get statistics
+stats = tracker.finalize()
+print(f"Memory used: {stats.total_mb:.1f}MB")
+```
+
 ## Troubleshooting
 
 ### Common Issues
