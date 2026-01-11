@@ -9,7 +9,7 @@ from pydantic import Field
 
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nodetool.config.logging_config import get_logger
-from nodetool.huggingface.memory_utils import log_memory, run_gc
+from nodetool.workflows.memory_utils import log_memory, run_gc
 from nodetool.metadata.types import (
     HFT5,
     HFFlux,

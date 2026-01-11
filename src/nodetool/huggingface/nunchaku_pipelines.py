@@ -15,7 +15,7 @@ from nodetool.huggingface.flux_utils import (
     flux_variant_to_base_model_id,
 )
 from nodetool.huggingface.local_provider_utils import _get_torch, load_model
-from nodetool.huggingface.memory_utils import log_memory, run_gc, MemoryTracker
+from nodetool.workflows.memory_utils import log_memory, run_gc, MemoryTracker
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 
 if TYPE_CHECKING:
