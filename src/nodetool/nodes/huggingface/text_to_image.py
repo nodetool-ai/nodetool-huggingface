@@ -9,7 +9,7 @@ from pydantic import Field
 
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nodetool.config.logging_config import get_logger
-from nodetool.workflows.memory_utils import log_memory, run_gc
+from nodetool.huggingface.memory_utils import log_memory, run_gc
 from nodetool.metadata.types import (
     HFT5,
     HFFlux,
@@ -773,6 +773,7 @@ class Flux(HuggingFacePipelineNode):
         # Apply CPU offload if enabled and not already configured
         if self._pipeline is not None and self.enable_cpu_offload:
             from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+
             apply_cpu_offload_if_needed(self._pipeline, method="sequential")
 
     async def move_to_device(self, device: str):
@@ -792,7 +793,10 @@ class Flux(HuggingFacePipelineNode):
                         ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
-                    from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+                    from nodetool.huggingface.memory_utils import (
+                        apply_cpu_offload_if_needed,
+                    )
+
                     apply_cpu_offload_if_needed(self._pipeline, method="sequential")
             else:
                 # Normal device movement without CPU offload
@@ -812,7 +816,9 @@ class Flux(HuggingFacePipelineNode):
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
-        log_memory(f"Flux.process START (variant={self.variant.value}, {self.width}x{self.height})")
+        log_memory(
+            f"Flux.process START (variant={self.variant.value}, {self.width}x{self.height})"
+        )
 
         # Set up the generator for reproducibility
         generator = None
@@ -852,13 +858,17 @@ class Flux(HuggingFacePipelineNode):
         # VAE decoding happens after denoising and can hang on large images
         large_image = self.width * self.height > 1024 * 1024  # > 1 megapixel
         if large_image and hasattr(self._pipeline, "vae"):
-            log.info(f"Enabling VAE tiling for large image ({self.width}x{self.height})")
+            log.info(
+                f"Enabling VAE tiling for large image ({self.width}x{self.height})"
+            )
             try:
                 self._pipeline.vae.enable_tiling()
             except Exception as e:
                 log.warning(f"Failed to enable VAE tiling: {e}")
 
-        log.info(f"Starting Flux pipeline: {self.width}x{self.height}, {num_inference_steps} steps")
+        log.info(
+            f"Starting Flux pipeline: {self.width}x{self.height}, {num_inference_steps} steps"
+        )
 
         # Generate the image off the event loop
         def _run_pipeline_sync():
@@ -1574,6 +1584,7 @@ class FluxControl(HuggingFacePipelineNode):
         _apply_vae_optimizations(self._pipeline)
         if self._pipeline is not None and self.enable_cpu_offload:
             from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+
             apply_cpu_offload_if_needed(self._pipeline, method="sequential")
 
     def _is_nunchaku_model(self) -> bool:
@@ -1645,7 +1656,10 @@ class FluxControl(HuggingFacePipelineNode):
                         ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
-                    from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+                    from nodetool.huggingface.memory_utils import (
+                        apply_cpu_offload_if_needed,
+                    )
+
                     apply_cpu_offload_if_needed(self._pipeline, method="sequential")
             else:
                 # Normal device movement without CPU offload
