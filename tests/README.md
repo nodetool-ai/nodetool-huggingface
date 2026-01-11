@@ -84,9 +84,9 @@ When adding new nodes or functionality:
 ## Test Coverage
 
 Current test coverage includes:
-- Node module imports (34 tests)
-- Node instantiation and basic functionality (23 tests)
-- Utility functions (11 tests)
+- Node module imports (19 tests)
+- Node instantiation and basic functionality (13 tests)
+- Utility functions (9 tests)
 - DSL node creation (7 tests)
 
-Total: 41 tests
+Total: 41 tests (all passing)
