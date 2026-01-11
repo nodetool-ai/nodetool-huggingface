@@ -848,10 +848,22 @@ class Flux(HuggingFacePipelineNode):
         # Run GC before inference to free any unused memory
         run_gc("Before Flux inference", log_before_after=True)
 
+        # Enable VAE tiling for large images to prevent OOM during decoding
+        # VAE decoding happens after denoising and can hang on large images
+        large_image = self.width * self.height > 1024 * 1024  # > 1 megapixel
+        if large_image and hasattr(self._pipeline, "vae"):
+            log.info(f"Enabling VAE tiling for large image ({self.width}x{self.height})")
+            try:
+                self._pipeline.vae.enable_tiling()
+            except Exception as e:
+                log.warning(f"Failed to enable VAE tiling: {e}")
+
+        log.info(f"Starting Flux pipeline: {self.width}x{self.height}, {num_inference_steps} steps")
+
         # Generate the image off the event loop
         def _run_pipeline_sync():
             with torch.inference_mode():
-                return self._pipeline(
+                result = self._pipeline(
                     prompt=self.prompt,
                     guidance_scale=guidance_scale,
                     height=self.height,
@@ -862,6 +874,9 @@ class Flux(HuggingFacePipelineNode):
                     callback_on_step_end=progress_callback,  # type: ignore
                     callback_on_step_end_tensor_inputs=["latents"],
                 )
+                # Log after VAE decoding completes (this is inside the thread)
+                log.info("Flux VAE decoding completed")
+                return result
 
         try:
             output = await asyncio.to_thread(_run_pipeline_sync)
