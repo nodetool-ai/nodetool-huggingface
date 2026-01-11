@@ -15,6 +15,7 @@ from nodetool.huggingface.flux_utils import (
     flux_variant_to_base_model_id,
 )
 from nodetool.huggingface.local_provider_utils import _get_torch, load_model
+from nodetool.huggingface.memory_utils import log_memory, run_gc, MemoryTracker
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 
 if TYPE_CHECKING:
@@ -213,13 +214,17 @@ async def load_nunchaku_flux_pipeline(
     from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
     from nodetool.ml.core.model_manager import ModelManager
 
+    log_memory("load_nunchaku_flux_pipeline - START")
+
     pipeline_class = pipeline_class or FluxPipeline
     pipeline_name = pipeline_class.__name__
 
     if cache_key:
         cached_pipeline = ModelManager.get_model(cache_key)
         if cached_pipeline:
+            log.info(f"[MEMORY] Returning cached pipeline for {cache_key}")
             return cached_pipeline
+
     variant = detect_flux_variant(repo_id, transformer_path)
     base_model_id = flux_variant_to_base_model_id(variant)
     hf_token = await context.get_secret("HF_TOKEN")
@@ -233,16 +238,21 @@ async def load_nunchaku_flux_pipeline(
     torch_dtype = torch.bfloat16 if variant in ["schnell", "dev"] else torch.float16
     node_key = _node_identifier(node_id, repo_id)
 
-    transformer = await get_nunchaku_transformer(
-        context=context,
-        model_class=NunchakuFluxTransformer2dModel,
-        node_id=node_key,
-        repo_id=repo_id,
-        path=transformer_path,
-    )
-    transformer.set_attention_impl("nunchaku-fp16")
+    # Run GC before loading transformer to free any unused memory
+    run_gc("Before loading Nunchaku transformer")
 
-    text_encoder = await get_nunchaku_text_encoder(context, node_key)
+    with MemoryTracker("Loading Nunchaku transformer", run_gc_after=False):
+        transformer = await get_nunchaku_transformer(
+            context=context,
+            model_class=NunchakuFluxTransformer2dModel,
+            node_id=node_key,
+            repo_id=repo_id,
+            path=transformer_path,
+        )
+        transformer.set_attention_impl("nunchaku-fp16")
+
+    with MemoryTracker("Loading Nunchaku text encoder", run_gc_after=False):
+        text_encoder = await get_nunchaku_text_encoder(context, node_key)
 
     pipeline_kwargs: dict[str, Any] = {
         "transformer": transformer,
@@ -253,11 +263,16 @@ async def load_nunchaku_flux_pipeline(
         pipeline_kwargs["text_encoder_2"] = text_encoder
 
     try:
-        pipeline = pipeline_class.from_pretrained(base_model_id, **pipeline_kwargs)
+        with MemoryTracker(f"Building {pipeline_name} from pretrained", run_gc_after=True):
+            pipeline = pipeline_class.from_pretrained(base_model_id, **pipeline_kwargs)
+
         if cache_key and node_id:
             ModelManager.set_model(node_id, cache_key, pipeline)
+
+        log_memory("load_nunchaku_flux_pipeline - END")
         return pipeline
     except _get_torch().OutOfMemoryError as exc:  # type: ignore[attr-defined]
+        run_gc("After OOM error")
         raise ValueError(
             "VRAM out of memory while loading Flux with the Nunchaku transformer. "
             "Try enabling 'CPU offload' or reduce image size/steps."
@@ -292,6 +307,8 @@ async def load_nunchaku_qwen_pipeline(
     from nunchaku.utils import get_gpu_memory
     from nodetool.ml.core.model_manager import ModelManager
 
+    log_memory("load_nunchaku_qwen_pipeline - START")
+
     hf_token = await context.get_secret("HF_TOKEN")
     torch = _get_torch()
     if torch_dtype is None:
@@ -301,25 +318,33 @@ async def load_nunchaku_qwen_pipeline(
 
     cached_pipeline = ModelManager.get_model(cache_key)
     if cached_pipeline:
+        log.info(f"[MEMORY] Returning cached pipeline for {cache_key}")
         return cached_pipeline
+
+    # Run GC before loading to free any unused memory
+    run_gc("Before loading Nunchaku Qwen pipeline")
 
     try:
         # Load Nunchaku transformer
-        transformer = await get_nunchaku_transformer(
-            context=context,
-            model_class=NunchakuQwenImageTransformer2DModel,
-            node_id=node_id,
-            repo_id=repo_id,
-            path=transformer_path,
-            device=context.device,
-        )
-        pipeline = pipeline_class.from_pretrained(
-            base_model_id,
-            transformer=transformer,
-            torch_dtype=torch_dtype,
-            token=hf_token,
-        )
-        pipeline.enable_model_cpu_offload()
+        with MemoryTracker("Loading Nunchaku Qwen transformer", run_gc_after=False):
+            transformer = await get_nunchaku_transformer(
+                context=context,
+                model_class=NunchakuQwenImageTransformer2DModel,
+                node_id=node_id,
+                repo_id=repo_id,
+                path=transformer_path,
+                device=context.device,
+            )
+
+        with MemoryTracker("Building Qwen pipeline from pretrained", run_gc_after=True):
+            pipeline = pipeline_class.from_pretrained(
+                base_model_id,
+                transformer=transformer,
+                torch_dtype=torch_dtype,
+                token=hf_token,
+            )
+            pipeline.enable_model_cpu_offload()
+
         if get_gpu_memory() > 18:
             log.info("Enabling model CPU offload")
         else:
@@ -333,8 +358,11 @@ async def load_nunchaku_qwen_pipeline(
 
         if cache_key and node_id:
             ModelManager.set_model(node_id, cache_key, pipeline)
+
+        log_memory("load_nunchaku_qwen_pipeline - END")
         return pipeline
     except _get_torch().OutOfMemoryError as exc:
+        run_gc("After OOM error in Qwen pipeline")
         raise ValueError(
             "VRAM out of memory while loading Qwen with the Nunchaku transformer."
         ) from exc

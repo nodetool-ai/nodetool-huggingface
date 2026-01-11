@@ -369,12 +369,13 @@ class Wan_T2V(HuggingFacePipelineNode):
         )
 
         if self._pipeline is not None:
-            if self.enable_cpu_offload and hasattr(
-                self._pipeline, "enable_model_cpu_offload"
-            ):
-                self._pipeline.enable_model_cpu_offload()  # type: ignore
-                if hasattr(self._pipeline, "enable_sequential_cpu_offload"):
-                    self._pipeline.enable_sequential_cpu_offload()  # type: ignore
+            if self.enable_cpu_offload:
+                from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+                # Use model CPU offload as primary, fall back to sequential
+                if hasattr(self._pipeline, "enable_model_cpu_offload"):
+                    apply_cpu_offload_if_needed(self._pipeline, method="model")
+                elif hasattr(self._pipeline, "enable_sequential_cpu_offload"):
+                    apply_cpu_offload_if_needed(self._pipeline, method="sequential")
 
             if hasattr(self._pipeline, "enable_attention_slicing"):
                 try:
