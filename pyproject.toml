@@ -33,6 +33,7 @@ dependencies = [
     "accelerate",
     "qwen-vl-utils",
     "bitsandbytes",
+    "timm"
 ]
 
 
