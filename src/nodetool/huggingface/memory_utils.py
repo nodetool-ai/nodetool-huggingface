@@ -79,9 +79,46 @@ def log_memory(context: str = "") -> None:
         log.info(f"Memory: RAM={ram_mb:.1f}MB, GPU={gpu_mb:.1f}MB")
 
 
-def run_gc() -> None:
-    """Run garbage collection."""
+def run_gc(label: str = "", log_before_after: bool = False) -> float:
+    """
+    Run garbage collection and clear GPU cache if available.
+
+    Args:
+        label: Optional descriptive label for logging
+        log_before_after: Whether to log memory usage before and after GC
+
+    Returns:
+        Memory freed in MB (RAM only, approximate)
+    """
+    if log_before_after:
+        before_mb = get_memory_usage_mb()
+        log.info(f"[GC] {label} - Before GC: RAM={before_mb:.1f}MB")
+    else:
+        before_mb = get_memory_usage_mb()
+        if label:
+            log.debug(f"[GC] {label}")
+
     gc.collect()
+
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+    except ImportError:
+        pass
+
+    after_mb = get_memory_usage_mb()
+    freed_mb = before_mb - after_mb
+
+    if log_before_after:
+        log.info(f"[GC] {label} - After GC: RAM={after_mb:.1f}MB (freed {freed_mb:.1f}MB)")
+        gpu_mb = get_gpu_memory_usage_mb()
+        if gpu_mb > 0:
+            log.info(f"[GC] {label} - GPU after: {gpu_mb:.1f}MB")
+
+    return freed_mb
 
 
 def log_memory_summary(context: str = "") -> None:
@@ -99,24 +136,44 @@ def log_memory_summary(context: str = "") -> None:
 
 class MemoryTracker:
     """
-    Simple memory tracker for measuring memory deltas.
+    Context manager for tracking memory usage during a block of code.
 
     Usage:
+        with MemoryTracker("Loading model"):
+            # ... load model code ...
+
+        # Or without context manager:
         tracker = MemoryTracker("loading model")
         # ... do work ...
         tracker.log_delta()
     """
 
-    def __init__(self, context: str = ""):
+    def __init__(self, context: str = "", run_gc_after: bool = True):
         """
         Initialize memory tracker.
 
         Args:
             context: Context string for logging
+            run_gc_after: Whether to run garbage collection after the block
         """
         self.context = context
+        self.run_gc_after = run_gc_after
+        self.start_ram = 0.0
+        self.start_gpu = 0.0
+
+    def __enter__(self):
+        """Start tracking memory."""
         self.start_ram = get_memory_usage_mb()
         self.start_gpu = get_gpu_memory_usage_mb()
+        log.info(f"[MEMORY TRACK] {self.context} - START: RAM={self.start_ram:.1f}MB, GPU={self.start_gpu:.1f}MB")
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Log memory delta and optionally run GC."""
+        self.log_delta()
+        if self.run_gc_after:
+            run_gc(f"{self.context} cleanup")
+        return False
 
     def log_delta(self) -> None:
         """Log memory delta since initialization."""
@@ -128,7 +185,7 @@ class MemoryTracker:
 
         if self.context:
             log.info(
-                f"[{self.context}] Memory delta: RAM +{delta_ram:.1f}MB, GPU +{delta_gpu:.1f}MB"
+                f"[MEMORY TRACK] {self.context} - END: RAM={current_ram:.1f}MB (delta: {delta_ram:+.1f}MB), GPU={current_gpu:.1f}MB (delta: {delta_gpu:+.1f}MB)"
             )
         else:
             log.info(f"Memory delta: RAM +{delta_ram:.1f}MB, GPU +{delta_gpu:.1f}MB")
