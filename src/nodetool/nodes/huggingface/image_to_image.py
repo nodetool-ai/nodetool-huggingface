@@ -9,6 +9,7 @@ from typing import Any, TypedDict, ClassVar, TYPE_CHECKING
 from pydantic import Field
 
 from nodetool.config.logging_config import get_logger
+from nodetool.workflows.memory_utils import log_memory, run_gc
 from nodetool.workflows.types import NodeProgress
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nodetool.metadata.types import (
@@ -2438,7 +2439,8 @@ class FluxFill(HuggingFacePipelineNode):
 
         # Apply CPU offload if enabled
         if self._pipeline is not None and self.enable_cpu_offload:
-            self._pipeline.enable_sequential_cpu_offload()
+            from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+            apply_cpu_offload_if_needed(self._pipeline, method="sequential")
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
@@ -2457,7 +2459,8 @@ class FluxFill(HuggingFacePipelineNode):
                         ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
-                    self._pipeline.enable_sequential_cpu_offload()
+                    from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+                    apply_cpu_offload_if_needed(self._pipeline, method="sequential")
             else:
                 # Normal device movement without CPU offload
                 try:
@@ -2474,6 +2477,8 @@ class FluxFill(HuggingFacePipelineNode):
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
+        log_memory(f"FluxFill.process START ({self.width}x{self.height})")
+
         # Set up the generator for reproducibility
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
@@ -2481,6 +2486,9 @@ class FluxFill(HuggingFacePipelineNode):
 
         input_image = await context.image_to_pil(self.image)
         mask_image = await context.image_to_pil(self.mask_image)
+
+        # Run GC before inference to free any unused memory
+        run_gc("Before FluxFill inference", log_before_after=True)
 
         # Prepare kwargs for the pipeline
         kwargs = {
@@ -2502,13 +2510,19 @@ class FluxFill(HuggingFacePipelineNode):
         try:
             output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
         except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            run_gc("After FluxFill OOM error")
             raise ValueError(
                 "VRAM out of memory while running Flux Fill. "
                 "Try enabling 'CPU offload' in the advanced node properties "
                 "(Enable CPU offload), reduce image size, or lower max_sequence_length."
             ) from e
 
+        log_memory("FluxFill inference completed")
+
         image = output.images[0]
+
+        # Run GC after inference to clean up intermediate tensors
+        run_gc("After FluxFill inference", log_before_after=True)
 
         return await context.image_from_pil(image)
 
@@ -2754,12 +2768,17 @@ class FluxKontext(HuggingFacePipelineNode):
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
+        log_memory("FluxKontext.process START")
+
         # Set up the generator for reproducibility
         generator = torch.Generator(device=context.device)
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
 
         input_image = await context.image_to_pil(self.image)
+
+        # Run GC before inference to free any unused memory
+        run_gc("Before FluxKontext inference", log_before_after=True)
 
         # Prepare kwargs for the pipeline
         kwargs = {
@@ -2777,11 +2796,18 @@ class FluxKontext(HuggingFacePipelineNode):
         try:
             output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
         except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            run_gc("After FluxKontext OOM error")
             raise ValueError(
                 "VRAM out of memory while running Flux Kontext. "
                 "Enable 'CPU offload' in the advanced node properties (if available), "
                 "or reduce image size."
             ) from e
+
+        log_memory("FluxKontext inference completed")
+
         image = output.images[0]
+
+        # Run GC after inference to clean up intermediate tensors
+        run_gc("After FluxKontext inference", log_before_after=True)
 
         return await context.image_from_pil(image)

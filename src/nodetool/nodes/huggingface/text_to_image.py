@@ -9,6 +9,7 @@ from pydantic import Field
 
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nodetool.config.logging_config import get_logger
+from nodetool.workflows.memory_utils import log_memory, run_gc
 from nodetool.metadata.types import (
     HFT5,
     HFFlux,
@@ -769,9 +770,10 @@ class Flux(HuggingFacePipelineNode):
             _enable_pytorch2_attention(self._pipeline)
             _apply_vae_optimizations(self._pipeline)
 
-        # Apply CPU offload if enabled
+        # Apply CPU offload if enabled and not already configured
         if self._pipeline is not None and self.enable_cpu_offload:
-            self._pipeline.enable_sequential_cpu_offload()
+            from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+            apply_cpu_offload_if_needed(self._pipeline, method="sequential")
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
@@ -790,7 +792,8 @@ class Flux(HuggingFacePipelineNode):
                         ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
-                    self._pipeline.enable_sequential_cpu_offload()
+                    from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+                    apply_cpu_offload_if_needed(self._pipeline, method="sequential")
             else:
                 # Normal device movement without CPU offload
                 try:
@@ -808,6 +811,8 @@ class Flux(HuggingFacePipelineNode):
 
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
+
+        log_memory(f"Flux.process START (variant={self.variant.value}, {self.width}x{self.height})")
 
         # Set up the generator for reproducibility
         generator = None
@@ -835,7 +840,13 @@ class Flux(HuggingFacePipelineNode):
                     total=num_inference_steps,
                 )
             )
+            # Log memory every 5 steps to track usage during inference
+            if step % 5 == 0:
+                log_memory(f"Flux inference step {step}/{num_inference_steps}")
             return callback_kwargs
+
+        # Run GC before inference to free any unused memory
+        run_gc("Before Flux inference", log_before_after=True)
 
         # Generate the image off the event loop
         def _run_pipeline_sync():
@@ -855,13 +866,19 @@ class Flux(HuggingFacePipelineNode):
         try:
             output = await asyncio.to_thread(_run_pipeline_sync)
         except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            run_gc("After Flux OOM error")
             raise ValueError(
                 "VRAM out of memory while running Flux. "
                 "Try enabling 'CPU offload' in the advanced node properties "
                 "(Enable CPU offload), reduce image size, or lower steps."
             ) from e
 
+        log_memory("Flux inference completed")
+
         image = output.images[0]  # type: ignore
+
+        # Run GC after inference to clean up intermediate tensors
+        run_gc("After Flux inference", log_before_after=True)
 
         return await context.image_from_pil(image)
 
@@ -1541,7 +1558,8 @@ class FluxControl(HuggingFacePipelineNode):
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         if self._pipeline is not None and self.enable_cpu_offload:
-            self._pipeline.enable_sequential_cpu_offload()
+            from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+            apply_cpu_offload_if_needed(self._pipeline, method="sequential")
 
     def _is_nunchaku_model(self) -> bool:
         return self._resolve_effective_quantization() != FluxControlQuantization.FP16
@@ -1612,7 +1630,8 @@ class FluxControl(HuggingFacePipelineNode):
                         ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
-                    self._pipeline.enable_sequential_cpu_offload()
+                    from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+                    apply_cpu_offload_if_needed(self._pipeline, method="sequential")
             else:
                 # Normal device movement without CPU offload
                 try:
@@ -1629,6 +1648,8 @@ class FluxControl(HuggingFacePipelineNode):
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
+        log_memory(f"FluxControl.process START ({self.width}x{self.height})")
+
         # Set up the generator for reproducibility
         generator = torch.Generator(device=context.device)
         if self.seed != -1:
@@ -1636,6 +1657,9 @@ class FluxControl(HuggingFacePipelineNode):
 
         # Load and preprocess control image
         control_image = await context.image_to_pil(self.control_image)
+
+        # Run GC before inference to free any unused memory
+        run_gc("Before FluxControl inference", log_before_after=True)
 
         # Prepare kwargs for the pipeline
         kwargs = {
@@ -1654,11 +1678,18 @@ class FluxControl(HuggingFacePipelineNode):
         try:
             output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
         except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            run_gc("After FluxControl OOM error")
             raise ValueError(
                 "VRAM out of memory while running Flux Control. "
                 "Enable 'CPU offload' in the advanced node properties (if available), "
                 "or reduce image size/steps."
             ) from e
+
+        log_memory("FluxControl inference completed")
+
         image = output.images[0]
+
+        # Run GC after inference to clean up intermediate tensors
+        run_gc("After FluxControl inference", log_before_after=True)
 
         return await context.image_from_pil(image)
