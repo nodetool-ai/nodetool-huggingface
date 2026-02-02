@@ -832,15 +832,20 @@ class Flux(HuggingFacePipelineNode):
             num_inference_steps = 4
         max_sequence_length = self.max_sequence_length
 
-        # Cancellation event for aborting stuck inference from another thread
+        # Cancellation event for signalling the inference thread to stop.
+        # Checked in the progress callback and used to set pipeline._interrupt.
         cancel_event = threading.Event()
+
+        pipeline_ref = self._pipeline
 
         def progress_callback(
             pipeline: Any, step: int, timestep: int, callback_kwargs: dict
         ) -> dict:
-            # Check for cancellation at each inference step
+            # Use diffusers' native _interrupt to skip remaining steps gracefully
             if cancel_event.is_set():
-                raise RuntimeError("Flux inference cancelled")
+                log.info("Flux inference interrupted via cancel_event")
+                pipeline._interrupt = True
+                return callback_kwargs
             context.post_message(
                 NodeProgress(
                     node_id=self.id,
@@ -871,7 +876,7 @@ class Flux(HuggingFacePipelineNode):
         # Generate the image off the event loop
         def _run_pipeline_sync():
             with torch.inference_mode():
-                result = self._pipeline(
+                result = pipeline_ref(
                     prompt=self.prompt,
                     guidance_scale=guidance_scale,
                     height=self.height,
@@ -899,6 +904,8 @@ class Flux(HuggingFacePipelineNode):
             )
         except asyncio.TimeoutError:
             cancel_event.set()
+            # Also set _interrupt directly on the pipeline for immediate effect
+            pipeline_ref._interrupt = True
             run_gc("After Flux timeout")
             raise RuntimeError(
                 f"Flux inference timed out after {total_timeout}s. "
@@ -907,6 +914,7 @@ class Flux(HuggingFacePipelineNode):
             )
         except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
             cancel_event.set()
+            pipeline_ref._interrupt = True
             run_gc("After Flux OOM error")
             raise ValueError(
                 "VRAM out of memory while running Flux. "
@@ -914,8 +922,10 @@ class Flux(HuggingFacePipelineNode):
                 "(Enable CPU offload), reduce image size, or lower steps."
             ) from e
         except asyncio.CancelledError:
-            # Signal the inference thread to abort at the next step
+            # Signal the inference thread to abort at the next step via
+            # both the cancel_event and the diffusers native _interrupt flag.
             cancel_event.set()
+            pipeline_ref._interrupt = True
             raise
 
         log_memory("Flux inference completed")
