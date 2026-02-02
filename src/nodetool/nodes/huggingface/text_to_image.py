@@ -807,6 +807,8 @@ class Flux(HuggingFacePipelineNode):
             _apply_vae_optimizations(self._pipeline)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
+        import threading
+
         import torch
 
         if self._pipeline is None:
@@ -830,9 +832,15 @@ class Flux(HuggingFacePipelineNode):
             num_inference_steps = 4
         max_sequence_length = self.max_sequence_length
 
+        # Cancellation event for aborting stuck inference from another thread
+        cancel_event = threading.Event()
+
         def progress_callback(
             pipeline: Any, step: int, timestep: int, callback_kwargs: dict
         ) -> dict:
+            # Check for cancellation at each inference step
+            if cancel_event.is_set():
+                raise RuntimeError("Flux inference cancelled")
             context.post_message(
                 NodeProgress(
                     node_id=self.id,
@@ -878,15 +886,37 @@ class Flux(HuggingFacePipelineNode):
                 log.info("Flux VAE decoding completed")
                 return result
 
+        # Use a per-step timeout: if no progress is made within this time,
+        # the inference is considered stuck (e.g. nunchaku hang).
+        # Allow generous time per step for slow GPUs.
+        per_step_timeout = 120  # seconds per inference step
+        total_timeout = per_step_timeout * max(num_inference_steps, 4) + 60  # extra buffer for VAE decode
+
         try:
-            output = await asyncio.to_thread(_run_pipeline_sync)
+            output = await asyncio.wait_for(
+                asyncio.to_thread(_run_pipeline_sync),
+                timeout=total_timeout,
+            )
+        except asyncio.TimeoutError:
+            cancel_event.set()
+            run_gc("After Flux timeout")
+            raise RuntimeError(
+                f"Flux inference timed out after {total_timeout}s. "
+                "The pipeline may be stuck. Try restarting the server, "
+                "reducing image size, or switching quantization mode."
+            )
         except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            cancel_event.set()
             run_gc("After Flux OOM error")
             raise ValueError(
                 "VRAM out of memory while running Flux. "
                 "Try enabling 'CPU offload' in the advanced node properties "
                 "(Enable CPU offload), reduce image size, or lower steps."
             ) from e
+        except asyncio.CancelledError:
+            # Signal the inference thread to abort at the next step
+            cancel_event.set()
+            raise
 
         log_memory("Flux inference completed")
 
