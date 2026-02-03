@@ -114,7 +114,7 @@
       {
         "id": "2034479",
         "parent_id": null,
-        "type": "nodetool.output.ImageOutput",
+        "type": "nodetool.output.Output",
         "data": {
           "name": "image",
           "description": "The upscaled image with enhanced resolution and details"
