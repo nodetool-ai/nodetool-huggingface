@@ -139,7 +139,7 @@
       {
         "id": "13",
         "parent_id": null,
-        "type": "nodetool.output.StringOutput",
+        "type": "nodetool.output.Output",
         "data": {
           "name": "summary",
           "description": ""

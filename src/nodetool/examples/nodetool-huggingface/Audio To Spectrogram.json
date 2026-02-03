@@ -254,7 +254,7 @@
       {
         "id": "34",
         "parent_id": null,
-        "type": "nodetool.output.ImageOutput",
+        "type": "nodetool.output.Output",
         "data": {
           "name": "output",
           "description": ""
