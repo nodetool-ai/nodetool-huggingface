@@ -341,7 +341,7 @@
       {
         "id": "39781357",
         "source": "13",
-        "sourceHandle": "output",
+        "sourceHandle": "image",
         "target": "16",
         "targetHandle": "value",
         "ui_properties": {

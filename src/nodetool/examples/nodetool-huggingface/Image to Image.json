@@ -114,7 +114,7 @@
       {
         "id": "e72852c7-529b-45dc-849f-92fd9762467a",
         "source": "8ff93e78-4f51-4207-af5e-03097b513ad5",
-        "sourceHandle": "output",
+        "sourceHandle": "image",
         "target": "0ca199b1-774f-438e-ba87-e25158275ec2",
         "targetHandle": "value",
         "ui_properties": {

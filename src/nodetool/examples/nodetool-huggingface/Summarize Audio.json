@@ -193,7 +193,7 @@
       {
         "id": "d837d97b-655a-41f2-b3f4-2f87630092df",
         "source": "ccab60dc-c552-488c-a34a-0394c74f1040",
-        "sourceHandle": "output",
+        "sourceHandle": "text",
         "target": "13",
         "targetHandle": "value",
         "ui_properties": null
