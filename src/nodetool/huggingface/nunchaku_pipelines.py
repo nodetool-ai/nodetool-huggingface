@@ -15,7 +15,7 @@ from nodetool.huggingface.flux_utils import (
     flux_variant_to_base_model_id,
 )
 from nodetool.huggingface.local_provider_utils import _get_torch, load_model
-from nodetool.workflows.memory_utils import log_memory, run_gc, MemoryTracker
+from nodetool.huggingface.memory_utils import log_memory, run_gc, MemoryTracker
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 
 if TYPE_CHECKING:
@@ -28,10 +28,10 @@ log = get_logger(__name__)
 # Check if nunchaku is available
 try:
     import nunchaku
+
     NUNCHAKU_AVAILABLE = True
 except ImportError:
     NUNCHAKU_AVAILABLE = False
-
 
 
 def is_nunchaku_available() -> bool:
@@ -149,7 +149,11 @@ async def get_nunchaku_transformer(
     if torch_dtype is None:
         torch_dtype = torch.bfloat16
     if device is None:
-        device = context.device if context.device else ("cuda" if torch.cuda.is_available() else "cpu")
+        device = (
+            context.device
+            if context.device
+            else ("cuda" if torch.cuda.is_available() else "cpu")
+        )
 
     """Load FLUX pipeline using a Nunchaku SVDQ transformer file."""
     precision = get_precision()
@@ -191,7 +195,6 @@ async def get_nunchaku_transformer(
         device=device,
     )
     return transformer
-
 
 
 def _node_identifier(node_id: str | None, repo_id: str) -> str:
@@ -263,7 +266,9 @@ async def load_nunchaku_flux_pipeline(
         pipeline_kwargs["text_encoder_2"] = text_encoder
 
     try:
-        with MemoryTracker(f"Building {pipeline_name} from pretrained", run_gc_after=True):
+        with MemoryTracker(
+            f"Building {pipeline_name} from pretrained", run_gc_after=True
+        ):
             pipeline = pipeline_class.from_pretrained(base_model_id, **pipeline_kwargs)
 
         if cache_key and node_id:
@@ -372,4 +377,5 @@ def get_nunchaku_sdxl_unet_class() -> type:
     """Get the NunchakuSDXLUNet2DConditionModel class if available."""
     _require_nunchaku()
     from nunchaku.models.unets.unet_sdxl import NunchakuSDXLUNet2DConditionModel
+
     return NunchakuSDXLUNet2DConditionModel
