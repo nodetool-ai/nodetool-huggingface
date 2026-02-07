@@ -40,6 +40,13 @@ docs.chromadb
 # Testing
 /coverage
 *.lcov
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
 
 # Environment variables
 *.override.env
