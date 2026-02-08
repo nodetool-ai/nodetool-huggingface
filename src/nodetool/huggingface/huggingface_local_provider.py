@@ -964,7 +964,9 @@ class HuggingFaceLocalProvider(BaseProvider):
 
         # Apply chat template
         # Ensure messages are in the format expected by HF (list of dicts)
-        hf_messages = [await self.convert_message(msg) for msg in messages]
+        hf_messages = []
+        for msg in messages:
+            hf_messages.append(await self.convert_message(msg))
 
         prompt = tokenizer.apply_chat_template(
             hf_messages, tokenize=False, add_generation_prompt=True
