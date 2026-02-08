@@ -70,7 +70,7 @@ from nodetool.metadata.types import (
 from nodetool.workflows.types import Chunk, NodeProgress
 from nodetool.config.logging_config import get_logger
 from nodetool.ml.core.model_manager import ModelManager
-from nodetool.io.media_fetch import fetch_uri_bytes_and_mime_sync
+from nodetool.io.media_fetch import fetch_uri_bytes_and_mime_async
 from nodetool.workflows.recommended_models import get_recommended_models
 
 if TYPE_CHECKING:
@@ -807,7 +807,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         repo_id, filename = parts
         return repo_id, filename
 
-    def _load_image_data(self, image_ref) -> bytes:
+    async def _load_image_data(self, image_ref) -> bytes:
         """Load image data from an ImageRef."""
         if hasattr(image_ref, "data") and image_ref.data is not None:
             return image_ref.data
@@ -816,10 +816,10 @@ class HuggingFaceLocalProvider(BaseProvider):
         if not uri:
             raise ValueError("ImageRef has no data or URI")
 
-        _mime, data = fetch_uri_bytes_and_mime_sync(uri)
+        _mime, data = await fetch_uri_bytes_and_mime_async(uri)
         return data
 
-    def convert_message(self, message: Message) -> Dict[str, Any]:
+    async def convert_message(self, message: Message) -> Dict[str, Any]:
         """
         Convert an internal message to HF dict format.
         Preserves PIL images in content list for further processing.
@@ -864,7 +864,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                     content_list.append({"type": "text", "text": part.text})
                 elif isinstance(part, MessageImageContent):
                     # Load image to PIL
-                    data = self._load_image_data(part.image)
+                    data = await self._load_image_data(part.image)
                     img = Image.open(BytesIO(data))
                     # Store PIL image directly; will be extracted later
                     content_list.append({"type": "image", "image": img})
@@ -964,7 +964,9 @@ class HuggingFaceLocalProvider(BaseProvider):
 
         # Apply chat template
         # Ensure messages are in the format expected by HF (list of dicts)
-        hf_messages = [self.convert_message(msg) for msg in messages]
+        hf_messages = []
+        for msg in messages:
+            hf_messages.append(await self.convert_message(msg))
 
         prompt = tokenizer.apply_chat_template(
             hf_messages, tokenize=False, add_generation_prompt=True
@@ -1075,7 +1077,7 @@ class HuggingFaceLocalProvider(BaseProvider):
 
         for msg in messages:
             # Use convert_message to standardize
-            converted = self.convert_message(msg)
+            converted = await self.convert_message(msg)
 
             # Post-process for VLM: extract PIL images from content list
             if isinstance(converted.get("content"), list):
