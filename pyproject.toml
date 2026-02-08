@@ -33,7 +33,9 @@ dependencies = [
     "accelerate",
     "qwen-vl-utils",
     "bitsandbytes",
-    "timm"
+    "timm",
+    "hy3dgen>=2.0.2",
+    "trimesh>=4.0.0",
 ]
 
 
