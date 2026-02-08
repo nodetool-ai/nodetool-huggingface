@@ -27,7 +27,6 @@ from nodetool.metadata.types import (
     HuggingFaceModel,
     ImageRef,
 )
-from nodetool.workflows.base_node import BaseNode
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     HF_CONTROLNET_MODELS,
@@ -156,7 +155,7 @@ class BaseImageToImage(HuggingFacePipelineNode):
         return await context.image_from_pil(result)  # type: ignore
 
 
-class RealESRGANNode(BaseNode):
+class RealESRGANNode(HuggingFacePipelineNode):
     """
     Performs image super-resolution using the RealESRGAN model.
     image, super-resolution, enhancement, huggingface
