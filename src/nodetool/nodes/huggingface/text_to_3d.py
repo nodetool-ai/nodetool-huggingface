@@ -13,7 +13,7 @@ import io
 from enum import Enum
 from typing import Any, ClassVar, TYPE_CHECKING
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from nodetool.metadata.types import HuggingFaceModel, ImageRef, Model3DRef
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
@@ -207,7 +207,7 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
         from PIL import Image
         from diffusers import ShapEImg2ImgPipeline
         
-        if self.image.is_empty():
+        if not self.image or self.image.is_empty():
             raise ValueError("Input image is required")
 
         # Load input image
@@ -302,6 +302,26 @@ class Hunyuan3D(HuggingFacePipelineNode):
         },
     }
 
+    # Repo ID -> enum value (for backwards compatibility when workflow stores repo_id in model_variant)
+    _REPO_TO_VARIANT: ClassVar[dict[str, str]] = {
+        "tencent/Hunyuan3D-2": "standard",
+        "tencent/Hunyuan3D-2mini": "mini",
+    }
+
+    @field_validator("model_variant", mode="before")
+    @classmethod
+    def _normalize_model_variant(cls, v: Any) -> Any:
+        if v is None:
+            return cls.ModelVariant.STANDARD
+        if isinstance(v, cls.ModelVariant):
+            return v
+        if isinstance(v, str):
+            normalized = cls._REPO_TO_VARIANT.get(v, v)
+            if normalized == "standard":
+                return cls.ModelVariant.STANDARD
+            if normalized == "mini":
+                return cls.ModelVariant.MINI
+        return v
 
     image: ImageRef = Field(
         default=ImageRef(),
@@ -408,7 +428,7 @@ class Hunyuan3D(HuggingFacePipelineNode):
         import torch
         from PIL import Image
 
-        if self.image.is_empty():
+        if not self.image or self.image.is_empty():
             raise ValueError("Input image is required")
 
         try:
@@ -559,7 +579,7 @@ class StableFast3D(HuggingFacePipelineNode):
         import torch
         from PIL import Image
 
-        if self.image.is_empty():
+        if not self.image or self.image.is_empty():
             raise ValueError("Input image is required")
 
         try:
@@ -692,7 +712,7 @@ class TripoSR(HuggingFacePipelineNode):
         import numpy as np
         from PIL import Image
 
-        if self.image.is_empty():
+        if not self.image or self.image.is_empty():
             raise ValueError("Input image is required")
 
         try:
@@ -753,7 +773,7 @@ class TripoSR(HuggingFacePipelineNode):
             format=format_str,
         )
 
-class Trellis2\(HuggingFacePipelineNode\):
+class Trellis2(HuggingFacePipelineNode):
     """
     Generate high-fidelity 3D models from images using Microsoft TRELLIS.2-4B.
     3d, generation, image-to-3d, trellis, mesh, local, high-quality, PBR, o-voxel
@@ -861,7 +881,7 @@ class Trellis2\(HuggingFacePipelineNode\):
         os.environ.setdefault('OPENCV_IO_ENABLE_OPENEXR', '1')
         os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
-        if self.image.is_empty():
+        if not self.image or self.image.is_empty():
             raise ValueError("Input image is required")
 
         # Load input image
