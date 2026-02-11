@@ -16,6 +16,7 @@ from nodetool.types.job import JobUpdate
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress
 from huggingface_hub import _CACHED_NO_EXIST, hf_hub_download
+from nodetool.huggingface.model_memory_tracker import ModelMemoryTracker
 
 if TYPE_CHECKING:
     import torch
@@ -192,11 +193,15 @@ async def load_pipeline(
         raise ValueError("Please select a model")
 
     cache_key = f"{model_id}_{pipeline_task}"
+    target_device = _resolve_hf_device(context, device or context.device)
 
     cached_model = ModelManager.get_model(cache_key)
     if cached_model:
-        target_device = _resolve_hf_device(context, device or context.device)
         return _ensure_model_on_device(cached_model, target_device)
+
+    # Initialize memory tracking
+    tracker = ModelMemoryTracker(node_id, str(model_id), target_device)
+    tracker.start()
 
     if (
         isinstance(model_id, str)
@@ -255,6 +260,7 @@ async def load_pipeline(
 
     try:
         model = _create_pipeline()
+        tracker.after_load()
     except (ValueError, RuntimeError) as exc:
         if not _is_vram_error(exc):
             raise
@@ -278,6 +284,7 @@ async def load_pipeline(
 
         try:
             model = _create_pipeline()
+            tracker.after_load()
             log.info("Successfully loaded pipeline %s after freeing VRAM", model_id)
         except Exception as retry_exc:
             log.error(
@@ -286,6 +293,31 @@ async def load_pipeline(
                 retry_exc,
             )
             raise
+
+    # Track memory after device placement (pipeline already on device)
+    tracker.after_device_placement()
+
+    # Run warmup inference to capture lazy allocations
+    # Use a dummy class for pipelines
+    class PipelineClass:
+        __name__ = pipeline_task
+
+    await tracker.warmup_inference(model, PipelineClass)
+
+    # Detect offload status and shared components
+    offload_status = tracker.detect_offload_status(model)
+    shared_components = tracker.detect_shared_components(model)
+    component_memory = tracker.track_component_memory(model)
+
+    # Finalize tracking and get memory stats
+    memory_stats = tracker.finalize()
+    memory_stats.offload_status = offload_status
+
+    # Log memory statistics
+    log.info(
+        f"Pipeline {model_id} loaded: {memory_stats.total_mb:.1f}MB total, "
+        f"{memory_stats.peak_mb:.1f}MB peak, offload={offload_status}"
+    )
 
     ModelManager.set_model(node_id, cache_key, model)
     return model  # type: ignore
@@ -318,6 +350,10 @@ async def load_model(
         cached_model = ModelManager.get_model(cache_key)
         if cached_model:
             return _ensure_model_on_device(cached_model, target_device)
+
+    # Initialize memory tracking
+    tracker = ModelMemoryTracker(node_id, model_id, target_device)
+    tracker.start()
 
     async def _do_load() -> T:
         if path:
@@ -370,6 +406,7 @@ async def load_model(
 
     try:
         model = await _do_load()
+        tracker.after_load()
     except (ValueError, RuntimeError) as exc:
         if not _is_vram_error(exc):
             raise
@@ -393,6 +430,7 @@ async def load_model(
 
         try:
             model = await _do_load()
+            tracker.after_load()
             log.info("Successfully loaded model %s after freeing VRAM", model_id)
         except Exception as retry_exc:
             log.error(
@@ -403,6 +441,26 @@ async def load_model(
             raise
 
     model = _ensure_model_on_device(model, target_device)
+    tracker.after_device_placement()
+
+    # Run warmup inference to capture lazy allocations
+    await tracker.warmup_inference(model, model_class)
+
+    # Detect offload status and shared components
+    offload_status = tracker.detect_offload_status(model)
+    shared_components = tracker.detect_shared_components(model)
+    component_memory = tracker.track_component_memory(model)
+
+    # Finalize tracking and get memory stats
+    memory_stats = tracker.finalize()
+    memory_stats.offload_status = offload_status
+
+    # Log memory statistics
+    log.info(
+        f"Model {model_id} loaded: {memory_stats.total_mb:.1f}MB total, "
+        f"{memory_stats.peak_mb:.1f}MB peak, offload={offload_status}"
+    )
+
     ModelManager.set_model(node_id, cache_key, model)
     return model
 

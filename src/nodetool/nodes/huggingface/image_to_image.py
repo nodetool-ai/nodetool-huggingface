@@ -9,7 +9,7 @@ from typing import Any, TypedDict, ClassVar, TYPE_CHECKING
 from pydantic import Field
 
 from nodetool.config.logging_config import get_logger
-from nodetool.workflows.memory_utils import log_memory, run_gc
+from nodetool.huggingface.memory_utils import log_memory, run_gc
 from nodetool.workflows.types import NodeProgress
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nodetool.metadata.types import (
@@ -2439,6 +2439,7 @@ class FluxFill(HuggingFacePipelineNode):
         # Apply CPU offload if enabled
         if self._pipeline is not None and self.enable_cpu_offload:
             from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+
             apply_cpu_offload_if_needed(self._pipeline, method="sequential")
 
     async def move_to_device(self, device: str):
@@ -2458,7 +2459,10 @@ class FluxFill(HuggingFacePipelineNode):
                         ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
-                    from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+                    from nodetool.huggingface.memory_utils import (
+                        apply_cpu_offload_if_needed,
+                    )
+
                     apply_cpu_offload_if_needed(self._pipeline, method="sequential")
             else:
                 # Normal device movement without CPU offload
