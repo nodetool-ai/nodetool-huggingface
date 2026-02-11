@@ -1394,6 +1394,336 @@ class QwenImage(HuggingFacePipelineNode):
         return []  # No required inputs - IP adapter image is optional
 
 
+class QwenImageLightningSteps(int, Enum):
+    """Number of inference steps for Qwen Image Lightning models."""
+    STEPS_4 = 4
+    STEPS_8 = 8
+
+
+class QwenImageLightningRank(int, Enum):
+    """Rank parameter for Qwen Image Lightning models."""
+    RANK_32 = 32
+    RANK_128 = 128
+
+
+class QwenImageLightning(HuggingFacePipelineNode):
+    """
+    Generates images from text using Qwen-Image-Lightning with Nunchaku quantization.
+    image, generation, AI, text-to-image, qwen, lightning, fast, distilled
+    
+    Use cases:
+    - Ultra-fast image generation in 4-8 steps
+    - Real-time image generation with low latency
+    - Efficient batch image creation
+    - Quick prototyping and iteration
+    """
+    
+    quantization: QwenQuantization = Field(
+        default=QwenQuantization.INT4,
+        description="Quantization level: INT4/FP4 for lower VRAM.",
+    )
+    num_inference_steps: QwenImageLightningSteps = Field(
+        default=QwenImageLightningSteps.STEPS_4,
+        description="Number of denoising steps. 4 steps for speed, 8 steps for quality.",
+    )
+    rank: QwenImageLightningRank = Field(
+        default=QwenImageLightningRank.RANK_32,
+        description="Model rank. 32 for speed, 128 for quality.",
+    )
+    prompt: str = Field(
+        default="A cat holding a sign that says hello world",
+        description="Text description of the image to generate.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Describe what to avoid in the image.",
+    )
+    true_cfg_scale: float = Field(
+        default=1.0,
+        description="True CFG scale for enhanced prompt following.",
+        ge=0.0,
+        le=10.0,
+    )
+    height: int = Field(
+        default=1024,
+        description="Output image height in pixels.",
+        ge=256,
+        le=2048,
+    )
+    width: int = Field(
+        default=1024,
+        description="Output image width in pixels.",
+        ge=256,
+        le=2048,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    
+    _pipeline: Any | None = None
+    
+    @classmethod
+    def get_recommended_models(cls) -> list[HFQwenImage]:
+        """Return recommended models for Qwen Image Lightning."""
+        allow_patterns = [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "text_encoder_2/*",
+            "tokenizer/*",
+            "tokenizer_2/*",
+        ]
+        return [
+            HFQwenImage(
+                repo_id="Qwen/Qwen-Image",
+                allow_patterns=allow_patterns,
+            ),
+            HFQwenImage(
+                repo_id="nunchaku-ai/nunchaku-qwen-image",
+                path="svdq-int4_r32-qwen-image-lightningv1.0-4steps.safetensors",
+            ),
+            HFQwenImage(
+                repo_id="nunchaku-ai/nunchaku-qwen-image",
+                path="svdq-fp4_r32-qwen-image-lightningv1.0-4steps.safetensors",
+            ),
+            HFQwenImage(
+                repo_id="nunchaku-ai/nunchaku-qwen-image",
+                path="svdq-int4_r32-qwen-image-lightningv1.1-8steps.safetensors",
+            ),
+            HFQwenImage(
+                repo_id="nunchaku-ai/nunchaku-qwen-image",
+                path="svdq-fp4_r32-qwen-image-lightningv1.1-8steps.safetensors",
+            ),
+            HFQwenImage(
+                repo_id="nunchaku-ai/nunchaku-qwen-image",
+                path="svdq-int4_r128-qwen-image-lightningv1.0-4steps.safetensors",
+            ),
+            HFQwenImage(
+                repo_id="nunchaku-ai/nunchaku-qwen-image",
+                path="svdq-fp4_r128-qwen-image-lightningv1.0-4steps.safetensors",
+            ),
+            HFQwenImage(
+                repo_id="nunchaku-ai/nunchaku-qwen-image",
+                path="svdq-int4_r128-qwen-image-lightningv1.1-8steps.safetensors",
+            ),
+            HFQwenImage(
+                repo_id="nunchaku-ai/nunchaku-qwen-image",
+                path="svdq-fp4_r128-qwen-image-lightningv1.1-8steps.safetensors",
+            ),
+        ]
+    
+    @classmethod
+    def get_model_packs(cls):
+        """Return curated Qwen-Image Lightning model packs."""
+        from nodetool.types.model import ModelPack, UnifiedModel
+        
+        QWEN_IMAGE_ALLOW_PATTERNS = [
+            "*.json",
+            "*.txt",
+            "scheduler/*",
+            "vae/*",
+            "text_encoder/*",
+            "text_encoder_2/*",
+            "tokenizer/*",
+            "tokenizer_2/*",
+        ]
+        
+        return [
+            ModelPack(
+                id="qwen_image_lightning_nunchaku_int4_4steps",
+                title="Qwen-Image Lightning (INT4, 4-steps)",
+                description="Ultra-fast Qwen-Image Lightning with INT4 quantization. 4-step inference.",
+                category="image_generation",
+                tags=["qwen", "lightning", "text-to-image", "int4", "nunchaku", "fast"],
+                models=[
+                    UnifiedModel(
+                        id="Qwen/Qwen-Image",
+                        type="hf.qwen_image",
+                        name="Qwen-Image Base",
+                        repo_id="Qwen/Qwen-Image",
+                        allow_patterns=QWEN_IMAGE_ALLOW_PATTERNS,
+                    ),
+                    UnifiedModel(
+                        id="nunchaku-ai/nunchaku-qwen-image:svdq-int4_r32-qwen-image-lightningv1.0-4steps.safetensors",
+                        type="hf.qwen_image",
+                        name="Nunchaku Qwen Lightning Transformer (INT4, 4-steps)",
+                        repo_id="nunchaku-ai/nunchaku-qwen-image",
+                        path="svdq-int4_r32-qwen-image-lightningv1.0-4steps.safetensors",
+                        size_on_disk=3500000000,
+                    ),
+                ],
+                total_size=3500000000,
+            ),
+            ModelPack(
+                id="qwen_image_lightning_nunchaku_int4_8steps",
+                title="Qwen-Image Lightning (INT4, 8-steps)",
+                description="High-quality Qwen-Image Lightning with INT4 quantization. 8-step inference.",
+                category="image_generation",
+                tags=["qwen", "lightning", "text-to-image", "int4", "nunchaku", "quality"],
+                models=[
+                    UnifiedModel(
+                        id="Qwen/Qwen-Image",
+                        type="hf.qwen_image",
+                        name="Qwen-Image Base",
+                        repo_id="Qwen/Qwen-Image",
+                        allow_patterns=QWEN_IMAGE_ALLOW_PATTERNS,
+                    ),
+                    UnifiedModel(
+                        id="nunchaku-ai/nunchaku-qwen-image:svdq-int4_r32-qwen-image-lightningv1.1-8steps.safetensors",
+                        type="hf.qwen_image",
+                        name="Nunchaku Qwen Lightning Transformer (INT4, 8-steps)",
+                        repo_id="nunchaku-ai/nunchaku-qwen-image",
+                        path="svdq-int4_r32-qwen-image-lightningv1.1-8steps.safetensors",
+                        size_on_disk=3500000000,
+                    ),
+                ],
+                total_size=3500000000,
+            ),
+        ]
+    
+    @classmethod
+    def get_title(cls) -> str:
+        return "Qwen-Image Lightning"
+    
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return [
+            "quantization",
+            "num_inference_steps",
+            "rank",
+            "prompt",
+            "negative_prompt",
+            "height",
+            "width",
+        ]
+    
+    def _resolve_model_config(self) -> HFQwenImage:
+        """Resolve the model configuration based on quantization, steps, and rank."""
+        steps = self.num_inference_steps.value
+        rank = self.rank.value
+        
+        # Determine version based on steps
+        version = "v1.0" if steps == 4 else "v1.1"
+        
+        # Determine precision based on quantization
+        if self.quantization == QwenQuantization.FP4:
+            precision = "fp4"
+        elif self.quantization == QwenQuantization.INT4:
+            precision = "int4"
+        else:
+            raise ValueError(f"Unsupported quantization for Lightning: {self.quantization}")
+        
+        # Build the model path
+        path = f"svdq-{precision}_r{rank}-qwen-image-lightning{version}-{steps}steps.safetensors"
+        
+        return HFQwenImage(
+            repo_id="nunchaku-ai/nunchaku-qwen-image",
+            path=path,
+        )
+    
+    def get_model_id(self) -> str:
+        model = self._resolve_model_config()
+        return model.repo_id
+    
+    def _create_lightning_scheduler(self):
+        """Create a FlowMatchEulerDiscreteScheduler with Lightning settings."""
+        import math
+        from diffusers import FlowMatchEulerDiscreteScheduler
+        
+        # From https://github.com/ModelTC/Qwen-Image-Lightning/blob/342260e8f5468d2f24d084ce04f55e101007118b/generate_with_diffusers.py#L82C9-L97C10
+        scheduler_config = {
+            "base_image_seq_len": 256,
+            "base_shift": math.log(3),  # We use shift=3 in distillation
+            "invert_sigmas": False,
+            "max_image_seq_len": 8192,
+            "max_shift": math.log(3),  # We use shift=3 in distillation
+            "num_train_timesteps": 1000,
+            "shift": 1.0,
+            "shift_terminal": None,  # set shift_terminal to None
+            "stochastic_sampling": False,
+            "time_shift_type": "exponential",
+            "use_beta_sigmas": False,
+            "use_dynamic_shifting": True,
+            "use_exponential_sigmas": False,
+            "use_karras_sigmas": False,
+        }
+        return FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
+    
+    async def preload_model(self, context: ProcessingContext):
+        """Load the Qwen Image Lightning pipeline with Nunchaku transformer."""
+        from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
+        from nodetool.huggingface.nunchaku_pipelines import load_nunchaku_qwen_pipeline
+        
+        log.info("Loading Qwen-Image Lightning pipeline...")
+        
+        model = self._resolve_model_config()
+        torch_dtype = available_torch_dtype()
+        scheduler = self._create_lightning_scheduler()
+        
+        # Load pipeline with nunchaku transformer
+        self._pipeline = await load_nunchaku_qwen_pipeline(
+            context=context,
+            repo_id=model.repo_id,
+            transformer_path=model.path,
+            node_id=self.id,
+            pipeline_class=QwenImagePipeline,
+            base_model_id="Qwen/Qwen-Image",
+            torch_dtype=torch_dtype,
+        )
+        
+        # Replace the scheduler with the Lightning scheduler
+        if self._pipeline is not None:
+            self._pipeline.scheduler = scheduler
+            log.info("Lightning scheduler configured")
+    
+    async def move_to_device(self, device: str):
+        """Device movement is handled by CPU offload in nunchaku pipeline."""
+        pass
+    
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+        
+        # Set up the generator for reproducibility
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device=context.device).manual_seed(self.seed)
+        
+        # Generate the image
+        pipeline_kwargs = {
+            "prompt": self.prompt,
+            "negative_prompt": self.negative_prompt,
+            "true_cfg_scale": self.true_cfg_scale,
+            "num_inference_steps": self.num_inference_steps.value,
+            "height": self.height,
+            "width": self.width,
+            "generator": generator,
+            "callback_on_step_end": pipeline_progress_callback(
+                self.id, self.num_inference_steps.value, context
+            ),
+            "callback_on_step_end_tensor_inputs": ["latents"],
+        }
+        
+        # Generate the image off the event loop
+        def _run_pipeline_sync():
+            with torch.inference_mode():
+                return self._pipeline(**pipeline_kwargs)  # type: ignore
+        
+        output = await asyncio.to_thread(_run_pipeline_sync)
+        
+        image = output.images[0]  # type: ignore
+        
+        return await context.image_from_pil(image)
+    
+    def required_inputs(self):
+        """Return list of required inputs that must be connected."""
+        return []
+
+
 FLUX_CONTROL_BASE_ALLOW_PATTERNS = [
     "*.json",
     "*.txt",
