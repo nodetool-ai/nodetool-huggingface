@@ -1,7 +1,7 @@
 {
   "name": "nodetool-huggingface",
   "description": "HuggingFace nodes for Nodetool",
-  "version": "0.6.3-rc.12",
+  "version": "0.6.3-rc.24",
   "authors": [
     "Matthias Georgi <matti.georgi@gmail.com>"
   ],
@@ -95,8 +95,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 270660,
-          "likes": 337
+          "downloads": 494532,
+          "likes": 340
         },
         {
           "id": "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition",
@@ -123,8 +123,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 81818,
-          "likes": 241
+          "downloads": 17171,
+          "likes": 242
         }
       ],
       "basic_fields": [
@@ -221,8 +221,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 248372,
-          "likes": 66
+          "downloads": 403725,
+          "likes": 68
         }
       ],
       "basic_fields": [
@@ -562,8 +562,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6480560,
-          "likes": 5357
+          "downloads": 6321042,
+          "likes": 5403
         },
         {
           "id": "openai/whisper-large-v3-turbo",
@@ -687,11 +687,12 @@
             "base_model:finetune:openai/whisper-large-v3",
             "license:mit",
             "endpoints_compatible",
+            "deploy:azure",
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2749465,
-          "likes": 2797
+          "downloads": 3268060,
+          "likes": 2827
         },
         {
           "id": "openai/whisper-large-v2",
@@ -821,8 +822,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 71176,
-          "likes": 1778
+          "downloads": 82055,
+          "likes": 1783
         },
         {
           "id": "openai/whisper-medium",
@@ -953,8 +954,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 529191,
-          "likes": 275
+          "downloads": 510407,
+          "likes": 276
         },
         {
           "id": "openai/whisper-small",
@@ -1085,8 +1086,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1461143,
-          "likes": 513
+          "downloads": 2217784,
+          "likes": 523
         },
         {
           "id": "Systran/faster-whisper-large-v3",
@@ -1208,8 +1209,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 548905,
-          "likes": 507
+          "downloads": 501734,
+          "likes": 516
         }
       ],
       "basic_fields": [
@@ -1286,8 +1287,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 546802,
-          "likes": 28
+          "downloads": 1144426,
+          "likes": 30
         },
         {
           "id": "depth-anything/Depth-Anything-V2-Base-hf",
@@ -1310,7 +1311,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 209369,
+          "downloads": 458265,
           "likes": 2
         },
         {
@@ -1334,7 +1335,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 196976,
+          "downloads": 164233,
           "likes": 28
         },
         {
@@ -1365,8 +1366,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 52996,
-          "likes": 199
+          "downloads": 83765,
+          "likes": 201
         }
       ],
       "basic_fields": [
@@ -1447,8 +1448,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1394541,
-          "likes": 763
+          "downloads": 1550551,
+          "likes": 768
         },
         {
           "id": "BAAI/bge-base-en-v1.5",
@@ -1486,8 +1487,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3176881,
-          "likes": 399
+          "downloads": 4457314,
+          "likes": 403
         },
         {
           "id": "BAAI/bge-large-en-v1.5",
@@ -1525,8 +1526,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 4132151,
-          "likes": 623
+          "downloads": 5150447,
+          "likes": 627
         }
       ],
       "basic_fields": [
@@ -1626,8 +1627,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 39333188,
-          "likes": 2556
+          "downloads": 52328731,
+          "likes": 2565
         },
         {
           "id": "roberta-base",
@@ -1662,7 +1663,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 8412184,
+          "downloads": 8308683,
           "likes": 561
         },
         {
@@ -1697,8 +1698,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 5687292,
-          "likes": 830
+          "downloads": 7272788,
+          "likes": 833
         },
         {
           "id": "albert-base-v2",
@@ -1731,7 +1732,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 315620,
+          "downloads": 373779,
           "likes": 140
         }
       ],
@@ -1828,8 +1829,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3929903,
-          "likes": 931
+          "downloads": 4024091,
+          "likes": 937
         },
         {
           "id": "microsoft/resnet-50",
@@ -1861,8 +1862,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 139701,
-          "likes": 473
+          "downloads": 186978,
+          "likes": 479
         },
         {
           "id": "microsoft/resnet-18",
@@ -1893,7 +1894,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 97792,
+          "downloads": 107560,
           "likes": 62
         },
         {
@@ -1924,7 +1925,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2298210,
+          "downloads": 2574161,
           "likes": 83
         },
         {
@@ -1955,7 +1956,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 4775,
+          "downloads": 6699,
           "likes": 20
         },
         {
@@ -1984,8 +1985,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 238450,
-          "likes": 145
+          "downloads": 307574,
+          "likes": 146
         },
         {
           "id": "Falconsai/nsfw_image_detection",
@@ -2013,8 +2014,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 66227470,
-          "likes": 971
+          "downloads": 36258777,
+          "likes": 996
         },
         {
           "id": "rizvandwiki/gender-classification-2",
@@ -2042,7 +2043,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 212813,
+          "downloads": 205119,
           "likes": 36
         }
       ],
@@ -2142,8 +2143,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14591792,
-          "likes": 850
+          "downloads": 18050603,
+          "likes": 862
         },
         {
           "id": "laion/CLIP-ViT-H-14-laion2B-s32B-b79K",
@@ -2169,8 +2170,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 657392,
-          "likes": 437
+          "downloads": 753033,
+          "likes": 441
         },
         {
           "id": "laion/CLIP-ViT-g-14-laion2B-s12B-b42K",
@@ -2194,7 +2195,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 24539,
+          "downloads": 33763,
           "likes": 44
         }
       ],
@@ -2302,8 +2303,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14239,
-          "likes": 122
+          "downloads": 8083,
+          "likes": 123
         }
       ],
       "basic_fields": [
@@ -2390,7 +2391,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 12829,
+          "downloads": 23264,
           "likes": 14
         },
         {
@@ -2421,8 +2422,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 206728,
-          "likes": 482
+          "downloads": 302897,
+          "likes": 485
         }
       ],
       "basic_fields": [
@@ -2661,7 +2662,6 @@
             "onnx",
             "safetensors",
             "idefics3",
-            "image-to-text",
             "image-text-to-text",
             "conversational",
             "en",
@@ -2675,8 +2675,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 30444,
-          "likes": 576
+          "downloads": 49445,
+          "likes": 577
         },
         {
           "id": "llava-hf/llava-v1.5-13b",
@@ -2701,9 +2701,8 @@
             "transformers",
             "safetensors",
             "llava",
-            "image-to-text",
-            "vision",
             "image-text-to-text",
+            "vision",
             "conversational",
             "en",
             "dataset:liuhaotian/LLaVA-Instruct-150K",
@@ -2712,7 +2711,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6721,
+          "downloads": 4659,
           "likes": 55
         },
         {
@@ -2726,9 +2725,8 @@
             "transformers",
             "safetensors",
             "llava_next",
-            "image-to-text",
-            "vision",
             "image-text-to-text",
+            "vision",
             "conversational",
             "en",
             "arxiv:2310.03744",
@@ -2738,7 +2736,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 331659,
+          "downloads": 405787,
           "likes": 303
         },
         {
@@ -2752,9 +2750,8 @@
             "transformers",
             "safetensors",
             "llava_next",
-            "image-to-text",
-            "vision",
             "image-text-to-text",
+            "vision",
             "conversational",
             "en",
             "arxiv:2310.03744",
@@ -2765,7 +2762,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 11812,
+          "downloads": 17790,
           "likes": 30
         },
         {
@@ -2779,9 +2776,8 @@
             "transformers",
             "safetensors",
             "llava_next",
-            "image-to-text",
-            "vision",
             "image-text-to-text",
+            "vision",
             "conversational",
             "en",
             "arxiv:2310.03744",
@@ -2792,7 +2788,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 40835,
+          "downloads": 42202,
           "likes": 22
         },
         {
@@ -2806,9 +2802,8 @@
             "transformers",
             "safetensors",
             "llava_next",
-            "image-to-text",
-            "vision",
             "image-text-to-text",
+            "vision",
             "conversational",
             "en",
             "arxiv:2310.03744",
@@ -2818,8 +2813,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2703,
-          "likes": 93
+          "downloads": 3150,
+          "likes": 94
         },
         {
           "id": "llava-hf/llama3-llava-next-8b-hf",
@@ -2832,9 +2827,8 @@
             "transformers",
             "safetensors",
             "llava_next",
-            "image-to-text",
-            "vision",
             "image-text-to-text",
+            "vision",
             "conversational",
             "en",
             "license:llama3",
@@ -2844,8 +2838,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 4147,
-          "likes": 50
+          "downloads": 6462,
+          "likes": 51
         },
         {
           "id": "zai-org/GLM-4.6V-Flash",
@@ -2858,7 +2852,6 @@
             "transformers",
             "safetensors",
             "glm4v",
-            "image-to-text",
             "image-text-to-text",
             "conversational",
             "zh",
@@ -2869,8 +2862,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 54148,
-          "likes": 566
+          "downloads": 47763,
+          "likes": 586
         }
       ],
       "basic_fields": [
@@ -3027,9 +3020,8 @@
             "transformers",
             "safetensors",
             "qwen2_5_vl",
-            "image-to-text",
-            "multimodal",
             "image-text-to-text",
+            "multimodal",
             "conversational",
             "en",
             "arxiv:2309.00071",
@@ -3041,8 +3033,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 21633919,
-          "likes": 597
+          "downloads": 21441542,
+          "likes": 610
         },
         {
           "id": "Qwen/Qwen2.5-VL-7B-Instruct",
@@ -3055,9 +3047,8 @@
             "transformers",
             "safetensors",
             "qwen2_5_vl",
-            "image-to-text",
-            "multimodal",
             "image-text-to-text",
+            "multimodal",
             "conversational",
             "en",
             "arxiv:2309.00071",
@@ -3070,8 +3061,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3192727,
-          "likes": 1439
+          "downloads": 3080500,
+          "likes": 1454
         },
         {
           "id": "Qwen/Qwen2.5-VL-32B-Instruct",
@@ -3084,9 +3075,8 @@
             "transformers",
             "safetensors",
             "qwen2_5_vl",
-            "image-to-text",
-            "multimodal",
             "image-text-to-text",
+            "multimodal",
             "conversational",
             "en",
             "arxiv:2309.00071",
@@ -3098,8 +3088,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2266161,
-          "likes": 474
+          "downloads": 181024,
+          "likes": 476
         },
         {
           "id": "Qwen/Qwen2.5-VL-72B-Instruct",
@@ -3112,9 +3102,8 @@
             "transformers",
             "safetensors",
             "qwen2_5_vl",
-            "image-to-text",
-            "multimodal",
             "image-text-to-text",
+            "multimodal",
             "conversational",
             "en",
             "arxiv:2309.00071",
@@ -3127,8 +3116,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 124333,
-          "likes": 590
+          "downloads": 171229,
+          "likes": 595
         },
         {
           "id": "unsloth/Qwen2.5-VL-3B-Instruct-unsloth-bnb-4bit",
@@ -3141,10 +3130,9 @@
             "transformers",
             "safetensors",
             "qwen2_5_vl",
-            "image-to-text",
+            "image-text-to-text",
             "multimodal",
             "unsloth",
-            "image-text-to-text",
             "conversational",
             "en",
             "arxiv:2309.00071",
@@ -3160,7 +3148,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 12771,
+          "downloads": 5576,
           "likes": 14
         },
         {
@@ -3174,10 +3162,9 @@
             "transformers",
             "safetensors",
             "qwen2_5_vl",
-            "image-to-text",
+            "image-text-to-text",
             "multimodal",
             "unsloth",
-            "image-text-to-text",
             "conversational",
             "en",
             "arxiv:2309.00071",
@@ -3193,7 +3180,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1711,
+          "downloads": 1718,
           "likes": 4
         },
         {
@@ -3207,10 +3194,9 @@
             "transformers",
             "safetensors",
             "qwen2_5_vl",
-            "image-to-text",
+            "image-text-to-text",
             "multimodal",
             "unsloth",
-            "image-text-to-text",
             "conversational",
             "en",
             "arxiv:2309.00071",
@@ -3227,7 +3213,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 21278,
+          "downloads": 19178,
           "likes": 51
         },
         {
@@ -3241,10 +3227,9 @@
             "transformers",
             "safetensors",
             "qwen2_5_vl",
-            "image-to-text",
+            "image-text-to-text",
             "multimodal",
             "unsloth",
-            "image-text-to-text",
             "conversational",
             "en",
             "arxiv:2309.00071",
@@ -3261,7 +3246,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6264,
+          "downloads": 9185,
           "likes": 14
         },
         {
@@ -3275,10 +3260,9 @@
             "transformers",
             "safetensors",
             "qwen2_5_vl",
-            "image-to-text",
+            "image-text-to-text",
             "multimodal",
             "unsloth",
-            "image-text-to-text",
             "conversational",
             "en",
             "arxiv:2309.00071",
@@ -3294,7 +3278,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1597,
+          "downloads": 946,
           "likes": 14
         },
         {
@@ -3308,10 +3292,9 @@
             "transformers",
             "safetensors",
             "qwen2_5_vl",
-            "image-to-text",
+            "image-text-to-text",
             "multimodal",
             "unsloth",
-            "image-text-to-text",
             "conversational",
             "en",
             "arxiv:2309.00071",
@@ -3327,7 +3310,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 296,
+          "downloads": 448,
           "likes": 3
         },
         {
@@ -3341,10 +3324,9 @@
             "transformers",
             "safetensors",
             "qwen2_5_vl",
-            "image-to-text",
+            "image-text-to-text",
             "multimodal",
             "unsloth",
-            "image-text-to-text",
             "conversational",
             "en",
             "arxiv:2309.00071",
@@ -3361,7 +3343,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 87,
+          "downloads": 69,
           "likes": 8
         },
         {
@@ -3375,10 +3357,9 @@
             "transformers",
             "safetensors",
             "qwen2_5_vl",
-            "image-to-text",
+            "image-text-to-text",
             "multimodal",
             "unsloth",
-            "image-text-to-text",
             "conversational",
             "en",
             "arxiv:2309.00071",
@@ -3395,7 +3376,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1209,
+          "downloads": 544,
           "likes": 15
         }
       ],
@@ -3525,7 +3506,6 @@
             "transformers",
             "safetensors",
             "qwen3_vl",
-            "image-to-text",
             "image-text-to-text",
             "conversational",
             "arxiv:2505.09388",
@@ -3538,8 +3518,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 608506,
-          "likes": 300
+          "downloads": 12356193,
+          "likes": 325
         },
         {
           "id": "Qwen/Qwen3-VL-2B-Thinking",
@@ -3552,7 +3532,6 @@
             "transformers",
             "safetensors",
             "qwen3_vl",
-            "image-to-text",
             "image-text-to-text",
             "conversational",
             "arxiv:2505.09388",
@@ -3565,8 +3544,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 24769,
-          "likes": 102
+          "downloads": 33574,
+          "likes": 105
         },
         {
           "id": "Qwen/Qwen3-VL-4B-Instruct",
@@ -3579,7 +3558,6 @@
             "transformers",
             "safetensors",
             "qwen3_vl",
-            "image-to-text",
             "image-text-to-text",
             "conversational",
             "arxiv:2505.09388",
@@ -3592,8 +3570,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 638368,
-          "likes": 317
+          "downloads": 1011000,
+          "likes": 332
         },
         {
           "id": "Qwen/Qwen3-VL-4B-Thinking",
@@ -3606,7 +3584,6 @@
             "transformers",
             "safetensors",
             "qwen3_vl",
-            "image-to-text",
             "image-text-to-text",
             "conversational",
             "arxiv:2505.09388",
@@ -3619,8 +3596,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 92478,
-          "likes": 98
+          "downloads": 59845,
+          "likes": 102
         },
         {
           "id": "Qwen/Qwen3-VL-7B-Instruct",
@@ -3639,7 +3616,6 @@
             "transformers",
             "safetensors",
             "qwen3_vl",
-            "image-to-text",
             "image-text-to-text",
             "conversational",
             "arxiv:2505.09388",
@@ -3652,8 +3628,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2192912,
-          "likes": 709
+          "downloads": 3247278,
+          "likes": 760
         },
         {
           "id": "Qwen/Qwen3-VL-8B-Thinking",
@@ -3666,7 +3642,6 @@
             "transformers",
             "safetensors",
             "qwen3_vl",
-            "image-to-text",
             "image-text-to-text",
             "conversational",
             "arxiv:2505.09388",
@@ -3679,8 +3654,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 139555,
-          "likes": 180
+          "downloads": 176090,
+          "likes": 187
         },
         {
           "id": "Qwen/Qwen3-VL-30B-A3B-Instruct",
@@ -3693,7 +3668,6 @@
             "transformers",
             "safetensors",
             "qwen3_vl_moe",
-            "image-to-text",
             "image-text-to-text",
             "conversational",
             "arxiv:2505.09388",
@@ -3706,8 +3680,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 858683,
-          "likes": 522
+          "downloads": 1731677,
+          "likes": 535
         },
         {
           "id": "Qwen/Qwen3-VL-30B-A3B-Thinking",
@@ -3720,7 +3694,6 @@
             "transformers",
             "safetensors",
             "qwen3_vl_moe",
-            "image-to-text",
             "image-text-to-text",
             "conversational",
             "arxiv:2505.09388",
@@ -3733,8 +3706,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 400972,
-          "likes": 184
+          "downloads": 215068,
+          "likes": 191
         },
         {
           "id": "Qwen/Qwen3-VL-32B-Instruct",
@@ -3747,7 +3720,6 @@
             "transformers",
             "safetensors",
             "qwen3_vl",
-            "image-to-text",
             "image-text-to-text",
             "conversational",
             "arxiv:2505.09388",
@@ -3760,8 +3732,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 451801,
-          "likes": 169
+          "downloads": 396410,
+          "likes": 178
         },
         {
           "id": "Qwen/Qwen3-VL-32B-Thinking",
@@ -3774,7 +3746,6 @@
             "transformers",
             "safetensors",
             "qwen3_vl",
-            "image-to-text",
             "image-text-to-text",
             "conversational",
             "arxiv:2505.09388",
@@ -3787,8 +3758,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 22190,
-          "likes": 81
+          "downloads": 18153,
+          "likes": 87
         },
         {
           "id": "Qwen/Qwen3-VL-235B-A22B-Instruct",
@@ -3796,12 +3767,13 @@
           "name": "Qwen/Qwen3-VL-235B-A22B-Instruct",
           "repo_id": "Qwen/Qwen3-VL-235B-A22B-Instruct",
           "size_on_disk": 471351862384,
-          "pipeline_tag": "image-to-text",
+          "pipeline_tag": "image-text-to-text",
           "tags": [
             "transformers",
             "safetensors",
             "qwen3_vl_moe",
-            "image-to-text",
+            "image-text-to-text",
+            "conversational",
             "arxiv:2505.09388",
             "arxiv:2502.13923",
             "arxiv:2409.12191",
@@ -3812,8 +3784,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 245630,
-          "likes": 361
+          "downloads": 399684,
+          "likes": 369
         },
         {
           "id": "Qwen/Qwen3-VL-235B-A22B-Thinking",
@@ -3821,12 +3793,13 @@
           "name": "Qwen/Qwen3-VL-235B-A22B-Thinking",
           "repo_id": "Qwen/Qwen3-VL-235B-A22B-Thinking",
           "size_on_disk": 471351862204,
-          "pipeline_tag": "image-to-text",
+          "pipeline_tag": "image-text-to-text",
           "tags": [
             "transformers",
             "safetensors",
             "qwen3_vl_moe",
-            "image-to-text",
+            "image-text-to-text",
+            "conversational",
             "arxiv:2505.09388",
             "arxiv:2502.13923",
             "arxiv:2409.12191",
@@ -3837,8 +3810,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 460896,
-          "likes": 367
+          "downloads": 2726932,
+          "likes": 378
         },
         {
           "id": "Qwen/Qwen3-VL-Demo",
@@ -3857,9 +3830,8 @@
             "transformers",
             "safetensors",
             "qwen3_vl",
-            "image-to-text",
-            "unsloth",
             "image-text-to-text",
+            "unsloth",
             "conversational",
             "arxiv:2505.09388",
             "arxiv:2502.13923",
@@ -3874,7 +3846,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3422,
+          "downloads": 2381,
           "likes": 2
         },
         {
@@ -3888,9 +3860,8 @@
             "transformers",
             "safetensors",
             "qwen3_vl",
-            "image-to-text",
-            "unsloth",
             "image-text-to-text",
+            "unsloth",
             "conversational",
             "arxiv:2505.09388",
             "arxiv:2502.13923",
@@ -3905,7 +3876,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 872,
+          "downloads": 935,
           "likes": 0
         },
         {
@@ -3933,7 +3904,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 5694,
+          "downloads": 5326,
           "likes": 0
         },
         {
@@ -3961,7 +3932,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 143,
+          "downloads": 112,
           "likes": 1
         },
         {
@@ -3989,7 +3960,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 8563,
+          "downloads": 11339,
           "likes": 3
         },
         {
@@ -4017,8 +3988,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 294,
-          "likes": 1
+          "downloads": 544,
+          "likes": 2
         },
         {
           "id": "unsloth/Qwen3-VL-32B-Instruct-bnb-4bit",
@@ -4031,9 +4002,8 @@
             "transformers",
             "safetensors",
             "qwen3_vl",
-            "image-to-text",
-            "unsloth",
             "image-text-to-text",
+            "unsloth",
             "conversational",
             "arxiv:2505.09388",
             "arxiv:2502.13923",
@@ -4048,8 +4018,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1925,
-          "likes": 3
+          "downloads": 1612,
+          "likes": 4
         },
         {
           "id": "unsloth/Qwen3-VL-32B-Thinking-bnb-4bit",
@@ -4062,9 +4032,8 @@
             "transformers",
             "safetensors",
             "qwen3_vl",
-            "image-to-text",
-            "unsloth",
             "image-text-to-text",
+            "unsloth",
             "conversational",
             "arxiv:2505.09388",
             "arxiv:2502.13923",
@@ -4079,8 +4048,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 178,
-          "likes": 1
+          "downloads": 189,
+          "likes": 2
         }
       ],
       "basic_fields": [
@@ -4279,8 +4248,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 156309,
-          "likes": 990
+          "downloads": 129941,
+          "likes": 992
         },
         {
           "id": "nunchaku-tech/nunchaku-flux.1-fill-dev:svdq-int4_r32-flux.1-fill-dev.safetensors",
@@ -4308,7 +4277,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1371,
+          "downloads": 1745,
           "likes": 22
         },
         {
@@ -4337,7 +4306,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1371,
+          "downloads": 1745,
           "likes": 22
         }
       ],
@@ -4469,8 +4438,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 182798,
-          "likes": 2531
+          "downloads": 79641,
+          "likes": 2551
         },
         {
           "id": "nunchaku-tech/nunchaku-flux.1-kontext-dev:svdq-int4_r32-flux.1-kontext-dev.safetensors",
@@ -4498,7 +4467,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 13042,
+          "downloads": 7551,
           "likes": 64
         },
         {
@@ -4527,7 +4496,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 13042,
+          "downloads": 7551,
           "likes": 64
         },
         {
@@ -4865,7 +4834,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 680,
+          "downloads": 549,
           "likes": 4
         }
       ],
@@ -5020,8 +4989,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 40965,
-          "likes": 2293
+          "downloads": 66615,
+          "likes": 2310
         },
         {
           "id": "nunchaku-tech/nunchaku-qwen-image-edit:svdq-int4_r32-qwen-image-edit.safetensors",
@@ -5049,7 +5018,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10383,
+          "downloads": 33959,
           "likes": 110
         },
         {
@@ -5078,7 +5047,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10383,
+          "downloads": 33959,
           "likes": 110
         },
         {
@@ -5107,8 +5076,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 40866,
-          "likes": 276
+          "downloads": 32648,
+          "likes": 279
         },
         {
           "id": "nunchaku-tech/nunchaku-qwen-image-edit-2509:svdq-fp4_r32-qwen-image-edit-2509.safetensors",
@@ -5136,8 +5105,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 40866,
-          "likes": 276
+          "downloads": 32648,
+          "likes": 279
         }
       ],
       "basic_fields": [
@@ -5293,7 +5262,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 222
+          "likes": 223
         },
         {
           "id": "ai-forever/Real-ESRGAN:RealESRGAN_x4.pth",
@@ -5311,7 +5280,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 222
+          "likes": 223
         },
         {
           "id": "ai-forever/Real-ESRGAN:RealESRGAN_x8.pth",
@@ -5329,7 +5298,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 222
+          "likes": 223
         },
         {
           "id": "ximso/RealESRGAN_x4plus_anime_6B:RealESRGAN_x4plus_anime_6B.pth",
@@ -5645,8 +5614,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14787,
-          "likes": 57
+          "downloads": 14642,
+          "likes": 58
         },
         {
           "id": "lllyasviel/control_v11p_sd15_inpaint:diffusion_pytorch_model.fp16.safetensors",
@@ -5671,7 +5640,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 21765,
+          "downloads": 22812,
           "likes": 132
         },
         {
@@ -5697,7 +5666,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 13743,
+          "downloads": 11850,
           "likes": 17
         },
         {
@@ -5723,8 +5692,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10723,
-          "likes": 73
+          "downloads": 10532,
+          "likes": 74
         },
         {
           "id": "lllyasviel/control_v11p_sd15_scribble:diffusion_pytorch_model.fp16.safetensors",
@@ -5749,8 +5718,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 8634,
-          "likes": 30
+          "downloads": 8521,
+          "likes": 31
         },
         {
           "id": "lllyasviel/control_v11p_sd15_openpose:diffusion_pytorch_model.fp16.safetensors",
@@ -5775,8 +5744,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14210,
-          "likes": 131
+          "downloads": 14993,
+          "likes": 132
         },
         {
           "id": "lllyasviel/sd_control_collection:ip-adapter_sd15_plus.pth",
@@ -5790,7 +5759,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:ip-adapter_sd15.pth",
@@ -5804,7 +5773,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:ioclab_sd15_recolor.safetensors",
@@ -5818,7 +5787,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "h94/IP-Adapter:models/ip-adapter_sd15.bin",
@@ -5840,7 +5809,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
@@ -5862,7 +5831,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
@@ -5884,7 +5853,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "Lykon/DreamShaper:DreamShaper_6.2_BakedVae_pruned.safetensors",
@@ -5909,8 +5878,268 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 39559,
+          "downloads": 52366,
           "likes": 999
+        },
+        {
+          "id": "waifu-diffusion/wd-1-5-beta3:wd-illusion-fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "waifu-diffusion/wd-1-5-beta3",
+          "repo_id": "waifu-diffusion/wd-1-5-beta3",
+          "path": "wd-illusion-fp16.safetensors",
+          "size_on_disk": 2580068696,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "license:other",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 996,
+          "likes": 137
+        },
+        {
+          "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "andite/pastel-mix",
+          "repo_id": "andite/pastel-mix",
+          "path": "pastelmix-fp16.safetensors"
+        },
+        {
+          "id": "prompthero/openjourney-v4:openjourney-v4.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "prompthero/openjourney-v4",
+          "repo_id": "prompthero/openjourney-v4",
+          "path": "openjourney-v4.ckpt",
+          "size_on_disk": 2132910209,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "stable-diffusion",
+            "text-to-image",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 2337,
+          "likes": 1252
+        },
+        {
+          "id": "gsdf/Counterfeit-V3.0:Counterfeit-V3.0_fix_fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "gsdf/Counterfeit-V3.0",
+          "repo_id": "gsdf/Counterfeit-V3.0",
+          "path": "Counterfeit-V3.0_fix_fp16.safetensors",
+          "size_on_disk": 2132651162,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "license:creativeml-openrail-m",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 0,
+          "likes": 554
+        },
+        {
+          "id": "Linaqruf/anything-v3.0:anything-v3-fp16-pruned.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Linaqruf/anything-v3.0",
+          "repo_id": "Linaqruf/anything-v3.0",
+          "path": "anything-v3-fp16-pruned.safetensors",
+          "size_on_disk": 2132625431,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 5,
+          "likes": 739
+        },
+        {
+          "id": "Yntec/Deliberate:Deliberate.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Yntec/Deliberate",
+          "repo_id": "Yntec/Deliberate",
+          "path": "Deliberate.safetensors",
+          "size_on_disk": 2546086470,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "General",
+            "Anime",
+            "Art",
+            "XpucT",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "license:cc-by-nc-nd-4.0",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 30,
+          "likes": 5
+        },
+        {
+          "id": "WarriorMama777/OrangeMixs:Models/AbyssOrangeMix/AbyssOrangeMix.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "WarriorMama777/OrangeMixs",
+          "repo_id": "WarriorMama777/OrangeMixs",
+          "path": "Models/AbyssOrangeMix/AbyssOrangeMix.safetensors",
+          "size_on_disk": 5984232961,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "dataset:Nerfgun3/bad_prompt",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 935,
+          "likes": 3890
+        },
+        {
+          "id": "Meina/MeinaPastel:MeinaPastelV5 - Baked VAE.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Meina/MeinaPastel",
+          "repo_id": "Meina/MeinaPastel",
+          "path": "MeinaPastelV5 - Baked VAE.safetensors",
+          "size_on_disk": 3546167162,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "meina",
+            "anime",
+            "pastel",
+            "meinapastel",
+            "meinamix",
+            "stable diffusion",
+            "art",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 0,
+          "likes": 17
+        },
+        {
+          "id": "JosephusCheung/ACertainThing:ACertainThing.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "JosephusCheung/ACertainThing",
+          "repo_id": "JosephusCheung/ACertainThing",
+          "path": "ACertainThing.ckpt",
+          "size_on_disk": 4265335100,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "en",
+            "arxiv:2106.09685",
+            "doi:10.57967/hf/0197",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 81,
+          "likes": 188
+        },
+        {
+          "id": "dreamlike-art/dreamlike-anime-1.0:dreamlike-anime-1.0.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "dreamlike-art/dreamlike-anime-1.0",
+          "repo_id": "dreamlike-art/dreamlike-anime-1.0",
+          "path": "dreamlike-anime-1.0.safetensors",
+          "size_on_disk": 2132625462,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "image-to-image",
+            "anime",
+            "en",
+            "license:other",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 3720,
+          "likes": 259
+        },
+        {
+          "id": "Envvi/Inkpunk-Diffusion:Inkpunk-Diffusion-v2.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "Envvi/Inkpunk-Diffusion",
+          "repo_id": "Envvi/Inkpunk-Diffusion",
+          "path": "Inkpunk-Diffusion-v2.ckpt",
+          "size_on_disk": 2132856622,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 320,
+          "likes": 992
+        },
+        {
+          "id": "nitrosocke/redshift-diffusion:redshift-diffusion-v1.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "nitrosocke/redshift-diffusion",
+          "repo_id": "nitrosocke/redshift-diffusion",
+          "path": "redshift-diffusion-v1.ckpt",
+          "size_on_disk": 2132856622,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "image-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 99,
+          "likes": 614
         }
       ],
       "basic_fields": [
@@ -6229,8 +6458,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14787,
-          "likes": 57
+          "downloads": 14642,
+          "likes": 58
         },
         {
           "id": "lllyasviel/control_v11p_sd15_inpaint:diffusion_pytorch_model.fp16.safetensors",
@@ -6255,7 +6484,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 21765,
+          "downloads": 22812,
           "likes": 132
         },
         {
@@ -6281,7 +6510,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 13743,
+          "downloads": 11850,
           "likes": 17
         },
         {
@@ -6307,8 +6536,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10723,
-          "likes": 73
+          "downloads": 10532,
+          "likes": 74
         },
         {
           "id": "lllyasviel/control_v11p_sd15_scribble:diffusion_pytorch_model.fp16.safetensors",
@@ -6333,8 +6562,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 8634,
-          "likes": 30
+          "downloads": 8521,
+          "likes": 31
         },
         {
           "id": "lllyasviel/control_v11p_sd15_openpose:diffusion_pytorch_model.fp16.safetensors",
@@ -6359,8 +6588,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14210,
-          "likes": 131
+          "downloads": 14993,
+          "likes": 132
         },
         {
           "id": "lllyasviel/sd_control_collection:ip-adapter_sd15_plus.pth",
@@ -6374,7 +6603,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:ip-adapter_sd15.pth",
@@ -6388,7 +6617,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:ioclab_sd15_recolor.safetensors",
@@ -6402,7 +6631,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "h94/IP-Adapter:models/ip-adapter_sd15.bin",
@@ -6424,7 +6653,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
@@ -6446,7 +6675,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
@@ -6468,7 +6697,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "Lykon/DreamShaper:DreamShaper_6.2_BakedVae_pruned.safetensors",
@@ -6493,8 +6722,268 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 39559,
+          "downloads": 52366,
           "likes": 999
+        },
+        {
+          "id": "waifu-diffusion/wd-1-5-beta3:wd-illusion-fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "waifu-diffusion/wd-1-5-beta3",
+          "repo_id": "waifu-diffusion/wd-1-5-beta3",
+          "path": "wd-illusion-fp16.safetensors",
+          "size_on_disk": 2580068696,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "license:other",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 996,
+          "likes": 137
+        },
+        {
+          "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "andite/pastel-mix",
+          "repo_id": "andite/pastel-mix",
+          "path": "pastelmix-fp16.safetensors"
+        },
+        {
+          "id": "prompthero/openjourney-v4:openjourney-v4.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "prompthero/openjourney-v4",
+          "repo_id": "prompthero/openjourney-v4",
+          "path": "openjourney-v4.ckpt",
+          "size_on_disk": 2132910209,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "stable-diffusion",
+            "text-to-image",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 2337,
+          "likes": 1252
+        },
+        {
+          "id": "gsdf/Counterfeit-V3.0:Counterfeit-V3.0_fix_fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "gsdf/Counterfeit-V3.0",
+          "repo_id": "gsdf/Counterfeit-V3.0",
+          "path": "Counterfeit-V3.0_fix_fp16.safetensors",
+          "size_on_disk": 2132651162,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "license:creativeml-openrail-m",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 0,
+          "likes": 554
+        },
+        {
+          "id": "Linaqruf/anything-v3.0:anything-v3-fp16-pruned.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Linaqruf/anything-v3.0",
+          "repo_id": "Linaqruf/anything-v3.0",
+          "path": "anything-v3-fp16-pruned.safetensors",
+          "size_on_disk": 2132625431,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 5,
+          "likes": 739
+        },
+        {
+          "id": "Yntec/Deliberate:Deliberate.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Yntec/Deliberate",
+          "repo_id": "Yntec/Deliberate",
+          "path": "Deliberate.safetensors",
+          "size_on_disk": 2546086470,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "General",
+            "Anime",
+            "Art",
+            "XpucT",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "license:cc-by-nc-nd-4.0",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 30,
+          "likes": 5
+        },
+        {
+          "id": "WarriorMama777/OrangeMixs:Models/AbyssOrangeMix/AbyssOrangeMix.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "WarriorMama777/OrangeMixs",
+          "repo_id": "WarriorMama777/OrangeMixs",
+          "path": "Models/AbyssOrangeMix/AbyssOrangeMix.safetensors",
+          "size_on_disk": 5984232961,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "dataset:Nerfgun3/bad_prompt",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 935,
+          "likes": 3890
+        },
+        {
+          "id": "Meina/MeinaPastel:MeinaPastelV5 - Baked VAE.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Meina/MeinaPastel",
+          "repo_id": "Meina/MeinaPastel",
+          "path": "MeinaPastelV5 - Baked VAE.safetensors",
+          "size_on_disk": 3546167162,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "meina",
+            "anime",
+            "pastel",
+            "meinapastel",
+            "meinamix",
+            "stable diffusion",
+            "art",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 0,
+          "likes": 17
+        },
+        {
+          "id": "JosephusCheung/ACertainThing:ACertainThing.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "JosephusCheung/ACertainThing",
+          "repo_id": "JosephusCheung/ACertainThing",
+          "path": "ACertainThing.ckpt",
+          "size_on_disk": 4265335100,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "en",
+            "arxiv:2106.09685",
+            "doi:10.57967/hf/0197",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 81,
+          "likes": 188
+        },
+        {
+          "id": "dreamlike-art/dreamlike-anime-1.0:dreamlike-anime-1.0.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "dreamlike-art/dreamlike-anime-1.0",
+          "repo_id": "dreamlike-art/dreamlike-anime-1.0",
+          "path": "dreamlike-anime-1.0.safetensors",
+          "size_on_disk": 2132625462,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "image-to-image",
+            "anime",
+            "en",
+            "license:other",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 3720,
+          "likes": 259
+        },
+        {
+          "id": "Envvi/Inkpunk-Diffusion:Inkpunk-Diffusion-v2.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "Envvi/Inkpunk-Diffusion",
+          "repo_id": "Envvi/Inkpunk-Diffusion",
+          "path": "Inkpunk-Diffusion-v2.ckpt",
+          "size_on_disk": 2132856622,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 320,
+          "likes": 992
+        },
+        {
+          "id": "nitrosocke/redshift-diffusion:redshift-diffusion-v1.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "nitrosocke/redshift-diffusion",
+          "repo_id": "nitrosocke/redshift-diffusion",
+          "path": "redshift-diffusion-v1.ckpt",
+          "size_on_disk": 2132856622,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "image-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 99,
+          "likes": 614
         }
       ],
       "basic_fields": [
@@ -6822,7 +7311,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
@@ -6844,7 +7333,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
@@ -6866,7 +7355,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "Lykon/DreamShaper:DreamShaper_6.2_BakedVae_pruned.safetensors",
@@ -6891,8 +7380,268 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 39559,
+          "downloads": 52366,
           "likes": 999
+        },
+        {
+          "id": "waifu-diffusion/wd-1-5-beta3:wd-illusion-fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "waifu-diffusion/wd-1-5-beta3",
+          "repo_id": "waifu-diffusion/wd-1-5-beta3",
+          "path": "wd-illusion-fp16.safetensors",
+          "size_on_disk": 2580068696,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "license:other",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 996,
+          "likes": 137
+        },
+        {
+          "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "andite/pastel-mix",
+          "repo_id": "andite/pastel-mix",
+          "path": "pastelmix-fp16.safetensors"
+        },
+        {
+          "id": "prompthero/openjourney-v4:openjourney-v4.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "prompthero/openjourney-v4",
+          "repo_id": "prompthero/openjourney-v4",
+          "path": "openjourney-v4.ckpt",
+          "size_on_disk": 2132910209,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "stable-diffusion",
+            "text-to-image",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 2337,
+          "likes": 1252
+        },
+        {
+          "id": "gsdf/Counterfeit-V3.0:Counterfeit-V3.0_fix_fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "gsdf/Counterfeit-V3.0",
+          "repo_id": "gsdf/Counterfeit-V3.0",
+          "path": "Counterfeit-V3.0_fix_fp16.safetensors",
+          "size_on_disk": 2132651162,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "license:creativeml-openrail-m",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 0,
+          "likes": 554
+        },
+        {
+          "id": "Linaqruf/anything-v3.0:anything-v3-fp16-pruned.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Linaqruf/anything-v3.0",
+          "repo_id": "Linaqruf/anything-v3.0",
+          "path": "anything-v3-fp16-pruned.safetensors",
+          "size_on_disk": 2132625431,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 5,
+          "likes": 739
+        },
+        {
+          "id": "Yntec/Deliberate:Deliberate.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Yntec/Deliberate",
+          "repo_id": "Yntec/Deliberate",
+          "path": "Deliberate.safetensors",
+          "size_on_disk": 2546086470,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "General",
+            "Anime",
+            "Art",
+            "XpucT",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "license:cc-by-nc-nd-4.0",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 30,
+          "likes": 5
+        },
+        {
+          "id": "WarriorMama777/OrangeMixs:Models/AbyssOrangeMix/AbyssOrangeMix.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "WarriorMama777/OrangeMixs",
+          "repo_id": "WarriorMama777/OrangeMixs",
+          "path": "Models/AbyssOrangeMix/AbyssOrangeMix.safetensors",
+          "size_on_disk": 5984232961,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "dataset:Nerfgun3/bad_prompt",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 935,
+          "likes": 3890
+        },
+        {
+          "id": "Meina/MeinaPastel:MeinaPastelV5 - Baked VAE.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Meina/MeinaPastel",
+          "repo_id": "Meina/MeinaPastel",
+          "path": "MeinaPastelV5 - Baked VAE.safetensors",
+          "size_on_disk": 3546167162,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "meina",
+            "anime",
+            "pastel",
+            "meinapastel",
+            "meinamix",
+            "stable diffusion",
+            "art",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 0,
+          "likes": 17
+        },
+        {
+          "id": "JosephusCheung/ACertainThing:ACertainThing.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "JosephusCheung/ACertainThing",
+          "repo_id": "JosephusCheung/ACertainThing",
+          "path": "ACertainThing.ckpt",
+          "size_on_disk": 4265335100,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "en",
+            "arxiv:2106.09685",
+            "doi:10.57967/hf/0197",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 81,
+          "likes": 188
+        },
+        {
+          "id": "dreamlike-art/dreamlike-anime-1.0:dreamlike-anime-1.0.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "dreamlike-art/dreamlike-anime-1.0",
+          "repo_id": "dreamlike-art/dreamlike-anime-1.0",
+          "path": "dreamlike-anime-1.0.safetensors",
+          "size_on_disk": 2132625462,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "image-to-image",
+            "anime",
+            "en",
+            "license:other",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 3720,
+          "likes": 259
+        },
+        {
+          "id": "Envvi/Inkpunk-Diffusion:Inkpunk-Diffusion-v2.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "Envvi/Inkpunk-Diffusion",
+          "repo_id": "Envvi/Inkpunk-Diffusion",
+          "path": "Inkpunk-Diffusion-v2.ckpt",
+          "size_on_disk": 2132856622,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 320,
+          "likes": 992
+        },
+        {
+          "id": "nitrosocke/redshift-diffusion:redshift-diffusion-v1.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "nitrosocke/redshift-diffusion",
+          "repo_id": "nitrosocke/redshift-diffusion",
+          "path": "redshift-diffusion-v1.ckpt",
+          "size_on_disk": 2132856622,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "image-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 99,
+          "likes": 614
         }
       ],
       "basic_fields": [
@@ -7178,7 +7927,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
@@ -7200,7 +7949,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
@@ -7222,7 +7971,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "Lykon/DreamShaper:DreamShaper_6.2_BakedVae_pruned.safetensors",
@@ -7247,8 +7996,268 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 39559,
+          "downloads": 52366,
           "likes": 999
+        },
+        {
+          "id": "waifu-diffusion/wd-1-5-beta3:wd-illusion-fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "waifu-diffusion/wd-1-5-beta3",
+          "repo_id": "waifu-diffusion/wd-1-5-beta3",
+          "path": "wd-illusion-fp16.safetensors",
+          "size_on_disk": 2580068696,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "license:other",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 996,
+          "likes": 137
+        },
+        {
+          "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "andite/pastel-mix",
+          "repo_id": "andite/pastel-mix",
+          "path": "pastelmix-fp16.safetensors"
+        },
+        {
+          "id": "prompthero/openjourney-v4:openjourney-v4.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "prompthero/openjourney-v4",
+          "repo_id": "prompthero/openjourney-v4",
+          "path": "openjourney-v4.ckpt",
+          "size_on_disk": 2132910209,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "stable-diffusion",
+            "text-to-image",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 2337,
+          "likes": 1252
+        },
+        {
+          "id": "gsdf/Counterfeit-V3.0:Counterfeit-V3.0_fix_fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "gsdf/Counterfeit-V3.0",
+          "repo_id": "gsdf/Counterfeit-V3.0",
+          "path": "Counterfeit-V3.0_fix_fp16.safetensors",
+          "size_on_disk": 2132651162,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "license:creativeml-openrail-m",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 0,
+          "likes": 554
+        },
+        {
+          "id": "Linaqruf/anything-v3.0:anything-v3-fp16-pruned.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Linaqruf/anything-v3.0",
+          "repo_id": "Linaqruf/anything-v3.0",
+          "path": "anything-v3-fp16-pruned.safetensors",
+          "size_on_disk": 2132625431,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 5,
+          "likes": 739
+        },
+        {
+          "id": "Yntec/Deliberate:Deliberate.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Yntec/Deliberate",
+          "repo_id": "Yntec/Deliberate",
+          "path": "Deliberate.safetensors",
+          "size_on_disk": 2546086470,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "General",
+            "Anime",
+            "Art",
+            "XpucT",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "license:cc-by-nc-nd-4.0",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 30,
+          "likes": 5
+        },
+        {
+          "id": "WarriorMama777/OrangeMixs:Models/AbyssOrangeMix/AbyssOrangeMix.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "WarriorMama777/OrangeMixs",
+          "repo_id": "WarriorMama777/OrangeMixs",
+          "path": "Models/AbyssOrangeMix/AbyssOrangeMix.safetensors",
+          "size_on_disk": 5984232961,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "dataset:Nerfgun3/bad_prompt",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 935,
+          "likes": 3890
+        },
+        {
+          "id": "Meina/MeinaPastel:MeinaPastelV5 - Baked VAE.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Meina/MeinaPastel",
+          "repo_id": "Meina/MeinaPastel",
+          "path": "MeinaPastelV5 - Baked VAE.safetensors",
+          "size_on_disk": 3546167162,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "meina",
+            "anime",
+            "pastel",
+            "meinapastel",
+            "meinamix",
+            "stable diffusion",
+            "art",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 0,
+          "likes": 17
+        },
+        {
+          "id": "JosephusCheung/ACertainThing:ACertainThing.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "JosephusCheung/ACertainThing",
+          "repo_id": "JosephusCheung/ACertainThing",
+          "path": "ACertainThing.ckpt",
+          "size_on_disk": 4265335100,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "en",
+            "arxiv:2106.09685",
+            "doi:10.57967/hf/0197",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 81,
+          "likes": 188
+        },
+        {
+          "id": "dreamlike-art/dreamlike-anime-1.0:dreamlike-anime-1.0.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "dreamlike-art/dreamlike-anime-1.0",
+          "repo_id": "dreamlike-art/dreamlike-anime-1.0",
+          "path": "dreamlike-anime-1.0.safetensors",
+          "size_on_disk": 2132625462,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "image-to-image",
+            "anime",
+            "en",
+            "license:other",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 3720,
+          "likes": 259
+        },
+        {
+          "id": "Envvi/Inkpunk-Diffusion:Inkpunk-Diffusion-v2.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "Envvi/Inkpunk-Diffusion",
+          "repo_id": "Envvi/Inkpunk-Diffusion",
+          "path": "Inkpunk-Diffusion-v2.ckpt",
+          "size_on_disk": 2132856622,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 320,
+          "likes": 992
+        },
+        {
+          "id": "nitrosocke/redshift-diffusion:redshift-diffusion-v1.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "nitrosocke/redshift-diffusion",
+          "repo_id": "nitrosocke/redshift-diffusion",
+          "path": "redshift-diffusion-v1.ckpt",
+          "size_on_disk": 2132856622,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "image-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 99,
+          "likes": 614
         }
       ],
       "basic_fields": [
@@ -7547,7 +8556,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
@@ -7569,7 +8578,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
@@ -7591,7 +8600,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "Lykon/DreamShaper:DreamShaper_6.2_BakedVae_pruned.safetensors",
@@ -7616,8 +8625,268 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 39559,
+          "downloads": 52366,
           "likes": 999
+        },
+        {
+          "id": "waifu-diffusion/wd-1-5-beta3:wd-illusion-fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "waifu-diffusion/wd-1-5-beta3",
+          "repo_id": "waifu-diffusion/wd-1-5-beta3",
+          "path": "wd-illusion-fp16.safetensors",
+          "size_on_disk": 2580068696,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "license:other",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 996,
+          "likes": 137
+        },
+        {
+          "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "andite/pastel-mix",
+          "repo_id": "andite/pastel-mix",
+          "path": "pastelmix-fp16.safetensors"
+        },
+        {
+          "id": "prompthero/openjourney-v4:openjourney-v4.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "prompthero/openjourney-v4",
+          "repo_id": "prompthero/openjourney-v4",
+          "path": "openjourney-v4.ckpt",
+          "size_on_disk": 2132910209,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "stable-diffusion",
+            "text-to-image",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 2337,
+          "likes": 1252
+        },
+        {
+          "id": "gsdf/Counterfeit-V3.0:Counterfeit-V3.0_fix_fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "gsdf/Counterfeit-V3.0",
+          "repo_id": "gsdf/Counterfeit-V3.0",
+          "path": "Counterfeit-V3.0_fix_fp16.safetensors",
+          "size_on_disk": 2132651162,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "license:creativeml-openrail-m",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 0,
+          "likes": 554
+        },
+        {
+          "id": "Linaqruf/anything-v3.0:anything-v3-fp16-pruned.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Linaqruf/anything-v3.0",
+          "repo_id": "Linaqruf/anything-v3.0",
+          "path": "anything-v3-fp16-pruned.safetensors",
+          "size_on_disk": 2132625431,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 5,
+          "likes": 739
+        },
+        {
+          "id": "Yntec/Deliberate:Deliberate.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Yntec/Deliberate",
+          "repo_id": "Yntec/Deliberate",
+          "path": "Deliberate.safetensors",
+          "size_on_disk": 2546086470,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "General",
+            "Anime",
+            "Art",
+            "XpucT",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "license:cc-by-nc-nd-4.0",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 30,
+          "likes": 5
+        },
+        {
+          "id": "WarriorMama777/OrangeMixs:Models/AbyssOrangeMix/AbyssOrangeMix.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "WarriorMama777/OrangeMixs",
+          "repo_id": "WarriorMama777/OrangeMixs",
+          "path": "Models/AbyssOrangeMix/AbyssOrangeMix.safetensors",
+          "size_on_disk": 5984232961,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "dataset:Nerfgun3/bad_prompt",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 935,
+          "likes": 3890
+        },
+        {
+          "id": "Meina/MeinaPastel:MeinaPastelV5 - Baked VAE.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Meina/MeinaPastel",
+          "repo_id": "Meina/MeinaPastel",
+          "path": "MeinaPastelV5 - Baked VAE.safetensors",
+          "size_on_disk": 3546167162,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "meina",
+            "anime",
+            "pastel",
+            "meinapastel",
+            "meinamix",
+            "stable diffusion",
+            "art",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 0,
+          "likes": 17
+        },
+        {
+          "id": "JosephusCheung/ACertainThing:ACertainThing.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "JosephusCheung/ACertainThing",
+          "repo_id": "JosephusCheung/ACertainThing",
+          "path": "ACertainThing.ckpt",
+          "size_on_disk": 4265335100,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "en",
+            "arxiv:2106.09685",
+            "doi:10.57967/hf/0197",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 81,
+          "likes": 188
+        },
+        {
+          "id": "dreamlike-art/dreamlike-anime-1.0:dreamlike-anime-1.0.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "dreamlike-art/dreamlike-anime-1.0",
+          "repo_id": "dreamlike-art/dreamlike-anime-1.0",
+          "path": "dreamlike-anime-1.0.safetensors",
+          "size_on_disk": 2132625462,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "image-to-image",
+            "anime",
+            "en",
+            "license:other",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 3720,
+          "likes": 259
+        },
+        {
+          "id": "Envvi/Inkpunk-Diffusion:Inkpunk-Diffusion-v2.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "Envvi/Inkpunk-Diffusion",
+          "repo_id": "Envvi/Inkpunk-Diffusion",
+          "path": "Inkpunk-Diffusion-v2.ckpt",
+          "size_on_disk": 2132856622,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 320,
+          "likes": 992
+        },
+        {
+          "id": "nitrosocke/redshift-diffusion:redshift-diffusion-v1.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "nitrosocke/redshift-diffusion",
+          "repo_id": "nitrosocke/redshift-diffusion",
+          "path": "redshift-diffusion-v1.ckpt",
+          "size_on_disk": 2132856622,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "image-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 99,
+          "likes": 614
         }
       ],
       "basic_fields": [
@@ -7725,7 +8994,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 116049,
+          "downloads": 117795,
           "likes": 189
         }
       ],
@@ -7870,7 +9139,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 31374,
+          "downloads": 11607,
           "likes": 720
         }
       ],
@@ -8202,8 +9471,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14466,
-          "likes": 525
+          "downloads": 12947,
+          "likes": 526
         },
         {
           "id": "diffusers/controlnet-depth-sdxl-1.0:diffusion_pytorch_model.fp16.safetensors",
@@ -8226,8 +9495,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 17321,
-          "likes": 195
+          "downloads": 18740,
+          "likes": 196
         },
         {
           "id": "diffusers/controlnet-zoe-depth-sdxl-1.0:diffusion_pytorch_model.safetensors",
@@ -8250,7 +9519,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 528,
+          "downloads": 552,
           "likes": 41
         },
         {
@@ -8265,7 +9534,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:diffusers_xl_canny_mid.safetensors",
@@ -8279,7 +9548,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:diffusers_xl_canny_small.safetensors",
@@ -8293,7 +9562,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:diffusers_xl_depth_full.safetensors",
@@ -8307,7 +9576,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:diffusers_xl_depth_mid.safetensors",
@@ -8321,7 +9590,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:diffusers_xl_depth_small.safetensors",
@@ -8335,7 +9604,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_diffusers_xl_canny.safetensors",
@@ -8349,7 +9618,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_diffusers_xl_depth_midas.safetensors",
@@ -8363,7 +9632,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_diffusers_xl_depth_zoe.safetensors",
@@ -8377,7 +9646,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_diffusers_xl_lineart.safetensors",
@@ -8391,7 +9660,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_diffusers_xl_openpose.safetensors",
@@ -8405,7 +9674,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_diffusers_xl_sketch.safetensors",
@@ -8419,7 +9688,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_xl_canny.safetensors",
@@ -8433,7 +9702,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_xl_openpose.safetensors",
@@ -8447,7 +9716,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_xl_sketch.safetensors",
@@ -8461,7 +9730,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:thibaud_xl_openpose.safetensors",
@@ -8475,7 +9744,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:thibaud_xl_openpose_256lora.safetensors",
@@ -8489,7 +9758,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:sargezt_xl_depth_faid_vidit.safetensors",
@@ -8503,7 +9772,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:sargezt_xl_depth_zeed.safetensors",
@@ -8517,7 +9786,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:sargezt_xl_depth.safetensors",
@@ -8531,7 +9800,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:sargezt_xl_softedge.safetensors",
@@ -8545,7 +9814,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:ip-adapter_xl.pth",
@@ -8559,7 +9828,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_depth_anime.safetensors",
@@ -8573,7 +9842,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_canny_anime.safetensors",
@@ -8587,7 +9856,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_scribble_anime.safetensors",
@@ -8601,7 +9870,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_openpose_anime.safetensors",
@@ -8615,7 +9884,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_openpose_anime_v2.safetensors",
@@ -8629,7 +9898,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_blur_anime_beta.safetensors",
@@ -8643,7 +9912,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_blur.safetensors",
@@ -8657,7 +9926,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_blur_anime.safetensors",
@@ -8671,7 +9940,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_canny.safetensors",
@@ -8685,7 +9954,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_depth.safetensors",
@@ -8699,7 +9968,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_canny.safetensors",
@@ -8715,8 +9984,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_depth.safetensors",
@@ -8732,8 +10001,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_depth_V2.safetensors",
@@ -8749,8 +10018,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_dw_openpose.safetensors",
@@ -8766,8 +10035,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_lineart_anime_denoise.safetensors",
@@ -8783,8 +10052,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_mlsd_V2.safetensors",
@@ -8800,8 +10069,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_normal.safetensors",
@@ -8817,8 +10086,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_normal_dsine.safetensors",
@@ -8834,8 +10103,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_recolor_luminance.safetensors",
@@ -8851,8 +10120,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_segment_animeface.safetensors",
@@ -8868,8 +10137,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_segment_animeface_V2.safetensors",
@@ -8885,8 +10154,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_sketch.safetensors",
@@ -8902,8 +10171,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_softedge.safetensors",
@@ -8919,8 +10188,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_t2i-adapter_color_shuffle.safetensors",
@@ -8936,8 +10205,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_tile_anime_alpha.safetensors",
@@ -8953,8 +10222,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_tile_anime_beta.safetensors",
@@ -8970,8 +10239,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_tile_realistic.safetensors",
@@ -8987,8 +10256,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         }
       ],
       "basic_fields": [
@@ -9350,8 +10619,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14466,
-          "likes": 525
+          "downloads": 12947,
+          "likes": 526
         },
         {
           "id": "diffusers/controlnet-depth-sdxl-1.0:diffusion_pytorch_model.fp16.safetensors",
@@ -9374,8 +10643,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 17321,
-          "likes": 195
+          "downloads": 18740,
+          "likes": 196
         },
         {
           "id": "diffusers/controlnet-zoe-depth-sdxl-1.0:diffusion_pytorch_model.safetensors",
@@ -9398,7 +10667,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 528,
+          "downloads": 552,
           "likes": 41
         },
         {
@@ -9413,7 +10682,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:diffusers_xl_canny_mid.safetensors",
@@ -9427,7 +10696,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:diffusers_xl_canny_small.safetensors",
@@ -9441,7 +10710,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:diffusers_xl_depth_full.safetensors",
@@ -9455,7 +10724,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:diffusers_xl_depth_mid.safetensors",
@@ -9469,7 +10738,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:diffusers_xl_depth_small.safetensors",
@@ -9483,7 +10752,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_diffusers_xl_canny.safetensors",
@@ -9497,7 +10766,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_diffusers_xl_depth_midas.safetensors",
@@ -9511,7 +10780,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_diffusers_xl_depth_zoe.safetensors",
@@ -9525,7 +10794,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_diffusers_xl_lineart.safetensors",
@@ -9539,7 +10808,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_diffusers_xl_openpose.safetensors",
@@ -9553,7 +10822,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_diffusers_xl_sketch.safetensors",
@@ -9567,7 +10836,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_xl_canny.safetensors",
@@ -9581,7 +10850,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_xl_openpose.safetensors",
@@ -9595,7 +10864,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:t2i-adapter_xl_sketch.safetensors",
@@ -9609,7 +10878,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:thibaud_xl_openpose.safetensors",
@@ -9623,7 +10892,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:thibaud_xl_openpose_256lora.safetensors",
@@ -9637,7 +10906,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:sargezt_xl_depth_faid_vidit.safetensors",
@@ -9651,7 +10920,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:sargezt_xl_depth_zeed.safetensors",
@@ -9665,7 +10934,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:sargezt_xl_depth.safetensors",
@@ -9679,7 +10948,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:sargezt_xl_softedge.safetensors",
@@ -9693,7 +10962,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:ip-adapter_xl.pth",
@@ -9707,7 +10976,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_depth_anime.safetensors",
@@ -9721,7 +10990,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_canny_anime.safetensors",
@@ -9735,7 +11004,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_scribble_anime.safetensors",
@@ -9749,7 +11018,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_openpose_anime.safetensors",
@@ -9763,7 +11032,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_openpose_anime_v2.safetensors",
@@ -9777,7 +11046,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_blur_anime_beta.safetensors",
@@ -9791,7 +11060,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_blur.safetensors",
@@ -9805,7 +11074,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_blur_anime.safetensors",
@@ -9819,7 +11088,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_canny.safetensors",
@@ -9833,7 +11102,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "lllyasviel/sd_control_collection:kohya_controllllite_xl_depth.safetensors",
@@ -9847,7 +11116,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 2097
+          "likes": 2099
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_canny.safetensors",
@@ -9863,8 +11132,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_depth.safetensors",
@@ -9880,8 +11149,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_depth_V2.safetensors",
@@ -9897,8 +11166,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_dw_openpose.safetensors",
@@ -9914,8 +11183,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_lineart_anime_denoise.safetensors",
@@ -9931,8 +11200,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_mlsd_V2.safetensors",
@@ -9948,8 +11217,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_normal.safetensors",
@@ -9965,8 +11234,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_normal_dsine.safetensors",
@@ -9982,8 +11251,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_recolor_luminance.safetensors",
@@ -9999,8 +11268,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_segment_animeface.safetensors",
@@ -10016,8 +11285,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_segment_animeface_V2.safetensors",
@@ -10033,8 +11302,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_sketch.safetensors",
@@ -10050,8 +11319,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_softedge.safetensors",
@@ -10067,8 +11336,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_t2i-adapter_color_shuffle.safetensors",
@@ -10084,8 +11353,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_tile_anime_alpha.safetensors",
@@ -10101,8 +11370,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_tile_anime_beta.safetensors",
@@ -10118,8 +11387,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         },
         {
           "id": "bdsqlsz/qinglong_controlnet-lllite:bdsqlsz_controlllite_xl_tile_realistic.safetensors",
@@ -10135,8 +11404,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16925,
-          "likes": 345
+          "downloads": 10061,
+          "likes": 346
         }
       ],
       "basic_fields": [
@@ -10458,7 +11727,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:sdxl_models/ip-adapter_sdxl_vit-h.bin",
@@ -10480,7 +11749,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:sdxl_models/ip-adapter-plus_sdxl_vit-h.bin",
@@ -10502,7 +11771,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "stabilityai/stable-diffusion-xl-base-1.0:sd_xl_base_1.0.safetensors",
@@ -10529,8 +11798,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 1941057,
-          "likes": 7385
+          "downloads": 2078473,
+          "likes": 7451
         },
         {
           "id": "Lykon/dreamshaper-xl-v2-turbo:DreamShaperXL_Turbo_v2_1.safetensors",
@@ -10561,7 +11830,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 46514,
+          "downloads": 18813,
           "likes": 71
         },
         {
@@ -10595,8 +11864,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 211878,
-          "likes": 291
+          "downloads": 72263,
+          "likes": 299
         },
         {
           "id": "dataautogpt3/ProteusV0.3:ProteusV0.3.safetensors",
@@ -10615,7 +11884,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 52567,
+          "downloads": 34514,
           "likes": 95
         },
         {
@@ -10654,7 +11923,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 185738,
+          "downloads": 164398,
           "likes": 0
         },
         {
@@ -10680,8 +11949,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 242399,
-          "likes": 382
+          "downloads": 279129,
+          "likes": 386
         },
         {
           "id": "SG161222/RealVisXL_V5.0:RealVisXL_V5.0_fp16.safetensors",
@@ -10700,8 +11969,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 126720,
-          "likes": 133
+          "downloads": 160703,
+          "likes": 136
         },
         {
           "id": "nunchaku-tech/nunchaku-sdxl:svdq-int4_r32-sdxl.safetensors",
@@ -10728,8 +11997,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 846,
-          "likes": 31
+          "downloads": 283,
+          "likes": 32
         },
         {
           "id": "nunchaku-tech/nunchaku-sdxl-turbo:svdq-int4_r32-sdxl-turbo.safetensors",
@@ -10756,7 +12025,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 321,
+          "downloads": 187,
           "likes": 12
         }
       ],
@@ -11091,7 +12360,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:sdxl_models/ip-adapter_sdxl_vit-h.bin",
@@ -11113,7 +12382,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:sdxl_models/ip-adapter-plus_sdxl_vit-h.bin",
@@ -11135,7 +12404,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "stabilityai/stable-diffusion-xl-base-1.0:sd_xl_base_1.0.safetensors",
@@ -11162,8 +12431,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 1941057,
-          "likes": 7385
+          "downloads": 2078473,
+          "likes": 7451
         },
         {
           "id": "Lykon/dreamshaper-xl-v2-turbo:DreamShaperXL_Turbo_v2_1.safetensors",
@@ -11194,7 +12463,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 46514,
+          "downloads": 18813,
           "likes": 71
         },
         {
@@ -11228,8 +12497,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 211878,
-          "likes": 291
+          "downloads": 72263,
+          "likes": 299
         },
         {
           "id": "dataautogpt3/ProteusV0.3:ProteusV0.3.safetensors",
@@ -11248,7 +12517,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 52567,
+          "downloads": 34514,
           "likes": 95
         },
         {
@@ -11287,7 +12556,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 185738,
+          "downloads": 164398,
           "likes": 0
         },
         {
@@ -11313,8 +12582,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 242399,
-          "likes": 382
+          "downloads": 279129,
+          "likes": 386
         },
         {
           "id": "SG161222/RealVisXL_V5.0:RealVisXL_V5.0_fp16.safetensors",
@@ -11333,8 +12602,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 126720,
-          "likes": 133
+          "downloads": 160703,
+          "likes": 136
         },
         {
           "id": "nunchaku-tech/nunchaku-sdxl:svdq-int4_r32-sdxl.safetensors",
@@ -11361,8 +12630,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 846,
-          "likes": 31
+          "downloads": 283,
+          "likes": 32
         },
         {
           "id": "nunchaku-tech/nunchaku-sdxl-turbo:svdq-int4_r32-sdxl-turbo.safetensors",
@@ -11389,7 +12658,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 321,
+          "downloads": 187,
           "likes": 12
         }
       ],
@@ -11485,7 +12754,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 813007,
+          "downloads": 252750,
           "likes": 41
         },
         {
@@ -11513,7 +12782,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3375,
+          "downloads": 2780,
           "likes": 3
         },
         {
@@ -11541,7 +12810,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 830,
+          "downloads": 291,
           "likes": 15
         },
         {
@@ -11569,7 +12838,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 75,
+          "downloads": 94,
           "likes": 3
         },
         {
@@ -11596,8 +12865,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16556,
-          "likes": 17
+          "downloads": 11563,
+          "likes": 18
         }
       ],
       "basic_fields": [
@@ -11680,7 +12949,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 121776,
+          "downloads": 137413,
           "likes": 400
         },
         {
@@ -11698,7 +12967,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6591,
+          "downloads": 6953,
           "likes": 134
         },
         {
@@ -11717,7 +12986,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 304253,
+          "downloads": 312845,
           "likes": 723
         },
         {
@@ -11735,8 +13004,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 225975,
-          "likes": 603
+          "downloads": 246035,
+          "likes": 605
         }
       ],
       "basic_fields": [
@@ -11818,7 +13087,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 121776,
+          "downloads": 137413,
           "likes": 400
         },
         {
@@ -11836,7 +13105,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6591,
+          "downloads": 6953,
           "likes": 134
         },
         {
@@ -11855,7 +13124,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 304253,
+          "downloads": 312845,
           "likes": 723
         },
         {
@@ -11873,8 +13142,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 225975,
-          "likes": 603
+          "downloads": 246035,
+          "likes": 605
         }
       ],
       "basic_fields": [
@@ -11962,16 +13231,17 @@
             "pytorch",
             "tf",
             "blip",
-            "image-to-text",
+            "image-text-to-text",
             "image-captioning",
+            "image-to-text",
             "arxiv:2201.12086",
             "license:bsd-3-clause",
             "endpoints_compatible",
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1945280,
-          "likes": 841
+          "downloads": 2264239,
+          "likes": 842
         },
         {
           "id": "Salesforce/blip2-opt-2.7b",
@@ -11991,10 +13261,10 @@
             "pytorch",
             "safetensors",
             "blip-2",
-            "image-to-text",
-            "vision",
-            "image-captioning",
             "visual-question-answering",
+            "vision",
+            "image-to-text",
+            "image-captioning",
             "image-text-to-text",
             "en",
             "arxiv:2301.12597",
@@ -12003,8 +13273,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 516960,
-          "likes": 431
+          "downloads": 461050,
+          "likes": 432
         },
         {
           "id": "microsoft/git-base",
@@ -12024,8 +13294,9 @@
             "pytorch",
             "safetensors",
             "git",
-            "image-to-text",
+            "image-text-to-text",
             "vision",
+            "image-to-text",
             "image-captioning",
             "en",
             "arxiv:2205.14100",
@@ -12034,7 +13305,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6518,
+          "downloads": 8643,
           "likes": 106
         },
         {
@@ -12054,6 +13325,7 @@
             "transformers",
             "pytorch",
             "vision-encoder-decoder",
+            "image-text-to-text",
             "image-to-text",
             "image-captioning",
             "doi:10.57967/hf/0222",
@@ -12062,8 +13334,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 700053,
-          "likes": 924
+          "downloads": 504697,
+          "likes": 925
         }
       ],
       "basic_fields": [
@@ -12302,8 +13574,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 93023,
-          "likes": 196
+          "downloads": 100705,
+          "likes": 201
         },
         {
           "id": "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers",
@@ -12331,8 +13603,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 14265,
-          "likes": 57
+          "downloads": 14688,
+          "likes": 58
         },
         {
           "id": "Wan-AI/Wan2.1-I2V-14B-720P-Diffusers",
@@ -12360,8 +13632,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 16049,
-          "likes": 47
+          "downloads": 20099,
+          "likes": 48
         }
       ],
       "basic_fields": [
@@ -13460,7 +14732,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 94,
+          "downloads": 84,
           "likes": 15
         },
         {
@@ -13482,8 +14754,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3807,
-          "likes": 573
+          "downloads": 4090,
+          "likes": 578
         },
         {
           "id": "goofyai/3d_render_style_xl:3d_render_style_xl.safetensors",
@@ -13504,7 +14776,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 505,
+          "downloads": 323,
           "likes": 132
         },
         {
@@ -13526,7 +14798,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 36,
+          "downloads": 38,
           "likes": 9
         },
         {
@@ -13553,7 +14825,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 54,
+          "downloads": 43,
           "likes": 39
         },
         {
@@ -13575,7 +14847,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 18,
+          "downloads": 14,
           "likes": 8
         }
       ],
@@ -13665,16 +14937,17 @@
             "pytorch",
             "tf",
             "blip",
-            "image-to-text",
+            "image-text-to-text",
             "image-captioning",
+            "image-to-text",
             "arxiv:2201.12086",
             "license:bsd-3-clause",
             "endpoints_compatible",
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1945280,
-          "likes": 841
+          "downloads": 2264239,
+          "likes": 842
         },
         {
           "id": "Salesforce/blip-image-captioning-large",
@@ -13694,16 +14967,17 @@
             "tf",
             "safetensors",
             "blip",
-            "image-to-text",
+            "image-text-to-text",
             "image-captioning",
+            "image-to-text",
             "arxiv:2201.12086",
             "license:bsd-3-clause",
             "endpoints_compatible",
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 905083,
-          "likes": 1445
+          "downloads": 730702,
+          "likes": 1452
         },
         {
           "id": "nlpconnect/vit-gpt2-image-captioning",
@@ -13721,6 +14995,7 @@
             "transformers",
             "pytorch",
             "vision-encoder-decoder",
+            "image-text-to-text",
             "image-to-text",
             "image-captioning",
             "doi:10.57967/hf/0222",
@@ -13729,8 +15004,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 700053,
-          "likes": 924
+          "downloads": 504697,
+          "likes": 925
         },
         {
           "id": "microsoft/git-base-coco",
@@ -13748,9 +15023,10 @@
             "transformers",
             "pytorch",
             "git",
-            "image-to-text",
+            "image-text-to-text",
             "vision",
             "image-captioning",
+            "image-to-text",
             "en",
             "arxiv:2205.14100",
             "license:mit",
@@ -13758,7 +15034,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6069,
+          "downloads": 5335,
           "likes": 20
         }
       ],
@@ -13848,7 +15124,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 360967,
+          "downloads": 651235,
           "likes": 187
         }
       ],
@@ -13956,8 +15232,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 527456,
-          "likes": 925
+          "downloads": 467649,
+          "likes": 935
         },
         {
           "id": "facebook/detr-resnet-101",
@@ -13987,7 +15263,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 39425,
+          "downloads": 46425,
           "likes": 125
         },
         {
@@ -14018,7 +15294,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 56212,
+          "downloads": 50066,
           "likes": 278
         },
         {
@@ -14049,8 +15325,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 596436,
-          "likes": 71
+          "downloads": 618007,
+          "likes": 72
         },
         {
           "id": "microsoft/table-transformer-detection",
@@ -14078,8 +15354,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1396326,
-          "likes": 396
+          "downloads": 1925308,
+          "likes": 398
         },
         {
           "id": "microsoft/table-transformer-structure-recognition-v1.1-all",
@@ -14105,7 +15381,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 190285,
+          "downloads": 368407,
           "likes": 79
         },
         {
@@ -14119,7 +15395,7 @@
             "*.json",
             "**/*.json"
           ],
-          "size_on_disk": 122742861,
+          "size_on_disk": 122742873,
           "pipeline_tag": "object-detection",
           "tags": [
             "transformers",
@@ -14130,13 +15406,14 @@
             "Object detection",
             "en",
             "dataset:detection-datasets/fashionpedia",
+            "license:mit",
             "endpoints_compatible",
             "deploy:azure",
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 42821,
-          "likes": 140
+          "downloads": 277198,
+          "likes": 141
         }
       ],
       "basic_fields": [
@@ -14298,7 +15575,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 81259,
+          "downloads": 97184,
           "likes": 145
         },
         {
@@ -14326,7 +15603,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6900,
+          "downloads": 23934,
           "likes": 29
         },
         {
@@ -14354,7 +15631,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 5065,
+          "downloads": 17485,
           "likes": 13
         },
         {
@@ -14383,7 +15660,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 32048,
+          "downloads": 190480,
           "likes": 29
         },
         {
@@ -14412,7 +15689,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 809900,
+          "downloads": 993962,
           "likes": 116
         },
         {
@@ -14441,8 +15718,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 842907,
-          "likes": 93
+          "downloads": 431853,
+          "likes": 95
         }
       ],
       "basic_fields": [
@@ -14553,8 +15830,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 184069,
-          "likes": 265
+          "downloads": 184635,
+          "likes": 266
         },
         {
           "id": "bert-large-uncased-whole-word-masking-finetuned-squad",
@@ -14586,8 +15863,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 333629,
-          "likes": 182
+          "downloads": 294970,
+          "likes": 184
         },
         {
           "id": "deepset/roberta-base-squad2",
@@ -14621,8 +15898,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 716936,
-          "likes": 934
+          "downloads": 745029,
+          "likes": 939
         },
         {
           "id": "distilbert-base-uncased-distilled-squad",
@@ -14655,7 +15932,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 32816,
+          "downloads": 46025,
           "likes": 119
         }
       ],
@@ -14787,8 +16064,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 9527,
-          "likes": 235
+          "downloads": 8487,
+          "likes": 234
         },
         {
           "id": "google/tapas-large-finetuned-wtq",
@@ -14820,7 +16097,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1188,
+          "downloads": 750,
           "likes": 148
         },
         {
@@ -14850,7 +16127,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 78,
+          "downloads": 774,
           "likes": 8
         }
       ],
@@ -14951,8 +16228,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3427557,
-          "likes": 873
+          "downloads": 3798541,
+          "likes": 888
         },
         {
           "id": "BAAI/bge-reranker-base",
@@ -14989,8 +16266,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 967461,
-          "likes": 224
+          "downloads": 1649738,
+          "likes": 225
         },
         {
           "id": "BAAI/bge-reranker-large",
@@ -15028,8 +16305,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 631835,
-          "likes": 447
+          "downloads": 711910,
+          "likes": 450
         }
       ],
       "basic_fields": [
@@ -15136,8 +16413,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 21638816,
-          "likes": 1235
+          "downloads": 24311379,
+          "likes": 1248
         },
         {
           "id": "sentence-transformers/all-MiniLM-L6-v2",
@@ -15197,8 +16474,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 141838267,
-          "likes": 4407
+          "downloads": 163821522,
+          "likes": 4486
         },
         {
           "id": "BAAI/bge-m3",
@@ -15231,8 +16508,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10422606,
-          "likes": 2700
+          "downloads": 15131000,
+          "likes": 2760
         },
         {
           "id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
@@ -15315,8 +16592,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 17212909,
-          "likes": 1116
+          "downloads": 18517152,
+          "likes": 1138
         }
       ],
       "basic_fields": [
@@ -15466,8 +16743,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 4125225,
-          "likes": 762
+          "downloads": 5086629,
+          "likes": 766
         },
         {
           "id": "michellejieli/emotion_text_classifier",
@@ -15498,8 +16775,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 208482,
-          "likes": 149
+          "downloads": 15311,
+          "likes": 148
         }
       ],
       "basic_fields": [
@@ -15604,8 +16881,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3410716,
-          "likes": 1524
+          "downloads": 3551887,
+          "likes": 1536
         },
         {
           "id": "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",
@@ -15638,7 +16915,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 79227,
+          "downloads": 62102,
           "likes": 222
         },
         {
@@ -15689,8 +16966,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 87402,
-          "likes": 287
+          "downloads": 131624,
+          "likes": 292
         },
         {
           "id": "tasksource/ModernBERT-base-nli",
@@ -15725,8 +17002,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2491,
-          "likes": 23
+          "downloads": 3703,
+          "likes": 25
         },
         {
           "id": "cross-encoder/nli-deberta-v3-base",
@@ -15759,7 +17036,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 36318,
+          "downloads": 71538,
           "likes": 41
         },
         {
@@ -15789,7 +17066,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 16360,
+          "downloads": 33140,
           "likes": 9
         },
         {
@@ -15831,7 +17108,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 399660,
+          "downloads": 323185,
           "likes": 206
         }
       ],
@@ -15951,8 +17228,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 12303,
-          "likes": 539
+          "downloads": 10332,
+          "likes": 550
         },
         {
           "id": "EssentialAI/rnj-1-instruct",
@@ -15976,8 +17253,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 4012,
-          "likes": 301
+          "downloads": 8951,
+          "likes": 304
         },
         {
           "id": "EssentialAI/rnj-1",
@@ -15998,8 +17275,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1580,
-          "likes": 94
+          "downloads": 2279,
+          "likes": 98
         },
         {
           "id": "meta-llama/Llama-3.1-8B-Instruct",
@@ -16036,8 +17313,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 9951869,
-          "likes": 5361
+          "downloads": 5850902,
+          "likes": 5474
         },
         {
           "id": "arcee-ai/Trinity-Nano-Preview",
@@ -16071,8 +17348,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 8265,
-          "likes": 62
+          "downloads": 20085,
+          "likes": 63
         },
         {
           "id": "open-thoughts/OpenThinker-Agent-v1",
@@ -16101,8 +17378,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 195,
-          "likes": 92
+          "downloads": 427,
+          "likes": 94
         },
         {
           "id": "Qwen/Qwen3-0.6B",
@@ -16127,8 +17404,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 8643612,
-          "likes": 1029
+          "downloads": 10233154,
+          "likes": 1089
         },
         {
           "id": "Qwen/Qwen3-4B-Instruct-2507",
@@ -16152,8 +17429,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3057540,
-          "likes": 688
+          "downloads": 3453738,
+          "likes": 734
         },
         {
           "id": "Qwen/Qwen2.5-7B-Instruct",
@@ -16181,8 +17458,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 8812556,
-          "likes": 1047
+          "downloads": 14508270,
+          "likes": 1077
         },
         {
           "id": "meta-llama/Llama-3.1-8B",
@@ -16215,8 +17492,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2658193,
-          "likes": 2042
+          "downloads": 1206748,
+          "likes": 2067
         },
         {
           "id": "allenai/Olmo-3-32B-Think",
@@ -16241,7 +17518,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1728,
+          "downloads": 2572,
           "likes": 169
         },
         {
@@ -16266,8 +17543,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3477855,
-          "likes": 410
+          "downloads": 4401445,
+          "likes": 422
         },
         {
           "id": "HuggingFaceTB/SmolLM3-3B",
@@ -16298,8 +17575,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 48255,
-          "likes": 887
+          "downloads": 85059,
+          "likes": 900
         },
         {
           "id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
@@ -16326,8 +17603,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1461455,
-          "likes": 1515
+          "downloads": 1802682,
+          "likes": 1528
         },
         {
           "id": "unsloth/Qwen3-32B-bnb-4bit",
@@ -16347,7 +17624,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 52322,
+          "downloads": 64290,
           "likes": 7
         },
         {
@@ -16368,7 +17645,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 617,
+          "downloads": 704,
           "likes": 20
         },
         {
@@ -16390,7 +17667,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 4458,
+          "downloads": 10600,
           "likes": 4
         },
         {
@@ -16412,8 +17689,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 195925,
-          "likes": 7
+          "downloads": 110014,
+          "likes": 8
         },
         {
           "id": "unsloth/Qwen3-4B-bnb-4bit",
@@ -16433,7 +17710,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 78514,
+          "downloads": 84981,
           "likes": 2
         },
         {
@@ -16453,7 +17730,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3226,
+          "downloads": 4867,
           "likes": 4
         },
         {
@@ -16473,7 +17750,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3251,
+          "downloads": 1816,
           "likes": 3
         },
         {
@@ -16493,7 +17770,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 186,
+          "downloads": 276,
           "likes": 0
         },
         {
@@ -16520,7 +17797,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 249,
+          "downloads": 154,
           "likes": 0
         },
         {
@@ -16547,7 +17824,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1086,
+          "downloads": 957,
           "likes": 2
         },
         {
@@ -16573,7 +17850,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 442,
+          "downloads": 242,
           "likes": 0
         },
         {
@@ -16599,7 +17876,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 307,
+          "downloads": 579,
           "likes": 0
         },
         {
@@ -16626,7 +17903,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 128,
+          "downloads": 78,
           "likes": 0
         },
         {
@@ -16691,7 +17968,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1095,
+          "downloads": 9834,
           "likes": 3
         },
         {
@@ -16750,7 +18027,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6458,
+          "downloads": 4271,
           "likes": 9
         },
         {
@@ -16759,15 +18036,16 @@
           "name": "unsloth/gemma-3-4b-it-bnb-4bit",
           "repo_id": "unsloth/gemma-3-4b-it-bnb-4bit",
           "size_on_disk": 3268199247,
-          "pipeline_tag": "image-to-text",
+          "pipeline_tag": "image-text-to-text",
           "tags": [
             "transformers",
             "safetensors",
             "gemma3",
-            "image-to-text",
+            "image-text-to-text",
             "unsloth",
             "gemma",
             "google",
+            "conversational",
             "en",
             "arxiv:1905.07830",
             "arxiv:1905.10044",
@@ -16808,7 +18086,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 29887,
+          "downloads": 27630,
           "likes": 12
         },
         {
@@ -16817,15 +18095,16 @@
           "name": "unsloth/gemma-3-12b-it-bnb-4bit",
           "repo_id": "unsloth/gemma-3-12b-it-bnb-4bit",
           "size_on_disk": 7838487378,
-          "pipeline_tag": "image-to-text",
+          "pipeline_tag": "image-text-to-text",
           "tags": [
             "transformers",
             "safetensors",
             "gemma3",
-            "image-to-text",
+            "image-text-to-text",
             "unsloth",
             "gemma",
             "google",
+            "conversational",
             "en",
             "arxiv:1905.07830",
             "arxiv:1905.10044",
@@ -16866,8 +18145,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 29615,
-          "likes": 32
+          "downloads": 28116,
+          "likes": 35
         },
         {
           "id": "unsloth/gemma-3-27b-it-bnb-4bit",
@@ -16875,15 +18154,16 @@
           "name": "unsloth/gemma-3-27b-it-bnb-4bit",
           "repo_id": "unsloth/gemma-3-27b-it-bnb-4bit",
           "size_on_disk": 16304476759,
-          "pipeline_tag": "image-to-text",
+          "pipeline_tag": "image-text-to-text",
           "tags": [
             "transformers",
             "safetensors",
             "gemma3",
-            "image-to-text",
+            "image-text-to-text",
             "unsloth",
             "gemma",
             "google",
+            "conversational",
             "en",
             "arxiv:1905.07830",
             "arxiv:1905.10044",
@@ -16924,7 +18204,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 181107,
+          "downloads": 68002,
           "likes": 18
         },
         {
@@ -16982,7 +18262,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 71,
+          "downloads": 14,
           "likes": 3
         },
         {
@@ -16991,12 +18271,12 @@
           "name": "unsloth/gemma-3-4b-pt-bnb-4bit",
           "repo_id": "unsloth/gemma-3-4b-pt-bnb-4bit",
           "size_on_disk": 3268193026,
-          "pipeline_tag": "image-to-text",
+          "pipeline_tag": "image-text-to-text",
           "tags": [
             "transformers",
             "safetensors",
             "gemma3",
-            "image-to-text",
+            "image-text-to-text",
             "unsloth",
             "gemma",
             "google",
@@ -17039,7 +18319,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 272,
+          "downloads": 571,
           "likes": 1
         },
         {
@@ -17048,12 +18328,12 @@
           "name": "unsloth/gemma-3-12b-pt-bnb-4bit",
           "repo_id": "unsloth/gemma-3-12b-pt-bnb-4bit",
           "size_on_disk": 7838481139,
-          "pipeline_tag": "image-to-text",
+          "pipeline_tag": "image-text-to-text",
           "tags": [
             "transformers",
             "safetensors",
             "gemma3",
-            "image-to-text",
+            "image-text-to-text",
             "unsloth",
             "gemma",
             "google",
@@ -17096,7 +18376,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 663,
+          "downloads": 142,
           "likes": 1
         },
         {
@@ -17105,12 +18385,12 @@
           "name": "unsloth/gemma-3-27b-pt-bnb-4bit",
           "repo_id": "unsloth/gemma-3-27b-pt-bnb-4bit",
           "size_on_disk": 16304470526,
-          "pipeline_tag": "image-to-text",
+          "pipeline_tag": "image-text-to-text",
           "tags": [
             "transformers",
             "safetensors",
             "gemma3",
-            "image-to-text",
+            "image-text-to-text",
             "unsloth",
             "gemma",
             "google",
@@ -17153,7 +18433,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 711,
+          "downloads": 703,
           "likes": 1
         },
         {
@@ -17188,7 +18468,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2687,
+          "downloads": 3752,
           "likes": 1
         },
         {
@@ -17223,7 +18503,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 851,
+          "downloads": 2025,
           "likes": 1
         },
         {
@@ -17257,7 +18537,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 122,
+          "downloads": 607,
           "likes": 0
         },
         {
@@ -17291,7 +18571,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 511,
+          "downloads": 470,
           "likes": 1
         },
         {
@@ -17326,7 +18606,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3341,
+          "downloads": 4928,
           "likes": 0
         },
         {
@@ -17361,7 +18641,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 550,
+          "downloads": 662,
           "likes": 1
         },
         {
@@ -17395,7 +18675,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 383,
+          "downloads": 399,
           "likes": 0
         },
         {
@@ -17429,7 +18709,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 218,
+          "downloads": 107,
           "likes": 0
         },
         {
@@ -17464,7 +18744,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 774,
+          "downloads": 281,
           "likes": 0
         },
         {
@@ -17499,7 +18779,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 787,
+          "downloads": 1063,
           "likes": 1
         },
         {
@@ -17533,7 +18813,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 524,
+          "downloads": 173,
           "likes": 0
         },
         {
@@ -17567,7 +18847,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 281,
+          "downloads": 226,
           "likes": 0
         },
         {
@@ -17601,7 +18881,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 219,
+          "downloads": 116,
           "likes": 2
         },
         {
@@ -17635,7 +18915,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 217,
+          "downloads": 3447,
           "likes": 0
         },
         {
@@ -17669,7 +18949,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6,
+          "downloads": 65,
           "likes": 1
         },
         {
@@ -17703,7 +18983,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 120,
+          "downloads": 82,
           "likes": 0
         },
         {
@@ -17737,7 +19017,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 23,
+          "downloads": 11,
           "likes": 1
         },
         {
@@ -17771,7 +19051,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 215,
+          "downloads": 226,
           "likes": 0
         }
       ],
@@ -17783,7 +19063,7 @@
     },
     {
       "title": "Hunyuan3D-2",
-      "description": "Generate 3D meshes from images using Tencent Hunyuan3D-2.\n    3d, generation, image-to-3d, hunyuan3d, mesh, local, high-quality\n\n    Use cases:\n    - Generate 3D models from images locally\n    - Create 3D assets from product photos or concept art\n    - Convert single images to 3D meshes\n    - Prototype 3D content without API costs\n\n    Produces untextured meshes (shape only). Use external tools for texturing.\n\n    **Requirements:** hy3dgen package, torch with CUDA. First run downloads ~6GB model.\n    Standard model needs ~6GB VRAM, mini needs ~5GB. Use low_vram_mode on constrained GPUs.\n\n    Models: https://huggingface.co/tencent/Hunyuan3D-2",
+      "description": "Generate 3D meshes from images using Tencent Hunyuan3D-2.\n    3d, generation, image-to-3d, hunyuan3d, mesh, local, high-quality\n\n    Use cases:\n    - Generate 3D models from images locally\n    - Create 3D assets from product photos or concept art\n    - Convert single images to 3D meshes\n    - Prototype 3D content without API costs\n\n    Produces untextured meshes (shape only). Use external tools for texturing.\n\n    **Requirements:** hy3dgen>=2.0.2 package, torch with CUDA.\n    First run downloads ~5GB model (shape-only, not full 75GB repo).\n    Standard model needs ~6GB VRAM, mini needs ~5GB. Use low_vram_mode on constrained GPUs.\n\n    Models: https://huggingface.co/tencent/Hunyuan3D-2",
       "namespace": "huggingface.text_to_3d",
       "node_type": "huggingface.text_to_3d.Hunyuan3D",
       "properties": [
@@ -17807,14 +19087,14 @@
           "type": {
             "type": "enum",
             "values": [
-              "tencent/Hunyuan3D-2",
-              "tencent/Hunyuan3D-2mini"
+              "standard",
+              "mini"
             ],
             "type_name": "nodetool.nodes.huggingface.text_to_3d.Hunyuan3D.ModelVariant"
           },
-          "default": "tencent/Hunyuan3D-2",
+          "default": "standard",
           "title": "Model Variant",
-          "description": "Model variant. Standard (~6GB VRAM) or Mini (~5GB VRAM, faster)."
+          "description": "Model variant. Standard (1.1B params, ~6GB VRAM) or Mini (0.6B params, ~5GB VRAM, faster)."
         },
         {
           "name": "num_inference_steps",
@@ -17832,7 +19112,7 @@
           "type": {
             "type": "float"
           },
-          "default": 7.5,
+          "default": 5.0,
           "title": "Guidance Scale",
           "description": "How strongly to follow the input. Higher = more adherence.",
           "min": 1.0,
@@ -17843,7 +19123,7 @@
           "type": {
             "type": "int"
           },
-          "default": 256,
+          "default": 384,
           "title": "Octree Resolution",
           "description": "Resolution of the octree for mesh extraction. Higher = more detail.",
           "min": 64.0,
@@ -17898,12 +19178,11 @@
           "name": "tencent/Hunyuan3D-2",
           "repo_id": "tencent/Hunyuan3D-2",
           "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
+            "config.json",
+            "hunyuan3d-dit-v2-0/*.yaml",
+            "hunyuan3d-dit-v2-0/*.safetensors"
           ],
-          "size_on_disk": 34342312175,
+          "size_on_disk": 9856304766,
           "pipeline_tag": "image-to-3d",
           "tags": [
             "hunyuan3d-2",
@@ -17919,8 +19198,35 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 66183,
-          "likes": 1699
+          "downloads": 69172,
+          "likes": 1714
+        },
+        {
+          "id": "tencent/Hunyuan3D-2mini",
+          "type": "hf.model",
+          "name": "tencent/Hunyuan3D-2mini",
+          "repo_id": "tencent/Hunyuan3D-2mini",
+          "allow_patterns": [
+            "config.json",
+            "hunyuan3d-dit-v2-mini/*.yaml",
+            "hunyuan3d-dit-v2-mini/*.safetensors"
+          ],
+          "size_on_disk": 3819959900,
+          "pipeline_tag": "image-to-3d",
+          "tags": [
+            "hunyuan3d-2",
+            "image-to-3d",
+            "text-to-3d",
+            "en",
+            "zh",
+            "arxiv:2501.12202",
+            "arxiv:2411.02293",
+            "license:other",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 4671,
+          "likes": 116
         }
       ],
       "basic_fields": [
@@ -18011,11 +19317,11 @@
           "repo_id": "openai/shap-e-img2img",
           "allow_patterns": [
             "**/*.safetensors",
+            "shap_e_renderer/*.bin",
             "**/*.json",
-            "**/*.txt",
-            "*.json"
+            "**/*.txt"
           ],
-          "size_on_disk": 1690974750,
+          "size_on_disk": 2596207487,
           "pipeline_tag": "image-to-image",
           "tags": [
             "diffusers",
@@ -18028,7 +19334,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 582,
+          "downloads": 578,
           "likes": 56
         }
       ],
@@ -18112,11 +19418,11 @@
           "repo_id": "openai/shap-e",
           "allow_patterns": [
             "**/*.safetensors",
+            "shap_e_renderer/*.bin",
             "**/*.json",
-            "**/*.txt",
-            "*.json"
+            "**/*.txt"
           ],
-          "size_on_disk": 1332947032,
+          "size_on_disk": 2238179776,
           "pipeline_tag": "text-to-3d",
           "tags": [
             "diffusers",
@@ -18129,8 +19435,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 2988,
-          "likes": 257
+          "downloads": 3138,
+          "likes": 258
         }
       ],
       "basic_fields": [
@@ -18139,8 +19445,115 @@
       ]
     },
     {
+      "title": "SF3D (Stable Fast 3D)",
+      "description": "Generate textured 3D meshes from images in under 1 second using Stability AI SF3D.\n    3d, generation, image-to-3d, sf3d, mesh, local, fast, textured\n\n    Use cases:\n    - Ultra-fast 3D asset generation from images\n    - Create game-ready 3D assets with textures\n    - Generate UV-unwrapped meshes with materials\n    - Real-time 3D reconstruction workflows\n\n    **Requirements:** sf3d package, rembg, torch with CUDA.\n    First run downloads ~1GB model. Needs ~6GB VRAM.\n    Generates textured meshes with UV maps, normal maps, and PBR materials.\n\n    Model: https://huggingface.co/stabilityai/stable-fast-3d\n    License: Free for <$1M revenue, enterprise license required above.",
+      "namespace": "huggingface.text_to_3d",
+      "node_type": "huggingface.text_to_3d.StableFast3D",
+      "properties": [
+        {
+          "name": "image",
+          "type": {
+            "type": "image"
+          },
+          "default": {
+            "type": "image",
+            "uri": "",
+            "asset_id": null,
+            "data": null,
+            "metadata": null
+          },
+          "title": "Image",
+          "description": "Input image to convert to 3D"
+        },
+        {
+          "name": "foreground_ratio",
+          "type": {
+            "type": "float"
+          },
+          "default": 0.85,
+          "title": "Foreground Ratio",
+          "description": "Ratio of foreground size to image size after background removal.",
+          "min": 0.5,
+          "max": 1.0
+        },
+        {
+          "name": "texture_resolution",
+          "type": {
+            "type": "int"
+          },
+          "default": 1024,
+          "title": "Texture Resolution",
+          "description": "Resolution of the texture atlas.",
+          "min": 256.0,
+          "max": 2048.0
+        },
+        {
+          "name": "remesh",
+          "type": {
+            "type": "bool"
+          },
+          "default": false,
+          "title": "Remesh",
+          "description": "Whether to remesh the output for cleaner topology."
+        },
+        {
+          "name": "output_format",
+          "type": {
+            "type": "enum",
+            "values": [
+              "glb",
+              "obj"
+            ],
+            "type_name": "nodetool.nodes.huggingface.text_to_3d.StableFast3D.OutputFormat"
+          },
+          "default": "glb",
+          "title": "Output Format",
+          "description": "Output format for the 3D model."
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "model_3d"
+          },
+          "name": "output"
+        }
+      ],
+      "recommended_models": [
+        {
+          "id": "stabilityai/stable-fast-3d",
+          "type": "hf.model",
+          "name": "stabilityai/stable-fast-3d",
+          "repo_id": "stabilityai/stable-fast-3d",
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.yaml",
+            "**/*.json",
+            "**/*.txt"
+          ],
+          "size_on_disk": 0,
+          "pipeline_tag": "image-to-3d",
+          "tags": [
+            "safetensors",
+            "image-to-3d",
+            "dataset:allenai/objaverse",
+            "arxiv:2408.00653",
+            "license:other",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 5145,
+          "likes": 729
+        }
+      ],
+      "basic_fields": [
+        "image",
+        "output_format"
+      ]
+    },
+    {
       "title": "TRELLIS.2-4B",
-      "description": "Generate high-fidelity 3D models from images using Microsoft TRELLIS.2-4B.\n    3d, generation, image-to-3d, trellis, mesh, local, high-quality, PBR, o-voxel\n\n    Use cases:\n    - Generate state-of-the-art 3D models from single images\n    - Create production-ready 3D assets with PBR materials\n    - Handle complex topology including open surfaces and non-manifold geometry\n    - Generate assets with transparency/translucency support\n\n    **Note:** Requires trellis2, o_voxel, torch, and 24GB+ GPU memory.\n    Currently only tested on Linux systems.\n    First run will download the model (~10GB+).\n    \n    Model: https://huggingface.co/microsoft/TRELLIS.2-4B\n    Paper: https://arxiv.org/abs/2512.14692",
+      "description": "Generate high-fidelity 3D models from images using Microsoft TRELLIS.2-4B.\n    3d, generation, image-to-3d, trellis, mesh, local, high-quality, PBR, o-voxel\n\n    Use cases:\n    - Generate state-of-the-art 3D models from single images\n    - Create production-ready 3D assets with PBR materials\n    - Handle complex topology including open surfaces and non-manifold geometry\n    - Generate assets with transparency/translucency support\n\n    **Note:** Requires trellis2, o_voxel, torch, and 24GB+ GPU memory.\n    Currently only tested on Linux systems.\n    First run will download the model (~10GB+).\n\n    Model: https://huggingface.co/microsoft/TRELLIS.2-4B\n    Paper: https://arxiv.org/abs/2512.14692",
       "namespace": "huggingface.text_to_3d",
       "node_type": "huggingface.text_to_3d.Trellis2",
       "properties": [
@@ -18249,13 +19662,112 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 572
+          "likes": 623
         }
       ],
       "basic_fields": [
         "image",
         "resolution",
         "seed"
+      ]
+    },
+    {
+      "title": "TripoSR",
+      "description": "Generate 3D meshes from images using Stability AI TripoSR.\n    3d, generation, image-to-3d, triposr, mesh, local, fast\n\n    Use cases:\n    - Fast 3D reconstruction from single images\n    - Generate 3D models from concept art\n    - Create 3D assets for games and visualization\n    - Prototype 3D content quickly\n\n    **Requirements:** tsr package (TripoSR), rembg, torch with CUDA.\n    First run downloads ~1GB model. Needs ~6GB VRAM.\n\n    Model: https://huggingface.co/stabilityai/TripoSR\n    License: MIT",
+      "namespace": "huggingface.text_to_3d",
+      "node_type": "huggingface.text_to_3d.TripoSR",
+      "properties": [
+        {
+          "name": "image",
+          "type": {
+            "type": "image"
+          },
+          "default": {
+            "type": "image",
+            "uri": "",
+            "asset_id": null,
+            "data": null,
+            "metadata": null
+          },
+          "title": "Image",
+          "description": "Input image to convert to 3D"
+        },
+        {
+          "name": "foreground_ratio",
+          "type": {
+            "type": "float"
+          },
+          "default": 0.85,
+          "title": "Foreground Ratio",
+          "description": "Ratio of foreground size to image size after background removal.",
+          "min": 0.5,
+          "max": 1.0
+        },
+        {
+          "name": "mc_resolution",
+          "type": {
+            "type": "int"
+          },
+          "default": 256,
+          "title": "Mc Resolution",
+          "description": "Marching cubes resolution for mesh extraction. Higher = more detail.",
+          "min": 64.0,
+          "max": 512.0
+        },
+        {
+          "name": "output_format",
+          "type": {
+            "type": "enum",
+            "values": [
+              "glb",
+              "obj"
+            ],
+            "type_name": "nodetool.nodes.huggingface.text_to_3d.TripoSR.OutputFormat"
+          },
+          "default": "glb",
+          "title": "Output Format",
+          "description": "Output format for the 3D model."
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "model_3d"
+          },
+          "name": "output"
+        }
+      ],
+      "recommended_models": [
+        {
+          "id": "stabilityai/TripoSR",
+          "type": "hf.model",
+          "name": "stabilityai/TripoSR",
+          "repo_id": "stabilityai/TripoSR",
+          "allow_patterns": [
+            "**/*.ckpt",
+            "**/*.yaml",
+            "**/*.json",
+            "**/*.txt"
+          ],
+          "size_on_disk": 0,
+          "pipeline_tag": "image-to-3d",
+          "tags": [
+            "3d",
+            "image-to-3d",
+            "dataset:allenai/objaverse",
+            "arxiv:2311.04400",
+            "arxiv:2403.02151",
+            "license:mit",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 38870,
+          "likes": 591
+        }
+      ],
+      "basic_fields": [
+        "image",
+        "output_format"
       ]
     },
     {
@@ -18335,7 +19847,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 2321,
+          "downloads": 2909,
           "likes": 21
         }
       ],
@@ -18345,7 +19857,7 @@
       ]
     },
     {
-      "title": "Audio LDM 2",
+      "title": "Audio LDM2",
       "description": "Generates audio from text prompts using the improved AudioLDM2 model.\n    audio, generation, AI, text-to-audio, sound-effects, sound-design\n\n    Use cases:\n    - Create realistic sound effects from text descriptions\n    - Generate background audio for videos and games\n    - Produce environmental soundscapes for multimedia\n    - Explore creative AI-generated audio for sound design",
       "namespace": "huggingface.text_to_audio",
       "node_type": "huggingface.text_to_audio.AudioLDM2",
@@ -18441,7 +19953,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 29809,
+          "downloads": 16938,
           "likes": 62
         }
       ],
@@ -18517,7 +20029,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 14,
+          "downloads": 17,
           "likes": 17
         }
       ],
@@ -18600,8 +20112,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 94374,
-          "likes": 472
+          "downloads": 135105,
+          "likes": 476
         },
         {
           "id": "facebook/musicgen-medium",
@@ -18626,8 +20138,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1126248,
-          "likes": 153
+          "downloads": 1223492,
+          "likes": 155
         },
         {
           "id": "facebook/musicgen-large",
@@ -18652,8 +20164,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 5473,
-          "likes": 517
+          "downloads": 10861,
+          "likes": 519
         },
         {
           "id": "facebook/musicgen-melody",
@@ -18678,7 +20190,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1970,
+          "downloads": 1788,
           "likes": 249
         },
         {
@@ -18706,7 +20218,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2096,
+          "downloads": 2177,
           "likes": 39
         },
         {
@@ -18734,8 +20246,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 739,
-          "likes": 88
+          "downloads": 964,
+          "likes": 90
         }
       ],
       "basic_fields": [
@@ -18822,7 +20334,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 80,
+          "downloads": 73,
           "likes": 7
         }
       ],
@@ -18920,8 +20432,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 21389,
-          "likes": 1405
+          "downloads": 17093,
+          "likes": 1415
         }
       ],
       "basic_fields": [
@@ -19073,7 +20585,7 @@
           ],
           "has_model_index": true,
           "downloads": 0,
-          "likes": 1308
+          "likes": 1318
         }
       ],
       "basic_fields": [
@@ -19241,8 +20753,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 598144,
-          "likes": 4581
+          "downloads": 666779,
+          "likes": 4617
         },
         {
           "id": "black-forest-labs/FLUX.1-dev",
@@ -19273,8 +20785,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 776537,
-          "likes": 12241
+          "downloads": 706622,
+          "likes": 12317
         },
         {
           "id": "nunchaku-tech/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
@@ -19302,7 +20814,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1188,
+          "downloads": 1084,
           "likes": 12
         },
         {
@@ -19331,7 +20843,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1188,
+          "downloads": 1084,
           "likes": 12
         },
         {
@@ -19360,8 +20872,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6000,
-          "likes": 44
+          "downloads": 5170,
+          "likes": 45
         },
         {
           "id": "nunchaku-tech/nunchaku-flux.1-dev:svdq-fp4_r32-flux.1-dev.safetensors",
@@ -19389,8 +20901,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6000,
-          "likes": 44
+          "downloads": 5170,
+          "likes": 45
         },
         {
           "id": "nunchaku-tech/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
@@ -19686,7 +21198,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 5728,
+          "downloads": 2406,
           "likes": 231
         },
         {
@@ -19718,7 +21230,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 1421,
+          "downloads": 1434,
           "likes": 236
         },
         {
@@ -19747,7 +21259,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 152,
+          "downloads": 155,
           "likes": 5
         },
         {
@@ -19776,7 +21288,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 152,
+          "downloads": 155,
           "likes": 5
         },
         {
@@ -19805,7 +21317,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 284,
+          "downloads": 177,
           "likes": 6
         },
         {
@@ -19834,7 +21346,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 284,
+          "downloads": 177,
           "likes": 6
         },
         {
@@ -20036,8 +21548,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 188087,
-          "likes": 2366
+          "downloads": 148795,
+          "likes": 2398
         },
         {
           "id": "nunchaku-tech/nunchaku-qwen-image:svdq-int4_r32-qwen-image.safetensors",
@@ -20064,8 +21576,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 31826,
-          "likes": 252
+          "downloads": 13070,
+          "likes": 253
         },
         {
           "id": "nunchaku-tech/nunchaku-qwen-image:svdq-fp4_r32-qwen-image.safetensors",
@@ -20092,8 +21604,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 31826,
-          "likes": 252
+          "downloads": 13070,
+          "likes": 253
         }
       ],
       "basic_fields": [
@@ -20415,7 +21927,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:models/ip-adapter_sd15_light.bin",
@@ -20437,7 +21949,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:models/ip-adapter_sd15_vit-G.bin",
@@ -20459,7 +21971,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "Lykon/DreamShaper:DreamShaper_6.2_BakedVae_pruned.safetensors",
@@ -20484,8 +21996,268 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 39559,
+          "downloads": 52366,
           "likes": 999
+        },
+        {
+          "id": "waifu-diffusion/wd-1-5-beta3:wd-illusion-fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "waifu-diffusion/wd-1-5-beta3",
+          "repo_id": "waifu-diffusion/wd-1-5-beta3",
+          "path": "wd-illusion-fp16.safetensors",
+          "size_on_disk": 2580068696,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "license:other",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 996,
+          "likes": 137
+        },
+        {
+          "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "andite/pastel-mix",
+          "repo_id": "andite/pastel-mix",
+          "path": "pastelmix-fp16.safetensors"
+        },
+        {
+          "id": "prompthero/openjourney-v4:openjourney-v4.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "prompthero/openjourney-v4",
+          "repo_id": "prompthero/openjourney-v4",
+          "path": "openjourney-v4.ckpt",
+          "size_on_disk": 2132910209,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "stable-diffusion",
+            "text-to-image",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 2337,
+          "likes": 1252
+        },
+        {
+          "id": "gsdf/Counterfeit-V3.0:Counterfeit-V3.0_fix_fp16.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "gsdf/Counterfeit-V3.0",
+          "repo_id": "gsdf/Counterfeit-V3.0",
+          "path": "Counterfeit-V3.0_fix_fp16.safetensors",
+          "size_on_disk": 2132651162,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "license:creativeml-openrail-m",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 0,
+          "likes": 554
+        },
+        {
+          "id": "Linaqruf/anything-v3.0:anything-v3-fp16-pruned.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Linaqruf/anything-v3.0",
+          "repo_id": "Linaqruf/anything-v3.0",
+          "path": "anything-v3-fp16-pruned.safetensors",
+          "size_on_disk": 2132625431,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 5,
+          "likes": 739
+        },
+        {
+          "id": "Yntec/Deliberate:Deliberate.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Yntec/Deliberate",
+          "repo_id": "Yntec/Deliberate",
+          "path": "Deliberate.safetensors",
+          "size_on_disk": 2546086470,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "General",
+            "Anime",
+            "Art",
+            "XpucT",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "license:cc-by-nc-nd-4.0",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 30,
+          "likes": 5
+        },
+        {
+          "id": "WarriorMama777/OrangeMixs:Models/AbyssOrangeMix/AbyssOrangeMix.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "WarriorMama777/OrangeMixs",
+          "repo_id": "WarriorMama777/OrangeMixs",
+          "path": "Models/AbyssOrangeMix/AbyssOrangeMix.safetensors",
+          "size_on_disk": 5984232961,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "dataset:Nerfgun3/bad_prompt",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 935,
+          "likes": 3890
+        },
+        {
+          "id": "Meina/MeinaPastel:MeinaPastelV5 - Baked VAE.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "Meina/MeinaPastel",
+          "repo_id": "Meina/MeinaPastel",
+          "path": "MeinaPastelV5 - Baked VAE.safetensors",
+          "size_on_disk": 3546167162,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "meina",
+            "anime",
+            "pastel",
+            "meinapastel",
+            "meinamix",
+            "stable diffusion",
+            "art",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "region:us"
+          ],
+          "has_model_index": false,
+          "downloads": 0,
+          "likes": 17
+        },
+        {
+          "id": "JosephusCheung/ACertainThing:ACertainThing.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "JosephusCheung/ACertainThing",
+          "repo_id": "JosephusCheung/ACertainThing",
+          "path": "ACertainThing.ckpt",
+          "size_on_disk": 4265335100,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "en",
+            "arxiv:2106.09685",
+            "doi:10.57967/hf/0197",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 81,
+          "likes": 188
+        },
+        {
+          "id": "dreamlike-art/dreamlike-anime-1.0:dreamlike-anime-1.0.safetensors",
+          "type": "hf.stable_diffusion",
+          "name": "dreamlike-art/dreamlike-anime-1.0",
+          "repo_id": "dreamlike-art/dreamlike-anime-1.0",
+          "path": "dreamlike-anime-1.0.safetensors",
+          "size_on_disk": 2132625462,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "safetensors",
+            "stable-diffusion",
+            "stable-diffusion-diffusers",
+            "text-to-image",
+            "image-to-image",
+            "anime",
+            "en",
+            "license:other",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 3720,
+          "likes": 259
+        },
+        {
+          "id": "Envvi/Inkpunk-Diffusion:Inkpunk-Diffusion-v2.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "Envvi/Inkpunk-Diffusion",
+          "repo_id": "Envvi/Inkpunk-Diffusion",
+          "path": "Inkpunk-Diffusion-v2.ckpt",
+          "size_on_disk": 2132856622,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 320,
+          "likes": 992
+        },
+        {
+          "id": "nitrosocke/redshift-diffusion:redshift-diffusion-v1.ckpt",
+          "type": "hf.stable_diffusion",
+          "name": "nitrosocke/redshift-diffusion",
+          "repo_id": "nitrosocke/redshift-diffusion",
+          "path": "redshift-diffusion-v1.ckpt",
+          "size_on_disk": 2132856622,
+          "pipeline_tag": "text-to-image",
+          "tags": [
+            "diffusers",
+            "stable-diffusion",
+            "text-to-image",
+            "image-to-image",
+            "en",
+            "license:creativeml-openrail-m",
+            "endpoints_compatible",
+            "diffusers:StableDiffusionPipeline",
+            "region:us"
+          ],
+          "has_model_index": true,
+          "downloads": 99,
+          "likes": 614
         }
       ],
       "basic_fields": [
@@ -20775,7 +22547,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:sdxl_models/ip-adapter_sdxl_vit-h.bin",
@@ -20797,7 +22569,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "h94/IP-Adapter:sdxl_models/ip-adapter-plus_sdxl_vit-h.bin",
@@ -20819,7 +22591,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 1286
+          "likes": 1293
         },
         {
           "id": "stabilityai/stable-diffusion-xl-base-1.0:sd_xl_base_1.0.safetensors",
@@ -20846,8 +22618,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 1941057,
-          "likes": 7385
+          "downloads": 2078473,
+          "likes": 7451
         },
         {
           "id": "Lykon/dreamshaper-xl-v2-turbo:DreamShaperXL_Turbo_v2_1.safetensors",
@@ -20878,7 +22650,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 46514,
+          "downloads": 18813,
           "likes": 71
         },
         {
@@ -20912,8 +22684,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 211878,
-          "likes": 291
+          "downloads": 72263,
+          "likes": 299
         },
         {
           "id": "dataautogpt3/ProteusV0.3:ProteusV0.3.safetensors",
@@ -20932,7 +22704,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 52567,
+          "downloads": 34514,
           "likes": 95
         },
         {
@@ -20971,7 +22743,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 185738,
+          "downloads": 164398,
           "likes": 0
         },
         {
@@ -20997,8 +22769,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 242399,
-          "likes": 382
+          "downloads": 279129,
+          "likes": 386
         },
         {
           "id": "SG161222/RealVisXL_V5.0:RealVisXL_V5.0_fp16.safetensors",
@@ -21017,8 +22789,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 126720,
-          "likes": 133
+          "downloads": 160703,
+          "likes": 136
         },
         {
           "id": "nunchaku-tech/nunchaku-sdxl:svdq-int4_r32-sdxl.safetensors",
@@ -21045,8 +22817,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 846,
-          "likes": 31
+          "downloads": 283,
+          "likes": 32
         },
         {
           "id": "nunchaku-tech/nunchaku-sdxl-turbo:svdq-int4_r32-sdxl-turbo.safetensors",
@@ -21073,7 +22845,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 321,
+          "downloads": 187,
           "likes": 12
         }
       ],
@@ -21280,7 +23052,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14349,
+          "downloads": 64206,
           "likes": 1509
         },
         {
@@ -21320,8 +23092,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 35466,
-          "likes": 252
+          "downloads": 45963,
+          "likes": 254
         }
       ],
       "basic_fields": [
@@ -21503,8 +23275,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2676926,
-          "likes": 5644
+          "downloads": 8172142,
+          "likes": 5718
         }
       ],
       "basic_fields": [
@@ -21583,8 +23355,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 42713,
-          "likes": 172
+          "downloads": 109870,
+          "likes": 174
         },
         {
           "id": "facebook/mms-tts-kor",
@@ -21612,7 +23384,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1735,
+          "downloads": 11853,
           "likes": 14
         },
         {
@@ -21641,7 +23413,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3505,
+          "downloads": 3579,
           "likes": 14
         },
         {
@@ -21670,7 +23442,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2133,
+          "downloads": 2459,
           "likes": 15
         }
       ],
@@ -21854,7 +23626,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 17311,
+          "downloads": 26792,
           "likes": 351
         },
         {
@@ -21884,8 +23656,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 39492,
-          "likes": 661
+          "downloads": 34522,
+          "likes": 663
         }
       ],
       "basic_fields": [
@@ -22082,8 +23854,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 163929,
-          "likes": 107
+          "downloads": 127330,
+          "likes": 110
         },
         {
           "id": "Wan-AI/Wan2.1-T2V-14B-Diffusers",
@@ -22110,7 +23882,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 21241,
+          "downloads": 28678,
           "likes": 48
         },
         {
@@ -22138,8 +23910,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 36592,
-          "likes": 105
+          "downloads": 38373,
+          "likes": 108
         }
       ],
       "basic_fields": [
@@ -22401,8 +24173,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2468303,
-          "likes": 762
+          "downloads": 2277114,
+          "likes": 765
         },
         {
           "id": "google-t5/t5-large",
@@ -22447,8 +24219,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 251066,
-          "likes": 247
+          "downloads": 346093,
+          "likes": 249
         },
         {
           "id": "google-t5/t5-small",
@@ -22495,8 +24267,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3326218,
-          "likes": 524
+          "downloads": 2020730,
+          "likes": 527
         }
       ],
       "basic_fields": [
@@ -22571,24 +24343,15 @@
       ]
     },
     {
-      "id": "3ae8a1cd7aa511f08640000015d0df1b",
-      "name": "Audio To Image",
-      "description": "Transform spoken descriptions into images with this workflow. Record or upload audio, which is transcribed by Whisper and then visualized by Stable Diffusion. Perfect for quickly generating images from verbal ideas without typing.",
-      "tags": [
-        "huggingface",
-        "multimodal",
-        "start"
-      ]
-    },
-    {
-      "id": "3dc7a22e12f311f0a84600004c6eb2d5",
+      "id": "",
       "name": "Audio To Spectrogram",
       "description": "Create a spectrogram from an audio file and use creative upscaling to transform it into wall-worthy art.",
       "tags": [
         "audio",
         "multimodal",
         "start",
-        "huggingface"
+        "huggingface",
+        "example"
       ]
     },
     {
@@ -22625,26 +24388,6 @@
       "tags": [
         "huggingface",
         "image"
-      ]
-    },
-    {
-      "id": "f1d42e6a12fb11f0901100001aeb0d2f",
-      "name": "Summarize Audio",
-      "description": "Transcribe an audio file and summarize the text.",
-      "tags": [
-        "audio",
-        "start",
-        "huggingface"
-      ]
-    },
-    {
-      "id": "transcribe_audio",
-      "name": "Transcribe Audio",
-      "description": "Convert speech to text using Whisper model with word-level timestamps",
-      "tags": [
-        "start",
-        "audio",
-        "huggingface"
       ]
     },
     {

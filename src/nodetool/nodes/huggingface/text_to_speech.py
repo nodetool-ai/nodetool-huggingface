@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 from enum import Enum
 from nodetool.workflows.types import Chunk
 from nodetool.metadata.types import AudioRef, HFTextToSpeech, HuggingFaceModel
@@ -285,26 +284,10 @@ class KokoroTTS(HuggingFacePipelineNode):
             if audio is None:
                 continue
             audio = audio.detach().cpu().numpy()
-            # Convert to int16 for audio output
-            if audio.dtype != np.int16:
-                # Assume audio is float32 in [-1, 1], scale to int16
-                audio_int16 = np.clip(audio, -1.0, 1.0)
-                audio_int16 = (audio_int16 * 32767.0).astype(np.int16)
-            else:
-                audio_int16 = audio
-            audio_chunks.append(audio_int16)
-            audio_base64 = base64.b64encode(audio_int16.tobytes()).decode("utf-8")
-            chunk = Chunk(
-                content=audio_base64,
-                content_type="audio",
-                content_metadata={
-                    "sample_rate": 24_000,
-                    "channels": 1,
-                    "dtype": "int16",
-                },
-                done=False,
-            )
-            yield {"chunk": chunk, "audio": None}
+            # Ensure audio is float32 in [-1, 1] range for consistent processing
+            if audio.dtype != np.float32:
+                audio = audio.astype(np.float32)
+            audio_chunks.append(audio)
 
         if not audio_chunks:
             raise ValueError("Kokoro did not produce any audio")
@@ -315,6 +298,7 @@ class KokoroTTS(HuggingFacePipelineNode):
             combined = np.concatenate(audio_chunks)
 
         # Kokoro outputs 24kHz mono
+        # audio_from_numpy expects float32 in [-1, 1] range
         run_gc("After Kokoro TTS inference", log_before_after=False)
         yield {
             "audio": await context.audio_from_numpy(combined, 24_000),
