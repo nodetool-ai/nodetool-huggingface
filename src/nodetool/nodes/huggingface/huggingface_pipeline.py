@@ -13,6 +13,7 @@ from nodetool.huggingface.local_provider_utils import load_model, load_pipeline
 if TYPE_CHECKING:
     import torch
     from transformers.pipelines.base import Pipeline
+    from nodetool.types.model import UnifiedModel
 
 T = TypeVar("T")
 
