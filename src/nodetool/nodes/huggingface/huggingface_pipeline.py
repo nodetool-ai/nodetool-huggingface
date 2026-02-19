@@ -90,6 +90,7 @@ class HuggingFacePipelineNode(BaseNode):
         context: ProcessingContext,
         pipeline_task: str,
         model_id: Any,
+        cache_key: str | None = None,
         **kwargs: Any,
     ):
         """Load a HuggingFace pipeline model (instance method wrapper)."""
@@ -99,6 +100,7 @@ class HuggingFacePipelineNode(BaseNode):
             pipeline_task,
             model_id,
             skip_cache=self.should_skip_cache(),
+            cache_key=cache_key,
             **kwargs,
         )
 

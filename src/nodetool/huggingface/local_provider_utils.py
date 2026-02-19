@@ -185,13 +185,15 @@ async def load_pipeline(
     device: str | None = None,
     torch_dtype: "torch.dtype" | None = None,
     skip_cache: bool = False,
+    cache_key: str | None = None,
     **kwargs: Any,
 ):
     """Load a HuggingFace pipeline model with optional VRAM recovery."""
     if model_id == "" or model_id is None:
         raise ValueError("Please select a model")
 
-    cache_key = f"{model_id}_{pipeline_task}"
+    if cache_key is None:
+        cache_key = f"{model_id}_{pipeline_task}"
 
     cached_model = ModelManager.get_model(cache_key)
     if cached_model:

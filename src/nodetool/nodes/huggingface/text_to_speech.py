@@ -6,6 +6,8 @@ from nodetool.workflows.types import Chunk
 from nodetool.metadata.types import AudioRef, HFTextToSpeech, HuggingFaceModel
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
+from nodetool.workflows.memory_utils import run_gc
+from nodetool.ml.core.model_manager import ModelManager
 
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Mapping, TypedDict
 from pydantic import Field
@@ -226,14 +228,31 @@ class KokoroTTS(HuggingFacePipelineNode):
 
     async def preload_model(self, context: ProcessingContext):
         from kokoro.pipeline import KPipeline
+        from kokoro.model import KModel
 
-        # Initialize and cache the Kokoro pipeline
         device = context.device
-        self._kpipeline = KPipeline(
-            lang_code=self.lang_code,
-            repo_id=self.get_model_id(),
-            device=device if device else None,
-        )
+
+        # Cache key for the underlying KModel
+        cache_key = f"{self.get_model_id()}_KModel"
+        cached_model = ModelManager.get_model(cache_key)
+
+        if cached_model is not None:
+            # Reuse the cached KModel instance
+            self._kpipeline = KPipeline(
+                lang_code=self.lang_code,
+                repo_id=self.get_model_id(),
+                model=cached_model,
+            )
+        else:
+            # Create a new KPipeline (which creates a new KModel)
+            self._kpipeline = KPipeline(
+                lang_code=self.lang_code,
+                repo_id=self.get_model_id(),
+                device=device if device else None,
+            )
+            # Cache the KModel for future reuse
+            if self._kpipeline.model is not None:
+                ModelManager.set_model(self.id, cache_key, self._kpipeline.model)
 
     async def move_to_device(self, device: str):
         if (
@@ -296,6 +315,7 @@ class KokoroTTS(HuggingFacePipelineNode):
             combined = np.concatenate(audio_chunks)
 
         # Kokoro outputs 24kHz mono
+        run_gc("After Kokoro TTS inference", log_before_after=False)
         yield {
             "audio": await context.audio_from_numpy(combined, 24_000),
             "chunk": Chunk(content="", done=True, content_type="audio"),

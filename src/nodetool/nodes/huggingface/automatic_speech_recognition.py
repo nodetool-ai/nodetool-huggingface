@@ -13,6 +13,7 @@ from nodetool.metadata.types import (
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
+from nodetool.workflows.memory_utils import run_gc
 
 from pydantic import Field
 from enum import Enum
@@ -237,6 +238,7 @@ class Whisper(HuggingFacePipelineNode):
             context=context,
             pipeline_task=pipeline_task,
             model_id=model,
+            cache_key=f"{self.model.repo_id}_{pipeline_task}",
             tokenizer=processor.tokenizer,
             feature_extractor=processor.feature_extractor,
             torch_dtype=torch_dtype,
@@ -300,6 +302,7 @@ class Whisper(HuggingFacePipelineNode):
                     logger.warning(f"Skipping invalid chunk: {e}")
 
         logger.info("Audio processing completed successfully.")
+        run_gc("After Whisper inference", log_before_after=False)
         return {
             "text": text,
             "chunks": chunks,

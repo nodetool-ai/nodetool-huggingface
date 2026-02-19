@@ -111,7 +111,11 @@ async def populate_node_inputs(node: GraphNode, assets: SampleAssets):
             setattr(
                 node,
                 name,
-                assets.candidate_labels() if "candidate_labels" in name else assets.text(),
+                (
+                    assets.candidate_labels()
+                    if "candidate_labels" in name
+                    else assets.text()
+                ),
             )
             continue
 
@@ -150,6 +154,7 @@ def _drop_node_model_references(node: GraphNode) -> None:
     """Remove common heavy attributes so GC can reclaim VRAM-heavy objects."""
     heavy_attrs = (
         "_pipeline",
+        "_kpipeline",
         "_model",
         "_models",
         "_text_encoder",
@@ -167,11 +172,13 @@ def _drop_node_model_references(node: GraphNode) -> None:
             with suppress(Exception):
                 setattr(node, attr, None)
 
+
 def _remove_accelerate_hooks(node: GraphNode) -> None:
     """Detach Accelerate CPU offload hooks to avoid reallocating on GPU during cleanup."""
     try:
         from accelerate.hooks import remove_hook_from_module  # type: ignore
         import torch
+
         Module = torch.nn.Module
     except Exception:
         return
@@ -188,7 +195,15 @@ def _remove_accelerate_hooks(node: GraphNode) -> None:
             for comp in components.values():
                 _strip(comp)
 
-    for attr_name in ("_pipeline", "_model", "_models", "_unet", "_vae", "_transformer", "_text_encoder"):
+    for attr_name in (
+        "_pipeline",
+        "_model",
+        "_models",
+        "_unet",
+        "_vae",
+        "_transformer",
+        "_text_encoder",
+    ):
         _strip(getattr(node, attr_name, None))
 
 
@@ -241,14 +256,22 @@ async def run_nodes(nodes: Iterable[GraphNode]):
         BaseNode.validate_inputs = lambda self, input_edges: []  # type: ignore[assignment]
         BaseNode.requires_gpu = lambda self: False  # type: ignore[assignment]
         try:
-            from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+            from nodetool.nodes.huggingface.huggingface_pipeline import (
+                HuggingFacePipelineNode,
+            )
+
             HuggingFacePipelineNode.requires_gpu = lambda self: False  # type: ignore[assignment]
         except Exception:
             pass
     except Exception:
         pass
 
-    test_mode = os.getenv("NODETOOL_SMOKE_TEST", "").lower() in {"1", "true", "yes", "on"}
+    test_mode = os.getenv("NODETOOL_SMOKE_TEST", "").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
     async with ResourceScope():
         provider_cache: dict[str, object] = {}
@@ -282,7 +305,9 @@ async def run_nodes(nodes: Iterable[GraphNode]):
                 except Exception:
                     pass
                 graph = create_graph(node)
-                results[node.__class__.__name__] = await run_graph(graph, context=context)
+                results[node.__class__.__name__] = await run_graph(
+                    graph, context=context
+                )
                 print(f"[smoke] Completed {node.__class__.__name__}", flush=True)
             except Exception as exc:  # pragma: no cover - smoke path
                 failures.append((node.__class__.__name__, exc))
