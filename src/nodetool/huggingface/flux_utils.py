@@ -1,6 +1,7 @@
 """
 Shared utilities for FLUX model detection and routing.
 """
+
 from __future__ import annotations
 
 
@@ -44,4 +45,3 @@ def is_nunchaku_transformer(repo_id: str, file_path: str | None) -> bool:
         and "flux" in repo_lower
         and "svdq" in file_path.lower()
     )
-

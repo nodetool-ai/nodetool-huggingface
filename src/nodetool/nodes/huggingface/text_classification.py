@@ -53,12 +53,12 @@ class TextClassifier(HuggingFacePipelineNode):
         )
 
     async def move_to_device(self, device: str):
-        self._pipeline.model.to(device)  # type: ignore
+        self._pipeline.model.to(device)
 
     async def process(self, context: ProcessingContext) -> dict[str, float]:
         assert self._pipeline is not None
         result = await self.run_pipeline_in_thread(self.prompt)
-        return {i["label"]: i["score"] for i in list(result)}  # type: ignore
+        return {i["label"]: i["score"] for i in list(result)}
 
 
 class ZeroShotTextClassifier(HuggingFacePipelineNode):
@@ -154,4 +154,4 @@ class ZeroShotTextClassifier(HuggingFacePipelineNode):
             candidate_labels=labels,
             multi_label=self.multi_label,
         )
-        return dict(zip(result["labels"], result["scores"]))  # type: ignore
+        return dict(zip(result["labels"], result["scores"]))

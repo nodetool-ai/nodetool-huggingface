@@ -249,7 +249,7 @@ async def load_pipeline(
         from transformers import pipeline
 
         return pipeline(
-            pipeline_task,  # type: ignore
+            pipeline_task,
             model=model_id,
             torch_dtype=torch_dtype,
             **kwargs,
@@ -290,7 +290,7 @@ async def load_pipeline(
             raise
 
     ModelManager.set_model(node_id, cache_key, model)
-    return model  # type: ignore
+    return model
 
 
 async def load_model(
@@ -345,7 +345,7 @@ async def load_model(
                     **kwargs,
                 )
             else:
-                model = model_class.from_pretrained(  # type: ignore
+                model = model_class.from_pretrained(
                     model_id,
                     torch_dtype=torch_dtype,
                     variant=variant,
@@ -362,7 +362,7 @@ async def load_model(
             if "token" not in kwargs:
                 kwargs["token"] = await context.get_secret("HF_TOKEN")
 
-            model = model_class.from_pretrained(  # type: ignore
+            model = model_class.from_pretrained(
                 model_id,
                 torch_dtype=torch_dtype,
                 variant=variant,

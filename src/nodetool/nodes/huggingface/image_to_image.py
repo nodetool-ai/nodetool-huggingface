@@ -146,13 +146,13 @@ class BaseImageToImage(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
-            self._pipeline.model.to(device)  # type: ignore
+            self._pipeline.model.to(device)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         assert self._pipeline is not None
         image = await context.image_to_pil(self.image)
-        result = await self.run_pipeline_in_thread(image, prompt=self.prompt)  # type: ignore
-        return await context.image_from_pil(result)  # type: ignore
+        result = await self.run_pipeline_in_thread(image, prompt=self.prompt)
+        return await context.image_from_pil(result)
 
 
 class RealESRGANNode(HuggingFacePipelineNode):
@@ -420,7 +420,7 @@ class ImageToImage(HuggingFacePipelineNode):
         if self._pipeline is not None:
             try:
                 self._pipeline.to(device)
-            except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            except torch.OutOfMemoryError as e:
                 raise ValueError(
                     "VRAM out of memory while moving Qwen Image Edit pipeline to device. "
                     "Try enabling 'CPU offload' in the advanced node properties (if available), "
@@ -456,8 +456,8 @@ class ImageToImage(HuggingFacePipelineNode):
             kwargs["negative_prompt"] = self.negative_prompt
 
         try:
-            output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
-        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            output = await self.run_pipeline_in_thread(**kwargs)
+        except torch.OutOfMemoryError as e:
             raise ValueError(
                 "VRAM out of memory while running Qwen Image Edit. "
                 "Enable 'CPU offload' in the advanced node properties (if available), "
@@ -732,7 +732,7 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
             controlnet=controlnet,
             device=context.device,
             torch_dtype=controlnet_dtype,
-        )  # type: ignore
+        )
         assert self._pipeline is not None
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
@@ -1065,11 +1065,11 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
                     guidance_scale=self.guidance_scale,
                     callback=progress_callback(
                         self.id, self.num_inference_steps, context
-                    ),  # type: ignore
+                    ),
                 )
 
         output = await asyncio.to_thread(_run_pipeline_sync)
-        upscaled_image = output.images[0]  # type: ignore
+        upscaled_image = output.images[0]
 
         return await context.image_from_pil(upscaled_image)
 
@@ -1180,12 +1180,12 @@ class StableDiffusionLatentUpscaler(HuggingFacePipelineNode):
                     output_type="latent",
                     callback=progress_callback(
                         self.id, self.num_inference_steps, context
-                    ),  # type: ignore
+                    ),
                     callback_steps=1,
                 )
 
         output = await asyncio.to_thread(_run_pipeline_sync)
-        upscaled = output.images  # type: ignore
+        upscaled = output.images
 
         # Convert back to TorchTensor
         return TorchTensor.from_tensor(upscaled)
@@ -1239,11 +1239,11 @@ class VAEEncode(HuggingFacePipelineNode):
             subfolder=self.model.variant if self.model.variant else None,
         )
         assert self._vae is not None
-        self._vae.to(context.device)  # type: ignore
+        self._vae.to(context.device)
 
     async def move_to_device(self, device: str):
         if self._vae is not None:
-            self._vae.to(device)  # type: ignore
+            self._vae.to(device)
 
     async def process(self, context: ProcessingContext) -> TorchTensor:
         if self._vae is None:
@@ -1318,11 +1318,11 @@ class VAEDecode(HuggingFacePipelineNode):
             subfolder=self.model.variant if self.model.variant else None,
         )
         assert self._vae is not None
-        self._vae.to(context.device)  # type: ignore
+        self._vae.to(context.device)
 
     async def move_to_device(self, device: str):
         if self._vae is not None:
-            self._vae.to(device)  # type: ignore
+            self._vae.to(device)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._vae is None:
@@ -1873,7 +1873,7 @@ class OmniGenNode(HuggingFacePipelineNode):
             kwargs["input_images"] = input_images_pil
             kwargs["img_guidance_scale"] = self.img_guidance_scale
 
-        output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
+        output = await self.run_pipeline_in_thread(**kwargs)
         image = output.images[0]
 
         return await context.image_from_pil(image)
@@ -2197,7 +2197,7 @@ class QwenImageEdit(HuggingFacePipelineNode):
                 # Normal device movement without CPU offload
                 try:
                     self._pipeline.to(device)
-                except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                except torch.OutOfMemoryError as e:
                     raise ValueError(
                         "VRAM out of memory while moving Qwen Image Edit pipeline to device. "
                         "Enable 'CPU offload' in advanced node properties or reduce image size/steps."
@@ -2233,8 +2233,8 @@ class QwenImageEdit(HuggingFacePipelineNode):
             kwargs["negative_prompt"] = " "  # Default as shown in Qwen example
 
         try:
-            output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
-        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            output = await self.run_pipeline_in_thread(**kwargs)
+        except torch.OutOfMemoryError as e:
             raise ValueError(
                 "VRAM out of memory while running Qwen Image Edit. "
                 "Enable 'CPU offload' in the advanced node properties (if available), "
@@ -2452,7 +2452,7 @@ class FluxFill(HuggingFacePipelineNode):
                     # Disable CPU offload and move all components to CPU
                     try:
                         self._pipeline.to(device)
-                    except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                    except torch.OutOfMemoryError as e:
                         raise ValueError(
                             "VRAM out of memory while moving Flux Fill to device. "
                             "Enable 'CPU offload' in the advanced node properties or reduce image size/steps."
@@ -2468,7 +2468,7 @@ class FluxFill(HuggingFacePipelineNode):
                 # Normal device movement without CPU offload
                 try:
                     self._pipeline.to(device)
-                except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                except torch.OutOfMemoryError as e:
                     raise ValueError(
                         "VRAM out of memory while moving Flux Fill to device. "
                         "Try enabling 'CPU offload' in the advanced node properties, reduce image size, or lower steps."
@@ -2511,8 +2511,8 @@ class FluxFill(HuggingFacePipelineNode):
         }
 
         try:
-            output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
-        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            output = await self.run_pipeline_in_thread(**kwargs)
+        except torch.OutOfMemoryError as e:
             run_gc("After FluxFill OOM error")
             raise ValueError(
                 "VRAM out of memory while running Flux Fill. "
@@ -2733,7 +2733,7 @@ class FluxKontext(HuggingFacePipelineNode):
                         token=hf_token,
                     )
                     ModelManager.set_model(self.id, cache_key, self._pipeline)
-            except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            except torch.OutOfMemoryError as e:
                 raise ValueError(
                     "VRAM out of memory while loading Flux Kontext with the Nunchaku transformer. "
                     "Try enabling CPU offload or reduce image size."
@@ -2769,7 +2769,7 @@ class FluxKontext(HuggingFacePipelineNode):
                 # Normal device movement without CPU offload
                 try:
                     self._pipeline.to(device)
-                except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                except torch.OutOfMemoryError as e:
                     raise ValueError(
                         "VRAM out of memory while moving Flux Kontext to device. "
                         "Enable 'CPU offload' in the advanced node properties or reduce image size."
@@ -2805,8 +2805,8 @@ class FluxKontext(HuggingFacePipelineNode):
         }
 
         try:
-            output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
-        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            output = await self.run_pipeline_in_thread(**kwargs)
+        except torch.OutOfMemoryError as e:
             run_gc("After FluxKontext OOM error")
             raise ValueError(
                 "VRAM out of memory while running Flux Kontext. "

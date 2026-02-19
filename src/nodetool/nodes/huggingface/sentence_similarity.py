@@ -59,7 +59,7 @@ class SentenceSimilarity(HuggingFacePipelineNode):
         )
 
     async def move_to_device(self, device: str):
-        self._pipeline.model.to(device)  # type: ignore
+        self._pipeline.model.to(device)
 
     async def process(self, context: ProcessingContext) -> NPArray:
         # The result is typically a list of lists, where each inner list represents the features for a token

@@ -68,14 +68,14 @@ class Bark(HuggingFacePipelineNode):
             pipeline_task="text-to-speech",
             model_id=self.get_model_id(),
             device=context.device,
-        )  # type: ignore
+        )
 
     async def process(self, context: ProcessingContext) -> AudioRef:
         assert self._pipeline is not None, "Pipeline not initialized"
         result = await self.run_pipeline_in_thread(
             self.prompt, forward_params={"do_sample": True}
         )
-        audio = await context.audio_from_numpy(result["audio"], 24_000)  # type: ignore
+        audio = await context.audio_from_numpy(result["audio"], 24_000)
         return audio
 
 
@@ -259,7 +259,7 @@ class KokoroTTS(HuggingFacePipelineNode):
             and getattr(self._kpipeline, "model", None) is not None
         ):
             # KPipeline holds a torch.nn.Module in .model
-            self._kpipeline.model.to(device)  # type: ignore
+            self._kpipeline.model.to(device)
 
     class OutputType(TypedDict):
         audio: AudioRef | None
@@ -361,11 +361,11 @@ class KokoroTTS(HuggingFacePipelineNode):
 #             variant=None,
 #             torch_dtype=torch.float32,
 #         )
-#         self._tokenizer = AutoTokenizer.from_pretrained(self.get_model_id())  # type: ignore
+#         self._tokenizer = AutoTokenizer.from_pretrained(self.get_model_id())
 
 #     async def move_to_device(self, device: str):
 #         if self._model is not None:
-#             self._model.to(device)  # type: ignore
+#             self._model.to(device)
 
 #     async def process(self, context: ProcessingContext) -> AudioRef:
 #         if self._model is None or self._tokenizer is None:
@@ -373,19 +373,19 @@ class KokoroTTS(HuggingFacePipelineNode):
 
 #         device = context.device
 
-#         input_ids = self._tokenizer(self.description, return_tensors="pt").input_ids.to(  # type: ignore
+#         input_ids = self._tokenizer(self.description, return_tensors="pt").input_ids.to(
 #             device
 #         )
 #         prompt_input_ids = self._tokenizer(
 #             self.prompt, return_tensors="pt"
-#         ).input_ids.to(  # type: ignore
+#         ).input_ids.to(
 #             device
 #         )
 
 #         generation = self._model.generate(
 #             input_ids=input_ids, prompt_input_ids=prompt_input_ids
 #         )
-#         audio_arr = generation.cpu().numpy().squeeze()  # type: ignore
+#         audio_arr = generation.cpu().numpy().squeeze()
 
 #         return await context.audio_from_numpy(
 #             audio_arr, self._model.config.sampling_rate
@@ -454,7 +454,7 @@ class TextToSpeech(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
-            self._pipeline.model.to(device)  # type: ignore
+            self._pipeline.model.to(device)
 
     async def process(self, context: ProcessingContext) -> AudioRef:
         assert self._pipeline is not None, "Pipeline not initialized"
@@ -492,7 +492,7 @@ class TextToSpeech(HuggingFacePipelineNode):
 
 #         embeddings_dataset = load_dataset(self.dataset_name, split="validation")
 #         speaker_embeddings = torch.tensor(
-#             embeddings_dataset[self.embedding_index]["xvector"]  # type: ignore
+#             embeddings_dataset[self.embedding_index]["xvector"]
 #         ).unsqueeze(0)
 #         return Tensor(value=speaker_embeddings.tolist(), dtype="float32")
 
@@ -513,8 +513,8 @@ class TextToSpeech(HuggingFacePipelineNode):
 
 #     async def preload_model(self, context: ProcessingContext):
 #         model_name = "microsoft/speecht5_tts"
-#         self._processor = SpeechT5Processor.from_pretrained(model_name)  # type: ignore
-#         self._model = SpeechT5ForTextToSpeech.from_pretrained(model_name)  # type: ignore
+#         self._processor = SpeechT5Processor.from_pretrained(model_name)
+#         self._model = SpeechT5ForTextToSpeech.from_pretrained(model_name)
 #         # self._vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan")
 
 #     async def process(self, context: ProcessingContext) -> AudioRef:
@@ -529,7 +529,7 @@ class TextToSpeech(HuggingFacePipelineNode):
 
 #         speech = self._model.generate_speech(
 #             inputs["input_ids"],
-#             speaker_embedding=speaker_embedding,  # type: ignore
+#             speaker_embedding=speaker_embedding,
 #         )
 
 #         return await context.audio_from_numpy(speech.numpy(), sample_rate=16000)

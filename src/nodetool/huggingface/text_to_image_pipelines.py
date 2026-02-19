@@ -211,21 +211,23 @@ async def load_text_to_image_pipeline(
                 )
 
                 if _is_node_model(model_id, model_path, StableDiffusionXL):
-                     from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
+                    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
                         StableDiffusionXLPipeline,
                     )
-                     pipeline = StableDiffusionXLPipeline.from_single_file(
+
+                    pipeline = StableDiffusionXLPipeline.from_single_file(
                         str(cache_path),
                         torch_dtype=(
                             torch.float16 if _is_cuda_available() else torch.float32
                         ),
                     )
-                elif _is_node_model(model_id, model_path, StableDiffusion) or _is_node_model(
-                    model_id, model_path, StableDiffusionControlNet
-                ):
+                elif _is_node_model(
+                    model_id, model_path, StableDiffusion
+                ) or _is_node_model(model_id, model_path, StableDiffusionControlNet):
                     from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
                         StableDiffusionPipeline,
                     )
+
                     pipeline = StableDiffusionPipeline.from_single_file(
                         str(cache_path),
                         torch_dtype=(

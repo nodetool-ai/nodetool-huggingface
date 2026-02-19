@@ -339,7 +339,7 @@ class Text2Image(HuggingFacePipelineNode):
         if self._pipeline is not None:
             try:
                 self._pipeline.to(device)
-            except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            except torch.OutOfMemoryError as e:
                 raise ValueError(
                     "VRAM out of memory while moving TextToImage pipeline to device. "
                     "Enable 'CPU offload' in advanced node properties or reduce image size/steps."
@@ -373,11 +373,11 @@ class Text2Image(HuggingFacePipelineNode):
                 ),
             }
             with torch.inference_mode():
-                return self._pipeline(**call_kwargs)  # type: ignore
+                return self._pipeline(**call_kwargs)
 
         output = await asyncio.to_thread(_run_pipeline_sync)
 
-        image = output.images[0]  # type: ignore
+        image = output.images[0]
         result = await context.image_from_pil(image)
 
         return {
@@ -773,6 +773,7 @@ class Flux(HuggingFacePipelineNode):
         # Apply CPU offload if enabled and not already configured
         if self._pipeline is not None and self.enable_cpu_offload:
             from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+
             apply_cpu_offload_if_needed(self._pipeline, method="sequential")
 
     async def move_to_device(self, device: str):
@@ -785,20 +786,23 @@ class Flux(HuggingFacePipelineNode):
                     # Disable CPU offload and move all components to CPU
                     try:
                         self._pipeline.to(device)
-                    except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                    except torch.OutOfMemoryError as e:
                         raise ValueError(
                             "VRAM out of memory while moving Flux to device. "
                             "Enable 'CPU offload' in the advanced node properties or reduce image size/steps."
                         ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
-                    from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+                    from nodetool.huggingface.memory_utils import (
+                        apply_cpu_offload_if_needed,
+                    )
+
                     apply_cpu_offload_if_needed(self._pipeline, method="sequential")
             else:
                 # Normal device movement without CPU offload
                 try:
                     self._pipeline.to(device)
-                except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                except torch.OutOfMemoryError as e:
                     raise ValueError(
                         "VRAM out of memory while moving Flux to device. "
                         "Try enabling 'CPU offload' in the advanced node properties, reduce image size, or lower steps."
@@ -814,7 +818,9 @@ class Flux(HuggingFacePipelineNode):
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
-        log_memory(f"Flux.process START (variant={self.variant.value}, {self.width}x{self.height})")
+        log_memory(
+            f"Flux.process START (variant={self.variant.value}, {self.width}x{self.height})"
+        )
 
         # Set up the generator for reproducibility
         generator = None
@@ -865,13 +871,17 @@ class Flux(HuggingFacePipelineNode):
         # VAE decoding happens after denoising and can hang on large images
         large_image = self.width * self.height > 1024 * 1024  # > 1 megapixel
         if large_image and hasattr(self._pipeline, "vae"):
-            log.info(f"Enabling VAE tiling for large image ({self.width}x{self.height})")
+            log.info(
+                f"Enabling VAE tiling for large image ({self.width}x{self.height})"
+            )
             try:
                 self._pipeline.vae.enable_tiling()
             except Exception as e:
                 log.warning(f"Failed to enable VAE tiling: {e}")
 
-        log.info(f"Starting Flux pipeline: {self.width}x{self.height}, {num_inference_steps} steps")
+        log.info(
+            f"Starting Flux pipeline: {self.width}x{self.height}, {num_inference_steps} steps"
+        )
 
         # Generate the image off the event loop
         def _run_pipeline_sync():
@@ -884,7 +894,7 @@ class Flux(HuggingFacePipelineNode):
                     num_inference_steps=num_inference_steps,
                     max_sequence_length=max_sequence_length,
                     generator=generator,
-                    callback_on_step_end=progress_callback,  # type: ignore
+                    callback_on_step_end=progress_callback,
                     callback_on_step_end_tensor_inputs=["latents"],
                 )
                 # Log after VAE decoding completes (this is inside the thread)
@@ -895,7 +905,9 @@ class Flux(HuggingFacePipelineNode):
         # the inference is considered stuck (e.g. nunchaku hang).
         # Allow generous time per step for slow GPUs.
         per_step_timeout = 120  # seconds per inference step
-        total_timeout = per_step_timeout * max(num_inference_steps, 4) + 60  # extra buffer for VAE decode
+        total_timeout = (
+            per_step_timeout * max(num_inference_steps, 4) + 60
+        )  # extra buffer for VAE decode
 
         try:
             output = await asyncio.wait_for(
@@ -912,7 +924,7 @@ class Flux(HuggingFacePipelineNode):
                 "The pipeline may be stuck. Try restarting the server, "
                 "reducing image size, or switching quantization mode."
             )
-        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+        except torch.OutOfMemoryError as e:
             cancel_event.set()
             pipeline_ref._interrupt = True
             run_gc("After Flux OOM error")
@@ -930,7 +942,7 @@ class Flux(HuggingFacePipelineNode):
 
         log_memory("Flux inference completed")
 
-        image = output.images[0]  # type: ignore
+        image = output.images[0]
 
         # Run GC after inference to clean up intermediate tensors
         run_gc("After Flux inference", log_before_after=True)
@@ -1047,7 +1059,7 @@ class Chroma(HuggingFacePipelineNode):
                 if device == "cpu":
                     try:
                         self._pipeline.to(device)
-                    except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                    except torch.OutOfMemoryError as e:
                         raise ValueError(
                             "VRAM out of memory while moving Chroma pipeline to device. "
                             "Enable 'CPU offload' in the advanced node properties or reduce image size/steps."
@@ -1059,7 +1071,7 @@ class Chroma(HuggingFacePipelineNode):
                 # Normal device movement without CPU offload
                 try:
                     self._pipeline.to(device)
-                except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                except torch.OutOfMemoryError as e:
                     raise ValueError(
                         "VRAM out of memory while moving Chroma pipeline to device. "
                         "Try enabling 'CPU offload' in the advanced node properties, reduce image size, or lower steps."
@@ -1089,7 +1101,7 @@ class Chroma(HuggingFacePipelineNode):
             "max_sequence_length": self.max_sequence_length,
             "callback_on_step_end": pipeline_progress_callback(
                 self.id, self.num_inference_steps, context
-            ),  # type: ignore
+            ),
             "callback_on_step_end_tensor_inputs": ["latents"],
         }
 
@@ -1103,7 +1115,7 @@ class Chroma(HuggingFacePipelineNode):
 
         output = await asyncio.to_thread(_run_pipeline_sync)
 
-        image = output.images[0]  # type: ignore
+        image = output.images[0]
 
         return await context.image_from_pil(image)
 
@@ -1385,7 +1397,7 @@ class QwenImage(HuggingFacePipelineNode):
 
         output = await asyncio.to_thread(_run_pipeline_sync)
 
-        image = output.images[0]  # type: ignore
+        image = output.images[0]
 
         return await context.image_from_pil(image)
 
@@ -1614,6 +1626,7 @@ class FluxControl(HuggingFacePipelineNode):
         _apply_vae_optimizations(self._pipeline)
         if self._pipeline is not None and self.enable_cpu_offload:
             from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+
             apply_cpu_offload_if_needed(self._pipeline, method="sequential")
 
     def _is_nunchaku_model(self) -> bool:
@@ -1678,20 +1691,23 @@ class FluxControl(HuggingFacePipelineNode):
                 if device == "cpu":
                     try:
                         self._pipeline.to(device)
-                    except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                    except torch.OutOfMemoryError as e:
                         raise ValueError(
                             "VRAM out of memory while moving Flux Control to device. "
                             "Enable 'CPU offload' in the advanced node properties or reduce image size."
                         ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
-                    from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+                    from nodetool.huggingface.memory_utils import (
+                        apply_cpu_offload_if_needed,
+                    )
+
                     apply_cpu_offload_if_needed(self._pipeline, method="sequential")
             else:
                 # Normal device movement without CPU offload
                 try:
                     self._pipeline.to(device)
-                except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+                except torch.OutOfMemoryError as e:
                     raise ValueError(
                         "VRAM out of memory while moving Flux Control to device. "
                         "Enable 'CPU offload' in the advanced node properties or reduce image size."
@@ -1731,8 +1747,8 @@ class FluxControl(HuggingFacePipelineNode):
         }
 
         try:
-            output = await self.run_pipeline_in_thread(**kwargs)  # type: ignore
-        except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
+            output = await self.run_pipeline_in_thread(**kwargs)
+        except torch.OutOfMemoryError as e:
             run_gc("After FluxControl OOM error")
             raise ValueError(
                 "VRAM out of memory while running Flux Control. "

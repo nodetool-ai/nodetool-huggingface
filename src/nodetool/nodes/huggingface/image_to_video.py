@@ -220,15 +220,15 @@ class Wan_I2V(HuggingFacePipelineNode):
             if self.enable_cpu_offload and hasattr(
                 self._pipeline, "enable_model_cpu_offload"
             ):
-                self._pipeline.enable_model_cpu_offload()  # type: ignore
+                self._pipeline.enable_model_cpu_offload()
             if self.enable_vae_slicing and hasattr(self._pipeline, "vae"):
                 try:
-                    self._pipeline.vae.enable_slicing()  # type: ignore
+                    self._pipeline.vae.enable_slicing()
                 except Exception:
                     pass
             if self.enable_vae_tiling and hasattr(self._pipeline, "vae"):
                 try:
-                    self._pipeline.vae.enable_tiling()  # type: ignore
+                    self._pipeline.vae.enable_tiling()
                 except Exception:
                     pass
 
@@ -271,11 +271,11 @@ class Wan_I2V(HuggingFacePipelineNode):
             guidance_scale=self.guidance_scale,
             generator=generator,
             max_sequence_length=self.max_sequence_length,
-            callback_on_step_end=callback_on_step_end,  # type: ignore
+            callback_on_step_end=callback_on_step_end,
         )
 
         run_gc("After Wan I2V inference", log_before_after=False)
-        return await context.video_from_frames(output.frames[0], fps=self.fps)  # type: ignore
+        return await context.video_from_frames(output.frames[0], fps=self.fps)
 
     def required_inputs(self):
         return ["input_image"]

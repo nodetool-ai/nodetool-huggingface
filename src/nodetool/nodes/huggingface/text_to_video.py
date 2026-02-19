@@ -213,10 +213,10 @@ class CogVideoX(HuggingFacePipelineNode):
             callback_on_step_end_tensor_inputs=["latents"],
         )
 
-        frames = output.frames[0]  # type: ignore
+        frames = output.frames[0]
 
         run_gc("After CogVideoX inference", log_before_after=False)
-        return await context.video_from_numpy(frames, fps=self.fps)  # type: ignore
+        return await context.video_from_numpy(frames, fps=self.fps)
 
 
 class Wan_T2V(HuggingFacePipelineNode):
@@ -384,19 +384,19 @@ class Wan_T2V(HuggingFacePipelineNode):
 
             if hasattr(self._pipeline, "enable_attention_slicing"):
                 try:
-                    self._pipeline.enable_attention_slicing()  # type: ignore
+                    self._pipeline.enable_attention_slicing()
                 except Exception:
                     pass
 
             # VAE memory helpers
             if self.enable_vae_slicing and hasattr(self._pipeline, "vae"):
                 try:
-                    self._pipeline.vae.enable_slicing()  # type: ignore
+                    self._pipeline.vae.enable_slicing()
                 except Exception:
                     pass
             if self.enable_vae_tiling and hasattr(self._pipeline, "vae"):
                 try:
-                    self._pipeline.vae.enable_tiling()  # type: ignore
+                    self._pipeline.vae.enable_tiling()
                 except Exception:
                     pass
 
@@ -405,7 +405,7 @@ class Wan_T2V(HuggingFacePipelineNode):
                 if hasattr(self._pipeline, "unet") and hasattr(
                     self._pipeline.unet, "enable_xformers_memory_efficient_attention"
                 ):
-                    self._pipeline.unet.enable_xformers_memory_efficient_attention()  # type: ignore
+                    self._pipeline.unet.enable_xformers_memory_efficient_attention()
             except Exception:
                 pass
 
@@ -445,8 +445,8 @@ class Wan_T2V(HuggingFacePipelineNode):
             width=self.width,
             generator=generator,
             max_sequence_length=self.max_sequence_length,
-            callback_on_step_end=callback_on_step_end,  # type: ignore
+            callback_on_step_end=callback_on_step_end,
         )
 
         run_gc("After Wan T2V inference", log_before_after=False)
-        return await context.video_from_frames(output.frames[0], fps=self.fps)  # type: ignore
+        return await context.video_from_frames(output.frames[0], fps=self.fps)

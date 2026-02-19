@@ -74,10 +74,10 @@ class Reranker(HuggingFacePipelineNode):
             model_class=AutoModelForSequenceClassification,
             model_id=self.model.repo_id,
         )
-        self._model.eval()  # type: ignore
+        self._model.eval()
 
     async def move_to_device(self, device: str):
-        self._model.to(device)  # type: ignore
+        self._model.to(device)
 
     async def process(self, context: ProcessingContext) -> dict[str, float]:
         import torch
@@ -91,9 +91,9 @@ class Reranker(HuggingFacePipelineNode):
                 truncation=True,
                 return_tensors="pt",
                 max_length=512,
-            )  # type: ignore
+            )
             scores = (
-                self._model(**inputs, return_dict=True)  # type: ignore
+                self._model(**inputs, return_dict=True)
                 .logits.view(
                     -1,
                 )

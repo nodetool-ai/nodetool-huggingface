@@ -127,7 +127,7 @@ class HuggingFacePipelineNode(BaseNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None and hasattr(self._pipeline, "to"):
-            self._pipeline.to(device)  # type: ignore
+            self._pipeline.to(device)
 
     async def run_pipeline_in_thread(self, *args: Any, **kwargs: Any) -> Any:
         """

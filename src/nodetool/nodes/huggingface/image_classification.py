@@ -93,7 +93,7 @@ class ImageClassifier(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
-            self._pipeline.model.to(device)  # type: ignore
+            self._pipeline.model.to(device)
 
     async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
@@ -102,12 +102,12 @@ class ImageClassifier(HuggingFacePipelineNode):
             model_id=self.get_model_id(),
             device=context.device,
             torch_dtype=select_inference_dtype(),
-        )  # type: ignore
+        )
 
     async def process(self, context: ProcessingContext) -> dict[str, float]:
         image = await context.image_to_pil(self.image)
-        result = await self.run_pipeline_in_thread(image)  # type: ignore
-        return {str(item["label"]): float(item["score"]) for item in result}  # type: ignore
+        result = await self.run_pipeline_in_thread(image)
+        return {str(item["label"]): float(item["score"]) for item in result}
 
 
 class ZeroShotImageClassifier(HuggingFacePipelineNode):
@@ -177,11 +177,11 @@ class ZeroShotImageClassifier(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
-            self._pipeline.model.to(device)  # type: ignore
+            self._pipeline.model.to(device)
 
     async def process(self, context: ProcessingContext) -> dict[str, float]:
         image = await context.image_to_pil(self.image)
         result = await self.run_pipeline_in_thread(
             image, candidate_labels=self.candidate_labels.split(",")
-        )  # type: ignore
-        return {str(item["label"]): float(item["score"]) for item in result}  # type: ignore
+        )
+        return {str(item["label"]): float(item["score"]) for item in result}

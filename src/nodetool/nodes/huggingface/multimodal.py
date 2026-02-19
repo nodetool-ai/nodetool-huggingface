@@ -72,7 +72,7 @@ class ImageToText(HuggingFacePipelineNode):
         )
 
     async def move_to_device(self, device: str):
-        self._pipeline.model.to(device)  # type: ignore
+        self._pipeline.model.to(device)
 
     async def process(self, context: ProcessingContext) -> str:
         assert self._pipeline is not None
@@ -130,7 +130,7 @@ class VisualQuestionAnswering(HuggingFacePipelineNode):
         )
 
     async def move_to_device(self, device: str):
-        self._pipeline.model.to(device)  # type: ignore
+        self._pipeline.model.to(device)
 
     async def process(self, context: ProcessingContext) -> str:
         assert self._pipeline is not None
@@ -208,7 +208,7 @@ class VisualQuestionAnswering(HuggingFacePipelineNode):
 #             torch_dtype=torch.bfloat16,
 #             variant=None,
 #         )
-#         self._model.eval()  # type: ignore
+#         self._model.eval()
 #         self._tokenizer = await self.load_model(
 #             context=context,
 #             model_id=self.model.repo_id,
@@ -217,7 +217,7 @@ class VisualQuestionAnswering(HuggingFacePipelineNode):
 #         )
 
 #     async def move_to_device(self, device: str):
-#         # self._model.to(device)  # type: ignore
+#         # self._model.to(device)
 #         pass
 
 #     async def process(self, context: ProcessingContext) -> str:
@@ -232,7 +232,7 @@ class VisualQuestionAnswering(HuggingFacePipelineNode):
 #             }
 #         ]
 
-#         res = self._model.chat(  # type: ignore
+#         res = self._model.chat(
 #             image=image,
 #             msgs=msgs,
 #             tokenizer=self._tokenizer,

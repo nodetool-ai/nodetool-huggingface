@@ -243,13 +243,13 @@ class Whisper(HuggingFacePipelineNode):
             feature_extractor=processor.feature_extractor,
             torch_dtype=torch_dtype,
             device=context.device,
-        )  # type: ignore
+        )
 
         logger.info("Whisper model initialized successfully.")
 
     async def move_to_device(self, device: str):
         assert self._pipeline
-        self._pipeline.model.to(device)  # type: ignore
+        self._pipeline.model.to(device)
         logger.info(f"Moved Whisper model to device: {device}")
 
     async def process(self, context: ProcessingContext) -> OutputType:
