@@ -13,6 +13,7 @@ from nodetool.metadata.types import (
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
+from nodetool.workflows.memory_utils import run_gc
 from nodetool.workflows.types import NodeProgress
 
 if TYPE_CHECKING:
@@ -137,6 +138,7 @@ class MusicGen(HuggingFacePipelineNode):
             )
         sampling_rate = self._model.config.audio_encoder.sampling_rate
 
+        run_gc("After MusicGen inference", log_before_after=False)
         return await context.audio_from_numpy(
             audio_values[0].cpu().numpy(), sampling_rate
         )
@@ -211,6 +213,7 @@ class MusicLDM(HuggingFacePipelineNode):
         )
         audio = audio.audios[0]  # type: ignore
 
+        run_gc("After MusicLDM inference", log_before_after=False)
         return await context.audio_from_numpy(audio, 16_000)
 
 
@@ -301,6 +304,7 @@ class AudioLDM(HuggingFacePipelineNode):
         )
         audio = audio.audios[0]  # type: ignore
 
+        run_gc("After AudioLDM inference", log_before_after=False)
         return await context.audio_from_numpy(audio, 16000)
 
 
@@ -403,6 +407,7 @@ class AudioLDM2(HuggingFacePipelineNode):
         )
         audio = audio.audios[0]  # type: ignore
 
+        run_gc("After AudioLDM2 inference", log_before_after=False)
         return await context.audio_from_numpy(audio, 16000)
 
 
@@ -475,6 +480,7 @@ class DanceDiffusion(HuggingFacePipelineNode):
         )
         audio = audio.audios[0]  # type: ignore
 
+        run_gc("After DanceDiffusion inference", log_before_after=False)
         return await context.audio_from_numpy(audio, 16000)
 
 
@@ -579,6 +585,7 @@ class StableAudioNode(HuggingFacePipelineNode):
 
         output = audio.T.float().cpu().numpy()
         sampling_rate = self._pipeline.vae.sampling_rate
+        run_gc("After StableAudio inference", log_before_after=False)
         audio = await context.audio_from_numpy(output, sampling_rate)
         return audio
 

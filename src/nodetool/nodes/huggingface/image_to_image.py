@@ -2439,6 +2439,7 @@ class FluxFill(HuggingFacePipelineNode):
         # Apply CPU offload if enabled
         if self._pipeline is not None and self.enable_cpu_offload:
             from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+
             apply_cpu_offload_if_needed(self._pipeline, method="sequential")
 
     async def move_to_device(self, device: str):
@@ -2458,7 +2459,10 @@ class FluxFill(HuggingFacePipelineNode):
                         ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
-                    from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+                    from nodetool.huggingface.memory_utils import (
+                        apply_cpu_offload_if_needed,
+                    )
+
                     apply_cpu_offload_if_needed(self._pipeline, method="sequential")
             else:
                 # Normal device movement without CPU offload
@@ -2714,13 +2718,21 @@ class FluxKontext(HuggingFacePipelineNode):
             base_model_id = base_model.repo_id or "black-forest-labs/FLUX.1-Kontext-dev"
 
             try:
-                self._pipeline = FluxKontextPipeline.from_pretrained(
-                    base_model_id,
-                    transformer=transformer,
-                    text_encoder_2=text_encoder_2,
-                    torch_dtype=torch_dtype,
-                    token=hf_token,
-                )
+                from nodetool.ml.core.model_manager import ModelManager
+
+                cache_key = f"{base_model_id}_FluxKontext_{quantization.value}"
+                cached = ModelManager.get_model(cache_key)
+                if cached is not None:
+                    self._pipeline = cached
+                else:
+                    self._pipeline = FluxKontextPipeline.from_pretrained(
+                        base_model_id,
+                        transformer=transformer,
+                        text_encoder_2=text_encoder_2,
+                        torch_dtype=torch_dtype,
+                        token=hf_token,
+                    )
+                    ModelManager.set_model(self.id, cache_key, self._pipeline)
             except torch.OutOfMemoryError as e:  # type: ignore[attr-defined]
                 raise ValueError(
                     "VRAM out of memory while loading Flux Kontext with the Nunchaku transformer. "

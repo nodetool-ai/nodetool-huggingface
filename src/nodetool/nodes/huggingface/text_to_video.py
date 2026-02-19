@@ -15,6 +15,7 @@ from .huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     available_torch_dtype,
 )
+from nodetool.workflows.memory_utils import run_gc
 from nodetool.workflows.types import NodeProgress
 
 if TYPE_CHECKING:
@@ -214,6 +215,7 @@ class CogVideoX(HuggingFacePipelineNode):
 
         frames = output.frames[0]  # type: ignore
 
+        run_gc("After CogVideoX inference", log_before_after=False)
         return await context.video_from_numpy(frames, fps=self.fps)  # type: ignore
 
 
@@ -370,7 +372,10 @@ class Wan_T2V(HuggingFacePipelineNode):
 
         if self._pipeline is not None:
             if self.enable_cpu_offload:
-                from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+                from nodetool.huggingface.memory_utils import (
+                    apply_cpu_offload_if_needed,
+                )
+
                 # Use model CPU offload as primary, fall back to sequential
                 if hasattr(self._pipeline, "enable_model_cpu_offload"):
                     apply_cpu_offload_if_needed(self._pipeline, method="model")
@@ -443,4 +448,5 @@ class Wan_T2V(HuggingFacePipelineNode):
             callback_on_step_end=callback_on_step_end,  # type: ignore
         )
 
+        run_gc("After Wan T2V inference", log_before_after=False)
         return await context.video_from_frames(output.frames[0], fps=self.fps)  # type: ignore
