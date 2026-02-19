@@ -9,7 +9,6 @@ from pydantic import Field
 
 from nodetool.workflows.processing_context import ProcessingContext
 
-
 HF_LORA_SD_MODELS = [
     HFLoraSD(repo_id="danbrown/loras", path="2d_sprite.safetensors"),
     HFLoraSD(repo_id="danbrown/loras", path="ghibli_scenery.safetensors"),

@@ -76,12 +76,12 @@ class Segmentation(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
-            self._pipeline.model.to(device)  # type: ignore
+            self._pipeline.model.to(device)
 
     async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context, "image-segmentation", self.get_model_id(), device=context.device
-        )  # type: ignore
+        )
 
     async def process(
         self, context: ProcessingContext

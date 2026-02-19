@@ -74,7 +74,7 @@ class QuestionAnswering(HuggingFacePipelineNode):
         )
 
     async def move_to_device(self, device: str):
-        self._pipeline.model.to(device)  # type: ignore
+        self._pipeline.model.to(device)
 
     class OutputType(TypedDict):
         answer: str
@@ -154,7 +154,7 @@ class TableQuestionAnswering(HuggingFacePipelineNode):
         )
 
     async def move_to_device(self, device: str):
-        self._pipeline.model.to(device)  # type: ignore
+        self._pipeline.model.to(device)
 
     class OutputType(TypedDict):
         answer: str

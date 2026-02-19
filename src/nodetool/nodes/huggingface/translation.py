@@ -211,7 +211,7 @@ class Translation(HuggingFacePipelineNode):
             # Rename local variable to avoid conflict with self.model
             pipeline_model = getattr(self._pipeline, "model", None)
             if isinstance(pipeline_model, PreTrainedModel):
-                pipeline_model.to(target_device)  # type: ignore
+                pipeline_model.to(target_device)
                 logger.info(f"Model moved to {target_device}")
             else:
                 logger.warning(

@@ -75,19 +75,19 @@ class AudioClassifier(HuggingFacePipelineNode):
             pipeline_task="audio-classification",
             model_id=self.model.repo_id,
             torch_dtype=select_inference_dtype(),
-        )  # type: ignore
+        )
 
     async def move_to_device(self, device: str):
         assert self._pipeline is not None, "Pipeline not initialized"
-        self._pipeline.model.to(device)  # type: ignore
+        self._pipeline.model.to(device)
 
     async def process(self, context: ProcessingContext) -> dict[str, float]:
         samples, _, _ = await context.audio_to_numpy(self.audio)
         result = await self.run_pipeline_in_thread(
             samples,
             top_k=self.top_k,
-        )  # type: ignore
-        return {item["label"]: item["score"] for item in result}  # type: ignore
+        )
+        return {item["label"]: item["score"] for item in result}
 
 
 class ZeroShotAudioClassifier(HuggingFacePipelineNode):
@@ -158,4 +158,4 @@ class ZeroShotAudioClassifier(HuggingFacePipelineNode):
         result = await self.run_pipeline_in_thread(
             samples, candidate_labels=self.candidate_labels.split(",")
         )
-        return {item["label"]: item["score"] for item in result}  # type: ignore
+        return {item["label"]: item["score"] for item in result}

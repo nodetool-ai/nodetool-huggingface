@@ -41,7 +41,7 @@ class HuggingFaceLogHandler(logging.Handler):
                 node_id=self.node_id,
                 node_name=self.node_name,
                 content=message,
-                severity=severity,  # type: ignore
+                severity=severity,
             )
             self.context.post_message(log_update)
         except Exception:

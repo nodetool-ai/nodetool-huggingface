@@ -13,6 +13,7 @@ from nodetool.huggingface.local_provider_utils import load_model, load_pipeline
 if TYPE_CHECKING:
     import torch
     from transformers.pipelines.base import Pipeline
+    from nodetool.types.model import UnifiedModel
 
 T = TypeVar("T")
 
@@ -90,6 +91,7 @@ class HuggingFacePipelineNode(BaseNode):
         context: ProcessingContext,
         pipeline_task: str,
         model_id: Any,
+        cache_key: str | None = None,
         **kwargs: Any,
     ):
         """Load a HuggingFace pipeline model (instance method wrapper)."""
@@ -99,6 +101,7 @@ class HuggingFacePipelineNode(BaseNode):
             pipeline_task,
             model_id,
             skip_cache=self.should_skip_cache(),
+            cache_key=cache_key,
             **kwargs,
         )
 
@@ -124,7 +127,7 @@ class HuggingFacePipelineNode(BaseNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None and hasattr(self._pipeline, "to"):
-            self._pipeline.to(device)  # type: ignore
+            self._pipeline.to(device)
 
     async def run_pipeline_in_thread(self, *args: Any, **kwargs: Any) -> Any:
         """

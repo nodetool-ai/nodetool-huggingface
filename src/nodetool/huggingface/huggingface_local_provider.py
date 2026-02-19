@@ -159,7 +159,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 generator=generator,
                 callback_on_step_end=pipeline_progress_callback(
                     node_id=node_id, total_steps=num_steps, context=context
-                ),  # type: ignore
+                ),
                 callback_on_step_end_tensor_inputs=["latents"],
             )
 
@@ -245,7 +245,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 generator=generator,
                 callback_on_step_end=pipeline_progress_callback(
                     node_id=node_id, total_steps=num_steps, context=context
-                ),  # type: ignore
+                ),
                 callback_on_step_end_tensor_inputs=["latents"],
             )
 
@@ -633,7 +633,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 max_sequence_length=max_sequence_length,
                 callback_on_step_end=pipeline_progress_callback(
                     node_id=node_id, total_steps=num_inference_steps, context=context
-                ),  # type: ignore
+                ),
             )
 
         output = await asyncio.to_thread(_run_pipeline_sync)
@@ -642,7 +642,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         frames = output.frames[0]  # pyright: ignore[reportAttributeAccessIssue]
 
         # Convert frames to video
-        video_ref = await context.video_from_frames(frames, fps=fps)  # type: ignore
+        video_ref = await context.video_from_frames(frames, fps=fps)
 
         return video_ref
 
@@ -859,16 +859,17 @@ class HuggingFaceLocalProvider(BaseProvider):
             # Handle list content
             content_list = []
             has_images = False
-            for part in message.content:
-                if isinstance(part, MessageTextContent):
-                    content_list.append({"type": "text", "text": part.text})
-                elif isinstance(part, MessageImageContent):
-                    # Load image to PIL
-                    data = await self._load_image_data(part.image)
-                    img = Image.open(BytesIO(data))
-                    # Store PIL image directly; will be extracted later
-                    content_list.append({"type": "image", "image": img})
-                    has_images = True
+            if message.content is not None and isinstance(message.content, list):
+                for part in message.content:
+                    if isinstance(part, MessageTextContent):
+                        content_list.append({"type": "text", "text": part.text})
+                    elif isinstance(part, MessageImageContent):
+                        # Load image to PIL
+                        data = await self._load_image_data(part.image)
+                        img = Image.open(BytesIO(data))
+                        # Store PIL image directly; will be extracted later
+                        content_list.append({"type": "image", "image": img})
+                        has_images = True
 
             # For text-only models, content must be a string, not a list
             # Only use list format if there are images (for VLM models)
@@ -989,7 +990,9 @@ class HuggingFaceLocalProvider(BaseProvider):
                     self.next_tokens_are_prompt = False
                     return
 
-                text = self.tokenizer.decode(value, skip_special_tokens=True)  # pyright: ignore[reportAttributeAccessIssue]
+                text = self.tokenizer.decode(
+                    value, skip_special_tokens=True
+                )  # pyright: ignore[reportAttributeAccessIssue]
                 if text:
                     self.token_queue.put(text)
 
@@ -1011,7 +1014,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 "streamer": streamer,
                 "return_full_text": False,
             }
-            cached_pipeline(prompt, **generation_kwargs)  # type: ignore[reportArgumentType]
+            cached_pipeline(prompt, **generation_kwargs)
 
         thread = threading.Thread(target=generate)
         thread.start()
@@ -1047,7 +1050,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                     "output_text",
                 ]:
                     if key in first and isinstance(first[key], str):
-                        return first[key]  # type: ignore
+                        return first[key]
             if isinstance(first, str):
                 return first
         return str(outputs)

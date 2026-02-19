@@ -165,7 +165,7 @@ class ImageTextToText(HuggingFacePipelineNode):
         provider = await get_provider(Provider.HuggingFace)
         messages = self._prepare_messages()
 
-        full_text = ""
+        full_text: str = ""
         async for chunk in provider.generate_messages(
             messages=messages,
             model=self.model.repo_id,
@@ -175,7 +175,7 @@ class ImageTextToText(HuggingFacePipelineNode):
             pipeline_task="image-text-to-text",
         ):
             if chunk.content:
-                full_text += chunk.content
+                full_text += str(chunk.content)
             yield {"text": None, "chunk": chunk}
 
         yield {

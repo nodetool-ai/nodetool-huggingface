@@ -185,13 +185,15 @@ async def load_pipeline(
     device: str | None = None,
     torch_dtype: "torch.dtype" | None = None,
     skip_cache: bool = False,
+    cache_key: str | None = None,
     **kwargs: Any,
 ):
     """Load a HuggingFace pipeline model with optional VRAM recovery."""
     if model_id == "" or model_id is None:
         raise ValueError("Please select a model")
 
-    cache_key = f"{model_id}_{pipeline_task}"
+    if cache_key is None:
+        cache_key = f"{model_id}_{pipeline_task}"
 
     cached_model = ModelManager.get_model(cache_key)
     if cached_model:
@@ -247,7 +249,7 @@ async def load_pipeline(
         from transformers import pipeline
 
         return pipeline(
-            pipeline_task,  # type: ignore
+            pipeline_task,
             model=model_id,
             torch_dtype=torch_dtype,
             **kwargs,
@@ -288,7 +290,7 @@ async def load_pipeline(
             raise
 
     ModelManager.set_model(node_id, cache_key, model)
-    return model  # type: ignore
+    return model
 
 
 async def load_model(
@@ -343,7 +345,7 @@ async def load_model(
                     **kwargs,
                 )
             else:
-                model = model_class.from_pretrained(  # type: ignore
+                model = model_class.from_pretrained(
                     model_id,
                     torch_dtype=torch_dtype,
                     variant=variant,
@@ -360,7 +362,7 @@ async def load_model(
             if "token" not in kwargs:
                 kwargs["token"] = await context.get_secret("HF_TOKEN")
 
-            model = model_class.from_pretrained(  # type: ignore
+            model = model_class.from_pretrained(
                 model_id,
                 torch_dtype=torch_dtype,
                 variant=variant,

@@ -65,15 +65,15 @@ class FillMask(HuggingFacePipelineNode):
         )
 
     async def move_to_device(self, device: str):
-        self._pipeline.model.to(device)  # type: ignore
+        self._pipeline.model.to(device)
 
     async def process(self, context: ProcessingContext) -> dict[str, Any]:
         assert self._pipeline is not None
         result = await self.run_pipeline_in_thread(self.inputs, top_k=self.top_k)
         assert result is not None
-        data = [[item["token_str"], item["score"]] for item in result]  # type: ignore
+        data = [[item["token_str"], item["score"]] for item in result]
         columns = [
             ColumnDef(name="token", data_type="string"),
             ColumnDef(name="score", data_type="float"),
         ]
-        return DataframeRef(columns=columns, data=data)  # type: ignore
+        return DataframeRef(columns=columns, data=data)
