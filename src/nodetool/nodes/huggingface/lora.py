@@ -4,11 +4,10 @@ from nodetool.metadata.types import (
     HFLoraSDXL,
     HFLoraSDXLConfig,
 )
-from nodetool.workflows.base_node import BaseNode
+from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from pydantic import Field
 
 from nodetool.workflows.processing_context import ProcessingContext
-
 
 HF_LORA_SD_MODELS = [
     HFLoraSD(repo_id="danbrown/loras", path="2d_sprite.safetensors"),
@@ -88,7 +87,7 @@ HF_LORA_SDXL_MODELS = [
 ]
 
 
-class LoRASelector(BaseNode):
+class LoRASelector(HuggingFacePipelineNode):
     """
     Selects up to 5 LoRA models to apply to a Stable Diffusion model.
     lora, model customization, fine-tuning, SD

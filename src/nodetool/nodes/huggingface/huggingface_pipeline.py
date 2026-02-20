@@ -13,6 +13,7 @@ from nodetool.huggingface.local_provider_utils import load_model, load_pipeline
 if TYPE_CHECKING:
     import torch
     from transformers.pipelines.base import Pipeline
+    from nodetool.types.model import UnifiedModel
 
 T = TypeVar("T")
 
@@ -40,6 +41,37 @@ def select_inference_dtype() -> "torch.dtype":
 
 class HuggingFacePipelineNode(BaseNode):
     @classmethod
+    def unified_recommended_models(
+        cls, include_model_info: bool = False
+    ) -> list["UnifiedModel"]:
+        from nodetool.types.model import UnifiedModel
+
+        recommended_models = cls.get_recommended_models()
+        if not recommended_models:
+            return []
+
+        unified_models: list[UnifiedModel] = []
+        for model in recommended_models:
+            repo_id = getattr(model, "repo_id", None)
+            if not repo_id:
+                continue
+            path = getattr(model, "path", None)
+            model_id = f"{repo_id}:{path}" if path else repo_id
+            unified_models.append(
+                UnifiedModel(
+                    id=model_id,
+                    repo_id=repo_id,
+                    path=path,
+                    type=getattr(model, "type", None),
+                    name=repo_id,
+                    cache_path=None,
+                    allow_patterns=getattr(model, "allow_patterns", None),
+                    ignore_patterns=getattr(model, "ignore_patterns", None),
+                )
+            )
+        return unified_models
+
+    @classmethod
     def is_visible(cls) -> bool:
         return cls is not HuggingFacePipelineNode
 
@@ -59,6 +91,7 @@ class HuggingFacePipelineNode(BaseNode):
         context: ProcessingContext,
         pipeline_task: str,
         model_id: Any,
+        cache_key: str | None = None,
         **kwargs: Any,
     ):
         """Load a HuggingFace pipeline model (instance method wrapper)."""
@@ -68,6 +101,7 @@ class HuggingFacePipelineNode(BaseNode):
             pipeline_task,
             model_id,
             skip_cache=self.should_skip_cache(),
+            cache_key=cache_key,
             **kwargs,
         )
 
@@ -93,7 +127,7 @@ class HuggingFacePipelineNode(BaseNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None and hasattr(self._pipeline, "to"):
-            self._pipeline.to(device)  # type: ignore
+            self._pipeline.to(device)
 
     async def run_pipeline_in_thread(self, *args: Any, **kwargs: Any) -> Any:
         """

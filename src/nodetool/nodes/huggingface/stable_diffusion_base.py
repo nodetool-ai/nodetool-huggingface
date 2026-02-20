@@ -6,6 +6,8 @@ from random import randint
 import asyncio
 from typing import Any, TYPE_CHECKING
 
+import numpy as np
+from PIL import Image
 
 from pydantic import Field
 
@@ -58,6 +60,37 @@ HF_IP_ADAPTER_XL_MODELS = [
 HF_STABLE_DIFFUSION_MODELS = [
     HFStableDiffusion(
         repo_id="Lykon/DreamShaper", path="DreamShaper_6.2_BakedVae_pruned.safetensors"
+    ),
+    # Anime & Stylized Art Models (SD1.5 only)
+    HFStableDiffusion(repo_id="andite/pastel-mix", path="pastelmix-fp16.safetensors"),
+    HFStableDiffusion(repo_id="prompthero/openjourney-v4", path="openjourney-v4.ckpt"),
+    HFStableDiffusion(
+        repo_id="gsdf/Counterfeit-V3.0", path="Counterfeit-V3.0_fix_fp16.safetensors"
+    ),
+    HFStableDiffusion(
+        repo_id="Linaqruf/anything-v3.0", path="anything-v3-fp16-pruned.safetensors"
+    ),
+    HFStableDiffusion(repo_id="Yntec/Deliberate", path="Deliberate.safetensors"),
+    HFStableDiffusion(
+        repo_id="WarriorMama777/OrangeMixs",
+        path="Models/AbyssOrangeMix/AbyssOrangeMix.safetensors",
+    ),
+    HFStableDiffusion(
+        repo_id="Meina/MeinaPastel", path="MeinaPastelV5 - Baked VAE.safetensors"
+    ),
+    HFStableDiffusion(
+        repo_id="JosephusCheung/ACertainThing", path="ACertainThing.ckpt"
+    ),
+    # Fantasy & Dreamlike Art
+    HFStableDiffusion(
+        repo_id="dreamlike-art/dreamlike-anime-1.0",
+        path="dreamlike-anime-1.0.safetensors",
+    ),
+    HFStableDiffusion(
+        repo_id="Envvi/Inkpunk-Diffusion", path="Inkpunk-Diffusion-v2.ckpt"
+    ),
+    HFStableDiffusion(
+        repo_id="nitrosocke/redshift-diffusion", path="redshift-diffusion-v1.ckpt"
     ),
 ]
 
@@ -392,7 +425,7 @@ async def load_loras(
     pipeline: Any, loras: list[HFLoraSDConfig] | list[HFLoraSDXLConfig]
 ):
     log.debug(f"Loading LoRAs. Total LoRAs provided: {len(loras)}")
-    loras = [lora for lora in loras if lora.lora.is_set()]  # type: ignore
+    loras = [lora for lora in loras if lora.lora.is_set()]
     log.debug(f"LoRAs after filtering (only set ones): {len(loras)}")
 
     if len(loras) == 0:
@@ -728,7 +761,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             log.debug(f"IP Adapter cache path: {cache_path}")
             log.debug(f"IP Adapter subfolder: {subfolder}")
             log.debug(f"IP Adapter weight name: {weight_name}")
-            self._pipeline.load_ip_adapter(  # type: ignore[call-arg]
+            self._pipeline.load_ip_adapter(
                 self.ip_adapter_model.repo_id,
                 subfolder=subfolder,
                 weight_name=weight_name,
@@ -838,7 +871,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
 
         if hasattr(self._pipeline, "set_ip_adapter_scale"):
             log.debug(f"Setting IP Adapter scale: {self.ip_adapter_scale}")
-            self._pipeline.set_ip_adapter_scale(self.ip_adapter_scale)  # type: ignore[attr-defined]
+            self._pipeline.set_ip_adapter_scale(self.ip_adapter_scale)
 
         width = kwargs.get("width", None)
         height = kwargs.get("height", None)
@@ -907,6 +940,15 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
 
         if self.output_type == self.StableDiffusionOutputType.IMAGE:
             log.debug("Converting PIL image to ImageRef")
+            # Handle numpy array output from some pipelines
+            if isinstance(image, np.ndarray):
+                # Squeeze batch dimensions and ensure correct shape
+                while image.ndim > 3:
+                    image = image.squeeze(0)
+                # Convert float (0-1) to uint8 (0-255) if needed
+                if image.dtype in (np.float32, np.float64):
+                    image = (image * 255).clip(0, 255).astype(np.uint8)
+                image = Image.fromarray(image)
             result = await context.image_from_pil(image)
             log.debug("Pipeline execution completed successfully")
             return result
@@ -1163,7 +1205,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             log.debug(f"IP Adapter cache path: {cache_path}")
             log.debug(f"IP Adapter subfolder: {subfolder}")
             log.debug(f"IP Adapter weight name: {weight_name}")
-            self._pipeline.load_ip_adapter(  # type: ignore[call-arg]
+            self._pipeline.load_ip_adapter(
                 self.ip_adapter_model.repo_id,
                 subfolder=subfolder,
                 weight_name=weight_name,
@@ -1369,7 +1411,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             log.debug(f"IP Adapter cache path: {cache_path}")
             log.debug(f"IP Adapter subfolder: {subfolder}")
             log.debug(f"IP Adapter weight name: {weight_name}")
-            self._pipeline.load_ip_adapter(  # type: ignore[call-arg]
+            self._pipeline.load_ip_adapter(
                 self.ip_adapter_model.repo_id,
                 subfolder=subfolder,
                 weight_name=weight_name,
@@ -1483,7 +1525,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
 
         if hasattr(self._pipeline, "set_ip_adapter_scale"):
             log.debug(f"Setting IP Adapter scale (XL): {self.ip_adapter_scale}")
-            self._pipeline.set_ip_adapter_scale(self.ip_adapter_scale)  # type: ignore[attr-defined]
+            self._pipeline.set_ip_adapter_scale(self.ip_adapter_scale)
 
         log.debug("Starting pipeline inference (XL)")
         log.debug(

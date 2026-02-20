@@ -15,6 +15,7 @@ from .huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     available_torch_dtype,
 )
+from nodetool.workflows.memory_utils import run_gc
 from nodetool.workflows.types import NodeProgress
 
 if TYPE_CHECKING:
@@ -212,9 +213,10 @@ class CogVideoX(HuggingFacePipelineNode):
             callback_on_step_end_tensor_inputs=["latents"],
         )
 
-        frames = output.frames[0]  # type: ignore
+        frames = output.frames[0]
 
-        return await context.video_from_numpy(frames, fps=self.fps)  # type: ignore
+        run_gc("After CogVideoX inference", log_before_after=False)
+        return await context.video_from_numpy(frames, fps=self.fps)
 
 
 class Wan_T2V(HuggingFacePipelineNode):
@@ -370,7 +372,10 @@ class Wan_T2V(HuggingFacePipelineNode):
 
         if self._pipeline is not None:
             if self.enable_cpu_offload:
-                from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+                from nodetool.huggingface.memory_utils import (
+                    apply_cpu_offload_if_needed,
+                )
+
                 # Use model CPU offload as primary, fall back to sequential
                 if hasattr(self._pipeline, "enable_model_cpu_offload"):
                     apply_cpu_offload_if_needed(self._pipeline, method="model")
@@ -379,19 +384,19 @@ class Wan_T2V(HuggingFacePipelineNode):
 
             if hasattr(self._pipeline, "enable_attention_slicing"):
                 try:
-                    self._pipeline.enable_attention_slicing()  # type: ignore
+                    self._pipeline.enable_attention_slicing()
                 except Exception:
                     pass
 
             # VAE memory helpers
             if self.enable_vae_slicing and hasattr(self._pipeline, "vae"):
                 try:
-                    self._pipeline.vae.enable_slicing()  # type: ignore
+                    self._pipeline.vae.enable_slicing()
                 except Exception:
                     pass
             if self.enable_vae_tiling and hasattr(self._pipeline, "vae"):
                 try:
-                    self._pipeline.vae.enable_tiling()  # type: ignore
+                    self._pipeline.vae.enable_tiling()
                 except Exception:
                     pass
 
@@ -400,7 +405,7 @@ class Wan_T2V(HuggingFacePipelineNode):
                 if hasattr(self._pipeline, "unet") and hasattr(
                     self._pipeline.unet, "enable_xformers_memory_efficient_attention"
                 ):
-                    self._pipeline.unet.enable_xformers_memory_efficient_attention()  # type: ignore
+                    self._pipeline.unet.enable_xformers_memory_efficient_attention()
             except Exception:
                 pass
 
@@ -440,7 +445,8 @@ class Wan_T2V(HuggingFacePipelineNode):
             width=self.width,
             generator=generator,
             max_sequence_length=self.max_sequence_length,
-            callback_on_step_end=callback_on_step_end,  # type: ignore
+            callback_on_step_end=callback_on_step_end,
         )
 
-        return await context.video_from_frames(output.frames[0], fps=self.fps)  # type: ignore
+        run_gc("After Wan T2V inference", log_before_after=False)
+        return await context.video_from_frames(output.frames[0], fps=self.fps)

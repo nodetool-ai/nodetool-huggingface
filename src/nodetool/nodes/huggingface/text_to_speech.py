@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import base64
 from enum import Enum
 from nodetool.workflows.types import Chunk
 from nodetool.metadata.types import AudioRef, HFTextToSpeech, HuggingFaceModel
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
+from nodetool.workflows.memory_utils import run_gc
+from nodetool.ml.core.model_manager import ModelManager
 
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Mapping, TypedDict
 from pydantic import Field
@@ -67,14 +68,14 @@ class Bark(HuggingFacePipelineNode):
             pipeline_task="text-to-speech",
             model_id=self.get_model_id(),
             device=context.device,
-        )  # type: ignore
+        )
 
     async def process(self, context: ProcessingContext) -> AudioRef:
         assert self._pipeline is not None, "Pipeline not initialized"
         result = await self.run_pipeline_in_thread(
             self.prompt, forward_params={"do_sample": True}
         )
-        audio = await context.audio_from_numpy(result["audio"], 24_000)  # type: ignore
+        audio = await context.audio_from_numpy(result["audio"], 24_000)
         return audio
 
 
@@ -226,14 +227,31 @@ class KokoroTTS(HuggingFacePipelineNode):
 
     async def preload_model(self, context: ProcessingContext):
         from kokoro.pipeline import KPipeline
+        from kokoro.model import KModel
 
-        # Initialize and cache the Kokoro pipeline
         device = context.device
-        self._kpipeline = KPipeline(
-            lang_code=self.lang_code,
-            repo_id=self.get_model_id(),
-            device=device if device else None,
-        )
+
+        # Cache key for the underlying KModel
+        cache_key = f"{self.get_model_id()}_KModel"
+        cached_model = ModelManager.get_model(cache_key)
+
+        if cached_model is not None:
+            # Reuse the cached KModel instance
+            self._kpipeline = KPipeline(
+                lang_code=self.lang_code,
+                repo_id=self.get_model_id(),
+                model=cached_model,
+            )
+        else:
+            # Create a new KPipeline (which creates a new KModel)
+            self._kpipeline = KPipeline(
+                lang_code=self.lang_code,
+                repo_id=self.get_model_id(),
+                device=device if device else None,
+            )
+            # Cache the KModel for future reuse
+            if self._kpipeline.model is not None:
+                ModelManager.set_model(self.id, cache_key, self._kpipeline.model)
 
     async def move_to_device(self, device: str):
         if (
@@ -241,7 +259,7 @@ class KokoroTTS(HuggingFacePipelineNode):
             and getattr(self._kpipeline, "model", None) is not None
         ):
             # KPipeline holds a torch.nn.Module in .model
-            self._kpipeline.model.to(device)  # type: ignore
+            self._kpipeline.model.to(device)
 
     class OutputType(TypedDict):
         audio: AudioRef | None
@@ -266,26 +284,10 @@ class KokoroTTS(HuggingFacePipelineNode):
             if audio is None:
                 continue
             audio = audio.detach().cpu().numpy()
-            # Convert to int16 for audio output
-            if audio.dtype != np.int16:
-                # Assume audio is float32 in [-1, 1], scale to int16
-                audio_int16 = np.clip(audio, -1.0, 1.0)
-                audio_int16 = (audio_int16 * 32767.0).astype(np.int16)
-            else:
-                audio_int16 = audio
-            audio_chunks.append(audio_int16)
-            audio_base64 = base64.b64encode(audio_int16.tobytes()).decode("utf-8")
-            chunk = Chunk(
-                content=audio_base64,
-                content_type="audio",
-                content_metadata={
-                    "sample_rate": 24_000,
-                    "channels": 1,
-                    "dtype": "int16",
-                },
-                done=False,
-            )
-            yield {"chunk": chunk, "audio": None}
+            # Ensure audio is float32 in [-1, 1] range for consistent processing
+            if audio.dtype != np.float32:
+                audio = audio.astype(np.float32)
+            audio_chunks.append(audio)
 
         if not audio_chunks:
             raise ValueError("Kokoro did not produce any audio")
@@ -296,6 +298,8 @@ class KokoroTTS(HuggingFacePipelineNode):
             combined = np.concatenate(audio_chunks)
 
         # Kokoro outputs 24kHz mono
+        # audio_from_numpy expects float32 in [-1, 1] range
+        run_gc("After Kokoro TTS inference", log_before_after=False)
         yield {
             "audio": await context.audio_from_numpy(combined, 24_000),
             "chunk": Chunk(content="", done=True, content_type="audio"),
@@ -357,11 +361,11 @@ class KokoroTTS(HuggingFacePipelineNode):
 #             variant=None,
 #             torch_dtype=torch.float32,
 #         )
-#         self._tokenizer = AutoTokenizer.from_pretrained(self.get_model_id())  # type: ignore
+#         self._tokenizer = AutoTokenizer.from_pretrained(self.get_model_id())
 
 #     async def move_to_device(self, device: str):
 #         if self._model is not None:
-#             self._model.to(device)  # type: ignore
+#             self._model.to(device)
 
 #     async def process(self, context: ProcessingContext) -> AudioRef:
 #         if self._model is None or self._tokenizer is None:
@@ -369,19 +373,19 @@ class KokoroTTS(HuggingFacePipelineNode):
 
 #         device = context.device
 
-#         input_ids = self._tokenizer(self.description, return_tensors="pt").input_ids.to(  # type: ignore
+#         input_ids = self._tokenizer(self.description, return_tensors="pt").input_ids.to(
 #             device
 #         )
 #         prompt_input_ids = self._tokenizer(
 #             self.prompt, return_tensors="pt"
-#         ).input_ids.to(  # type: ignore
+#         ).input_ids.to(
 #             device
 #         )
 
 #         generation = self._model.generate(
 #             input_ids=input_ids, prompt_input_ids=prompt_input_ids
 #         )
-#         audio_arr = generation.cpu().numpy().squeeze()  # type: ignore
+#         audio_arr = generation.cpu().numpy().squeeze()
 
 #         return await context.audio_from_numpy(
 #             audio_arr, self._model.config.sampling_rate
@@ -450,7 +454,7 @@ class TextToSpeech(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
-            self._pipeline.model.to(device)  # type: ignore
+            self._pipeline.model.to(device)
 
     async def process(self, context: ProcessingContext) -> AudioRef:
         assert self._pipeline is not None, "Pipeline not initialized"
@@ -488,7 +492,7 @@ class TextToSpeech(HuggingFacePipelineNode):
 
 #         embeddings_dataset = load_dataset(self.dataset_name, split="validation")
 #         speaker_embeddings = torch.tensor(
-#             embeddings_dataset[self.embedding_index]["xvector"]  # type: ignore
+#             embeddings_dataset[self.embedding_index]["xvector"]
 #         ).unsqueeze(0)
 #         return Tensor(value=speaker_embeddings.tolist(), dtype="float32")
 
@@ -509,8 +513,8 @@ class TextToSpeech(HuggingFacePipelineNode):
 
 #     async def preload_model(self, context: ProcessingContext):
 #         model_name = "microsoft/speecht5_tts"
-#         self._processor = SpeechT5Processor.from_pretrained(model_name)  # type: ignore
-#         self._model = SpeechT5ForTextToSpeech.from_pretrained(model_name)  # type: ignore
+#         self._processor = SpeechT5Processor.from_pretrained(model_name)
+#         self._model = SpeechT5ForTextToSpeech.from_pretrained(model_name)
 #         # self._vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan")
 
 #     async def process(self, context: ProcessingContext) -> AudioRef:
@@ -525,7 +529,7 @@ class TextToSpeech(HuggingFacePipelineNode):
 
 #         speech = self._model.generate_speech(
 #             inputs["input_ids"],
-#             speaker_embedding=speaker_embedding,  # type: ignore
+#             speaker_embedding=speaker_embedding,
 #         )
 
 #         return await context.audio_from_numpy(speech.numpy(), sample_rate=16000)

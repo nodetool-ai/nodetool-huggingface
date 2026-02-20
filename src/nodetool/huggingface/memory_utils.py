@@ -60,14 +60,15 @@ def has_cpu_offload_enabled(pipeline) -> bool:
     Returns:
         True if CPU offload appears to be already configured by diffusers.
     """
-    if getattr(pipeline, '_nodetool_cpu_offload_applied', False):
+    if getattr(pipeline, "_nodetool_cpu_offload_applied", False):
         return True
 
     try:
         from accelerate.hooks import AlignDevicesHook
-        for name in ['transformer', 'unet', 'vae', 'text_encoder', 'text_encoder_2']:
+
+        for name in ["transformer", "unet", "vae", "text_encoder", "text_encoder_2"]:
             component = getattr(pipeline, name, None)
-            if component is not None and hasattr(component, '_hf_hook'):
+            if component is not None and hasattr(component, "_hf_hook"):
                 if isinstance(component._hf_hook, AlignDevicesHook):
                     return True
     except ImportError:

@@ -30,6 +30,7 @@ It employs a robust strategy to determine the correct pipeline class:
 This multi-layered approach ensures we reliably load both well-tagged models and ambiguous custom checkpoints
 using our internal knowledge base of node definitions.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -220,10 +221,11 @@ async def load_image_to_image_pipeline(
                 )
 
                 if _is_node_model(model_id, model_path, StableDiffusionXL):
-                     from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
+                    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
                         StableDiffusionXLImg2ImgPipeline,
                     )
-                     pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
+
+                    pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
                         str(cache_path),
                         torch_dtype=(
                             _get_torch().float16
@@ -242,6 +244,7 @@ async def load_image_to_image_pipeline(
                     from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import (
                         StableDiffusionImg2ImgPipeline,
                     )
+
                     pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
                         str(cache_path),
                         torch_dtype=(

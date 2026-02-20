@@ -13,6 +13,7 @@ from nodetool.metadata.types import (
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
+from nodetool.workflows.memory_utils import run_gc
 from nodetool.workflows.types import NodeProgress
 
 if TYPE_CHECKING:
@@ -104,8 +105,10 @@ class MusicGen(HuggingFacePipelineNode):
         if not context.is_huggingface_model_cached(self.model.repo_id):
             raise ValueError(f"Download the model {self.model.repo_id} first")
 
-        self._processor = await self.load_model(context, AutoProcessor, self.model.repo_id)  # type: ignore
-        self._model = await self.load_model(  # type: ignore
+        self._processor = await self.load_model(
+            context, AutoProcessor, self.model.repo_id
+        )
+        self._model = await self.load_model(
             context=context,
             model_class=MusicgenForConditionalGeneration,
             model_id=self.model.repo_id,
@@ -114,9 +117,9 @@ class MusicGen(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._model is not None:
-            self._model.to(device)  # type: ignore
+            self._model.to(device)
 
-    async def process(self, context: ProcessingContext) -> AudioRef:  # type: ignore
+    async def process(self, context: ProcessingContext) -> AudioRef:
         if self._model is None:
             raise ValueError("Model not initialized")
 
@@ -126,7 +129,7 @@ class MusicGen(HuggingFacePipelineNode):
             text=[self.prompt],
             padding=True,
             return_tensors="pt",
-        )  # type: ignore
+        )
 
         inputs["input_ids"] = inputs["input_ids"].to(context.device)
         inputs["attention_mask"] = inputs["attention_mask"].to(context.device)
@@ -137,6 +140,7 @@ class MusicGen(HuggingFacePipelineNode):
             )
         sampling_rate = self._model.config.audio_encoder.sampling_rate
 
+        run_gc("After MusicGen inference", log_before_after=False)
         return await context.audio_from_numpy(
             audio_values[0].cpu().numpy(), sampling_rate
         )
@@ -209,8 +213,9 @@ class MusicLDM(HuggingFacePipelineNode):
             num_inference_steps=self.num_inference_steps,
             audio_length_in_s=self.audio_length_in_s,
         )
-        audio = audio.audios[0]  # type: ignore
+        audio = audio.audios[0]
 
+        run_gc("After MusicLDM inference", log_before_after=False)
         return await context.audio_from_numpy(audio, 16_000)
 
 
@@ -296,11 +301,12 @@ class AudioLDM(HuggingFacePipelineNode):
             num_inference_steps=self.num_inference_steps,
             audio_length_in_s=self.audio_length_in_s,
             generator=generator,
-            callback=progress_callback,  # type: ignore
+            callback=progress_callback,
             callback_steps=1,
         )
-        audio = audio.audios[0]  # type: ignore
+        audio = audio.audios[0]
 
+        run_gc("After AudioLDM inference", log_before_after=False)
         return await context.audio_from_numpy(audio, 16000)
 
 
@@ -398,11 +404,12 @@ class AudioLDM2(HuggingFacePipelineNode):
             audio_length_in_s=self.audio_length_in_s,
             num_waveforms_per_prompt=self.num_waveforms_per_prompt,
             generator=generator,
-            callback=progress_callback,  # type: ignore
+            callback=progress_callback,
             callback_steps=1,
         )
-        audio = audio.audios[0]  # type: ignore
+        audio = audio.audios[0]
 
+        run_gc("After AudioLDM2 inference", log_before_after=False)
         return await context.audio_from_numpy(audio, 16000)
 
 
@@ -473,8 +480,9 @@ class DanceDiffusion(HuggingFacePipelineNode):
             num_inference_steps=self.num_inference_steps,
             generator=generator,
         )
-        audio = audio.audios[0]  # type: ignore
+        audio = audio.audios[0]
 
+        run_gc("After DanceDiffusion inference", log_before_after=False)
         return await context.audio_from_numpy(audio, 16000)
 
 
@@ -573,12 +581,13 @@ class StableAudioNode(HuggingFacePipelineNode):
             audio_end_in_s=self.duration,
             num_waveforms_per_prompt=1,
             generator=generator,
-            callback=progress_callback,  # type: ignore
+            callback=progress_callback,
         )
-        audio = audio.audios[0]  # type: ignore
+        audio = audio.audios[0]
 
         output = audio.T.float().cpu().numpy()
         sampling_rate = self._pipeline.vae.sampling_rate
+        run_gc("After StableAudio inference", log_before_after=False)
         audio = await context.audio_from_numpy(output, sampling_rate)
         return audio
 
@@ -665,7 +674,7 @@ class StableAudioNode(HuggingFacePipelineNode):
 
 #     async def move_to_device(self, device: str):
 #         if self._model is not None:
-#             self._model.to(device)  # type: ignore
+#             self._model.to(device)
 
 #     async def process(self, context: ProcessingContext) -> AudioRef:
 #         if (
@@ -694,7 +703,7 @@ class StableAudioNode(HuggingFacePipelineNode):
 #             padding=True,
 #             truncation=True,
 #             max_length=self.max_length,
-#         ).input_ids.to(  # type: ignore
+#         ).input_ids.to(
 #             context.device
 #         )
 
@@ -722,7 +731,7 @@ class StableAudioNode(HuggingFacePipelineNode):
 #                 return_tensors="pt",
 #                 padding=True,
 #                 max_length=self.max_length,
-#             ).input_values.to(  # type: ignore
+#             ).input_values.to(
 #                 context.device
 #             )
 
@@ -733,7 +742,7 @@ class StableAudioNode(HuggingFacePipelineNode):
 #             padding=True,
 #             truncation=True,
 #             max_length=self.max_length,
-#         ).input_ids.to(  # type: ignore
+#         ).input_ids.to(
 #             context.device
 #         )
 
@@ -748,6 +757,6 @@ class StableAudioNode(HuggingFacePipelineNode):
 
 #         with torch.inference_mode():
 #             generation = self._model.generate(**gen_kwargs)
-#             audio_arr = generation.cpu().numpy().squeeze()  # type: ignore
+#             audio_arr = generation.cpu().numpy().squeeze()
 
 #         return await context.audio_from_numpy(audio_arr, sampling_rate)

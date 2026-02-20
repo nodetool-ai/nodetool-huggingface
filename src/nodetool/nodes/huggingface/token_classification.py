@@ -59,13 +59,13 @@ class TokenClassification(HuggingFacePipelineNode):
         )
         data = [
             [
-                item["entity_group"],  # type: ignore
-                item["word"],  # type: ignore
-                item["start"],  # type: ignore
-                item["end"],  # type: ignore
-                float(item["score"]),  # type: ignore
+                item["entity_group"],
+                item["word"],
+                item["start"],
+                item["end"],
+                float(item["score"]),
             ]
-            for item in result  # type: ignore
+            for item in result
         ]
         columns = [
             ColumnDef(name="entity", data_type="string"),

@@ -104,11 +104,11 @@ class ImageToText(HuggingFacePipelineNode):
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
             try:
-                self._pipeline.model.to(device)  # type: ignore
+                self._pipeline.model.to(device)
             except AttributeError:
                 # Some models might have a different structure
                 try:
-                    self._pipeline.to(device)  # type: ignore
+                    self._pipeline.to(device)
                 except:
                     # If both approaches fail, we'll continue without moving the model
                     pass
@@ -121,14 +121,14 @@ class ImageToText(HuggingFacePipelineNode):
         if self.max_new_tokens is not None:
             kwargs["max_new_tokens"] = self.max_new_tokens
 
-        result = await self.run_pipeline_in_thread(image, **kwargs)  # type: ignore
+        result = await self.run_pipeline_in_thread(image, **kwargs)
 
         # Handle different output formats from different models
         if isinstance(result, list) and len(result) > 0:
             if isinstance(result[0], dict) and "generated_text" in result[0]:
-                return result[0]["generated_text"]  # type: ignore
+                return result[0]["generated_text"]
             elif isinstance(result[0], str):
-                return result[0]  # type: ignore
+                return result[0]
 
         # Fallback for other formats
-        return str(result)  # type: ignore
+        return str(result)
