@@ -1,7 +1,7 @@
 {
   "name": "nodetool-huggingface",
   "description": "HuggingFace nodes for Nodetool",
-  "version": "0.6.3-rc.24",
+  "version": "0.6.3-rc.25",
   "authors": [
     "Matthias Georgi <matti.georgi@gmail.com>"
   ],
@@ -95,7 +95,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 494532,
+          "downloads": 496819,
           "likes": 340
         },
         {
@@ -123,7 +123,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 17171,
+          "downloads": 16931,
           "likes": 242
         }
       ],
@@ -221,7 +221,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 403725,
+          "downloads": 425696,
           "likes": 68
         }
       ],
@@ -562,8 +562,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6321042,
-          "likes": 5403
+          "downloads": 6459036,
+          "likes": 5406
         },
         {
           "id": "openai/whisper-large-v3-turbo",
@@ -691,8 +691,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3268060,
-          "likes": 2827
+          "downloads": 3383798,
+          "likes": 2830
         },
         {
           "id": "openai/whisper-large-v2",
@@ -822,7 +822,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 82055,
+          "downloads": 80668,
           "likes": 1783
         },
         {
@@ -954,7 +954,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 510407,
+          "downloads": 477216,
           "likes": 276
         },
         {
@@ -1086,7 +1086,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2217784,
+          "downloads": 2325176,
           "likes": 523
         },
         {
@@ -1209,7 +1209,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 501734,
+          "downloads": 486885,
           "likes": 516
         }
       ],
@@ -1287,7 +1287,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1144426,
+          "downloads": 1148557,
           "likes": 30
         },
         {
@@ -1311,7 +1311,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 458265,
+          "downloads": 459641,
           "likes": 2
         },
         {
@@ -1335,7 +1335,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 164233,
+          "downloads": 163836,
           "likes": 28
         },
         {
@@ -1366,7 +1366,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 83765,
+          "downloads": 96165,
           "likes": 201
         }
       ],
@@ -1448,8 +1448,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1550551,
-          "likes": 768
+          "downloads": 1542681,
+          "likes": 769
         },
         {
           "id": "BAAI/bge-base-en-v1.5",
@@ -1487,7 +1487,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 4457314,
+          "downloads": 4570270,
           "likes": 403
         },
         {
@@ -1526,8 +1526,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 5150447,
-          "likes": 627
+          "downloads": 5233851,
+          "likes": 628
         }
       ],
       "basic_fields": [
@@ -1627,8 +1627,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 52328731,
-          "likes": 2565
+          "downloads": 53802046,
+          "likes": 2566
         },
         {
           "id": "roberta-base",
@@ -1663,7 +1663,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 8308683,
+          "downloads": 8557191,
           "likes": 561
         },
         {
@@ -1698,8 +1698,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 7272788,
-          "likes": 833
+          "downloads": 7500307,
+          "likes": 834
         },
         {
           "id": "albert-base-v2",
@@ -1732,7 +1732,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 373779,
+          "downloads": 368711,
           "likes": 140
         }
       ],
@@ -1829,8 +1829,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 4024091,
-          "likes": 937
+          "downloads": 3993867,
+          "likes": 938
         },
         {
           "id": "microsoft/resnet-50",
@@ -1862,8 +1862,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 186978,
-          "likes": 479
+          "downloads": 189789,
+          "likes": 480
         },
         {
           "id": "microsoft/resnet-18",
@@ -1894,7 +1894,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 107560,
+          "downloads": 102043,
           "likes": 62
         },
         {
@@ -1925,7 +1925,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2574161,
+          "downloads": 2597063,
           "likes": 83
         },
         {
@@ -1956,7 +1956,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6699,
+          "downloads": 6885,
           "likes": 20
         },
         {
@@ -1985,7 +1985,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 307574,
+          "downloads": 311096,
           "likes": 146
         },
         {
@@ -2014,7 +2014,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 36258777,
+          "downloads": 36467497,
           "likes": 996
         },
         {
@@ -2043,7 +2043,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 205119,
+          "downloads": 208331,
           "likes": 36
         }
       ],
@@ -2143,7 +2143,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 18050603,
+          "downloads": 18261788,
           "likes": 862
         },
         {
@@ -2170,7 +2170,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 753033,
+          "downloads": 724007,
           "likes": 441
         },
         {
@@ -2195,7 +2195,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 33763,
+          "downloads": 30000,
           "likes": 44
         }
       ],
@@ -2303,7 +2303,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 8083,
+          "downloads": 7987,
           "likes": 123
         }
       ],
@@ -2391,7 +2391,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 23264,
+          "downloads": 21679,
           "likes": 14
         },
         {
@@ -2422,7 +2422,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 302897,
+          "downloads": 289017,
           "likes": 485
         }
       ],
@@ -2675,7 +2675,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 49445,
+          "downloads": 49294,
           "likes": 577
         },
         {
@@ -2711,7 +2711,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 4659,
+          "downloads": 5149,
           "likes": 55
         },
         {
@@ -2736,7 +2736,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 405787,
+          "downloads": 418559,
           "likes": 303
         },
         {
@@ -2762,7 +2762,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 17790,
+          "downloads": 17654,
           "likes": 30
         },
         {
@@ -2788,7 +2788,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 42202,
+          "downloads": 14389,
           "likes": 22
         },
         {
@@ -2813,7 +2813,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3150,
+          "downloads": 3535,
           "likes": 94
         },
         {
@@ -2838,7 +2838,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6462,
+          "downloads": 6695,
           "likes": 51
         },
         {
@@ -2862,8 +2862,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 47763,
-          "likes": 586
+          "downloads": 43539,
+          "likes": 588
         }
       ],
       "basic_fields": [
@@ -3033,8 +3033,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 21441542,
-          "likes": 610
+          "downloads": 19875282,
+          "likes": 613
         },
         {
           "id": "Qwen/Qwen2.5-VL-7B-Instruct",
@@ -3061,8 +3061,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3080500,
-          "likes": 1454
+          "downloads": 3134126,
+          "likes": 1455
         },
         {
           "id": "Qwen/Qwen2.5-VL-32B-Instruct",
@@ -3088,7 +3088,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 181024,
+          "downloads": 181568,
           "likes": 476
         },
         {
@@ -3116,7 +3116,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 171229,
+          "downloads": 186447,
           "likes": 595
         },
         {
@@ -3148,7 +3148,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 5576,
+          "downloads": 4508,
           "likes": 14
         },
         {
@@ -3180,7 +3180,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1718,
+          "downloads": 1890,
           "likes": 4
         },
         {
@@ -3213,7 +3213,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 19178,
+          "downloads": 18076,
           "likes": 51
         },
         {
@@ -3246,7 +3246,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 9185,
+          "downloads": 9385,
           "likes": 14
         },
         {
@@ -3278,7 +3278,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 946,
+          "downloads": 836,
           "likes": 14
         },
         {
@@ -3310,7 +3310,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 448,
+          "downloads": 491,
           "likes": 3
         },
         {
@@ -3343,7 +3343,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 69,
+          "downloads": 66,
           "likes": 8
         },
         {
@@ -3376,7 +3376,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 544,
+          "downloads": 468,
           "likes": 15
         }
       ],
@@ -3518,8 +3518,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 12356193,
-          "likes": 325
+          "downloads": 12574304,
+          "likes": 330
         },
         {
           "id": "Qwen/Qwen3-VL-2B-Thinking",
@@ -3544,7 +3544,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 33574,
+          "downloads": 39268,
           "likes": 105
         },
         {
@@ -3570,8 +3570,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1011000,
-          "likes": 332
+          "downloads": 1051390,
+          "likes": 334
         },
         {
           "id": "Qwen/Qwen3-VL-4B-Thinking",
@@ -3596,7 +3596,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 59845,
+          "downloads": 47666,
           "likes": 102
         },
         {
@@ -3628,8 +3628,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3247278,
-          "likes": 760
+          "downloads": 3731926,
+          "likes": 763
         },
         {
           "id": "Qwen/Qwen3-VL-8B-Thinking",
@@ -3654,8 +3654,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 176090,
-          "likes": 187
+          "downloads": 177626,
+          "likes": 188
         },
         {
           "id": "Qwen/Qwen3-VL-30B-A3B-Instruct",
@@ -3680,7 +3680,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1731677,
+          "downloads": 1722032,
           "likes": 535
         },
         {
@@ -3706,7 +3706,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 215068,
+          "downloads": 180235,
           "likes": 191
         },
         {
@@ -3732,8 +3732,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 396410,
-          "likes": 178
+          "downloads": 407292,
+          "likes": 179
         },
         {
           "id": "Qwen/Qwen3-VL-32B-Thinking",
@@ -3758,7 +3758,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 18153,
+          "downloads": 20090,
           "likes": 87
         },
         {
@@ -3784,7 +3784,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 399684,
+          "downloads": 397439,
           "likes": 369
         },
         {
@@ -3810,7 +3810,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2726932,
+          "downloads": 2734930,
           "likes": 378
         },
         {
@@ -3846,7 +3846,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2381,
+          "downloads": 1913,
           "likes": 2
         },
         {
@@ -3904,7 +3904,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 5326,
+          "downloads": 5284,
           "likes": 0
         },
         {
@@ -3932,7 +3932,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 112,
+          "downloads": 106,
           "likes": 1
         },
         {
@@ -3960,7 +3960,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 11339,
+          "downloads": 10870,
           "likes": 3
         },
         {
@@ -3988,7 +3988,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 544,
+          "downloads": 662,
           "likes": 2
         },
         {
@@ -4018,7 +4018,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1612,
+          "downloads": 1491,
           "likes": 4
         },
         {
@@ -4048,7 +4048,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 189,
+          "downloads": 178,
           "likes": 2
         }
       ],
@@ -4248,7 +4248,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 129941,
+          "downloads": 129145,
           "likes": 992
         },
         {
@@ -4277,7 +4277,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1745,
+          "downloads": 1744,
           "likes": 22
         },
         {
@@ -4306,7 +4306,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1745,
+          "downloads": 1744,
           "likes": 22
         }
       ],
@@ -4438,8 +4438,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 79641,
-          "likes": 2551
+          "downloads": 76906,
+          "likes": 2552
         },
         {
           "id": "nunchaku-tech/nunchaku-flux.1-kontext-dev:svdq-int4_r32-flux.1-kontext-dev.safetensors",
@@ -4467,7 +4467,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 7551,
+          "downloads": 7347,
           "likes": 64
         },
         {
@@ -4496,7 +4496,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 7551,
+          "downloads": 7347,
           "likes": 64
         },
         {
@@ -4834,7 +4834,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 549,
+          "downloads": 530,
           "likes": 4
         }
       ],
@@ -4989,8 +4989,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 66615,
-          "likes": 2310
+          "downloads": 70833,
+          "likes": 2311
         },
         {
           "id": "nunchaku-tech/nunchaku-qwen-image-edit:svdq-int4_r32-qwen-image-edit.safetensors",
@@ -5018,7 +5018,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 33959,
+          "downloads": 36635,
           "likes": 110
         },
         {
@@ -5047,7 +5047,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 33959,
+          "downloads": 36635,
           "likes": 110
         },
         {
@@ -5076,7 +5076,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 32648,
+          "downloads": 24138,
           "likes": 279
         },
         {
@@ -5105,7 +5105,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 32648,
+          "downloads": 24138,
           "likes": 279
         }
       ],
@@ -5614,7 +5614,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14642,
+          "downloads": 14475,
           "likes": 58
         },
         {
@@ -5640,7 +5640,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 22812,
+          "downloads": 23857,
           "likes": 132
         },
         {
@@ -5666,7 +5666,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 11850,
+          "downloads": 11245,
           "likes": 17
         },
         {
@@ -5692,7 +5692,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10532,
+          "downloads": 10456,
           "likes": 74
         },
         {
@@ -5718,7 +5718,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 8521,
+          "downloads": 8392,
           "likes": 31
         },
         {
@@ -5744,8 +5744,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14993,
-          "likes": 132
+          "downloads": 15033,
+          "likes": 133
         },
         {
           "id": "lllyasviel/sd_control_collection:ip-adapter_sd15_plus.pth",
@@ -5878,28 +5878,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 52366,
+          "downloads": 58000,
           "likes": 999
-        },
-        {
-          "id": "waifu-diffusion/wd-1-5-beta3:wd-illusion-fp16.safetensors",
-          "type": "hf.stable_diffusion",
-          "name": "waifu-diffusion/wd-1-5-beta3",
-          "repo_id": "waifu-diffusion/wd-1-5-beta3",
-          "path": "wd-illusion-fp16.safetensors",
-          "size_on_disk": 2580068696,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "license:other",
-            "endpoints_compatible",
-            "diffusers:StableDiffusionPipeline",
-            "region:us"
-          ],
-          "has_model_index": true,
-          "downloads": 996,
-          "likes": 137
         },
         {
           "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
@@ -5927,7 +5907,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 2337,
+          "downloads": 2353,
           "likes": 1252
         },
         {
@@ -5996,7 +5976,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 30,
+          "downloads": 18,
           "likes": 5
         },
         {
@@ -6018,7 +5998,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 935,
+          "downloads": 973,
           "likes": 3890
         },
         {
@@ -6068,7 +6048,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 81,
+          "downloads": 79,
           "likes": 188
         },
         {
@@ -6093,7 +6073,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 3720,
+          "downloads": 3444,
           "likes": 259
         },
         {
@@ -6115,7 +6095,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 320,
+          "downloads": 330,
           "likes": 992
         },
         {
@@ -6138,7 +6118,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 99,
+          "downloads": 104,
           "likes": 614
         }
       ],
@@ -6458,7 +6438,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14642,
+          "downloads": 14475,
           "likes": 58
         },
         {
@@ -6484,7 +6464,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 22812,
+          "downloads": 23857,
           "likes": 132
         },
         {
@@ -6510,7 +6490,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 11850,
+          "downloads": 11245,
           "likes": 17
         },
         {
@@ -6536,7 +6516,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10532,
+          "downloads": 10456,
           "likes": 74
         },
         {
@@ -6562,7 +6542,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 8521,
+          "downloads": 8392,
           "likes": 31
         },
         {
@@ -6588,8 +6568,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14993,
-          "likes": 132
+          "downloads": 15033,
+          "likes": 133
         },
         {
           "id": "lllyasviel/sd_control_collection:ip-adapter_sd15_plus.pth",
@@ -6722,28 +6702,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 52366,
+          "downloads": 58000,
           "likes": 999
-        },
-        {
-          "id": "waifu-diffusion/wd-1-5-beta3:wd-illusion-fp16.safetensors",
-          "type": "hf.stable_diffusion",
-          "name": "waifu-diffusion/wd-1-5-beta3",
-          "repo_id": "waifu-diffusion/wd-1-5-beta3",
-          "path": "wd-illusion-fp16.safetensors",
-          "size_on_disk": 2580068696,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "license:other",
-            "endpoints_compatible",
-            "diffusers:StableDiffusionPipeline",
-            "region:us"
-          ],
-          "has_model_index": true,
-          "downloads": 996,
-          "likes": 137
         },
         {
           "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
@@ -6771,7 +6731,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 2337,
+          "downloads": 2353,
           "likes": 1252
         },
         {
@@ -6840,7 +6800,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 30,
+          "downloads": 18,
           "likes": 5
         },
         {
@@ -6862,7 +6822,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 935,
+          "downloads": 973,
           "likes": 3890
         },
         {
@@ -6912,7 +6872,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 81,
+          "downloads": 79,
           "likes": 188
         },
         {
@@ -6937,7 +6897,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 3720,
+          "downloads": 3444,
           "likes": 259
         },
         {
@@ -6959,7 +6919,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 320,
+          "downloads": 330,
           "likes": 992
         },
         {
@@ -6982,7 +6942,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 99,
+          "downloads": 104,
           "likes": 614
         }
       ],
@@ -7380,28 +7340,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 52366,
+          "downloads": 58000,
           "likes": 999
-        },
-        {
-          "id": "waifu-diffusion/wd-1-5-beta3:wd-illusion-fp16.safetensors",
-          "type": "hf.stable_diffusion",
-          "name": "waifu-diffusion/wd-1-5-beta3",
-          "repo_id": "waifu-diffusion/wd-1-5-beta3",
-          "path": "wd-illusion-fp16.safetensors",
-          "size_on_disk": 2580068696,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "license:other",
-            "endpoints_compatible",
-            "diffusers:StableDiffusionPipeline",
-            "region:us"
-          ],
-          "has_model_index": true,
-          "downloads": 996,
-          "likes": 137
         },
         {
           "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
@@ -7429,7 +7369,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 2337,
+          "downloads": 2353,
           "likes": 1252
         },
         {
@@ -7498,7 +7438,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 30,
+          "downloads": 18,
           "likes": 5
         },
         {
@@ -7520,7 +7460,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 935,
+          "downloads": 973,
           "likes": 3890
         },
         {
@@ -7570,7 +7510,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 81,
+          "downloads": 79,
           "likes": 188
         },
         {
@@ -7595,7 +7535,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 3720,
+          "downloads": 3444,
           "likes": 259
         },
         {
@@ -7617,7 +7557,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 320,
+          "downloads": 330,
           "likes": 992
         },
         {
@@ -7640,7 +7580,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 99,
+          "downloads": 104,
           "likes": 614
         }
       ],
@@ -7996,28 +7936,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 52366,
+          "downloads": 58000,
           "likes": 999
-        },
-        {
-          "id": "waifu-diffusion/wd-1-5-beta3:wd-illusion-fp16.safetensors",
-          "type": "hf.stable_diffusion",
-          "name": "waifu-diffusion/wd-1-5-beta3",
-          "repo_id": "waifu-diffusion/wd-1-5-beta3",
-          "path": "wd-illusion-fp16.safetensors",
-          "size_on_disk": 2580068696,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "license:other",
-            "endpoints_compatible",
-            "diffusers:StableDiffusionPipeline",
-            "region:us"
-          ],
-          "has_model_index": true,
-          "downloads": 996,
-          "likes": 137
         },
         {
           "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
@@ -8045,7 +7965,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 2337,
+          "downloads": 2353,
           "likes": 1252
         },
         {
@@ -8114,7 +8034,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 30,
+          "downloads": 18,
           "likes": 5
         },
         {
@@ -8136,7 +8056,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 935,
+          "downloads": 973,
           "likes": 3890
         },
         {
@@ -8186,7 +8106,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 81,
+          "downloads": 79,
           "likes": 188
         },
         {
@@ -8211,7 +8131,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 3720,
+          "downloads": 3444,
           "likes": 259
         },
         {
@@ -8233,7 +8153,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 320,
+          "downloads": 330,
           "likes": 992
         },
         {
@@ -8256,7 +8176,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 99,
+          "downloads": 104,
           "likes": 614
         }
       ],
@@ -8625,28 +8545,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 52366,
+          "downloads": 58000,
           "likes": 999
-        },
-        {
-          "id": "waifu-diffusion/wd-1-5-beta3:wd-illusion-fp16.safetensors",
-          "type": "hf.stable_diffusion",
-          "name": "waifu-diffusion/wd-1-5-beta3",
-          "repo_id": "waifu-diffusion/wd-1-5-beta3",
-          "path": "wd-illusion-fp16.safetensors",
-          "size_on_disk": 2580068696,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "license:other",
-            "endpoints_compatible",
-            "diffusers:StableDiffusionPipeline",
-            "region:us"
-          ],
-          "has_model_index": true,
-          "downloads": 996,
-          "likes": 137
         },
         {
           "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
@@ -8674,7 +8574,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 2337,
+          "downloads": 2353,
           "likes": 1252
         },
         {
@@ -8743,7 +8643,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 30,
+          "downloads": 18,
           "likes": 5
         },
         {
@@ -8765,7 +8665,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 935,
+          "downloads": 973,
           "likes": 3890
         },
         {
@@ -8815,7 +8715,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 81,
+          "downloads": 79,
           "likes": 188
         },
         {
@@ -8840,7 +8740,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 3720,
+          "downloads": 3444,
           "likes": 259
         },
         {
@@ -8862,7 +8762,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 320,
+          "downloads": 330,
           "likes": 992
         },
         {
@@ -8885,7 +8785,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 99,
+          "downloads": 104,
           "likes": 614
         }
       ],
@@ -8994,7 +8894,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 117795,
+          "downloads": 116011,
           "likes": 189
         }
       ],
@@ -9139,7 +9039,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 11607,
+          "downloads": 11063,
           "likes": 720
         }
       ],
@@ -9471,7 +9371,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 12947,
+          "downloads": 12759,
           "likes": 526
         },
         {
@@ -9495,7 +9395,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 18740,
+          "downloads": 18350,
           "likes": 196
         },
         {
@@ -9519,7 +9419,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 552,
+          "downloads": 568,
           "likes": 41
         },
         {
@@ -9984,7 +9884,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10001,7 +9901,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10018,7 +9918,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10035,7 +9935,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10052,7 +9952,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10069,7 +9969,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10086,7 +9986,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10103,7 +10003,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10120,7 +10020,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10137,7 +10037,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10154,7 +10054,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10171,7 +10071,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10188,7 +10088,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10205,7 +10105,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10222,7 +10122,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10239,7 +10139,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -10256,7 +10156,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         }
       ],
@@ -10619,7 +10519,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 12947,
+          "downloads": 12759,
           "likes": 526
         },
         {
@@ -10643,7 +10543,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 18740,
+          "downloads": 18350,
           "likes": 196
         },
         {
@@ -10667,7 +10567,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 552,
+          "downloads": 568,
           "likes": 41
         },
         {
@@ -11132,7 +11032,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11149,7 +11049,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11166,7 +11066,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11183,7 +11083,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11200,7 +11100,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11217,7 +11117,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11234,7 +11134,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11251,7 +11151,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11268,7 +11168,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11285,7 +11185,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11302,7 +11202,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11319,7 +11219,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11336,7 +11236,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11353,7 +11253,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11370,7 +11270,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11387,7 +11287,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         },
         {
@@ -11404,7 +11304,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10061,
+          "downloads": 10501,
           "likes": 346
         }
       ],
@@ -11798,8 +11698,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 2078473,
-          "likes": 7451
+          "downloads": 2093708,
+          "likes": 7455
         },
         {
           "id": "Lykon/dreamshaper-xl-v2-turbo:DreamShaperXL_Turbo_v2_1.safetensors",
@@ -11830,7 +11730,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 18813,
+          "downloads": 18890,
           "likes": 71
         },
         {
@@ -11864,7 +11764,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 72263,
+          "downloads": 69314,
           "likes": 299
         },
         {
@@ -11884,7 +11784,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 34514,
+          "downloads": 32484,
           "likes": 95
         },
         {
@@ -11923,7 +11823,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 164398,
+          "downloads": 158129,
           "likes": 0
         },
         {
@@ -11949,7 +11849,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 279129,
+          "downloads": 277061,
           "likes": 386
         },
         {
@@ -11969,8 +11869,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 160703,
-          "likes": 136
+          "downloads": 160788,
+          "likes": 137
         },
         {
           "id": "nunchaku-tech/nunchaku-sdxl:svdq-int4_r32-sdxl.safetensors",
@@ -11997,7 +11897,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 283,
+          "downloads": 242,
           "likes": 32
         },
         {
@@ -12025,7 +11925,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 187,
+          "downloads": 167,
           "likes": 12
         }
       ],
@@ -12431,8 +12331,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 2078473,
-          "likes": 7451
+          "downloads": 2093708,
+          "likes": 7455
         },
         {
           "id": "Lykon/dreamshaper-xl-v2-turbo:DreamShaperXL_Turbo_v2_1.safetensors",
@@ -12463,7 +12363,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 18813,
+          "downloads": 18890,
           "likes": 71
         },
         {
@@ -12497,7 +12397,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 72263,
+          "downloads": 69314,
           "likes": 299
         },
         {
@@ -12517,7 +12417,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 34514,
+          "downloads": 32484,
           "likes": 95
         },
         {
@@ -12556,7 +12456,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 164398,
+          "downloads": 158129,
           "likes": 0
         },
         {
@@ -12582,7 +12482,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 279129,
+          "downloads": 277061,
           "likes": 386
         },
         {
@@ -12602,8 +12502,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 160703,
-          "likes": 136
+          "downloads": 160788,
+          "likes": 137
         },
         {
           "id": "nunchaku-tech/nunchaku-sdxl:svdq-int4_r32-sdxl.safetensors",
@@ -12630,7 +12530,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 283,
+          "downloads": 242,
           "likes": 32
         },
         {
@@ -12658,7 +12558,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 187,
+          "downloads": 167,
           "likes": 12
         }
       ],
@@ -12754,7 +12654,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 252750,
+          "downloads": 176004,
           "likes": 41
         },
         {
@@ -12782,7 +12682,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2780,
+          "downloads": 2225,
           "likes": 3
         },
         {
@@ -12810,7 +12710,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 291,
+          "downloads": 324,
           "likes": 15
         },
         {
@@ -12838,7 +12738,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 94,
+          "downloads": 93,
           "likes": 3
         },
         {
@@ -12865,7 +12765,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 11563,
+          "downloads": 9719,
           "likes": 18
         }
       ],
@@ -12949,7 +12849,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 137413,
+          "downloads": 134607,
           "likes": 400
         },
         {
@@ -12967,7 +12867,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6953,
+          "downloads": 6996,
           "likes": 134
         },
         {
@@ -12986,7 +12886,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 312845,
+          "downloads": 310373,
           "likes": 723
         },
         {
@@ -13004,7 +12904,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 246035,
+          "downloads": 249921,
           "likes": 605
         }
       ],
@@ -13087,7 +12987,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 137413,
+          "downloads": 134607,
           "likes": 400
         },
         {
@@ -13105,7 +13005,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 6953,
+          "downloads": 6996,
           "likes": 134
         },
         {
@@ -13124,7 +13024,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 312845,
+          "downloads": 310373,
           "likes": 723
         },
         {
@@ -13142,7 +13042,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 246035,
+          "downloads": 249921,
           "likes": 605
         }
       ],
@@ -13240,7 +13140,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2264239,
+          "downloads": 2378045,
           "likes": 842
         },
         {
@@ -13273,7 +13173,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 461050,
+          "downloads": 461861,
           "likes": 432
         },
         {
@@ -13305,7 +13205,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 8643,
+          "downloads": 8752,
           "likes": 106
         },
         {
@@ -13334,7 +13234,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 504697,
+          "downloads": 403121,
           "likes": 925
         }
       ],
@@ -13574,8 +13474,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 100705,
-          "likes": 201
+          "downloads": 101585,
+          "likes": 203
         },
         {
           "id": "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers",
@@ -13603,7 +13503,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 14688,
+          "downloads": 14346,
           "likes": 58
         },
         {
@@ -13632,7 +13532,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 20099,
+          "downloads": 18548,
           "likes": 48
         }
       ],
@@ -14732,7 +14632,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 84,
+          "downloads": 89,
           "likes": 15
         },
         {
@@ -14754,8 +14654,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 4090,
-          "likes": 578
+          "downloads": 4219,
+          "likes": 579
         },
         {
           "id": "goofyai/3d_render_style_xl:3d_render_style_xl.safetensors",
@@ -14776,7 +14676,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 323,
+          "downloads": 328,
           "likes": 132
         },
         {
@@ -14798,7 +14698,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 38,
+          "downloads": 43,
           "likes": 9
         },
         {
@@ -14825,7 +14725,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 43,
+          "downloads": 45,
           "likes": 39
         },
         {
@@ -14847,7 +14747,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14,
+          "downloads": 11,
           "likes": 8
         }
       ],
@@ -14946,7 +14846,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2264239,
+          "downloads": 2378045,
           "likes": 842
         },
         {
@@ -14976,7 +14876,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 730702,
+          "downloads": 719104,
           "likes": 1452
         },
         {
@@ -15004,7 +14904,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 504697,
+          "downloads": 403121,
           "likes": 925
         },
         {
@@ -15034,7 +14934,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 5335,
+          "downloads": 4935,
           "likes": 20
         }
       ],
@@ -15124,7 +15024,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 651235,
+          "downloads": 652140,
           "likes": 187
         }
       ],
@@ -15232,7 +15132,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 467649,
+          "downloads": 442689,
           "likes": 935
         },
         {
@@ -15263,7 +15163,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 46425,
+          "downloads": 46566,
           "likes": 125
         },
         {
@@ -15294,7 +15194,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 50066,
+          "downloads": 52574,
           "likes": 278
         },
         {
@@ -15325,7 +15225,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 618007,
+          "downloads": 618774,
           "likes": 72
         },
         {
@@ -15354,7 +15254,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1925308,
+          "downloads": 2221692,
           "likes": 398
         },
         {
@@ -15381,7 +15281,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 368407,
+          "downloads": 359938,
           "likes": 79
         },
         {
@@ -15412,8 +15312,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 277198,
-          "likes": 141
+          "downloads": 323398,
+          "likes": 142
         }
       ],
       "basic_fields": [
@@ -15452,7 +15352,7 @@
               }
             ]
           },
-          "default": {},
+          "default": [],
           "title": "Detected Objects",
           "description": "List of detected objects from ObjectDetection or ZeroShotObjectDetection nodes."
         }
@@ -15575,7 +15475,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 97184,
+          "downloads": 97145,
           "likes": 145
         },
         {
@@ -15603,7 +15503,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 23934,
+          "downloads": 25023,
           "likes": 29
         },
         {
@@ -15631,7 +15531,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 17485,
+          "downloads": 18915,
           "likes": 13
         },
         {
@@ -15660,7 +15560,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 190480,
+          "downloads": 219431,
           "likes": 29
         },
         {
@@ -15689,7 +15589,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 993962,
+          "downloads": 975464,
           "likes": 116
         },
         {
@@ -15718,8 +15618,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 431853,
-          "likes": 95
+          "downloads": 392105,
+          "likes": 96
         }
       ],
       "basic_fields": [
@@ -15830,7 +15730,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 184635,
+          "downloads": 182049,
           "likes": 266
         },
         {
@@ -15863,8 +15763,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 294970,
-          "likes": 184
+          "downloads": 270310,
+          "likes": 185
         },
         {
           "id": "deepset/roberta-base-squad2",
@@ -15898,7 +15798,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 745029,
+          "downloads": 743215,
           "likes": 939
         },
         {
@@ -15932,7 +15832,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 46025,
+          "downloads": 47221,
           "likes": 119
         }
       ],
@@ -16064,7 +15964,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 8487,
+          "downloads": 8076,
           "likes": 234
         },
         {
@@ -16097,7 +15997,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 750,
+          "downloads": 708,
           "likes": 148
         },
         {
@@ -16127,7 +16027,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 774,
+          "downloads": 783,
           "likes": 8
         }
       ],
@@ -16228,8 +16128,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3798541,
-          "likes": 888
+          "downloads": 3834434,
+          "likes": 890
         },
         {
           "id": "BAAI/bge-reranker-base",
@@ -16266,7 +16166,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1649738,
+          "downloads": 1678375,
           "likes": 225
         },
         {
@@ -16305,7 +16205,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 711910,
+          "downloads": 688249,
           "likes": 450
         }
       ],
@@ -16413,7 +16313,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 24311379,
+          "downloads": 24361252,
           "likes": 1248
         },
         {
@@ -16474,8 +16374,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 163821522,
-          "likes": 4486
+          "downloads": 166283023,
+          "likes": 4492
         },
         {
           "id": "BAAI/bge-m3",
@@ -16508,8 +16408,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 15131000,
-          "likes": 2760
+          "downloads": 15561372,
+          "likes": 2765
         },
         {
           "id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
@@ -16592,8 +16492,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 18517152,
-          "likes": 1138
+          "downloads": 18651287,
+          "likes": 1139
         }
       ],
       "basic_fields": [
@@ -16743,8 +16643,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 5086629,
-          "likes": 766
+          "downloads": 4885406,
+          "likes": 767
         },
         {
           "id": "michellejieli/emotion_text_classifier",
@@ -16775,7 +16675,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 15311,
+          "downloads": 15156,
           "likes": 148
         }
       ],
@@ -16881,7 +16781,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3551887,
+          "downloads": 3521356,
           "likes": 1536
         },
         {
@@ -16915,7 +16815,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 62102,
+          "downloads": 71171,
           "likes": 222
         },
         {
@@ -16966,8 +16866,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 131624,
-          "likes": 292
+          "downloads": 135173,
+          "likes": 293
         },
         {
           "id": "tasksource/ModernBERT-base-nli",
@@ -17002,7 +16902,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3703,
+          "downloads": 3815,
           "likes": 25
         },
         {
@@ -17036,7 +16936,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 71538,
+          "downloads": 70845,
           "likes": 41
         },
         {
@@ -17066,7 +16966,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 33140,
+          "downloads": 38994,
           "likes": 9
         },
         {
@@ -17108,8 +17008,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 323185,
-          "likes": 206
+          "downloads": 318632,
+          "likes": 207
         }
       ],
       "basic_fields": [
@@ -17228,8 +17128,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10332,
-          "likes": 550
+          "downloads": 10234,
+          "likes": 552
         },
         {
           "id": "EssentialAI/rnj-1-instruct",
@@ -17253,7 +17153,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 8951,
+          "downloads": 9246,
           "likes": 304
         },
         {
@@ -17275,7 +17175,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2279,
+          "downloads": 2593,
           "likes": 98
         },
         {
@@ -17313,8 +17213,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 5850902,
-          "likes": 5474
+          "downloads": 5882431,
+          "likes": 5477
         },
         {
           "id": "arcee-ai/Trinity-Nano-Preview",
@@ -17348,8 +17248,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 20085,
-          "likes": 63
+          "downloads": 20195,
+          "likes": 64
         },
         {
           "id": "open-thoughts/OpenThinker-Agent-v1",
@@ -17378,7 +17278,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 427,
+          "downloads": 431,
           "likes": 94
         },
         {
@@ -17404,8 +17304,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10233154,
-          "likes": 1089
+          "downloads": 10161674,
+          "likes": 1093
         },
         {
           "id": "Qwen/Qwen3-4B-Instruct-2507",
@@ -17429,8 +17329,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3453738,
-          "likes": 734
+          "downloads": 3434393,
+          "likes": 736
         },
         {
           "id": "Qwen/Qwen2.5-7B-Instruct",
@@ -17458,8 +17358,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14508270,
-          "likes": 1077
+          "downloads": 15327136,
+          "likes": 1084
         },
         {
           "id": "meta-llama/Llama-3.1-8B",
@@ -17492,8 +17392,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1206748,
-          "likes": 2067
+          "downloads": 1197576,
+          "likes": 2071
         },
         {
           "id": "allenai/Olmo-3-32B-Think",
@@ -17518,7 +17418,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2572,
+          "downloads": 2769,
           "likes": 169
         },
         {
@@ -17543,8 +17443,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 4401445,
-          "likes": 422
+          "downloads": 4590304,
+          "likes": 421
         },
         {
           "id": "HuggingFaceTB/SmolLM3-3B",
@@ -17575,8 +17475,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 85059,
-          "likes": 900
+          "downloads": 89005,
+          "likes": 899
         },
         {
           "id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
@@ -17603,7 +17503,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1802682,
+          "downloads": 1817970,
           "likes": 1528
         },
         {
@@ -17624,7 +17524,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 64290,
+          "downloads": 66624,
           "likes": 7
         },
         {
@@ -17645,7 +17545,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 704,
+          "downloads": 679,
           "likes": 20
         },
         {
@@ -17667,7 +17567,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10600,
+          "downloads": 10969,
           "likes": 4
         },
         {
@@ -17689,7 +17589,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 110014,
+          "downloads": 95440,
           "likes": 8
         },
         {
@@ -17710,7 +17610,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 84981,
+          "downloads": 86906,
           "likes": 2
         },
         {
@@ -17730,7 +17630,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 4867,
+          "downloads": 5715,
           "likes": 4
         },
         {
@@ -17750,7 +17650,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1816,
+          "downloads": 1747,
           "likes": 3
         },
         {
@@ -17770,7 +17670,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 276,
+          "downloads": 290,
           "likes": 0
         },
         {
@@ -17797,7 +17697,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 154,
+          "downloads": 148,
           "likes": 0
         },
         {
@@ -17824,7 +17724,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 957,
+          "downloads": 1115,
           "likes": 2
         },
         {
@@ -17850,7 +17750,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 242,
+          "downloads": 261,
           "likes": 0
         },
         {
@@ -17876,7 +17776,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 579,
+          "downloads": 587,
           "likes": 0
         },
         {
@@ -17903,7 +17803,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 78,
+          "downloads": 75,
           "likes": 0
         },
         {
@@ -17968,7 +17868,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 9834,
+          "downloads": 9900,
           "likes": 3
         },
         {
@@ -18027,7 +17927,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 4271,
+          "downloads": 4382,
           "likes": 9
         },
         {
@@ -18086,7 +17986,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 27630,
+          "downloads": 26965,
           "likes": 12
         },
         {
@@ -18145,7 +18045,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 28116,
+          "downloads": 28180,
           "likes": 35
         },
         {
@@ -18204,7 +18104,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 68002,
+          "downloads": 54383,
           "likes": 18
         },
         {
@@ -18262,7 +18162,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 14,
+          "downloads": 22,
           "likes": 3
         },
         {
@@ -18319,7 +18219,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 571,
+          "downloads": 570,
           "likes": 1
         },
         {
@@ -18376,7 +18276,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 142,
+          "downloads": 87,
           "likes": 1
         },
         {
@@ -18433,7 +18333,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 703,
+          "downloads": 631,
           "likes": 1
         },
         {
@@ -18468,7 +18368,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3752,
+          "downloads": 4111,
           "likes": 1
         },
         {
@@ -18503,7 +18403,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2025,
+          "downloads": 2966,
           "likes": 1
         },
         {
@@ -18537,7 +18437,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 607,
+          "downloads": 766,
           "likes": 0
         },
         {
@@ -18571,7 +18471,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 470,
+          "downloads": 469,
           "likes": 1
         },
         {
@@ -18606,7 +18506,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 4928,
+          "downloads": 5285,
           "likes": 0
         },
         {
@@ -18641,7 +18541,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 662,
+          "downloads": 1455,
           "likes": 1
         },
         {
@@ -18675,7 +18575,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 399,
+          "downloads": 410,
           "likes": 0
         },
         {
@@ -18709,7 +18609,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 107,
+          "downloads": 105,
           "likes": 0
         },
         {
@@ -18744,7 +18644,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 281,
+          "downloads": 479,
           "likes": 0
         },
         {
@@ -18813,7 +18713,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 173,
+          "downloads": 134,
           "likes": 0
         },
         {
@@ -18847,7 +18747,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 226,
+          "downloads": 240,
           "likes": 0
         },
         {
@@ -18881,7 +18781,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 116,
+          "downloads": 110,
           "likes": 2
         },
         {
@@ -18915,7 +18815,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3447,
+          "downloads": 3450,
           "likes": 0
         },
         {
@@ -18983,7 +18883,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 82,
+          "downloads": 79,
           "likes": 0
         },
         {
@@ -19017,7 +18917,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 11,
+          "downloads": 12,
           "likes": 1
         },
         {
@@ -19051,7 +18951,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 226,
+          "downloads": 326,
           "likes": 0
         }
       ],
@@ -19198,8 +19098,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 69172,
-          "likes": 1714
+          "downloads": 68012,
+          "likes": 1715
         },
         {
           "id": "tencent/Hunyuan3D-2mini",
@@ -19225,7 +19125,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 4671,
+          "downloads": 4724,
           "likes": 116
         }
       ],
@@ -19334,7 +19234,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 578,
+          "downloads": 527,
           "likes": 56
         }
       ],
@@ -19435,7 +19335,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 3138,
+          "downloads": 3177,
           "likes": 258
         }
       ],
@@ -19542,8 +19442,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 5145,
-          "likes": 729
+          "downloads": 5379,
+          "likes": 728
         }
       ],
       "basic_fields": [
@@ -19662,7 +19562,7 @@
           ],
           "has_model_index": false,
           "downloads": 0,
-          "likes": 623
+          "likes": 630
         }
       ],
       "basic_fields": [
@@ -19761,7 +19661,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 38870,
+          "downloads": 42624,
           "likes": 591
         }
       ],
@@ -19847,7 +19747,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 2909,
+          "downloads": 2918,
           "likes": 21
         }
       ],
@@ -19953,7 +19853,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 16938,
+          "downloads": 17045,
           "likes": 62
         }
       ],
@@ -20029,7 +19929,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 17,
+          "downloads": 24,
           "likes": 17
         }
       ],
@@ -20112,8 +20012,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 135105,
-          "likes": 476
+          "downloads": 141708,
+          "likes": 477
         },
         {
           "id": "facebook/musicgen-medium",
@@ -20138,7 +20038,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1223492,
+          "downloads": 1224574,
           "likes": 155
         },
         {
@@ -20164,7 +20064,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 10861,
+          "downloads": 11437,
           "likes": 519
         },
         {
@@ -20190,7 +20090,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1788,
+          "downloads": 1933,
           "likes": 249
         },
         {
@@ -20218,7 +20118,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2177,
+          "downloads": 2384,
           "likes": 39
         },
         {
@@ -20246,7 +20146,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 964,
+          "downloads": 1027,
           "likes": 90
         }
       ],
@@ -20334,7 +20234,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 73,
+          "downloads": 94,
           "likes": 7
         }
       ],
@@ -20432,8 +20332,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 17093,
-          "likes": 1415
+          "downloads": 16642,
+          "likes": 1414
         }
       ],
       "basic_fields": [
@@ -20753,8 +20653,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 666779,
-          "likes": 4617
+          "downloads": 676216,
+          "likes": 4625
         },
         {
           "id": "black-forest-labs/FLUX.1-dev",
@@ -20785,8 +20685,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 706622,
-          "likes": 12317
+          "downloads": 686651,
+          "likes": 12328
         },
         {
           "id": "nunchaku-tech/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
@@ -20814,7 +20714,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1084,
+          "downloads": 1162,
           "likes": 12
         },
         {
@@ -20843,7 +20743,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 1084,
+          "downloads": 1162,
           "likes": 12
         },
         {
@@ -20872,7 +20772,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 5170,
+          "downloads": 5068,
           "likes": 45
         },
         {
@@ -20901,7 +20801,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 5170,
+          "downloads": 5068,
           "likes": 45
         },
         {
@@ -21198,7 +21098,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 2406,
+          "downloads": 2307,
           "likes": 231
         },
         {
@@ -21230,7 +21130,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 1434,
+          "downloads": 1358,
           "likes": 236
         },
         {
@@ -21259,7 +21159,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 155,
+          "downloads": 164,
           "likes": 5
         },
         {
@@ -21288,7 +21188,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 155,
+          "downloads": 164,
           "likes": 5
         },
         {
@@ -21317,7 +21217,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 177,
+          "downloads": 255,
           "likes": 6
         },
         {
@@ -21346,7 +21246,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 177,
+          "downloads": 255,
           "likes": 6
         },
         {
@@ -21548,8 +21448,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 148795,
-          "likes": 2398
+          "downloads": 148486,
+          "likes": 2402
         },
         {
           "id": "nunchaku-tech/nunchaku-qwen-image:svdq-int4_r32-qwen-image.safetensors",
@@ -21576,7 +21476,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 13070,
+          "downloads": 12482,
           "likes": 253
         },
         {
@@ -21604,7 +21504,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 13070,
+          "downloads": 12482,
           "likes": 253
         }
       ],
@@ -21996,28 +21896,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 52366,
+          "downloads": 58000,
           "likes": 999
-        },
-        {
-          "id": "waifu-diffusion/wd-1-5-beta3:wd-illusion-fp16.safetensors",
-          "type": "hf.stable_diffusion",
-          "name": "waifu-diffusion/wd-1-5-beta3",
-          "repo_id": "waifu-diffusion/wd-1-5-beta3",
-          "path": "wd-illusion-fp16.safetensors",
-          "size_on_disk": 2580068696,
-          "pipeline_tag": "text-to-image",
-          "tags": [
-            "diffusers",
-            "safetensors",
-            "license:other",
-            "endpoints_compatible",
-            "diffusers:StableDiffusionPipeline",
-            "region:us"
-          ],
-          "has_model_index": true,
-          "downloads": 996,
-          "likes": 137
         },
         {
           "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
@@ -22045,7 +21925,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 2337,
+          "downloads": 2353,
           "likes": 1252
         },
         {
@@ -22114,7 +21994,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 30,
+          "downloads": 18,
           "likes": 5
         },
         {
@@ -22136,7 +22016,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 935,
+          "downloads": 973,
           "likes": 3890
         },
         {
@@ -22186,7 +22066,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 81,
+          "downloads": 79,
           "likes": 188
         },
         {
@@ -22211,7 +22091,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 3720,
+          "downloads": 3444,
           "likes": 259
         },
         {
@@ -22233,7 +22113,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 320,
+          "downloads": 330,
           "likes": 992
         },
         {
@@ -22256,7 +22136,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 99,
+          "downloads": 104,
           "likes": 614
         }
       ],
@@ -22618,8 +22498,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 2078473,
-          "likes": 7451
+          "downloads": 2093708,
+          "likes": 7455
         },
         {
           "id": "Lykon/dreamshaper-xl-v2-turbo:DreamShaperXL_Turbo_v2_1.safetensors",
@@ -22650,7 +22530,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 18813,
+          "downloads": 18890,
           "likes": 71
         },
         {
@@ -22684,7 +22564,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 72263,
+          "downloads": 69314,
           "likes": 299
         },
         {
@@ -22704,7 +22584,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 34514,
+          "downloads": 32484,
           "likes": 95
         },
         {
@@ -22743,7 +22623,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 164398,
+          "downloads": 158129,
           "likes": 0
         },
         {
@@ -22769,7 +22649,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 279129,
+          "downloads": 277061,
           "likes": 386
         },
         {
@@ -22789,8 +22669,8 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 160703,
-          "likes": 136
+          "downloads": 160788,
+          "likes": 137
         },
         {
           "id": "nunchaku-tech/nunchaku-sdxl:svdq-int4_r32-sdxl.safetensors",
@@ -22817,7 +22697,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 283,
+          "downloads": 242,
           "likes": 32
         },
         {
@@ -22845,7 +22725,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 187,
+          "downloads": 167,
           "likes": 12
         }
       ],
@@ -23052,8 +22932,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 64206,
-          "likes": 1509
+          "downloads": 64701,
+          "likes": 1510
         },
         {
           "id": "suno/bark-small",
@@ -23092,8 +22972,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 45963,
-          "likes": 254
+          "downloads": 46874,
+          "likes": 255
         }
       ],
       "basic_fields": [
@@ -23275,8 +23155,8 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 8172142,
-          "likes": 5718
+          "downloads": 8660589,
+          "likes": 5729
         }
       ],
       "basic_fields": [
@@ -23355,7 +23235,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 109870,
+          "downloads": 117865,
           "likes": 174
         },
         {
@@ -23384,7 +23264,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 11853,
+          "downloads": 22315,
           "likes": 14
         },
         {
@@ -23413,7 +23293,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 3579,
+          "downloads": 2979,
           "likes": 14
         },
         {
@@ -23442,7 +23322,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2459,
+          "downloads": 2562,
           "likes": 15
         }
       ],
@@ -23626,7 +23506,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 26792,
+          "downloads": 27236,
           "likes": 351
         },
         {
@@ -23656,7 +23536,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 34522,
+          "downloads": 33459,
           "likes": 663
         }
       ],
@@ -23854,7 +23734,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 127330,
+          "downloads": 130462,
           "likes": 110
         },
         {
@@ -23882,7 +23762,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 28678,
+          "downloads": 28994,
           "likes": 48
         },
         {
@@ -23910,7 +23790,7 @@
             "region:us"
           ],
           "has_model_index": true,
-          "downloads": 38373,
+          "downloads": 41099,
           "likes": 108
         }
       ],
@@ -24173,7 +24053,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2277114,
+          "downloads": 2286581,
           "likes": 765
         },
         {
@@ -24219,7 +24099,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 346093,
+          "downloads": 353269,
           "likes": 249
         },
         {
@@ -24267,7 +24147,7 @@
             "region:us"
           ],
           "has_model_index": false,
-          "downloads": 2020730,
+          "downloads": 1832629,
           "likes": 527
         }
       ],
