@@ -24,7 +24,6 @@ from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineN
 from nodetool.providers import get_provider
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import Chunk
-from transformers import TextStreamer
 from queue import Queue
 import threading
 
@@ -349,6 +348,8 @@ class BaseQwenVL(HuggingFacePipelineNode):
         tokenizer = getattr(processor, "tokenizer", None)
         assert tokenizer is not None, "Tokenizer is not loaded"
         logger.debug("Tokenizer retrieved from processor")
+
+        from transformers import TextStreamer
 
         # Use the same AsyncTextStreamer pattern as in huggingface_local_provider.py
         token_queue: Queue = Queue()

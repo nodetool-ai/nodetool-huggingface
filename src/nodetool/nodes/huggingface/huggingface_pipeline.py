@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from nodetool.workflows.graph import BaseNode
 import asyncio
+import concurrent.futures
 from nodetool.config.logging_config import get_logger
 from nodetool.nodes.huggingface.huggingface_node import (
     setup_hf_logging,
@@ -18,6 +19,10 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 log = get_logger(__name__)
+
+# Shared thread pool for all HF pipeline operations to minimize CUDA memory pool fragmentation
+# Using a single thread ensures consistent CUDA memory pool usage
+_pipeline_thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="hf_pipeline")
 
 
 def select_inference_dtype() -> "torch.dtype":
@@ -133,19 +138,32 @@ class HuggingFacePipelineNode(BaseNode):
         """
         Execute the underlying HF pipeline in a background thread to avoid
         blocking the asyncio event loop.
+        Uses a shared thread pool to minimize CUDA memory pool fragmentation.
         """
+        import torch
+        import gc
+        
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
         pipeline = self._pipeline
-
+        
         def _call():
-            import torch
-
             with torch.inference_mode():
-                return pipeline(*args, **kwargs)
+                result = pipeline(*args, **kwargs)
+            
+            # Explicit cleanup: synchronize, clear any temporary allocations
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
+                # Force Python GC to collect any temporary tensors
+                gc.collect()
+            
+            return result
 
-        return await asyncio.to_thread(_call)
+        # Use shared thread pool instead of asyncio.to_thread to ensure
+        # consistent CUDA memory pool usage
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_pipeline_thread_pool, _call)
 
     async def process(self, context: ProcessingContext) -> Any:
         raise NotImplementedError("Subclasses must implement this method")

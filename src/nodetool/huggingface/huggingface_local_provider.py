@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import logging
 import re
 import os
 import threading
@@ -429,8 +430,10 @@ class HuggingFaceLocalProvider(BaseProvider):
                 use_safetensors=True,
             )
 
-            # Load processor
+            # Load processor (suppress verbose logging)
+            logging.getLogger("transformers").setLevel(logging.WARNING)
             processor = AutoProcessor.from_pretrained(model)
+            logging.getLogger("transformers").setLevel(logging.INFO)
 
             # Create pipeline
             asr_pipeline = create_pipeline(
