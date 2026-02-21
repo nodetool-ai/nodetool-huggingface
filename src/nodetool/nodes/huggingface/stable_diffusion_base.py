@@ -39,8 +39,6 @@ if TYPE_CHECKING:
     import torch
 
 log = get_logger(__name__)
-log.setLevel(logging.DEBUG)
-
 
 HF_IP_ADAPTER_MODELS = [
     HFIPAdapter(repo_id="h94/IP-Adapter", path="models/ip-adapter_sd15.bin"),

@@ -25,23 +25,30 @@ if TYPE_CHECKING:
 log = get_logger(__name__)
 
 
-# Check if nunchaku is available
-try:
-    import nunchaku
+# nunchaku availability will be checked lazily
+NUNCHAKU_AVAILABLE: bool | None = None
 
-    NUNCHAKU_AVAILABLE = True
-except ImportError:
-    NUNCHAKU_AVAILABLE = False
+
+def _check_nunchaku_available() -> bool:
+    """Check if the nunchaku package is available (lazy check)."""
+    global NUNCHAKU_AVAILABLE
+    if NUNCHAKU_AVAILABLE is None:
+        try:
+            import nunchaku
+            NUNCHAKU_AVAILABLE = True
+        except ImportError:
+            NUNCHAKU_AVAILABLE = False
+    return NUNCHAKU_AVAILABLE
 
 
 def is_nunchaku_available() -> bool:
     """Check if the nunchaku package is available."""
-    return NUNCHAKU_AVAILABLE
+    return _check_nunchaku_available()
 
 
 def _require_nunchaku() -> None:
     """Raise an error if nunchaku is not available."""
-    if not NUNCHAKU_AVAILABLE:
+    if not _check_nunchaku_available():
         raise ImportError(
             "nunchaku is required for this operation but is not installed. "
             "nunchaku is only available on non-Darwin platforms."

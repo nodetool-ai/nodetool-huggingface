@@ -215,6 +215,12 @@ class Whisper(HuggingFacePipelineNode):
 
         torch_dtype = torch.float16 if _is_cuda_available() else torch.float32
 
+        # Debug: Track VRAM through initialization
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+            mem_before = torch.cuda.memory_allocated() / 1024 / 1024
+            logger.info("[VRAM DEBUG] preload_model START: %.1fMB", mem_before)
+
         model = await self.load_model(
             context=context,
             model_class=AutoModelForSpeechSeq2Seq,
@@ -225,7 +231,17 @@ class Whisper(HuggingFacePipelineNode):
             torch_dtype=torch_dtype,
         )
 
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+            mem_after_model = torch.cuda.memory_allocated() / 1024 / 1024
+            logger.info("[VRAM DEBUG] after load_model: %.1fMB (delta: %+.1fMB)", mem_after_model, mem_after_model - mem_before)
+
         processor = AutoProcessor.from_pretrained(self.model.repo_id)
+
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+            mem_after_proc = torch.cuda.memory_allocated() / 1024 / 1024
+            logger.info("[VRAM DEBUG] after AutoProcessor: %.1fMB (delta: %+.1fMB)", mem_after_proc, mem_after_proc - mem_after_model)
 
         if self.task == Task.TRANSCRIBE:
             pipeline_task = "automatic-speech-recognition"
@@ -244,6 +260,12 @@ class Whisper(HuggingFacePipelineNode):
             torch_dtype=torch_dtype,
             device=context.device,
         )
+
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+            mem_after_pipe = torch.cuda.memory_allocated() / 1024 / 1024
+            logger.info("[VRAM DEBUG] after load_pipeline: %.1fMB (delta: %+.1fMB)", mem_after_pipe, mem_after_pipe - mem_after_proc)
+            logger.info("[VRAM DEBUG] preload_model TOTAL: %+.1fMB", mem_after_pipe - mem_before)
 
         logger.info("Whisper model initialized successfully.")
 

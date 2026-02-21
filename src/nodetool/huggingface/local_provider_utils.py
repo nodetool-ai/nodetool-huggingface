@@ -289,8 +289,9 @@ async def load_pipeline(
             )
             raise
 
-    ModelManager.set_model(node_id, cache_key, model)
-    return model
+    if not skip_cache:
+        ModelManager.set_model(node_id, cache_key, model)
+    return model  # type: ignore
 
 
 async def load_model(
@@ -405,7 +406,8 @@ async def load_model(
             raise
 
     model = _ensure_model_on_device(model, target_device)
-    ModelManager.set_model(node_id, cache_key, model)
+    if not skip_cache:
+        ModelManager.set_model(node_id, cache_key, model)
     return model
 
 
