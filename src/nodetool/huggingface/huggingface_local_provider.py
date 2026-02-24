@@ -1235,7 +1235,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             A Message object containing the model's response
 
         Raises:
-            ValueError: If required parameters are missing or context not provided
+            ValueError: If required parameters are missing
             RuntimeError: If generation fails
         """
         if not messages:
@@ -1243,9 +1243,8 @@ class HuggingFaceLocalProvider(BaseProvider):
 
         context = kwargs.pop("context", None)
         if context is None:
-            raise ValueError(
-                "ProcessingContext is required for HuggingFace text generation"
-            )
+            # Create a minimal ProcessingContext for API calls without workflow context
+            context = ProcessingContext()
 
         full_text = ""
         async for chunk in self.generate_messages(
@@ -1303,9 +1302,8 @@ class HuggingFaceLocalProvider(BaseProvider):
 
         context = kwargs.get("context")
         if context is None:
-            raise ValueError(
-                "ProcessingContext is required for HuggingFace text generation"
-            )
+            # Create a minimal ProcessingContext for API calls without workflow context
+            context = ProcessingContext()
 
         temperature = kwargs.get("temperature", 1.0)
         top_p = kwargs.get("top_p", 1.0)
