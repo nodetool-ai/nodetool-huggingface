@@ -1058,3 +1058,5 @@ class Trellis2(HuggingFacePipelineNode):
             name=f"trellis2_{self.id}.{format_str}",
             format=format_str,
         )
+
+
