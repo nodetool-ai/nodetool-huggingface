@@ -474,6 +474,16 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
                 # Enable CPU offloading if requested
                 if self.low_vram_mode:
+                    # hy3dgen pipeline lacks the `components` property that
+                    # enable_model_cpu_offload() expects (upstream bug).
+                    if not hasattr(self._pipeline, "components"):
+                        self._pipeline.components = {
+                            "conditioner": self._pipeline.conditioner,
+                            "model": self._pipeline.model,
+                            "vae": self._pipeline.vae,
+                            "scheduler": self._pipeline.scheduler,
+                            "image_processor": self._pipeline.image_processor,
+                        }
                     self._pipeline.enable_model_cpu_offload()
 
                 ModelManager.set_model(self.id, cache_key, self._pipeline)
