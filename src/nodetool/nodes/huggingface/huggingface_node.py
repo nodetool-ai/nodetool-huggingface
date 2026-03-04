@@ -1,7 +1,10 @@
 import asyncio
 from enum import Enum
+import os
 import re
+import sys
 import logging
+import shutil
 from nodetool.metadata.types import Provider, ImageRef, AudioRef, VideoRef, NPArray
 from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
@@ -12,6 +15,31 @@ if TYPE_CHECKING:
     import torch
 
 from nodetool.nodes.huggingface.prediction import run_huggingface
+
+# Windows lacks symlink privileges by default, causing huggingface_hub
+# snapshot_download to fail with [WinError 1314].  Patch _create_symlink
+# to fall back to copying when symlinks are unavailable.
+if sys.platform == "win32":
+    try:
+        from huggingface_hub import file_download as _hf_file_download
+
+        _original_create_symlink = _hf_file_download._create_symlink
+
+        def _windows_create_symlink(src: str, dst: str, new_blob: bool = False) -> None:  # type: ignore[override]
+            try:
+                _original_create_symlink(src, dst, new_blob=new_blob)
+            except OSError:
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                if os.path.isdir(src):
+                    if os.path.exists(dst):
+                        shutil.rmtree(dst)
+                    shutil.copytree(src, dst)
+                else:
+                    shutil.copyfile(src, dst)
+
+        _hf_file_download._create_symlink = _windows_create_symlink
+    except Exception:
+        pass
 
 
 class HuggingFaceLogHandler(logging.Handler):

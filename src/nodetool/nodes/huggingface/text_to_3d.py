@@ -1060,3 +1060,314 @@ class Trellis2(HuggingFacePipelineNode):
         )
 
 
+class TripoSG(HuggingFacePipelineNode):
+    """
+    Generate high-fidelity 3D meshes from images using VAST TripoSG.
+    3d, generation, image-to-3d, triposg, mesh, local, high-fidelity, rectified-flow
+
+    Use cases:
+    - Generate detailed 3D models from single images
+    - Create 3D assets from photos, cartoons, or sketches
+    - Produce meshes with sharp geometric features and fine surface details
+    - Handle complex topology including thin structures
+
+    **Requirements:** CUDA GPU with at least 8GB VRAM.
+    First run downloads ~3GB model weights.
+
+    Model: https://huggingface.co/VAST-AI/TripoSG
+    License: MIT
+    """
+
+    image: ImageRef = Field(
+        default=ImageRef(),
+        description="Input image to convert to 3D",
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        ge=10,
+        le=100,
+        description="Number of denoising steps. More steps = better quality but slower.",
+    )
+    guidance_scale: float = Field(
+        default=7.0,
+        ge=1.0,
+        le=20.0,
+        description="Classifier-free guidance scale. Higher = more adherence to input.",
+    )
+    octree_depth: int = Field(
+        default=7,
+        ge=5,
+        le=9,
+        description="Octree depth for mesh extraction. Higher = finer detail but slower. "
+        "7 is a good balance (~30s). 9 gives maximum detail but requires diso for speed.",
+    )
+    max_faces: int = Field(
+        default=-1,
+        ge=-1,
+        le=500000,
+        description="Maximum number of faces in output mesh. -1 for no limit.",
+    )
+    seed: int = Field(
+        default=42,
+        ge=-1,
+        description="Random seed for reproducibility. -1 for random.",
+    )
+
+    _pipeline: Any = None
+    _rmbg_net: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HuggingFaceModel(
+                repo_id="VAST-AI/TripoSG",
+                allow_patterns=[
+                    "**/*.safetensors",
+                    "**/*.json",
+                    "**/*.txt",
+                    "**/*.bin",
+                ],
+            ),
+            HuggingFaceModel(
+                repo_id="briaai/RMBG-1.4",
+                allow_patterns=["**/*.pth", "**/*.json", "**/*.py"],
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "TripoSG"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["image", "octree_depth", "max_faces", "seed"]
+
+    def requires_gpu(self) -> bool:
+        return True
+
+    def _prepare_image(
+        self, img_pil: "Image.Image", rmbg_net: Any
+    ) -> "Image.Image":
+        """Remove background and center-crop the foreground."""
+        import cv2
+        import numpy as np
+        import torch
+        import torch.nn.functional as F
+        import torchvision.transforms as transforms
+        import torchvision.transforms.functional as TF
+        from PIL import Image
+        from skimage.measure import label
+        from skimage.morphology import remove_small_objects
+
+        bg_color = np.array([1.0, 1.0, 1.0])
+        padding_ratio = 0.1
+        img = np.array(img_pil)
+
+        if img.shape[2] == 4:
+            alpha = img[:, :, 3]
+            rgb_image = img[:, :, :3]
+        else:
+            rgb_image = img
+            alpha = None
+
+        height, width = rgb_image.shape[:2]
+        scale = 2000 / max(height, width)
+        if scale < 1:
+            new_size = (int(width * scale), int(height * scale))
+            rgb_image = cv2.resize(rgb_image, new_size, interpolation=cv2.INTER_AREA)
+            if alpha is not None:
+                alpha = cv2.resize(alpha, new_size, interpolation=cv2.INTER_AREA)
+
+        rgb_gpu = (
+            torch.from_numpy(rgb_image).cuda().float().permute(2, 0, 1) / 255.0
+        )
+
+        if alpha is not None:
+            _, alpha = cv2.threshold(alpha, 127, 255, cv2.THRESH_BINARY)
+            alpha_gpu = torch.from_numpy(alpha).cuda().float().unsqueeze(0) / 255.0
+        else:
+            resize_transform = transforms.Resize((1024, 1024), antialias=True)
+            rgb_resized = resize_transform(rgb_gpu)
+            max_val = rgb_resized.flatten().max()
+            if max_val < 1e-3:
+                raise ValueError("Invalid image: pure black")
+            mean_color = (
+                torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1).cuda()
+            )
+            norm_img = rgb_resized / max_val - mean_color
+
+            rmbg_input = TF.normalize(rgb_resized, [0.5, 0.5, 0.5], [1.0, 1.0, 1.0])
+            result = rmbg_net(rmbg_input.unsqueeze(0))
+            alpha_gpu = result[0][0].squeeze(0)
+            alpha_gpu = transforms.Resize(
+                (rgb_gpu.shape[1], rgb_gpu.shape[2]), antialias=True
+            )(alpha_gpu)
+            ma, mi = alpha_gpu.max(), alpha_gpu.min()
+            alpha_gpu = (alpha_gpu - mi) / (ma - mi)
+
+            alpha_np = (alpha_gpu * 255).to(torch.uint8).squeeze().cpu().numpy()
+            _, alpha_np = cv2.threshold(
+                alpha_np, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+            )
+            labeled = label(alpha_np)
+            cleaned = (remove_small_objects(labeled, min_size=200) > 0).astype(
+                np.uint8
+            )
+            alpha_np = cleaned * 255
+            alpha_gpu = torch.from_numpy(cleaned).cuda().float().unsqueeze(0)
+
+        _, binary = cv2.threshold(
+            (alpha_gpu.squeeze().cpu().numpy() * 255).astype(np.uint8),
+            1, 255, cv2.THRESH_BINARY,
+        )
+        contours, _ = cv2.findContours(
+            binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+        if not contours:
+            raise ValueError("No foreground found in image")
+        x, y, w, h = cv2.boundingRect(max(contours, key=cv2.contourArea))
+
+        bg = (
+            torch.from_numpy(bg_color)
+            .float()
+            .cuda()
+            .repeat(alpha_gpu.shape[1], alpha_gpu.shape[2], 1)
+            .permute(2, 0, 1)
+        )
+        rgb_gpu = rgb_gpu * alpha_gpu + bg * (1 - alpha_gpu)
+
+        padding_size = [0] * 6
+        if w > h:
+            padding_size[0] = int(w * padding_ratio)
+            padding_size[2] = int(padding_size[0] + (w - h) / 2)
+        else:
+            padding_size[2] = int(h * padding_ratio)
+            padding_size[0] = int(padding_size[2] + (h - w) / 2)
+        padding_size[1] = padding_size[0]
+        padding_size[3] = padding_size[2]
+
+        padded = F.pad(
+            rgb_gpu[:, y : y + h, x : x + w],
+            pad=tuple(padding_size),
+            mode="constant",
+            value=bg_color[0],
+        )
+        result_np = padded.permute(1, 2, 0).cpu().numpy()
+        return Image.fromarray((result_np * 255).astype(np.uint8))
+
+    def _simplify_mesh(self, mesh: "trimesh.Trimesh", n_faces: int):
+        """Reduce mesh face count using quadric edge collapse."""
+        import pymeshlab
+        import trimesh
+
+        if mesh.faces.shape[0] <= n_faces:
+            return mesh
+        ms = pymeshlab.MeshSet()
+        ms.add_mesh(
+            pymeshlab.Mesh(
+                vertex_matrix=mesh.vertices, face_matrix=mesh.faces
+            )
+        )
+        ms.meshing_merge_close_vertices()
+        ms.meshing_decimation_quadric_edge_collapse(targetfacenum=n_faces)
+        result = ms.current_mesh()
+        return trimesh.Trimesh(
+            vertices=result.vertex_matrix(), faces=result.face_matrix()
+        )
+
+    async def process(self, context: ProcessingContext) -> Model3DRef:
+        import torch
+        import numpy as np
+        import trimesh
+        from PIL import Image
+        from huggingface_hub import snapshot_download
+
+        if self.image.is_empty():
+            raise ValueError("Input image is required")
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device != "cuda":
+            raise RuntimeError("TripoSG requires a CUDA-capable GPU with at least 8GB VRAM")
+
+        from triposg.pipelines.pipeline_triposg import TripoSGPipeline
+        from triposg.briarmbg import BriaRMBG
+
+        # Load RMBG model for background removal
+        if self._rmbg_net is None:
+            from nodetool.ml.core.model_manager import ModelManager
+
+            cache_key = "briaai/RMBG-1.4_BriaRMBG"
+            cached = ModelManager.get_model(cache_key)
+            if cached is not None:
+                self._rmbg_net = cached
+            else:
+                rmbg_path = snapshot_download(repo_id="briaai/RMBG-1.4")
+                self._rmbg_net = BriaRMBG.from_pretrained(rmbg_path).to(device)
+                self._rmbg_net.eval()
+                ModelManager.set_model(self.id, cache_key, self._rmbg_net)
+
+        # Load TripoSG pipeline
+        if self._pipeline is None:
+            from nodetool.ml.core.model_manager import ModelManager
+
+            cache_key = "VAST-AI/TripoSG_Pipeline"
+            cached = ModelManager.get_model(cache_key)
+            if cached is not None:
+                self._pipeline = cached
+            else:
+                triposg_path = snapshot_download(repo_id="VAST-AI/TripoSG")
+                self._pipeline = TripoSGPipeline.from_pretrained(
+                    triposg_path
+                ).to(device, torch.float16)
+                ModelManager.set_model(self.id, cache_key, self._pipeline)
+
+        # Load and prepare input image
+        image_io = await context.asset_to_io(self.image)
+        input_image = Image.open(image_io).convert("RGBA")
+        prepared_image = self._prepare_image(input_image, self._rmbg_net)
+
+        # Set seed
+        seed = self.seed if self.seed >= 0 else torch.randint(0, 2**32, (1,)).item()
+        generator = torch.Generator(device=device).manual_seed(seed)
+
+        # Use flash decoder (diso) if available, fall back to marching cubes
+        try:
+            import diso
+            use_flash = True
+        except ImportError:
+            use_flash = False
+
+        # Run inference
+        outputs = self._pipeline(
+            image=prepared_image,
+            generator=generator,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            dense_octree_depth=self.octree_depth - 1,
+            hierarchical_octree_depth=self.octree_depth,
+            flash_octree_depth=self.octree_depth,
+            use_flash_decoder=use_flash,
+        ).samples[0]
+
+        mesh = trimesh.Trimesh(
+            outputs[0].astype(np.float32),
+            np.ascontiguousarray(outputs[1]),
+        )
+
+        run_gc("After TripoSG inference", log_before_after=False)
+
+        # Optionally simplify mesh
+        if self.max_faces > 0:
+            mesh = self._simplify_mesh(mesh, self.max_faces)
+
+        # Export to GLB
+        buffer = io.BytesIO()
+        mesh.export(buffer, file_type="glb")
+        buffer.seek(0)
+        model_bytes = buffer.read()
+
+        return await context.model3d_from_bytes(
+            model_bytes,
+            name=f"triposg_{self.id}.glb",
+            format="glb",
+        )

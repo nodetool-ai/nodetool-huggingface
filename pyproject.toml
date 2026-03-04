@@ -36,11 +36,15 @@ dependencies = [
     "timm",
     "hy3dgen>=2.0.2",
     "trimesh>=4.0.0",
+    "pymeshlab",
+    "scikit-image",
+    "jaxtyping",
+    "typeguard",
 ]
 
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/nodetool", "src/RealESRGAN"]
+packages = ["src/nodetool", "src/RealESRGAN", "src/triposg"]
 include = [
     "src/nodetool/package_metadata/*.json",
     "src/nodetool/assets/**/*.jpg",
@@ -81,6 +85,7 @@ exclude = [
     "notebooks/",
     "scripts/",
     "src/RealESRGAN/",
+    "src/triposg/",
     "test_qwen.py",
 ]
 
