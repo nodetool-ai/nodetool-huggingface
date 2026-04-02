@@ -376,8 +376,9 @@ class HuggingFaceLocalProvider(BaseProvider):
         temperature: float = 0.0,
         timeout_s: int | None = None,
         context: Any = None,
+        word_timestamps: bool = False,
         **kwargs: Any,
-    ) -> str:
+    ) -> str | dict:
         """Transcribe audio to text using HuggingFace Whisper models.
 
         Args:
@@ -458,8 +459,9 @@ class HuggingFaceLocalProvider(BaseProvider):
         samples = samples / (2**15)
 
         # Build pipeline kwargs
+        return_ts = "word" if word_timestamps else kwargs.get("return_timestamps", False)
         pipeline_kwargs: dict[str, Any] = {
-            "return_timestamps": kwargs.get("return_timestamps", False),
+            "return_timestamps": return_ts,
             "chunk_length_s": kwargs.get("chunk_length_s", 30.0),
             "generate_kwargs": {},
         }
@@ -490,7 +492,20 @@ class HuggingFaceLocalProvider(BaseProvider):
 
         log.debug(f"Transcription complete: {len(text)} characters")
 
-        return text
+        if not word_timestamps:
+            return text
+
+        # Extract chunks from pipeline result
+        chunks = []
+        if isinstance(result, dict):
+            for chunk in result.get("chunks", []):
+                ts = chunk.get("timestamp", (0, 0))
+                chunks.append({
+                    "timestamp": [ts[0] or 0, ts[1] or 0],
+                    "text": chunk.get("text", ""),
+                })
+
+        return {"text": text, "chunks": chunks}
 
     async def text_to_video(
         self,
