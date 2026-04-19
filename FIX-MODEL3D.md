@@ -145,8 +145,14 @@ Short reference only; these no longer need active planning detail.
 - [x] **Packaging / docs:** optional-deps cleanup, platforms docstrings,
   vendored upstream notes, revision pin scaffolding, disk-space preflight, and
   input-image validation
+- [x] **Known packaging baseline:** PR #26 landed the first optional-dependency
+  groups, but the remaining env-marker / pinning / install-validation follow-up
+  stays in the execution order above
 - [x] **Planning / guardrails:** smoke-test import discipline and other
   supporting cleanup decisions are in place
+- [x] **Notable completed fixes:** node-held-ref cleanup where already landed,
+  Hunyuan3D low-VRAM guardrails, TripoSG device / flash-decoder cleanup, and
+  consistent `seed=-1` behavior are all captured in the current code / plan set
 
 ---
 

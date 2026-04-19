@@ -1,9 +1,9 @@
 """
 No-GPU smoke tests for local 3D generation nodes.
 
-These tests verify that every node class in local_3d.py can be imported,
-instantiated with default values, and that basic metadata methods work
-correctly.  No GPU or model weights are required.
+These tests verify that every node class in text_to_3d.py and image_to_3d.py
+can be imported, instantiated with default values, and that basic metadata
+methods work correctly.  No GPU or model weights are required.
 """
 
 import pytest
@@ -11,9 +11,9 @@ from nodetool.metadata.types import HuggingFaceModel
 
 
 def _load_node_classes():
-    """Import all 3D node classes from the renamed module."""
-    from nodetool.nodes.huggingface.local_3d import (
-        ShapETextTo3D,
+    """Import all 3D node classes from the split modules."""
+    from nodetool.nodes.huggingface.text_to_3d import ShapETextTo3D
+    from nodetool.nodes.huggingface.image_to_3d import (
         ShapEImageTo3D,
         Hunyuan3D,
         StableFast3D,
@@ -38,9 +38,11 @@ def node_classes():
     return _load_node_classes()
 
 
-def test_import_module():
-    """Module can be imported without error."""
-    import nodetool.nodes.huggingface.local_3d  # noqa: F401
+def test_import_modules():
+    """Modules can be imported without error."""
+    import nodetool.nodes.huggingface.text_to_3d  # noqa: F401
+    import nodetool.nodes.huggingface.image_to_3d  # noqa: F401
+    import nodetool.nodes.huggingface._3d_common  # noqa: F401
 
 
 def test_all_classes_importable(node_classes):
@@ -49,43 +51,45 @@ def test_all_classes_importable(node_classes):
 
 
 @pytest.mark.parametrize(
-    "cls_name",
+    "cls_name,module",
     [
-        "ShapETextTo3D",
-        "ShapEImageTo3D",
-        "Hunyuan3D",
-        "StableFast3D",
-        "TripoSR",
-        "Trellis2",
-        "TripoSG",
+        ("ShapETextTo3D", "text_to_3d"),
+        ("ShapEImageTo3D", "image_to_3d"),
+        ("Hunyuan3D", "image_to_3d"),
+        ("StableFast3D", "image_to_3d"),
+        ("TripoSR", "image_to_3d"),
+        ("Trellis2", "image_to_3d"),
+        ("TripoSG", "image_to_3d"),
     ],
 )
-def test_instantiate_with_defaults(cls_name):
+def test_instantiate_with_defaults(cls_name, module):
     """Each node can be instantiated with default field values."""
-    from nodetool.nodes.huggingface import local_3d
+    import importlib
 
-    cls = getattr(local_3d, cls_name)
+    mod = importlib.import_module(f"nodetool.nodes.huggingface.{module}")
+    cls = getattr(mod, cls_name)
     instance = cls()
     assert instance is not None
 
 
 @pytest.mark.parametrize(
-    "cls_name",
+    "cls_name,module",
     [
-        "ShapETextTo3D",
-        "ShapEImageTo3D",
-        "Hunyuan3D",
-        "StableFast3D",
-        "TripoSR",
-        "Trellis2",
-        "TripoSG",
+        ("ShapETextTo3D", "text_to_3d"),
+        ("ShapEImageTo3D", "image_to_3d"),
+        ("Hunyuan3D", "image_to_3d"),
+        ("StableFast3D", "image_to_3d"),
+        ("TripoSR", "image_to_3d"),
+        ("Trellis2", "image_to_3d"),
+        ("TripoSG", "image_to_3d"),
     ],
 )
-def test_get_recommended_models(cls_name):
+def test_get_recommended_models(cls_name, module):
     """get_recommended_models returns a non-empty list of HuggingFaceModel."""
-    from nodetool.nodes.huggingface import local_3d
+    import importlib
 
-    cls = getattr(local_3d, cls_name)
+    mod = importlib.import_module(f"nodetool.nodes.huggingface.{module}")
+    cls = getattr(mod, cls_name)
     models = cls.get_recommended_models()
     assert isinstance(models, list)
     assert len(models) > 0
@@ -95,22 +99,23 @@ def test_get_recommended_models(cls_name):
 
 
 @pytest.mark.parametrize(
-    "cls_name",
+    "cls_name,module",
     [
-        "ShapETextTo3D",
-        "ShapEImageTo3D",
-        "Hunyuan3D",
-        "StableFast3D",
-        "TripoSR",
-        "Trellis2",
-        "TripoSG",
+        ("ShapETextTo3D", "text_to_3d"),
+        ("ShapEImageTo3D", "image_to_3d"),
+        ("Hunyuan3D", "image_to_3d"),
+        ("StableFast3D", "image_to_3d"),
+        ("TripoSR", "image_to_3d"),
+        ("Trellis2", "image_to_3d"),
+        ("TripoSG", "image_to_3d"),
     ],
 )
-def test_get_basic_fields(cls_name):
+def test_get_basic_fields(cls_name, module):
     """get_basic_fields returns a non-empty list of strings."""
-    from nodetool.nodes.huggingface import local_3d
+    import importlib
 
-    cls = getattr(local_3d, cls_name)
+    mod = importlib.import_module(f"nodetool.nodes.huggingface.{module}")
+    cls = getattr(mod, cls_name)
     fields = cls.get_basic_fields()
     assert isinstance(fields, list)
     assert len(fields) > 0
@@ -119,22 +124,23 @@ def test_get_basic_fields(cls_name):
 
 
 @pytest.mark.parametrize(
-    "cls_name",
+    "cls_name,module",
     [
-        "ShapETextTo3D",
-        "ShapEImageTo3D",
-        "Hunyuan3D",
-        "StableFast3D",
-        "TripoSR",
-        "Trellis2",
-        "TripoSG",
+        ("ShapETextTo3D", "text_to_3d"),
+        ("ShapEImageTo3D", "image_to_3d"),
+        ("Hunyuan3D", "image_to_3d"),
+        ("StableFast3D", "image_to_3d"),
+        ("TripoSR", "image_to_3d"),
+        ("Trellis2", "image_to_3d"),
+        ("TripoSG", "image_to_3d"),
     ],
 )
-def test_get_title(cls_name):
+def test_get_title(cls_name, module):
     """get_title returns a non-empty string."""
-    from nodetool.nodes.huggingface import local_3d
+    import importlib
 
-    cls = getattr(local_3d, cls_name)
+    mod = importlib.import_module(f"nodetool.nodes.huggingface.{module}")
+    cls = getattr(mod, cls_name)
     title = cls.get_title()
     assert isinstance(title, str)
     assert len(title) > 0
@@ -142,7 +148,8 @@ def test_get_title(cls_name):
 
 def test_shape_nodes_do_not_require_gpu():
     """Shap-E nodes should support CPU (requires_gpu returns False)."""
-    from nodetool.nodes.huggingface.local_3d import ShapETextTo3D, ShapEImageTo3D
+    from nodetool.nodes.huggingface.text_to_3d import ShapETextTo3D
+    from nodetool.nodes.huggingface.image_to_3d import ShapEImageTo3D
 
     assert ShapETextTo3D().requires_gpu() is False
     assert ShapEImageTo3D().requires_gpu() is False
@@ -150,7 +157,7 @@ def test_shape_nodes_do_not_require_gpu():
 
 def test_heavy_nodes_require_gpu():
     """Heavy pipeline nodes should require GPU."""
-    from nodetool.nodes.huggingface.local_3d import (
+    from nodetool.nodes.huggingface.image_to_3d import (
         Hunyuan3D,
         StableFast3D,
         TripoSR,
@@ -164,8 +171,8 @@ def test_heavy_nodes_require_gpu():
 
 def test_seed_defaults():
     """All nodes with a seed field default to -1 (random)."""
-    from nodetool.nodes.huggingface.local_3d import (
-        ShapETextTo3D,
+    from nodetool.nodes.huggingface.text_to_3d import ShapETextTo3D
+    from nodetool.nodes.huggingface.image_to_3d import (
         ShapEImageTo3D,
         Hunyuan3D,
         Trellis2,
@@ -180,7 +187,7 @@ def test_seed_defaults():
 def test_resolve_device_returns_string():
     """_resolve_device returns a non-empty string."""
     pytest.importorskip("torch")
-    from nodetool.nodes.huggingface.local_3d import _resolve_device
+    from nodetool.nodes.huggingface._3d_common import _resolve_device
 
     device = _resolve_device()
     assert isinstance(device, str)
@@ -190,7 +197,7 @@ def test_resolve_device_returns_string():
 def test_resolve_seed_passthrough():
     """_resolve_seed returns the seed unchanged when >= 0."""
     pytest.importorskip("torch")
-    from nodetool.nodes.huggingface.local_3d import _resolve_seed
+    from nodetool.nodes.huggingface._3d_common import _resolve_seed
 
     assert _resolve_seed(42) == 42
     assert _resolve_seed(0) == 0
@@ -199,7 +206,7 @@ def test_resolve_seed_passthrough():
 def test_resolve_seed_random():
     """_resolve_seed returns a random uint32 when seed is -1."""
     pytest.importorskip("torch")
-    from nodetool.nodes.huggingface.local_3d import _resolve_seed
+    from nodetool.nodes.huggingface._3d_common import _resolve_seed
 
     seed = _resolve_seed(-1)
     assert isinstance(seed, int)
@@ -209,7 +216,7 @@ def test_resolve_seed_random():
 def test_open_pil_image_rejects_garbage():
     """_open_pil_image raises ValueError on non-image bytes."""
     import io
-    from nodetool.nodes.huggingface.local_3d import _open_pil_image
+    from nodetool.nodes.huggingface._3d_common import _open_pil_image
 
     buf = io.BytesIO(b"this is not an image")
     with pytest.raises(ValueError, match="Invalid input image"):
@@ -220,7 +227,7 @@ def test_open_pil_image_valid_png():
     """_open_pil_image succeeds on a minimal valid PNG."""
     import io
     from PIL import Image
-    from nodetool.nodes.huggingface.local_3d import _open_pil_image
+    from nodetool.nodes.huggingface._3d_common import _open_pil_image
 
     # Create a tiny 2x2 red PNG in memory
     img = Image.new("RGB", (2, 2), color=(255, 0, 0))
@@ -237,7 +244,7 @@ def test_export_mesh_roundtrip():
     """_export_mesh produces non-empty GLB bytes from a trimesh object."""
     trimesh = pytest.importorskip("trimesh")
     import numpy as np
-    from nodetool.nodes.huggingface.local_3d import _export_mesh
+    from nodetool.nodes.huggingface._3d_common import _export_mesh
 
     # Simple triangle
     verts = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=np.float32)
@@ -254,7 +261,7 @@ def test_export_mesh_include_normals():
     """_export_mesh with include_normals=True still produces valid output."""
     trimesh = pytest.importorskip("trimesh")
     import numpy as np
-    from nodetool.nodes.huggingface.local_3d import _export_mesh
+    from nodetool.nodes.huggingface._3d_common import _export_mesh
 
     verts = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=np.float32)
     faces = np.array([[0, 1, 2]], dtype=np.int64)
@@ -266,22 +273,29 @@ def test_export_mesh_include_normals():
 
 def test_all_nodes_have_platforms_in_docstring():
     """Every node class docstring includes a **Platforms:** line."""
-    from nodetool.nodes.huggingface import local_3d
+    from nodetool.nodes.huggingface.text_to_3d import ShapETextTo3D
+    from nodetool.nodes.huggingface.image_to_3d import (
+        ShapEImageTo3D,
+        Hunyuan3D,
+        StableFast3D,
+        TripoSR,
+        Trellis2,
+        TripoSG,
+    )
 
-    for cls_name in [
-        "ShapETextTo3D",
-        "ShapEImageTo3D",
-        "Hunyuan3D",
-        "StableFast3D",
-        "TripoSR",
-        "Trellis2",
-        "TripoSG",
+    for cls in [
+        ShapETextTo3D,
+        ShapEImageTo3D,
+        Hunyuan3D,
+        StableFast3D,
+        TripoSR,
+        Trellis2,
+        TripoSG,
     ]:
-        cls = getattr(local_3d, cls_name)
         doc = cls.__doc__ or ""
         assert (
             "**Platforms:**" in doc
-        ), f"{cls_name} docstring is missing a **Platforms:** line"
+        ), f"{cls.__name__} docstring is missing a **Platforms:** line"
 
 
 def test_model3d_from_bytes_accepts_metadata():
@@ -296,49 +310,51 @@ def test_model3d_from_bytes_accepts_metadata():
 
 
 # ---------------------------------------------------------------------------
-# ClassVar metadata tests (#20, #22a, D9/D11)
+# ClassVar metadata tests (#20, #22a, D9/D11, #8e)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
-    "cls_name",
+    "cls_name,module",
     [
-        "ShapETextTo3D",
-        "ShapEImageTo3D",
-        "Hunyuan3D",
-        "StableFast3D",
-        "TripoSR",
-        "Trellis2",
-        "TripoSG",
+        ("ShapETextTo3D", "text_to_3d"),
+        ("ShapEImageTo3D", "image_to_3d"),
+        ("Hunyuan3D", "image_to_3d"),
+        ("StableFast3D", "image_to_3d"),
+        ("TripoSR", "image_to_3d"),
+        ("Trellis2", "image_to_3d"),
+        ("TripoSG", "image_to_3d"),
     ],
 )
-def test_min_vram_gb_present(cls_name):
+def test_min_vram_gb_present(cls_name, module):
     """Every node declares a positive MIN_VRAM_GB ClassVar."""
-    from nodetool.nodes.huggingface import local_3d
+    import importlib
 
-    cls = getattr(local_3d, cls_name)
+    mod = importlib.import_module(f"nodetool.nodes.huggingface.{module}")
+    cls = getattr(mod, cls_name)
     assert hasattr(cls, "MIN_VRAM_GB"), f"{cls_name} missing MIN_VRAM_GB"
     assert isinstance(cls.MIN_VRAM_GB, int)
     assert cls.MIN_VRAM_GB > 0
 
 
 @pytest.mark.parametrize(
-    "cls_name",
+    "cls_name,module",
     [
-        "ShapETextTo3D",
-        "ShapEImageTo3D",
-        "Hunyuan3D",
-        "StableFast3D",
-        "TripoSR",
-        "Trellis2",
-        "TripoSG",
+        ("ShapETextTo3D", "text_to_3d"),
+        ("ShapEImageTo3D", "image_to_3d"),
+        ("Hunyuan3D", "image_to_3d"),
+        ("StableFast3D", "image_to_3d"),
+        ("TripoSR", "image_to_3d"),
+        ("Trellis2", "image_to_3d"),
+        ("TripoSG", "image_to_3d"),
     ],
 )
-def test_estimated_download_gb_present(cls_name):
+def test_estimated_download_gb_present(cls_name, module):
     """Every node declares a positive ESTIMATED_DOWNLOAD_GB ClassVar."""
-    from nodetool.nodes.huggingface import local_3d
+    import importlib
 
-    cls = getattr(local_3d, cls_name)
+    mod = importlib.import_module(f"nodetool.nodes.huggingface.{module}")
+    cls = getattr(mod, cls_name)
     assert hasattr(
         cls, "ESTIMATED_DOWNLOAD_GB"
     ), f"{cls_name} missing ESTIMATED_DOWNLOAD_GB"
@@ -347,22 +363,23 @@ def test_estimated_download_gb_present(cls_name):
 
 
 @pytest.mark.parametrize(
-    "cls_name",
+    "cls_name,module",
     [
-        "ShapETextTo3D",
-        "ShapEImageTo3D",
-        "Hunyuan3D",
-        "StableFast3D",
-        "TripoSR",
-        "Trellis2",
-        "TripoSG",
+        ("ShapETextTo3D", "text_to_3d"),
+        ("ShapEImageTo3D", "image_to_3d"),
+        ("Hunyuan3D", "image_to_3d"),
+        ("StableFast3D", "image_to_3d"),
+        ("TripoSR", "image_to_3d"),
+        ("Trellis2", "image_to_3d"),
+        ("TripoSG", "image_to_3d"),
     ],
 )
-def test_license_warning_present(cls_name):
+def test_license_warning_present(cls_name, module):
     """Every node has a license_warning ClassVar (str or None)."""
-    from nodetool.nodes.huggingface import local_3d
+    import importlib
 
-    cls = getattr(local_3d, cls_name)
+    mod = importlib.import_module(f"nodetool.nodes.huggingface.{module}")
+    cls = getattr(mod, cls_name)
     assert hasattr(cls, "license_warning"), f"{cls_name} missing license_warning"
     val = cls.license_warning
     assert val is None or isinstance(val, str)
@@ -370,8 +387,8 @@ def test_license_warning_present(cls_name):
 
 def test_license_warnings_correct():
     """Non-MIT nodes have a non-None license_warning; MIT nodes have None."""
-    from nodetool.nodes.huggingface.local_3d import (
-        ShapETextTo3D,
+    from nodetool.nodes.huggingface.text_to_3d import ShapETextTo3D
+    from nodetool.nodes.huggingface.image_to_3d import (
         ShapEImageTo3D,
         Hunyuan3D,
         StableFast3D,
@@ -401,7 +418,7 @@ def test_license_warnings_correct():
 def test_check_disk_space_passes_when_enough():
     """_check_disk_space does not raise when space is ample."""
     import tempfile
-    from nodetool.nodes.huggingface.local_3d import _check_disk_space
+    from nodetool.nodes.huggingface._3d_common import _check_disk_space
 
     # Use system tmp — should have plenty of space
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -411,7 +428,7 @@ def test_check_disk_space_passes_when_enough():
 def test_check_disk_space_raises_when_tight():
     """_check_disk_space raises OSError when requesting absurd space."""
     import tempfile
-    from nodetool.nodes.huggingface.local_3d import _check_disk_space
+    from nodetool.nodes.huggingface._3d_common import _check_disk_space
 
     with tempfile.TemporaryDirectory() as tmpdir:
         with pytest.raises(OSError, match="Not enough disk space"):
@@ -425,7 +442,7 @@ def test_check_disk_space_raises_when_tight():
 
 def test_model_revisions_table_covers_all_repos():
     """MODEL_REVISIONS has an entry for every repo referenced by nodes."""
-    from nodetool.nodes.huggingface.local_3d import MODEL_REVISIONS
+    from nodetool.nodes.huggingface._3d_common import MODEL_REVISIONS
 
     expected_repos = {
         "openai/shap-e",
@@ -443,9 +460,64 @@ def test_model_revisions_table_covers_all_repos():
 
 def test_model_revision_returns_none_for_unset():
     """_model_revision returns None for repos not yet pinned."""
-    from nodetool.nodes.huggingface.local_3d import _model_revision
+    from nodetool.nodes.huggingface._3d_common import _model_revision
 
     # All are None currently (placeholder SHAs to be filled in)
     assert _model_revision("openai/shap-e") is None
     # Unknown repo also returns None gracefully
     assert _model_revision("nonexistent/repo") is None
+
+
+# ---------------------------------------------------------------------------
+# Static capability metadata (#8e)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "cls_name,module",
+    [
+        ("ShapETextTo3D", "text_to_3d"),
+        ("ShapEImageTo3D", "image_to_3d"),
+        ("Hunyuan3D", "image_to_3d"),
+        ("StableFast3D", "image_to_3d"),
+        ("TripoSR", "image_to_3d"),
+        ("Trellis2", "image_to_3d"),
+        ("TripoSG", "image_to_3d"),
+    ],
+)
+def test_supported_platforms_present(cls_name, module):
+    """Every node declares a non-empty SUPPORTED_PLATFORMS ClassVar."""
+    import importlib
+
+    mod = importlib.import_module(f"nodetool.nodes.huggingface.{module}")
+    cls = getattr(mod, cls_name)
+    assert hasattr(
+        cls, "SUPPORTED_PLATFORMS"
+    ), f"{cls_name} missing SUPPORTED_PLATFORMS"
+    assert isinstance(cls.SUPPORTED_PLATFORMS, list)
+    assert len(cls.SUPPORTED_PLATFORMS) > 0
+    for p in cls.SUPPORTED_PLATFORMS:
+        assert p in ("linux", "macos", "windows"), f"unexpected platform: {p}"
+
+
+@pytest.mark.parametrize(
+    "cls_name,module",
+    [
+        ("ShapETextTo3D", "text_to_3d"),
+        ("ShapEImageTo3D", "image_to_3d"),
+        ("Hunyuan3D", "image_to_3d"),
+        ("StableFast3D", "image_to_3d"),
+        ("TripoSR", "image_to_3d"),
+        ("Trellis2", "image_to_3d"),
+        ("TripoSG", "image_to_3d"),
+    ],
+)
+def test_install_hint_present(cls_name, module):
+    """Every node has an INSTALL_HINT ClassVar (str or None)."""
+    import importlib
+
+    mod = importlib.import_module(f"nodetool.nodes.huggingface.{module}")
+    cls = getattr(mod, cls_name)
+    assert hasattr(cls, "INSTALL_HINT"), f"{cls_name} missing INSTALL_HINT"
+    val = cls.INSTALL_HINT
+    assert val is None or isinstance(val, str)

@@ -32,3 +32,5 @@ To update this vendored copy:
 2. Copy the inference-relevant directories (`triposg/`) here.
 3. Update the table above with the new commit SHA.
 4. Run `pytest tests/test_local_3d_smoke.py` to verify nothing broke.
+   (Note: 3D nodes are now split across `text_to_3d.py` and `image_to_3d.py`
+   with shared helpers in `_3d_common.py`.)

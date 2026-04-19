@@ -40,6 +40,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Always installable — Shap-E only needs diffusers (already in core deps)
+shape = []
+
 # Pure-Python / wheel deps — install everywhere, runtime gates CUDA
 hunyuan3d = [
     "hy3dgen>=2.0.2,<2.1",
@@ -47,12 +50,16 @@ hunyuan3d = [
 ]
 triposg = [
     "diso ; platform_system != 'Darwin'",
+    "rembg ; platform_system != 'Darwin'",
     "pymeshlab",
     "scikit-image",
 ]
 sf3d = ["sf3d", "rembg"]
 triposr = ["tsr", "rembg"]
 trellis2 = ["trellis2", "o_voxel"]
+
+# Convenience meta-groups
+all-3d-pypi = ["nodetool-huggingface[hunyuan3d,triposg]"]
 all-3d = ["nodetool-huggingface[hunyuan3d,triposg,sf3d,triposr,trellis2]"]
 
 
