@@ -43,7 +43,7 @@ Read this section top to bottom. The first unchecked group is the next work.
 
 ### 1. Next: fix model ownership and preload semantics
 
-- [ ] **Make `ModelManager` the single source of truth**
+- [x] **Make `ModelManager` the single source of truth**
   - Do not keep long-lived strong refs like `self._model` / `self._pipeline`
     on node instances.
   - Preferred implementation: keep this scoped to `local_3d.py`.
@@ -65,7 +65,7 @@ Read this section top to bottom. The first unchecked group is the next work.
 - Goal: break up the oversized 3D module along clear modality lines without
   changing behavior, then refresh generated metadata to match the new layout.
 
-- [ ] **Split `local_3d.py` by modality**
+- [x] **Split `local_3d.py` by modality**
   - `text_to_3d.py` for `ShapETextTo3D`
   - `image_to_3d.py` for the six image-to-3D nodes
   - `_3d_common.py` for shared helpers

@@ -94,10 +94,7 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
         description="Random seed for reproducibility. -1 for random.",
     )
 
-    # Note: self._pipeline is required by the HuggingFacePipelineNode base class
-    # (used by move_to_device, run_pipeline_in_thread). Refactoring this
-    # out requires upstream changes to nodetool-core's base class.
-    _pipeline: Any = None
+    CACHE_KEY: ClassVar[str] = "openai/shap-e-img2img_ShapEImg2ImgPipeline_None"
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
@@ -125,18 +122,22 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
     def requires_gpu(self) -> bool:
         return False
 
-    async def preload_model(self, context: ProcessingContext):
+    async def _get_pipeline(self, context: ProcessingContext):
+        """Load or retrieve the Shap-E image pipeline from ModelManager."""
         import torch
         from diffusers import ShapEImg2ImgPipeline
 
         device = _resolve_device()
         torch_dtype = torch.float16 if device == "cuda" else torch.float32
-        self._pipeline = await self.load_model(
+        return await self.load_model(
             context=context,
             model_class=ShapEImg2ImgPipeline,
             model_id="openai/shap-e-img2img",
             torch_dtype=torch_dtype,
         )
+
+    async def preload_model(self, context: ProcessingContext):
+        await self._get_pipeline(context)
 
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
@@ -144,13 +145,13 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
         if self.image.is_empty():
             raise ValueError("Input image is required")
 
-        assert self._pipeline is not None, "Pipeline not initialized"
+        pipeline = await self._get_pipeline(context)
 
         # Load input image
         image_io = await context.asset_to_io(self.image)
         input_image = _open_pil_image(image_io, mode="RGB")
 
-        device = str(self._pipeline.device)
+        device = str(pipeline.device)
 
         # Set seed – generator device must be "cpu" for MPS pipelines
         gen_device = "cpu" if device.startswith("mps") else device
@@ -158,7 +159,7 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
         generator = torch.Generator(device=gen_device).manual_seed(seed)
 
         # Generate
-        images = self._pipeline(
+        images = pipeline(
             input_image,
             guidance_scale=self.guidance_scale,
             num_inference_steps=self.num_inference_steps,
