@@ -1,8 +1,13 @@
 """
-HuggingFace local 3D generation nodes.
+HuggingFace image-to-3D generation nodes.
 
-Provides local inference for 3D model generation using models from HuggingFace:
-- Shap-E: Text-to-3D and Image-to-3D using diffusers
+Provides local inference for image-to-3D model generation:
+- Shap-E Image-to-3D: Using OpenAI's diffusers pipeline
+- Hunyuan3D: Tencent Hunyuan3D-2
+- StableFast3D (SF3D): Stability AI
+- TripoSR: Stability AI / VAST
+- Trellis2: Microsoft TRELLIS.2-4B
+- TripoSG: VAST-AI
 
 These nodes run locally and do not require API keys.
 """
@@ -11,7 +16,6 @@ from __future__ import annotations
 
 import io
 import logging
-import shutil
 from enum import Enum
 from typing import Any, ClassVar, TYPE_CHECKING
 
@@ -22,308 +26,21 @@ from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineN
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.memory_utils import run_gc
 
+from nodetool.nodes.huggingface._3d_common import (
+    _model_revision,
+    _check_disk_space,
+    _resolve_device,
+    _resolve_seed,
+    _open_pil_image,
+    _export_mesh,
+)
+
 if TYPE_CHECKING:
     import torch
     import trimesh
     from PIL import Image
 
 log = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Model revision pinning (D9 / #19)
-# ---------------------------------------------------------------------------
-# Map from HuggingFace repo_id → known-good commit SHA.
-# Pass these to ``from_pretrained(..., revision=...)`` and
-# ``snapshot_download(..., revision=...)`` calls so upstream
-# weight reorganizations don't silently break users.
-#
-# Values of ``None`` mean "use latest" — fill in verified SHAs
-# and bump intentionally.  Refresh quarterly.
-# ---------------------------------------------------------------------------
-MODEL_REVISIONS: dict[str, str | None] = {
-    "openai/shap-e": None,
-    "openai/shap-e-img2img": None,
-    "tencent/Hunyuan3D-2": None,
-    "tencent/Hunyuan3D-2mini": None,
-    "stabilityai/stable-fast-3d": None,
-    "stabilityai/TripoSR": None,
-    "microsoft/TRELLIS.2-4B": None,
-    "VAST-AI/TripoSG": None,
-    "briaai/RMBG-1.4": None,
-}
-
-
-def _model_revision(repo_id: str) -> str | None:
-    """Return the pinned revision for *repo_id*, or ``None`` (latest)."""
-    return MODEL_REVISIONS.get(repo_id)
-
-
-# ---------------------------------------------------------------------------
-# Disk-space pre-flight (#21)
-# ---------------------------------------------------------------------------
-_DISK_HEADROOM_GB = 2  # extra headroom beyond estimated model size
-
-
-def _check_disk_space(estimated_gb: float, cache_dir: str | None = None) -> None:
-    """Raise if the HF cache volume has less free space than *estimated_gb*.
-
-    Parameters
-    ----------
-    estimated_gb:
-        Approximate download size in GiB.
-    cache_dir:
-        Override for the cache directory to check.  When ``None``,
-        resolves from ``HF_HOME`` / ``HUGGINGFACE_HUB_CACHE`` env vars,
-        falling back to ``~/.cache/huggingface/hub``.
-    """
-    import os
-
-    if cache_dir is None:
-        cache_dir = os.environ.get(
-            "HUGGINGFACE_HUB_CACHE",
-            os.environ.get(
-                "HF_HOME",
-                os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub"),
-            ),
-        )
-    os.makedirs(cache_dir, exist_ok=True)
-    usage = shutil.disk_usage(cache_dir)
-    free_gb = usage.free / (1 << 30)
-    needed = estimated_gb + _DISK_HEADROOM_GB
-    if free_gb < needed:
-        raise OSError(
-            f"Not enough disk space to download model weights. "
-            f"Need ~{needed:.1f} GB free, but only {free_gb:.1f} GB available "
-            f"in {cache_dir}. Free up space or set HF_HOME / "
-            f"HUGGINGFACE_HUB_CACHE to a volume with more room."
-        )
-
-
-def _resolve_device() -> str:
-    """Return the best available torch device string (cuda > mps > cpu)."""
-    import torch
-
-    if torch.cuda.is_available():
-        return "cuda"
-    if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
-        return "mps"
-    return "cpu"
-
-
-def _resolve_seed(seed: int) -> int:
-    """Return *seed* unchanged when >= 0, otherwise a random 32-bit integer."""
-    if seed >= 0:
-        return seed
-    import torch
-
-    return torch.randint(0, 2**32, (1,)).item()
-
-
-def _open_pil_image(image_bytes_io: Any, mode: str = "RGB") -> "Image.Image":
-    """Open a PIL image from an IO buffer with friendly error messages.
-
-    Wraps ``PIL.Image.open`` to convert common failure modes
-    (corrupt file, unsupported format, truncated download, etc.)
-    into a clear ``ValueError`` that surfaces in the node UI.
-    """
-    from PIL import Image, UnidentifiedImageError
-
-    try:
-        img = Image.open(image_bytes_io)
-        img.load()  # force full decode to catch truncated files
-        return img.convert(mode)
-    except UnidentifiedImageError:
-        raise ValueError(
-            "Invalid input image: the file could not be identified as an image. "
-            "Please provide a valid JPEG, PNG, or WebP file."
-        )
-    except OSError as exc:
-        raise ValueError(f"Invalid input image: {exc}") from exc
-
-
-def _export_mesh(
-    mesh: Any,
-    format: str = "glb",
-    include_normals: bool = False,
-) -> bytes:
-    """Export a mesh (trimesh or raw vertices/faces object) to bytes.
-
-    Handles the common export pattern shared across 3D generation nodes:
-    - If *mesh* already has an ``.export()`` method (e.g. a trimesh object),
-      call it directly.
-    - Otherwise build a ``trimesh.Trimesh`` from ``.vertices`` / ``.faces``,
-      converting GPU tensors to numpy when necessary.
-
-    Parameters
-    ----------
-    mesh:
-        A trimesh ``Trimesh``, or any object with ``.vertices`` and ``.faces``
-        attributes.
-    format:
-        Target file type (``"glb"``, ``"obj"``, …).
-    include_normals:
-        If ``True``, pass ``include_normals=True`` to the trimesh exporter
-        (used by SF3D).
-    """
-    import trimesh as _trimesh
-
-    buffer = io.BytesIO()
-
-    if hasattr(mesh, "export"):
-        kwargs: dict[str, Any] = {"file_type": format}
-        if include_normals:
-            kwargs["include_normals"] = True
-        mesh.export(buffer, **kwargs)
-    else:
-        verts = mesh.vertices
-        faces = mesh.faces
-        if hasattr(verts, "cpu"):
-            verts = verts.cpu().numpy()
-        if hasattr(faces, "cpu"):
-            faces = faces.cpu().numpy()
-        tri = _trimesh.Trimesh(vertices=verts, faces=faces)
-        tri.export(buffer, file_type=format)
-
-    buffer.seek(0)
-    return buffer.read()
-
-
-class ShapETextTo3D(HuggingFacePipelineNode):
-    """
-    Generate 3D models from text descriptions using OpenAI Shap-E.
-    3d, generation, text-to-3d, shap-e, mesh, local
-
-    Use cases:
-    - Generate 3D models from text descriptions locally
-    - Create 3D assets without API costs
-    - Prototype 3D content quickly
-    - Generate simple 3D objects for games/visualization
-
-    **Platforms:** all (CPU/MPS/CUDA).
-
-    **Note:** Requires diffusers and torch. First run will download the model (~2.5GB).
-    """
-
-    # -- static metadata ---------------------------------------------------
-    MIN_VRAM_GB: ClassVar[int] = 4
-    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 2.5
-    license_warning: ClassVar[str | None] = None  # MIT
-
-    prompt: str = Field(
-        default="a shark",
-        description="Text description of the 3D model to generate",
-    )
-    guidance_scale: float = Field(
-        default=15.0,
-        ge=1.0,
-        le=30.0,
-        description="How strongly to follow the prompt. Higher = more prompt adherence.",
-    )
-    num_inference_steps: int = Field(
-        default=64,
-        ge=16,
-        le=128,
-        description="Number of denoising steps. More steps = better quality but slower.",
-    )
-    frame_size: int = Field(
-        default=256,
-        ge=64,
-        le=512,
-        description="Resolution of the internal representation. Higher = more detail.",
-    )
-    seed: int = Field(
-        default=-1,
-        ge=-1,
-        description="Random seed for reproducibility. -1 for random.",
-    )
-
-    _pipeline: Any = None
-
-    @classmethod
-    def get_recommended_models(cls) -> list[HuggingFaceModel]:
-        return [
-            HuggingFaceModel(
-                repo_id="openai/shap-e",
-                # Include safetensors + bin for shap_e_renderer (no safetensors available there)
-                allow_patterns=[
-                    "**/*.safetensors",
-                    "shap_e_renderer/*.bin",
-                    "**/*.json",
-                    "**/*.txt",
-                ],
-            ),
-        ]
-
-    @classmethod
-    def get_title(cls) -> str:
-        return "Shap-E Text-to-3D"
-
-    @classmethod
-    def get_basic_fields(cls) -> list[str]:
-        return ["prompt", "seed"]
-
-    def requires_gpu(self) -> bool:
-        return False
-
-    async def preload_model(self, context: ProcessingContext):
-        import torch
-        from diffusers import ShapEPipeline
-
-        device = _resolve_device()
-        torch_dtype = torch.float16 if device == "cuda" else torch.float32
-        self._pipeline = await self.load_model(
-            context=context,
-            model_class=ShapEPipeline,
-            model_id="openai/shap-e",
-            torch_dtype=torch_dtype,
-        )
-
-    async def process(self, context: ProcessingContext) -> Model3DRef:
-        import torch
-
-        if not self.prompt:
-            raise ValueError("Prompt is required")
-
-        assert self._pipeline is not None, "Pipeline not initialized"
-        device = str(self._pipeline.device)
-
-        # Set seed – generator device must be "cpu" for MPS pipelines
-        gen_device = "cpu" if device.startswith("mps") else device
-        seed = _resolve_seed(self.seed)
-        generator = torch.Generator(device=gen_device).manual_seed(seed)
-
-        # Generate
-        images = self._pipeline(
-            self.prompt,
-            guidance_scale=self.guidance_scale,
-            num_inference_steps=self.num_inference_steps,
-            frame_size=self.frame_size,
-            generator=generator,
-            output_type="mesh",
-        ).images
-
-        if not images:
-            raise RuntimeError("No 3D model generated")
-
-        mesh = images[0]
-
-        run_gc("After ShapE Text-to-3D inference", log_before_after=False)
-        # Export to GLB
-        import trimesh
-
-        tri_mesh = trimesh.Trimesh(
-            vertices=mesh.verts.cpu().numpy(),
-            faces=mesh.faces.cpu().numpy(),
-        )
-        model_bytes = _export_mesh(tri_mesh, format="glb")
-
-        return await context.model3d_from_bytes(
-            model_bytes,
-            name=f"shap_e_{self.id}.glb",
-            format="glb",
-            metadata={"seed": seed, "source_model": "openai/shap-e"},
-        )
 
 
 class ShapEImageTo3D(HuggingFacePipelineNode):
@@ -346,6 +63,8 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
     MIN_VRAM_GB: ClassVar[int] = 4
     ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 2.5
     license_warning: ClassVar[str | None] = None  # MIT
+    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "macos", "windows"]
+    INSTALL_HINT: ClassVar[str | None] = None  # uses diffusers, already in core
 
     image: ImageRef = Field(
         default=ImageRef(),
@@ -496,6 +215,10 @@ class Hunyuan3D(HuggingFacePipelineNode):
     license_warning: ClassVar[str | None] = (
         "Tencent Hunyuan3D License — non-commercial use only. "
         "See https://huggingface.co/tencent/Hunyuan3D-2/blob/main/LICENSE"
+    )
+    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "windows"]
+    INSTALL_HINT: ClassVar[str | None] = (
+        "Install with: pip install 'nodetool-huggingface[hunyuan3d]'"
     )
 
     class ModelVariant(str, Enum):
@@ -768,6 +491,10 @@ class StableFast3D(HuggingFacePipelineNode):
         "enterprise license required above. "
         "See https://huggingface.co/stabilityai/stable-fast-3d/blob/main/LICENSE.md"
     )
+    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "windows"]
+    INSTALL_HINT: ClassVar[str | None] = (
+        "Install from: https://github.com/Stability-AI/stable-fast-3d"
+    )
 
     class OutputFormat(str, Enum):
         GLB = "glb"
@@ -947,6 +674,10 @@ class TripoSR(HuggingFacePipelineNode):
     MIN_VRAM_GB: ClassVar[int] = 6
     ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 1.0
     license_warning: ClassVar[str | None] = None  # MIT
+    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "windows"]
+    INSTALL_HINT: ClassVar[str | None] = (
+        "Install from: https://github.com/VAST-AI-Research/TripoSR"
+    )
 
     class OutputFormat(str, Enum):
         GLB = "glb"
@@ -1122,6 +853,11 @@ class Trellis2(HuggingFacePipelineNode):
     license_warning: ClassVar[str | None] = (
         "Microsoft Research License — non-commercial use only. "
         "See https://huggingface.co/microsoft/TRELLIS.2-4B/blob/main/LICENSE"
+    )
+    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux"]
+    INSTALL_HINT: ClassVar[str | None] = (
+        "Install trellis2 and o_voxel. "
+        "See https://github.com/microsoft/TRELLIS.2 for instructions."
     )
 
     class Resolution(str, Enum):
@@ -1334,6 +1070,10 @@ class TripoSG(HuggingFacePipelineNode):
     MIN_VRAM_GB: ClassVar[int] = 8
     ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 3.0
     license_warning: ClassVar[str | None] = None  # MIT
+    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "windows"]
+    INSTALL_HINT: ClassVar[str | None] = (
+        "Install with: pip install 'nodetool-huggingface[triposg]'"
+    )
 
     image: ImageRef = Field(
         default=ImageRef(),

@@ -18965,8 +18965,8 @@
     {
       "title": "Hunyuan3D-2",
       "description": "Generate 3D meshes from images using Tencent Hunyuan3D-2.\n    3d, generation, image-to-3d, hunyuan3d, mesh, local, high-quality\n\n    Use cases:\n    - Generate 3D models from images locally\n    - Create 3D assets from product photos or concept art\n    - Convert single images to 3D meshes\n    - Prototype 3D content without API costs\n\n    Produces untextured meshes (shape only). Use external tools for texturing.\n\n    **Requirements:** hy3dgen>=2.0.2 package, torch with CUDA.\n    First run downloads ~5GB model (shape-only, not full 75GB repo).\n    Standard model needs ~6GB VRAM, mini needs ~5GB. Use low_vram_mode on constrained GPUs.\n\n    Models: https://huggingface.co/tencent/Hunyuan3D-2",
-      "namespace": "huggingface.local_3d",
-      "node_type": "huggingface.local_3d.Hunyuan3D",
+      "namespace": "huggingface.image_to_3d",
+      "node_type": "huggingface.image_to_3d.Hunyuan3D",
       "properties": [
         {
           "name": "image",
@@ -18991,7 +18991,7 @@
               "standard",
               "mini"
             ],
-            "type_name": "nodetool.nodes.huggingface.local_3d.Hunyuan3D.ModelVariant"
+            "type_name": "nodetool.nodes.huggingface.image_to_3d.Hunyuan3D.ModelVariant"
           },
           "default": "standard",
           "title": "Model Variant",
@@ -19047,7 +19047,7 @@
               "glb",
               "obj"
             ],
-            "type_name": "nodetool.nodes.huggingface.local_3d.Hunyuan3D.OutputFormat"
+            "type_name": "nodetool.nodes.huggingface.image_to_3d.Hunyuan3D.OutputFormat"
           },
           "default": "glb",
           "title": "Output Format",
@@ -19140,8 +19140,8 @@
     {
       "title": "Shap-E Image-to-3D",
       "description": "Generate 3D models from images using OpenAI Shap-E.\n    3d, generation, image-to-3d, shap-e, mesh, local, reconstruction\n\n    Use cases:\n    - Convert images to 3D models locally\n    - Create 3D assets from product photos\n    - Generate 3D content without API costs\n    - Reconstruct 3D objects from single images\n\n    **Note:** Requires diffusers and torch. First run will download the model (~2.5GB).",
-      "namespace": "huggingface.local_3d",
-      "node_type": "huggingface.local_3d.ShapEImageTo3D",
+      "namespace": "huggingface.image_to_3d",
+      "node_type": "huggingface.image_to_3d.ShapEImageTo3D",
       "properties": [
         {
           "name": "image",
@@ -19247,8 +19247,8 @@
     {
       "title": "Shap-E Text-to-3D",
       "description": "Generate 3D models from text descriptions using OpenAI Shap-E.\n    3d, generation, text-to-3d, shap-e, mesh, local\n\n    Use cases:\n    - Generate 3D models from text descriptions locally\n    - Create 3D assets without API costs\n    - Prototype 3D content quickly\n    - Generate simple 3D objects for games/visualization\n\n    **Note:** Requires diffusers and torch. First run will download the model (~2.5GB).",
-      "namespace": "huggingface.local_3d",
-      "node_type": "huggingface.local_3d.ShapETextTo3D",
+      "namespace": "huggingface.text_to_3d",
+      "node_type": "huggingface.text_to_3d.ShapETextTo3D",
       "properties": [
         {
           "name": "prompt",
@@ -19348,8 +19348,8 @@
     {
       "title": "SF3D (Stable Fast 3D)",
       "description": "Generate textured 3D meshes from images in under 1 second using Stability AI SF3D.\n    3d, generation, image-to-3d, sf3d, mesh, local, fast, textured\n\n    Use cases:\n    - Ultra-fast 3D asset generation from images\n    - Create game-ready 3D assets with textures\n    - Generate UV-unwrapped meshes with materials\n    - Real-time 3D reconstruction workflows\n\n    **Requirements:** sf3d package, rembg, torch with CUDA.\n    First run downloads ~1GB model. Needs ~6GB VRAM.\n    Generates textured meshes with UV maps, normal maps, and PBR materials.\n\n    Model: https://huggingface.co/stabilityai/stable-fast-3d\n    License: Free for <$1M revenue, enterprise license required above.",
-      "namespace": "huggingface.local_3d",
-      "node_type": "huggingface.local_3d.StableFast3D",
+      "namespace": "huggingface.image_to_3d",
+      "node_type": "huggingface.image_to_3d.StableFast3D",
       "properties": [
         {
           "name": "image",
@@ -19405,7 +19405,7 @@
               "glb",
               "obj"
             ],
-            "type_name": "nodetool.nodes.huggingface.local_3d.StableFast3D.OutputFormat"
+            "type_name": "nodetool.nodes.huggingface.image_to_3d.StableFast3D.OutputFormat"
           },
           "default": "glb",
           "title": "Output Format",
@@ -19455,8 +19455,8 @@
     {
       "title": "TRELLIS.2-4B",
       "description": "Generate high-fidelity 3D models from images using Microsoft TRELLIS.2-4B.\n    3d, generation, image-to-3d, trellis, mesh, local, high-quality, PBR, o-voxel\n\n    Use cases:\n    - Generate state-of-the-art 3D models from single images\n    - Create production-ready 3D assets with PBR materials\n    - Handle complex topology including open surfaces and non-manifold geometry\n    - Generate assets with transparency/translucency support\n\n    **Note:** Requires trellis2, o_voxel, torch, and 24GB+ GPU memory.\n    Currently only tested on Linux systems.\n    First run will download the model (~10GB+).\n\n    Model: https://huggingface.co/microsoft/TRELLIS.2-4B\n    Paper: https://arxiv.org/abs/2512.14692",
-      "namespace": "huggingface.local_3d",
-      "node_type": "huggingface.local_3d.Trellis2",
+      "namespace": "huggingface.image_to_3d",
+      "node_type": "huggingface.image_to_3d.Trellis2",
       "properties": [
         {
           "name": "image",
@@ -19482,7 +19482,7 @@
               "1024",
               "1536"
             ],
-            "type_name": "nodetool.nodes.huggingface.local_3d.Trellis2.Resolution"
+            "type_name": "nodetool.nodes.huggingface.image_to_3d.Trellis2.Resolution"
           },
           "default": "1024",
           "title": "Resolution",
@@ -19575,8 +19575,8 @@
     {
       "title": "TripoSG",
       "description": "Generate high-fidelity 3D meshes from images using VAST TripoSG.\n    3d, generation, image-to-3d, triposg, mesh, local, high-fidelity, rectified-flow\n\n    Use cases:\n    - Generate detailed 3D models from single images\n    - Create 3D assets from photos, cartoons, or sketches\n    - Produce meshes with sharp geometric features and fine surface details\n    - Handle complex topology including thin structures\n\n    **Requirements:** CUDA GPU with at least 8GB VRAM.\n    First run downloads ~3GB model weights.\n\n    Model: https://huggingface.co/VAST-AI/TripoSG\n    License: MIT",
-      "namespace": "huggingface.local_3d",
-      "node_type": "huggingface.local_3d.TripoSG",
+      "namespace": "huggingface.image_to_3d",
+      "node_type": "huggingface.image_to_3d.TripoSG",
       "properties": [
         {
           "name": "image",
@@ -19731,8 +19731,8 @@
     {
       "title": "TripoSR",
       "description": "Generate 3D meshes from images using Stability AI TripoSR.\n    3d, generation, image-to-3d, triposr, mesh, local, fast\n\n    Use cases:\n    - Fast 3D reconstruction from single images\n    - Generate 3D models from concept art\n    - Create 3D assets for games and visualization\n    - Prototype 3D content quickly\n\n    **Requirements:** tsr package (TripoSR), rembg, torch with CUDA.\n    First run downloads ~1GB model. Needs ~6GB VRAM.\n\n    Model: https://huggingface.co/stabilityai/TripoSR\n    License: MIT",
-      "namespace": "huggingface.local_3d",
-      "node_type": "huggingface.local_3d.TripoSR",
+      "namespace": "huggingface.image_to_3d",
+      "node_type": "huggingface.image_to_3d.TripoSR",
       "properties": [
         {
           "name": "image",
@@ -19779,7 +19779,7 @@
               "glb",
               "obj"
             ],
-            "type_name": "nodetool.nodes.huggingface.local_3d.TripoSR.OutputFormat"
+            "type_name": "nodetool.nodes.huggingface.image_to_3d.TripoSR.OutputFormat"
           },
           "default": "glb",
           "title": "Output Format",
