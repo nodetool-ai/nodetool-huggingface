@@ -25,24 +25,41 @@ let it try, don't pre-emptively block".
 
 ---
 
+## Status
+
+**PR #26 (`fix-model3d` branch, merged April 19 2026) landed against an earlier
+revision of this plan.** It implemented `[x]` items in Quick-wins below
+(#2, #3, #5, #9, #10, #13, #15, #16) plus a partial #8 and a single-file
+rename to `local_3d.py`. The plan has since evolved:
+
+- **D2 changed** from "rename to `local_3d.py`" → "split into
+  `text_to_3d.py` + `image_to_3d.py` + `_3d_common.py`". PR-3 now contains
+  corrective work (#1) to redo the rename properly.
+- **#8 expanded** into nine sub-items (#8a–#8i) covering env markers,
+  runtime installer, license/VRAM gating, etc. PR #26 only landed the
+  basic optional-dependencies stanza — most of #8a–#8i are still open.
+- All items not marked `[x]` are still pending.
+
+---
+
 ## Quick-win priority (do these first)
 
-- [ ] **#2 – Delete dead `Trellis2._ensure_model_downloaded`**
+- [x] **#2 – Delete dead `Trellis2._ensure_model_downloaded`**
   Lines `918–939`. Copy-paste from `Hunyuan3D`, references a non-existent
   `self.VARIANT_CONFIG`. Currently unreachable but will `AttributeError` if any
   refactor wires it up. Just delete it.
 
-- [ ] **#3 – Override `requires_gpu() -> False` on both Shap-E nodes**
+- [x] **#3 – Override `requires_gpu() -> False` on both Shap-E nodes**
   Shap-E's `process()` already supports CPU (lines 98, 227), but the base
   class default `requires_gpu() -> True` (huggingface_pipeline.py line 171)
   prevents the scheduler from running these on CPU/MPS-only machines.
 
-- [ ] **#10 – Cache `rembg` session in `ModelManager`**
+- [x] **#10 – Cache `rembg` session in `ModelManager`** *(landed in PR #26)*
   `SF3D` (line 661) and `TripoSR` (line 800) call `rembg.new_session()` per
   invocation, re-loading U²-Net every time. Cache once with key
   `"rembg_u2net_session"`.
 
-- [ ] **#13 – Standardize seeding to per-call `torch.Generator`**
+- [x] **#13 – Standardize seeding to per-call `torch.Generator`**
   Inconsistent today:
   - Shap-E: per-call `torch.Generator` (good).
   - Hunyuan3D / Trellis2: global `torch.manual_seed(...)` (leaks state across
@@ -50,31 +67,40 @@ let it try, don't pre-emptively block".
   - TripoSG: per-call `torch.Generator` (good).
   Pick per-call generators everywhere. See D3.
 
-- [ ] **#15 – Add `preload_model` to the 5 heavy nodes**
+- [x] **#15 – Add `preload_model` to the 5 heavy nodes**
   Only `ShapETextTo3D` and `ShapEImageTo3D` implement `preload_model`.
   `Hunyuan3D`, `StableFast3D`, `TripoSR`, `Trellis2`, `TripoSG` all load
   lazily inside `process()`, so the executor's preload phase is a no-op for
   them and the first run pays full cold-start. **See C1 — must be reconciled
   with D4.**
 
-- [ ] **#9 – Resolve viewer/output format mismatch**
+- [x] **#9 – Resolve viewer/output format mismatch**
   `Model3DViewer.tsx` (lines 551–558) only renders GLB/GLTF, but Hunyuan3D /
   SF3D / TripoSR expose an OBJ output option. Either restrict outputs to GLB
   (simpler) or add `OBJLoader` / `PLYLoader` to the viewer (richer).
   See Decisions §D1.
 
-- [ ] **#5 – Extract a single `_export_mesh(mesh, format) -> bytes` helper**
+- [x] **#5 – Extract a single `_export_mesh(mesh, format) -> bytes` helper**
   The "trimesh export, with optional `.cpu().numpy()` fallback" code is
   duplicated 5× with slight per-node variations (`include_normals=True` only
   for SF3D, `extension_webp=True` only for Trellis2). Centralize. **See C2 —
   the o_voxel-direct-to-GLB path stays separate.**
 
 - [ ] **#1 – Split module by input modality (HF `pipeline_tag` aligned)**
-  Current `text_to_3d.py` contains 6 image→3D nodes. Split into
-  `text_to_3d.py` and `image_to_3d.py`, matching HuggingFace's official
-  `pipeline_tag` values (`text-to-3d`, `image-to-3d`). See Decisions §D2.
+  Current state after PR #26: file lives at `local_3d.py`, namespace
+  `huggingface.local_3d.*`. **PR went with the old D2 (single-file rename);
+  new D2 is the modality split.** Pending follow-up in PR-3:
+  - Split `local_3d.py` → `text_to_3d.py` (`ShapETextTo3D`) +
+    `image_to_3d.py` (the other six nodes) + `_3d_common.py` (shared helpers).
+  - Update `local_3d` → `image_to_3d` in `tests/test_local_3d_smoke.py`
+    (rename file too).
+  - Add the per-node aliases listed in §G2 (now also need
+    `huggingface.local_3d.<NodeName>` → `huggingface.image_to_3d.<NodeName>`
+    on top of the original `huggingface.text_to_3d.*` aliases, since users
+    upgrading from the PR may have workflows referencing both names).
+  See Decisions §D2.
 
-- [ ] **#16 – Add a no-GPU smoke test**
+- [x] **#16 – Add a no-GPU smoke test**
   At minimum: import the module, instantiate each node, assert
   `get_recommended_models()` returns valid `HuggingFaceModel`s. That single
   test would have caught finding #2.
@@ -88,11 +114,22 @@ declares `hy3dgen`, `pymeshlab`, `scikit-image` as **hard** dependencies, while
 `sf3d`, `tsr`, `trellis2`, `o_voxel`, `rembg`, `diso` are not declared at all
 and `ImportError` at runtime. We split this into A+C+D:
 
+> **PR #26 status (April 2026):** Landed a basic optional-dependencies stanza
+> with `sf3d`/`triposr`/`trellis2`/`triposg`/`all-3d` groups (no env markers,
+> no version pins). This satisfies the *spirit* of #8 but does **not** address
+> #8a (demote hard deps), #8b (env markers), #8c (runtime installer), #8d
+> (commit pins), #8e (`is_available()` gating), #8f (Platforms docstrings),
+> or #8i (CUDA gate softening). Most of the value of the dependency rework
+> is still ahead of us.
+
 - [ ] **#8a – Demote heavy deps from hard to optional**
   Move `hy3dgen`, `pymeshlab`, `scikit-image` out of `[project] dependencies`.
   Goal: `pip install nodetool-huggingface` succeeds on a clean macOS box.
 
 - [ ] **#8b – Adopt env-markered `[project.optional-dependencies]` (Option A)**
+  PR #26 added groups *without* env markers — replace with the version below
+  so a clean macOS install of `[hunyuan3d]` succeeds and `[trellis2]` fails
+  loudly only on Linux:
   ```toml
   [project.optional-dependencies]
   # Always installable — Shap-E only needs diffusers (already in core)
@@ -200,7 +237,7 @@ and `ImportError` at runtime. We split this into A+C+D:
   at depth 9 this can blow VRAM if the pipeline preallocates flash buffers
   unconditionally.
 
-- [ ] **#14 – `seed=-1` semantics inconsistent**
+- [x] **#14 – `seed=-1` semantics inconsistent**
   Most nodes treat `-1` as "no generator". TripoSG defaults to `42` and
   converts `-1` to a freshly random seed it never echoes back. Pick one
   convention; if random is allowed, surface the actually-used seed in
@@ -583,26 +620,51 @@ node, but implement per-node:**
 
 ## Suggested PR slicing
 
-- [ ] **PR-1 "Quick fixes"** *(low risk, no API changes)*
-  - #2 delete dead code
-  - #3 Shap-E `requires_gpu`
-  - #4 Shap-E device fix
-  - #11 TripoSG `_prepare_image` cleanup
-  - #19 + D9 pin model revisions (table only, no behavior change)
-  - #24 input-image validation helper
-  - Hunyuan3D docstring cleanup
-  - #16 + N2 smoke test
-  - #17 vendored `triposg/UPSTREAM.md`
+- [x] **PR-1 "Quick fixes"** — *partially landed via PR #26 + scope drift*
+  - [x] #2 delete dead code — *PR #26*
+  - [x] #3 Shap-E `requires_gpu` — *PR #26*
+  - [ ] #4 Shap-E device fix — **still pending, slipped past PR #26**
+  - [ ] #11 TripoSG `_prepare_image` cleanup
+  - [ ] #19 + D9 pin model revisions (table only, no behavior change)
+  - [ ] #24 input-image validation helper
+  - [ ] Hunyuan3D docstring cleanup
+  - [x] #16 + N2 smoke test — *PR #26 (file: `tests/test_local_3d_smoke.py`,
+    needs renaming when #1 split lands)*
+  - [ ] #17 vendored `triposg/UPSTREAM.md`
 
-- [ ] **PR-2 "Refactor & helpers"** *(medium, internal API churn)*
-  - #5 + C2 export helper
-  - #10 rembg cache
-  - #6 + G6 ModelManager refactor
-  - #13 + #14 + D3 seeding rework
-  - #15 + C1 `preload_model` rollout
-  - #12 TripoSG flash flag audit
-  - #21 disk-space pre-flight
-  - Verify `PYTORCH_CUDA_ALLOC_CONF` rollout
+  **PR #26 also incidentally landed PR-2 work** (#5, #10, #13, #15) and a
+  partial #1/#8 (single-file rename + basic optional deps). Treat PR-1.5
+  below as a small follow-up to mop up the items the PR missed.
+
+- [ ] **PR-1.5 "PR #26 follow-ups"** *(small, low risk)*
+  - [ ] #4 Shap-E device fix (slipped from PR-1)
+  - [ ] #11 TripoSG `_prepare_image` cleanup
+  - [ ] Hunyuan3D docstring cleanup
+  - [ ] #14 verify per-call seed metadata is actually returned in
+    `Model3DRef.metadata` (D3) — the PR's commit message claims #14 but
+    needs verification that the seed is surfaced, not just used internally
+  - [ ] #19 + D9 pin model revisions
+  - [ ] #24 input-image validation helper
+  - [ ] #17 vendored `triposg/UPSTREAM.md`
+  - [ ] Verify `_export_mesh` helper from PR #26 covers Trellis2's
+    `extension_webp=True` and SF3D's `include_normals=True` paths (C2)
+
+- [ ] **PR-2 "Refactor & helpers"** *(reduced scope after PR #26)*
+  - [x] #5 + C2 export helper — *PR #26 (verify C2 handled — see PR-1.5)*
+  - [x] #10 rembg cache — *PR #26*
+  - [ ] #6 + G6 ModelManager refactor — **the more nuanced change; PR #26
+    only added `preload_model`, did not stop pinning `_pipeline` on `self`.**
+    Still need to read through `ModelManager.get_model(cache_key)` instead
+    of `self._pipeline`.
+  - [x] #13 + D3 seeding rework — *PR #26 (verify #14 metadata in PR-1.5)*
+  - [x] #15 + C1 `preload_model` rollout — *PR #26 (verify reconciliation
+    with C1 / D4: do the preloaded models register with `ModelManager`, or
+    do they still pin to `self`?)*
+  - [ ] #12 TripoSG flash flag audit (PR #26 *renamed* `use_flash` →
+    `use_flash_decoder` per code review, but did not audit whether the
+    flag is wired to anything real — verify or delete.)
+  - [ ] #21 disk-space pre-flight
+  - [ ] Verify `PYTORCH_CUDA_ALLOC_CONF` rollout
 
 - [ ] **PR-3 "Renames & packaging"** *(high blast radius, ship last; spans 4 repos)*
   - **`nodetool-core` first**: G2 alias mechanism in `get_node_class()`,
@@ -613,14 +675,25 @@ node, but implement per-node:**
     (#8e + #20/D11 + #22/D10), D3 seed badge in `Model3DProperty.tsx`.
     `electron/src/packageManager.ts` install actions for #8c.
   - **`nodetool-huggingface` last**:
-    - #1 + D2 module/namespace rename + alias registration
-    - #8a–#8i + G4 + G5 dependency strategy
+    - **#1 + D2 module/namespace SPLIT** (correcting PR #26's single-file
+      rename): `local_3d.py` → `text_to_3d.py` + `image_to_3d.py` +
+      `_3d_common.py`. Aliases must cover **both** the original
+      `huggingface.text_to_3d.<NodeName>` *and* the interim
+      `huggingface.local_3d.<NodeName>` namespace from PR #26.
+    - Rename `tests/test_local_3d_smoke.py` →
+      `tests/test_image_to_3d_smoke.py` (+ a tiny `test_text_to_3d_smoke.py`
+      for `ShapETextTo3D`), update imports.
+    - #8a, #8b (env markers — PR #26 only landed the bare `[project.optional-dependencies]`
+      groups), #8c, #8d, #8e, #8f, #8h, plus G4 + G5 audits.
     - #7 + G7 Hunyuan3D `low_vram_mode` hardening + version pin
     - #18 + D7 `low_vram_mode` rollout (Trellis2 confirmed no-op)
-    - #9 + D1 viewer / OBJ default fix
+    - #9 OBJ default fix — *PR #26 added the docstring hint; the actual
+      `default=GLB` switch on Hunyuan3D / SF3D / TripoSR is still pending,
+      verify and finish.* See D1.
     - #20 + D11 license warnings (data only)
     - #22 + D10 VRAM budget class attrs
-    - G1 regenerate package_metadata
+    - G1 regenerate `package_metadata` (PR #26 already regenerated for
+      `local_3d.*` — will need another regen after the split)
     - N1 confirm large-GLB delivery path
     - N3 confirm asset-store dedup
 
