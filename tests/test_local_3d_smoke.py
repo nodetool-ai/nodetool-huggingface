@@ -293,3 +293,159 @@ def test_model3d_from_bytes_accepts_metadata():
     assert (
         "metadata" in sig.parameters
     ), "model3d_from_bytes must accept a 'metadata' parameter"
+
+
+# ---------------------------------------------------------------------------
+# ClassVar metadata tests (#20, #22a, D9/D11)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "cls_name",
+    [
+        "ShapETextTo3D",
+        "ShapEImageTo3D",
+        "Hunyuan3D",
+        "StableFast3D",
+        "TripoSR",
+        "Trellis2",
+        "TripoSG",
+    ],
+)
+def test_min_vram_gb_present(cls_name):
+    """Every node declares a positive MIN_VRAM_GB ClassVar."""
+    from nodetool.nodes.huggingface import local_3d
+
+    cls = getattr(local_3d, cls_name)
+    assert hasattr(cls, "MIN_VRAM_GB"), f"{cls_name} missing MIN_VRAM_GB"
+    assert isinstance(cls.MIN_VRAM_GB, int)
+    assert cls.MIN_VRAM_GB > 0
+
+
+@pytest.mark.parametrize(
+    "cls_name",
+    [
+        "ShapETextTo3D",
+        "ShapEImageTo3D",
+        "Hunyuan3D",
+        "StableFast3D",
+        "TripoSR",
+        "Trellis2",
+        "TripoSG",
+    ],
+)
+def test_estimated_download_gb_present(cls_name):
+    """Every node declares a positive ESTIMATED_DOWNLOAD_GB ClassVar."""
+    from nodetool.nodes.huggingface import local_3d
+
+    cls = getattr(local_3d, cls_name)
+    assert hasattr(
+        cls, "ESTIMATED_DOWNLOAD_GB"
+    ), f"{cls_name} missing ESTIMATED_DOWNLOAD_GB"
+    assert isinstance(cls.ESTIMATED_DOWNLOAD_GB, float)
+    assert cls.ESTIMATED_DOWNLOAD_GB > 0
+
+
+@pytest.mark.parametrize(
+    "cls_name",
+    [
+        "ShapETextTo3D",
+        "ShapEImageTo3D",
+        "Hunyuan3D",
+        "StableFast3D",
+        "TripoSR",
+        "Trellis2",
+        "TripoSG",
+    ],
+)
+def test_license_warning_present(cls_name):
+    """Every node has a license_warning ClassVar (str or None)."""
+    from nodetool.nodes.huggingface import local_3d
+
+    cls = getattr(local_3d, cls_name)
+    assert hasattr(cls, "license_warning"), f"{cls_name} missing license_warning"
+    val = cls.license_warning
+    assert val is None or isinstance(val, str)
+
+
+def test_license_warnings_correct():
+    """Non-MIT nodes have a non-None license_warning; MIT nodes have None."""
+    from nodetool.nodes.huggingface.local_3d import (
+        ShapETextTo3D,
+        ShapEImageTo3D,
+        Hunyuan3D,
+        StableFast3D,
+        TripoSR,
+        Trellis2,
+        TripoSG,
+    )
+
+    # MIT nodes
+    for cls in [ShapETextTo3D, ShapEImageTo3D, TripoSR, TripoSG]:
+        assert cls.license_warning is None, f"{cls.__name__} should be None (MIT)"
+
+    # Non-MIT nodes
+    for cls in [Hunyuan3D, StableFast3D, Trellis2]:
+        assert (
+            cls.license_warning is not None
+        ), f"{cls.__name__} should have a license warning"
+        assert isinstance(cls.license_warning, str)
+        assert len(cls.license_warning) > 10
+
+
+# ---------------------------------------------------------------------------
+# Disk-space pre-flight (#21)
+# ---------------------------------------------------------------------------
+
+
+def test_check_disk_space_passes_when_enough():
+    """_check_disk_space does not raise when space is ample."""
+    import tempfile
+    from nodetool.nodes.huggingface.local_3d import _check_disk_space
+
+    # Use system tmp — should have plenty of space
+    with tempfile.TemporaryDirectory() as tmpdir:
+        _check_disk_space(0.001, cache_dir=tmpdir)  # 1 MB
+
+
+def test_check_disk_space_raises_when_tight():
+    """_check_disk_space raises OSError when requesting absurd space."""
+    import tempfile
+    from nodetool.nodes.huggingface.local_3d import _check_disk_space
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with pytest.raises(OSError, match="Not enough disk space"):
+            _check_disk_space(999_999, cache_dir=tmpdir)  # 999 TB
+
+
+# ---------------------------------------------------------------------------
+# MODEL_REVISIONS table (#19 / D9)
+# ---------------------------------------------------------------------------
+
+
+def test_model_revisions_table_covers_all_repos():
+    """MODEL_REVISIONS has an entry for every repo referenced by nodes."""
+    from nodetool.nodes.huggingface.local_3d import MODEL_REVISIONS
+
+    expected_repos = {
+        "openai/shap-e",
+        "openai/shap-e-img2img",
+        "tencent/Hunyuan3D-2",
+        "tencent/Hunyuan3D-2mini",
+        "stabilityai/stable-fast-3d",
+        "stabilityai/TripoSR",
+        "microsoft/TRELLIS.2-4B",
+        "VAST-AI/TripoSG",
+        "briaai/RMBG-1.4",
+    }
+    assert expected_repos.issubset(MODEL_REVISIONS.keys())
+
+
+def test_model_revision_returns_none_for_unset():
+    """_model_revision returns None for repos not yet pinned."""
+    from nodetool.nodes.huggingface.local_3d import _model_revision
+
+    # All are None currently (placeholder SHAs to be filled in)
+    assert _model_revision("openai/shap-e") is None
+    # Unknown repo also returns None gracefully
+    assert _model_revision("nonexistent/repo") is None

@@ -34,20 +34,26 @@ dependencies = [
     "qwen-vl-utils",
     "bitsandbytes",
     "timm",
-    "hy3dgen>=2.0.2,<2.1",
     "trimesh>=4.0.0",
-    "pymeshlab",
-    "scikit-image",
     "jaxtyping",
     "typeguard",
 ]
 
 [project.optional-dependencies]
+# Pure-Python / wheel deps — install everywhere, runtime gates CUDA
+hunyuan3d = [
+    "hy3dgen>=2.0.2,<2.1",
+    "pymeshlab",
+]
+triposg = [
+    "diso ; platform_system != 'Darwin'",
+    "pymeshlab",
+    "scikit-image",
+]
 sf3d = ["sf3d", "rembg"]
 triposr = ["tsr", "rembg"]
 trellis2 = ["trellis2", "o_voxel"]
-triposg = ["diso"]
-all-3d = ["nodetool-huggingface[sf3d,triposr,trellis2,triposg]"]
+all-3d = ["nodetool-huggingface[hunyuan3d,triposg,sf3d,triposr,trellis2]"]
 
 
 [tool.hatch.build.targets.wheel]

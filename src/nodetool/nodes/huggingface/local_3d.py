@@ -10,6 +10,8 @@ These nodes run locally and do not require API keys.
 from __future__ import annotations
 
 import io
+import logging
+import shutil
 from enum import Enum
 from typing import Any, ClassVar, TYPE_CHECKING
 
@@ -24,6 +26,78 @@ if TYPE_CHECKING:
     import torch
     import trimesh
     from PIL import Image
+
+log = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Model revision pinning (D9 / #19)
+# ---------------------------------------------------------------------------
+# Map from HuggingFace repo_id → known-good commit SHA.
+# Pass these to ``from_pretrained(..., revision=...)`` and
+# ``snapshot_download(..., revision=...)`` calls so upstream
+# weight reorganizations don't silently break users.
+#
+# Values of ``None`` mean "use latest" — fill in verified SHAs
+# and bump intentionally.  Refresh quarterly.
+# ---------------------------------------------------------------------------
+MODEL_REVISIONS: dict[str, str | None] = {
+    "openai/shap-e": None,
+    "openai/shap-e-img2img": None,
+    "tencent/Hunyuan3D-2": None,
+    "tencent/Hunyuan3D-2mini": None,
+    "stabilityai/stable-fast-3d": None,
+    "stabilityai/TripoSR": None,
+    "microsoft/TRELLIS.2-4B": None,
+    "VAST-AI/TripoSG": None,
+    "briaai/RMBG-1.4": None,
+}
+
+
+def _model_revision(repo_id: str) -> str | None:
+    """Return the pinned revision for *repo_id*, or ``None`` (latest)."""
+    return MODEL_REVISIONS.get(repo_id)
+
+
+# ---------------------------------------------------------------------------
+# Disk-space pre-flight (#21)
+# ---------------------------------------------------------------------------
+_DISK_HEADROOM_GB = 2  # extra headroom beyond estimated model size
+
+
+def _check_disk_space(estimated_gb: float, cache_dir: str | None = None) -> None:
+    """Raise if the HF cache volume has less free space than *estimated_gb*.
+
+    Parameters
+    ----------
+    estimated_gb:
+        Approximate download size in GiB.
+    cache_dir:
+        Override for the cache directory to check.  When ``None``,
+        resolves from ``HF_HOME`` / ``HUGGINGFACE_HUB_CACHE`` env vars,
+        falling back to ``~/.cache/huggingface/hub``.
+    """
+    import os
+
+    if cache_dir is None:
+        cache_dir = os.environ.get(
+            "HUGGINGFACE_HUB_CACHE",
+            os.environ.get(
+                "HF_HOME",
+                os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub"),
+            ),
+        )
+    os.makedirs(cache_dir, exist_ok=True)
+    usage = shutil.disk_usage(cache_dir)
+    free_gb = usage.free / (1 << 30)
+    needed = estimated_gb + _DISK_HEADROOM_GB
+    if free_gb < needed:
+        raise OSError(
+            f"Not enough disk space to download model weights. "
+            f"Need ~{needed:.1f} GB free, but only {free_gb:.1f} GB available "
+            f"in {cache_dir}. Free up space or set HF_HOME / "
+            f"HUGGINGFACE_HUB_CACHE to a volume with more room."
+        )
 
 
 def _resolve_device() -> str:
@@ -130,6 +204,11 @@ class ShapETextTo3D(HuggingFacePipelineNode):
 
     **Note:** Requires diffusers and torch. First run will download the model (~2.5GB).
     """
+
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 4
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 2.5
+    license_warning: ClassVar[str | None] = None  # MIT
 
     prompt: str = Field(
         default="a shark",
@@ -262,6 +341,11 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
 
     **Note:** Requires diffusers and torch. First run will download the model (~2.5GB).
     """
+
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 4
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 2.5
+    license_warning: ClassVar[str | None] = None  # MIT
 
     image: ImageRef = Field(
         default=ImageRef(),
@@ -406,6 +490,14 @@ class Hunyuan3D(HuggingFacePipelineNode):
     Models: https://huggingface.co/tencent/Hunyuan3D-2
     """
 
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 5
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 5.0
+    license_warning: ClassVar[str | None] = (
+        "Tencent Hunyuan3D License — non-commercial use only. "
+        "See https://huggingface.co/tencent/Hunyuan3D-2/blob/main/LICENSE"
+    )
+
     class ModelVariant(str, Enum):
         STANDARD = "standard"
         MINI = "mini"
@@ -518,8 +610,11 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
         # Only download the specific subfolder needed for shape generation
         # This avoids downloading paint, delight, turbo variants etc.
+        _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
+        revision = _model_revision(repo_id)
         snapshot_download(
             repo_id=repo_id,
+            revision=revision,
             allow_patterns=[
                 "config.json",  # Root config
                 f"{subfolder}/*",  # DiT model (includes bundled VAE)
@@ -542,10 +637,15 @@ class Hunyuan3D(HuggingFacePipelineNode):
             # Pre-download only shape files to avoid 75GB full repo download
             self._ensure_model_downloaded(variant)
 
+            if self.license_warning:
+                log.info("License notice: %s", self.license_warning)
+
             # Now load the pipeline - hy3dgen will find the cached files
+            revision = _model_revision(config["repo_id"])
             self._pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
                 config["repo_id"],
                 subfolder=config["subfolder"],
+                revision=revision,
                 use_safetensors=True,
                 variant="fp16",
             )
@@ -662,6 +762,15 @@ class StableFast3D(HuggingFacePipelineNode):
     License: Free for <$1M revenue, enterprise license required above.
     """
 
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 6
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 1.0
+    license_warning: ClassVar[str | None] = (
+        "Stability AI Community License — free under $1 M annual revenue, "
+        "enterprise license required above. "
+        "See https://huggingface.co/stabilityai/stable-fast-3d/blob/main/LICENSE.md"
+    )
+
     class OutputFormat(str, Enum):
         GLB = "glb"
         OBJ = "obj"
@@ -733,6 +842,10 @@ class StableFast3D(HuggingFacePipelineNode):
             self._model = cached
         else:
             from sf3d.system import SF3D
+
+            _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
+            if self.license_warning:
+                log.info("License notice: %s", self.license_warning)
 
             self._model = SF3D.from_pretrained(
                 "stabilityai/stable-fast-3d",
@@ -832,6 +945,11 @@ class TripoSR(HuggingFacePipelineNode):
     License: MIT
     """
 
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 6
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 1.0
+    license_warning: ClassVar[str | None] = None  # MIT
+
     class OutputFormat(str, Enum):
         GLB = "glb"
         OBJ = "obj"
@@ -892,6 +1010,7 @@ class TripoSR(HuggingFacePipelineNode):
         else:
             from tsr.system import TSR
 
+            _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
             self._model = TSR.from_pretrained(
                 "stabilityai/TripoSR",
                 config_name="config.yaml",
@@ -999,6 +1118,14 @@ class Trellis2(HuggingFacePipelineNode):
     Paper: https://arxiv.org/abs/2512.14692
     """
 
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 24
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 10.0
+    license_warning: ClassVar[str | None] = (
+        "Microsoft Research License — non-commercial use only. "
+        "See https://huggingface.co/microsoft/TRELLIS.2-4B/blob/main/LICENSE"
+    )
+
     class Resolution(str, Enum):
         RES_512 = "512"  # ~3 seconds on H100
         RES_1024 = "1024"  # ~17 seconds on H100
@@ -1079,6 +1206,10 @@ class Trellis2(HuggingFacePipelineNode):
             self._pipeline = cached
         else:
             from trellis2.pipelines import Trellis2ImageTo3DPipeline
+
+            _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
+            if self.license_warning:
+                log.info("License notice: %s", self.license_warning)
 
             self._pipeline = Trellis2ImageTo3DPipeline.from_pretrained(
                 "microsoft/TRELLIS.2-4B"
@@ -1201,6 +1332,11 @@ class TripoSG(HuggingFacePipelineNode):
     License: MIT
     """
 
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 8
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 3.0
+    license_warning: ClassVar[str | None] = None  # MIT
+
     image: ImageRef = Field(
         default=ImageRef(),
         description="Input image to convert to 3D",
@@ -1285,7 +1421,11 @@ class TripoSG(HuggingFacePipelineNode):
             if cached is not None:
                 self._rmbg_net = cached
             else:
-                rmbg_path = snapshot_download(repo_id="briaai/RMBG-1.4")
+                _check_disk_space(0.5)  # RMBG is ~0.2 GB
+                rmbg_path = snapshot_download(
+                    repo_id="briaai/RMBG-1.4",
+                    revision=_model_revision("briaai/RMBG-1.4"),
+                )
                 self._rmbg_net = BriaRMBG.from_pretrained(rmbg_path).to(device)
                 self._rmbg_net.eval()
                 ModelManager.set_model(self.id, cache_key, self._rmbg_net)
@@ -1297,7 +1437,11 @@ class TripoSG(HuggingFacePipelineNode):
             if cached is not None:
                 self._pipeline = cached
             else:
-                triposg_path = snapshot_download(repo_id="VAST-AI/TripoSG")
+                _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
+                triposg_path = snapshot_download(
+                    repo_id="VAST-AI/TripoSG",
+                    revision=_model_revision("VAST-AI/TripoSG"),
+                )
                 self._pipeline = TripoSGPipeline.from_pretrained(triposg_path).to(
                     device, torch.float16
                 )
