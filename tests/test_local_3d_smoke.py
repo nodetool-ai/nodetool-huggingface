@@ -243,3 +243,34 @@ def test_export_mesh_include_normals():
     data = _export_mesh(mesh, format="glb", include_normals=True)
     assert isinstance(data, bytes)
     assert len(data) > 0
+
+
+def test_all_nodes_have_platforms_in_docstring():
+    """Every node class docstring includes a **Platforms:** line."""
+    from nodetool.nodes.huggingface import local_3d
+
+    for cls_name in [
+        "ShapETextTo3D",
+        "ShapEImageTo3D",
+        "Hunyuan3D",
+        "StableFast3D",
+        "TripoSR",
+        "Trellis2",
+        "TripoSG",
+    ]:
+        cls = getattr(local_3d, cls_name)
+        doc = cls.__doc__ or ""
+        assert (
+            "**Platforms:**" in doc
+        ), f"{cls_name} docstring is missing a **Platforms:** line"
+
+
+def test_model3d_from_bytes_accepts_metadata():
+    """Verify model3d_from_bytes signature accepts metadata kwarg."""
+    import inspect
+    from nodetool.workflows.processing_context import ProcessingContext
+
+    sig = inspect.signature(ProcessingContext.model3d_from_bytes)
+    assert (
+        "metadata" in sig.parameters
+    ), "model3d_from_bytes must accept a 'metadata' parameter"

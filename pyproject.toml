@@ -34,7 +34,7 @@ dependencies = [
     "qwen-vl-utils",
     "bitsandbytes",
     "timm",
-    "hy3dgen>=2.0.2",
+    "hy3dgen>=2.0.2,<2.1",
     "trimesh>=4.0.0",
     "pymeshlab",
     "scikit-image",
