@@ -42,6 +42,13 @@ dependencies = [
     "typeguard",
 ]
 
+[project.optional-dependencies]
+sf3d = ["sf3d", "rembg"]
+triposr = ["tsr", "rembg"]
+trellis2 = ["trellis2", "o_voxel"]
+triposg = ["diso"]
+all-3d = ["nodetool-huggingface[sf3d,triposr,trellis2,triposg]"]
+
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nodetool", "src/RealESRGAN", "src/triposg"]
