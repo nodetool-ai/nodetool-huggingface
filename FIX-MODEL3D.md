@@ -86,7 +86,7 @@ rename to `local_3d.py`. The plan has since evolved:
   for SF3D, `extension_webp=True` only for Trellis2). Centralize. **See C2 —
   the o_voxel-direct-to-GLB path stays separate.**
 
-- [ ] **#1 – Split module by input modality (HF `pipeline_tag` aligned)**
+- [x] **#1 – Split module by input modality (HF `pipeline_tag` aligned)**
   Current state after PR #26: file lives at `local_3d.py`, namespace
   `huggingface.local_3d.*`. **PR went with the old D2 (single-file rename);
   new D2 is the modality split.** Pending follow-up in PR-3:
@@ -124,7 +124,7 @@ and `ImportError` at runtime. We split this into A+C+D:
   Move `hy3dgen`, `pymeshlab`, `scikit-image` out of `[project] dependencies`.
   Goal: `pip install nodetool-huggingface` succeeds on a clean macOS box.
 
-- [ ] **#8b – Adopt env-markered `[project.optional-dependencies]` (Option A)**
+- [x] **#8b – Adopt env-markered `[project.optional-dependencies]` (Option A)**
   PR #26 added groups *without* env markers — replace with the version below
   so a clean macOS install of `[hunyuan3d]` succeeds and `[trellis2]` fails
   loudly only on Linux:
@@ -163,7 +163,7 @@ and `ImportError` at runtime. We split this into A+C+D:
   with commit-pinned VCS URLs for CI / dev reproducibility. The runtime
   installer (#8c) reads these.
 
-- [ ] **#8e – Add static capability metadata per node**
+- [x] **#8e – Add static capability metadata per node**
   Add class-level metadata that can be safely emitted into package metadata
   and consumed later by shared product surfaces:
   - `SUPPORTED_PLATFORMS`
@@ -182,14 +182,14 @@ and `ImportError` at runtime. We split this into A+C+D:
   - TripoSG: *"Platforms: Linux+CUDA, Windows+CUDA (build required)."*
   - Trellis2: *"Platforms: Linux+CUDA only, 24 GB+ VRAM."*
 
-- [ ] **#8i – Soften CUDA gates in SF3D and TripoSR**
+- [x] **#8i – Soften CUDA gates in SF3D and TripoSR**
   Today both raise `RuntimeError("requires CUDA")` (lines 638-640, and TripoSR
   similarly) before the upstream code even gets a chance. Replace with a
   permissive device check + warning when running on non-CUDA, and let the
   underlying library fail with its own (more informative) error. This unlocks
   the experimental Apple paths above.
 
-- [ ] **#8g – Skip Option B (direct VCS deps in `pyproject.toml`)**
+- [x] **#8g – Skip Option B (direct VCS deps in `pyproject.toml`)**
   PyPI rejects wheels with VCS deps in metadata; would block our publish
   pipeline. Documented for posterity.
 
@@ -208,7 +208,10 @@ and `ImportError` at runtime. We split this into A+C+D:
   249. On macOS the `torch.Generator` ends up on `cpu` while the model is on
   `mps`. Drive everything off `self._pipeline.device`.
 
-- [ ] **#6 – Stop holding strong refs on the node instance**
+- [x] **#6 – Stop holding strong refs on the node instance**
+  *(Implemented for all heavy nodes: Hunyuan3D, SF3D, TripoSR, Trellis2, TripoSG.
+  ShapE nodes still use self._pipeline via HuggingFacePipelineNode base class —
+  requires upstream nodetool-core change.)*
   Pattern `self._model = ModelManager.get_model(cache_key) or new_model;
   ModelManager.set_model(...)` keeps a strong reference on `self._model`. If
   `ModelManager` evicts under VRAM pressure, the GPU memory still can't be

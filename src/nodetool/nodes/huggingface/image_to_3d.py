@@ -94,6 +94,9 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
         description="Random seed for reproducibility. -1 for random.",
     )
 
+    # Note: self._pipeline is required by the HuggingFacePipelineNode base class
+    # (used by move_to_device, run_pipeline_in_thread). Refactoring this
+    # out requires upstream changes to nodetool-core's base class.
     _pipeline: Any = None
 
     @classmethod
