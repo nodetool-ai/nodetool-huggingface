@@ -1,0 +1,11 @@
+# Pinned requirements for Stability AI / VAST TripoSR
+#
+# TripoSR is not published to PyPI. Install from the upstream git repo.
+# Requires torchmcubes (C++ extension, CUDA recommended).
+#
+# Repository: https://github.com/VAST-AI-Research/TripoSR
+# License:    MIT
+# Pinned:     2024-05-14 (last upstream commit)
+
+tsr @ git+https://github.com/VAST-AI-Research/TripoSR.git@d26e33181947bbbc4c6fc0f5734e1ec6c080956e
+rembg

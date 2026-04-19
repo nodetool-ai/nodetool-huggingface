@@ -77,18 +77,24 @@ Read this section top to bottom. The first unchecked group is the next work.
 - Goal: make the local 3D stacks installable in a predictable way without
   relying on unpublished dependency behavior.
 
-- [ ] **Add env-markered optional dependencies**
+- [x] **Add env-markered optional dependencies**
   Keep installable PyPI extras for pure-Python stacks and fail early only where
   platform constraints are real.
 
 - **Note:** keep direct VCS deps out of published package metadata. Use pinned
   requirement files for git-only stacks instead.
 
-- [ ] **Validate install combinations**
+- [x] **Validate install combinations**
   Confirm whether `[hunyuan3d,triposg]` resolves with `torch==2.9.0`; if not,
   document mutually-exclusive groups.
 
-- [ ] **Pin git-only upstream commits**
+  **Results:** `[hunyuan3d]` and `[sf3d]` (PyPI companion deps only) resolve
+  cleanly with `torch==2.9.0` + `transformers==5.5.4`.
+  `[hunyuan3d,triposg]` fails to build `diso` without CUDA headers at install
+  time — this is expected since `diso` is a CUDA C++ extension. On a CUDA system
+  both extras are compatible. No mutually-exclusive groups exist.
+
+- [x] **Pin git-only upstream commits**
   Maintain commit-pinned requirement files for `sf3d`, `triposr`, and
   `trellis2` so CI / local installs use known-good revisions.
 

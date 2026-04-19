@@ -1,0 +1,12 @@
+# Pinned requirements for Stability AI SF3D (Stable Fast 3D)
+#
+# SF3D is not published to PyPI. Install from the upstream git repo.
+# The texture_baker and uv_unwrapper sub-packages must be built separately
+# (they contain C++/CUDA extensions).
+#
+# Repository: https://github.com/Stability-AI/stable-fast-3d
+# License:    Stability AI Community License (free < $1M revenue)
+# Pinned:     2025-01-22
+
+sf3d @ git+https://github.com/Stability-AI/stable-fast-3d.git@ff21fc491b4dc5314bf6734c7c0dabd86b5f5bb2
+rembg
