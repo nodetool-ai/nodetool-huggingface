@@ -12,9 +12,8 @@ from typing import Any, TypeVar, TYPE_CHECKING
 from nodetool.config.logging_config import get_logger
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nodetool.ml.core.model_manager import ModelManager
-from nodetool.types.job import JobUpdate
 from nodetool.workflows.processing_context import ProcessingContext
-from nodetool.workflows.types import NodeProgress
+from nodetool.workflows.types import JobUpdate, NodeProgress
 from huggingface_hub import _CACHED_NO_EXIST, hf_hub_download
 
 if TYPE_CHECKING:
