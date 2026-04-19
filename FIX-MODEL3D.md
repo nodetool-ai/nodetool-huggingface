@@ -92,11 +92,10 @@ rename to `local_3d.py`. The plan has since evolved:
   new D2 is the modality split.** Pending follow-up in PR-3:
   - Split `local_3d.py` → `text_to_3d.py` (`ShapETextTo3D`) +
     `image_to_3d.py` (the other six nodes) + `_3d_common.py` (shared helpers).
-  - Update imports in the existing smoke test to match (mechanical).
-  - Add the per-node aliases listed in §G2 (now also need
-    `huggingface.local_3d.<NodeName>` → `huggingface.image_to_3d.<NodeName>`
-    on top of the original `huggingface.text_to_3d.*` aliases, since users
-    upgrading from the PR may have workflows referencing both names).
+  - Update imports in the existing smoke test and metadata regeneration path
+    to match the split (mechanical).
+  - No backward-compat alias layer is required; this is still effectively new
+    functionality with no real external usage to preserve.
   See Decisions §D2.
 
 - [x] **#16 – Add a no-GPU smoke test**
@@ -154,8 +153,9 @@ and `ImportError` at runtime. We split this into A+C+D:
   `sf3d`, `tsr`, `trellis2`+`o_voxel` are not on PyPI. Wire a `nodetool
   install-extra <name>` command (CLI + Electron action via
   `nodetool/electron/src/packageManager.ts`) that runs the right
-  `uv pip install git+https://...@<commit>` with platform gating. The node
-  sidebar shows an "Install" button instead of a stack trace.
+  `uv pip install git+https://...@<commit>` with platform gating. For now,
+  missing-install guidance should surface through clear node errors / logs,
+  not new sidebar UI.
   Stacks: `sf3d`, `triposr`, `trellis2`.
 
 - [ ] **#8d – Pin upstream commits for git-only deps (Option D)**
@@ -163,20 +163,16 @@ and `ImportError` at runtime. We split this into A+C+D:
   with commit-pinned VCS URLs for CI / dev reproducibility. The runtime
   installer (#8c) reads these.
 
-- [ ] **#8e – `is_available()` per node, with platform + import check**
-  ```python
-  @classmethod
-  def is_available(cls) -> bool:
-      if platform.system() != "Linux":
-          return False  # Trellis2 only
-      try:
-          import trellis2  # noqa
-          return True
-      except ImportError:
-          return False
-  ```
-  Sidebar message reflects which condition failed: "Linux only" vs
-  "Install with `nodetool install-extra trellis2`".
+- [ ] **#8e – Add static capability metadata per node**
+  Add class-level metadata that can be safely emitted into package metadata
+  and consumed later by shared product surfaces:
+  - `SUPPORTED_PLATFORMS`
+  - `INSTALL_HINT`
+  - `license_warning`
+  - `MIN_VRAM_GB`
+  This keeps static facts like "Linux only" or
+  "Install with `nodetool install-extra trellis2`" separate from live-machine
+  runtime checks.
 
 - [ ] **#8f – `**Platforms:**` line in every heavy-node docstring**
   - Shap-E: *"Platforms: all (CPU/MPS/CUDA)."*
@@ -274,34 +270,20 @@ and `ImportError` at runtime. We split this into A+C+D:
   metadata JSON must be regenerated. Run the regen script and verify only
   intended diffs.
 
-- [x] **G2 – Migration shim for existing workflows referencing `huggingface.text_to_3d.<image-node>`**
-  **Verified: `get_node_class()` in `nodetool-core/src/nodetool/workflows/base_node.py:2299`
-  does a direct `NODE_BY_TYPE` dict lookup with NO alias support.** Adding
-  aliasing requires a `nodetool-core` change. **D2 is a 2-repo change**:
-  - In `nodetool-core`: add `NODE_TYPE_ALIASES: dict[str, str]` and check it
-    in `_lookup()` before returning `None`. ~10 lines.
-  - In `nodetool-huggingface`: register six per-node aliases at import time
-    (one for each node moving from `text_to_3d.py` to `image_to_3d.py`):
-    `huggingface.text_to_3d.ShapEImageTo3D`   → `huggingface.image_to_3d.ShapEImageTo3D`
-    `huggingface.text_to_3d.Hunyuan3D`        → `huggingface.image_to_3d.Hunyuan3D`
-    `huggingface.text_to_3d.StableFast3D`     → `huggingface.image_to_3d.StableFast3D`
-    `huggingface.text_to_3d.TripoSR`          → `huggingface.image_to_3d.TripoSR`
-    `huggingface.text_to_3d.Trellis2`         → `huggingface.image_to_3d.Trellis2`
-    `huggingface.text_to_3d.TripoSG`          → `huggingface.image_to_3d.TripoSG`
-  - `ShapETextTo3D` namespace is unchanged → no alias needed.
+- [x] **G2 – No backward-compat layer required for the module split**
+  We can ignore namespace migration complexity here. There is no meaningful
+  external usage to preserve yet, so `local_3d.py` can be split cleanly into
+  `text_to_3d.py` and `image_to_3d.py` without alias machinery in
+  `nodetool-core`.
 
-- [x] **G3 – Confirm `is_available()` is a real `BaseNode` hook**
-  **Verified: `BaseNode` has `is_visible()` (line 624) and `requires_gpu()`
-  (line 2009) but NO `is_available()`.** Adding it is a small core change
-  that follows the established pattern.
-  - `nodetool-core`: add `@classmethod def is_available(cls) -> tuple[bool, str | None]`
-    returning `(available, reason_if_not)`. Default `(True, None)`.
-  - `nodetool-sdk/csharp/Nodetool.Types/scripts/generation/discovery.py` line 201
-    already filters by `is_visible()` — extend to also surface
-    `is_available()` into the generated metadata.
-  - `nodetool` web sidebar consumes the metadata and renders the warning.
-  - **Decision: do this in `nodetool-core`** rather than the fallback "raise
-    in pre_process" approach. Cost is small, UX is much better.
+- [x] **G3 – Do not bake runtime availability into generated metadata**
+  **Verified: `nodetool-sdk/csharp/Nodetool.Types/scripts/generation/discovery.py`
+  imports node classes during build-time discovery.** That means package
+  metadata can safely contain static facts (`SUPPORTED_PLATFORMS`,
+  `INSTALL_HINT`, `license_warning`, `MIN_VRAM_GB`) but should not pretend to
+  know runtime facts like "package installed on this machine" or "current GPU
+  has enough VRAM". Those belong to a live local-HF runtime layer, which is
+  tracked separately at the end of this file.
 
 - [ ] **G4 – Verify VCS-URL behavior in `pyproject.toml`**
   Confirms #8g: PyPI rejects sdists/wheels with `direct_url` deps in
@@ -363,8 +345,9 @@ and `ImportError` at runtime. We split this into A+C+D:
 - [ ] **#20 – SF3D licensing surfaced in node UI**
   Stable Fast 3D is **Stability AI Community License** — free under
   $1M revenue, enterprise license required above. Today buried in the
-  docstring (line 558). Surface as a `license_warning` field that the
-  sidebar displays when the node is added.
+  docstring (line 558). Surface as a `license_warning` field and emit it in
+  node logs / errors where appropriate. Any richer product UI for license
+  warnings belongs to later roadmap work, not this plan.
 
 - [ ] **#21 – Disk-space pre-flight for model downloads**
   Trellis2 = 10 GB+, Hunyuan3D standard = 5 GB, TripoSG = 3 GB. A user on a
@@ -372,28 +355,57 @@ and `ImportError` at runtime. We split this into A+C+D:
   cache. Add a pre-flight check via `shutil.disk_usage()` against the HF
   cache directory before `snapshot_download`, with a clear error.
 
-- [ ] **#22 – Document VRAM budgets in node metadata, not just docstrings**
-  Each heavy node knows its own VRAM minimum (Hunyuan3D 6 GB, SF3D 6 GB,
-  TripoSR 6 GB, TripoSG 8 GB, Trellis2 24 GB). Expose this as a class
-  attribute (e.g. `MIN_VRAM_GB: ClassVar[int] = 24`) so the scheduler /
-  sidebar can warn users *before* OOM. Fold into the `is_available()` check
-  via `torch.cuda.get_device_properties(0).total_memory`.
-
-- [ ] **#23 – `_pipeline_thread_pool` is a global single worker**
-  `huggingface_pipeline.py` line 25: `ThreadPoolExecutor(max_workers=1)`
-  serializes ALL HF inference. For 3D specifically that's largely fine (one
-  Trellis2 job at 60s on H100 saturates the device anyway), but unrelated
-  audio / Shap-E CPU runs also serialize. **Decision: out of scope for the 3D
-  PRs.** Add a docstring comment marking the pool as intentionally
-  single-worker for CUDA memory pool consistency, and leave a TODO referencing
-  a future `runs_on_cpu_pool: ClassVar[bool] = False` opt-out marker so
-  CPU-bound HF nodes can route through `asyncio.to_thread` instead.
+- [ ] **#22 – Surface VRAM budgets cleanly**
+  Break this into explicit, checkable deliverables:
+  - [ ] **#22a** Every heavy node exposes `MIN_VRAM_GB: ClassVar[int]`.
+  - [ ] **#22b** At runtime, compare available VRAM against `MIN_VRAM_GB`
+    using the existing/shared hardware probe where available (or a thin shared
+    adapter), and emit a soft warning in node logs when the machine is under
+    the recommended budget.
+  - [ ] **#22c** Add at least one focused test for the warning path and one
+    manual verification note confirming the warning appears without blocking
+    execution.
 
 - [ ] **#24 – Input image validation**
   Each `process()` calls `await context.asset_to_io(self.image)` then opens
   with PIL. Failure modes (corrupt image, EXIF-rotated, palette-only) all
   bubble as raw `PIL.UnidentifiedImageError`. Wrap once in a helper that
   returns a friendly `ValueError("Invalid input image: <reason>")`.
+
+- [ ] **#25 – Make exported `Model3DRef` assets consistent across generators**
+  Break this into explicit, checkable deliverables:
+  - [ ] **#25a** Choose and document the canonical transport format (`GLB`) for
+    generated assets inside nodetool.
+  - [ ] **#25b** Standardize exported assets on a single orientation convention:
+    `+Y` up, forward axis documented once in `_3d_common.py`, and apply that
+    convention in each local generator where upstream export hooks allow it.
+  - [ ] **#25c** Standardize exported assets on a single centering / pivot
+    convention: bounding-box center at origin by default, with optional
+    scale-normalization-to-unit-box available but not forced.
+  - [ ] **#25d** Define the minimum shared metadata set on `Model3DRef`:
+    `seed`, `source_model`, `vertex_count`, `face_count`, `has_texture`,
+    `units`, `orientation`.
+  - [ ] **#25e** Extract a shared normalization / metadata helper into
+    `_3d_common.py` and route each local generator through it.
+  - [ ] **#25f** Add at least one no-GPU test that asserts the shared metadata
+    contract on a stubbed generated model.
+  - [ ] **#25g** Add one manual verification checklist item that confirms all
+    supported local generators preview correctly in the viewer after export and
+    appear upright / centered without per-model viewer hacks.
+
+- [ ] **#26 – Add a small manual evaluation matrix for defaults**
+  Smoke tests catch wiring bugs, not product quality regressions. Maintain a
+  lightweight benchmark sheet for 3-5 canonical prompts/images recording:
+  runtime, peak VRAM, output size, viewer success, mesh quality, and texture
+  quality. Use it to justify default models, recommended settings, and future
+  upgrades like Hunyuan3D-2.1.
+
+- [ ] **#27 – Make the phase-1 product boundary explicit**
+  This plan delivers a solid **local 3D generation layer** inside nodetool:
+  one input, one generated 3D asset, consistent preview/export behavior, clear
+  install/runtime guidance. Mesh cleanup, retopology, UV unwrap, texture-bake,
+  and multi-output 3D workflows remain a deliberate follow-up track rather
+  than implicit scope creep inside these PRs.
 
 ---
 
@@ -477,14 +489,9 @@ src/nodetool/nodes/huggingface/
 - `huggingface.image_to_3d.Trellis2`
 - `huggingface.image_to_3d.TripoSG`
 
-**Migration:**
+**Migration / scope note:**
 
-- The `huggingface.text_to_3d.ShapETextTo3D` namespace is unchanged → no
-  alias needed for that one node.
-- All six image→3D nodes need an alias from
-  `huggingface.text_to_3d.<NodeName>` → `huggingface.image_to_3d.<NodeName>`
-  for one release. Drop in the next minor version.
-- Use the alias mechanism added per **G2** (`nodetool-core` change).
+- No backward-compat aliasing is required for this split.
 - Shared helpers extracted to `_3d_common.py` to avoid the duplicated
   imports / device resolution / rembg cache / mesh export code that the
   single-file alternative was trying to avoid.
@@ -523,8 +530,10 @@ src/nodetool/nodes/huggingface/
 - **D** for our own dev / CI reproducibility (commit-pinned requirements
   files).
 - **Skip B** for published wheels (PyPI rejects VCS metadata).
-- `is_available()` returns `False` on platform mismatch *and* `ImportError`.
-  Sidebar message distinguishes the two cases.
+- Static metadata exposes `SUPPORTED_PLATFORMS`, `INSTALL_HINT`,
+  `license_warning`, and `MIN_VRAM_GB`. Live runtime checks for install state,
+  device state, cancellation, and progress are tracked separately in the
+  cross-cutting local-HF section at the end of this file.
 - Hunyuan3D moves *out* of the git-only stack: `hy3dgen` is a normal PyPI
   package, the CUDA C++ extensions only ship under `hy3dgen/texgen/` which
   we never import.
@@ -579,27 +588,90 @@ MODEL_REVISIONS: dict[str, str] = {
 
 ### D10 – VRAM budget surfacing (finding #22)
 
-**Decision: class attribute + scheduler hint, no hard block.**
+**Decision: class attribute + runtime log warning, no hard block. This
+decision is only "done" when #22a-#22c are all checked off.**
 
 - Each heavy node declares `MIN_VRAM_GB: ClassVar[int]`.
-- `is_available()` returns `True` even if VRAM is below the budget — but adds
-  a warning to the sidebar ("This model needs ~24 GB VRAM, you have 12 GB.
-  Likely to OOM. Try Hunyuan3D Mini instead.").
+- Static metadata advertises the recommended VRAM budget.
+- Reuse nodetool's existing runtime GPU detection path for CUDA / live VRAM
+  information where available; do not add a second independent hardware-probe
+  system just for these 3D nodes.
+- If runtime device information is available, emit a soft warning in node logs
+  when the machine is below the recommended VRAM budget.
 - We don't hard-block because users with `low_vram_mode=True` may make it
   work, and we shouldn't over-promise either way.
 
 ### D11 – Licensing surfacing (finding #20)
 
-**Decision: `license_warning: ClassVar[str | None]` on each node, rendered
-in the sidebar.**
+**Decision: `license_warning: ClassVar[str | None]` on each node, surfaced in
+logs / docs for now.**
 
 - Default `None` (no warning) — e.g. Shap-E MIT, TripoSR MIT, TripoSG MIT.
 - Set on **Hunyuan3D** (Tencent non-commercial), **SF3D** (Stability
   Community License, $1M revenue cap), **Trellis2** (Microsoft Research
   License, non-commercial) with concise human-readable text + upstream
   license URL.
-- **No "I accept" gate** — sidebar warning is sufficient for now. Revisit
-  if any user actually trips over the licensing.
+- **No "I accept" gate** and no new sidebar UI in this plan. Revisit richer
+  product surfaces later if the warnings prove useful enough.
+
+### D12 – Canonical `Model3DRef` contract (finding #25)
+
+**Decision: exported assets should look consistent across generators, and this
+decision is only "done" when #25a-#25g are all checked off.**
+
+- GLB is the canonical transport format inside nodetool.
+- All exporters should converge on the same orientation convention: `+Y` up,
+  with the forward-axis convention documented once in `_3d_common.py`.
+- All exporters should converge on the same default centering convention:
+  bounding-box center at origin.
+- Preserve per-model output controls, but normalize the final asset enough that
+  the viewer and downstream nodes do not need model-specific special cases.
+- Include a minimum shared metadata set on `Model3DRef`: `seed`,
+  `source_model`, `vertex_count`, `face_count`, `has_texture`, `units`,
+  `orientation`.
+- Scale normalization remains opt-in rather than forced, so advanced users can
+  preserve native dimensions when needed.
+
+### D13 – Evaluation strategy for defaults (finding #26)
+
+**Decision: keep CI light, but require a small manual benchmark matrix.**
+
+- CI covers smoke/import/export wiring only.
+- Product choices (recommended models, default output settings, whether a
+  model is worth shipping) are validated on 3-5 canonical prompts/images.
+- Record runtime, peak VRAM, output size, viewer success, mesh quality, and
+  texture quality in the plan/PR notes whenever defaults change.
+- New model additions should include at least one documented successful local
+  run on a supported machine before becoming recommended.
+
+### D14 – Product boundary for this work (finding #27)
+
+**Decision: this plan ships the generation layer, not the full 3D toolchain.**
+
+- In-scope: local text/image → 3D generation, sane exports, viewer-safe
+  outputs, install/runtime guidance, and basic metadata/warnings.
+- Out-of-scope for these PRs: retopology, UV unwrap, cleanup pipelines,
+  texture baking beyond what the upstream generator already emits, and
+  multi-asset 3D workflows.
+- Those are follow-up product tracks that should consume `Model3DRef` rather
+  than complicate the generation nodes themselves.
+
+### D15 – Build on the existing generic `nodetool.model3d.*` surface
+
+**Decision: post-processing follow-up should upgrade existing generic nodes,
+not invent a parallel 3D toolchain from scratch.**
+
+- `nodetool/packages/base-nodes/src/nodes/model3d.ts` already exposes generic
+  nodes such as `Decimate`, `Transform3D`, `CenterMesh`,
+  `RecalculateNormals`, `FlipNormals`, `MergeMeshes`, `Boolean3D`,
+  `FormatConverter`, and `GetModel3DMetadata`.
+- The right follow-up is to audit which of those are already product-ready,
+  upgrade the weak ones, and add a small number of missing high-value cleanup
+  nodes for AI-generated meshes.
+- Priority order: real decimation / metadata / conversion, normalization,
+  largest-component cleanup, then mesh repair.
+- Full UV unwrap, texture baking, and retopology stay later-phase because
+  they are much heavier and less reliable than the core cleanup steps above.
 
 ### D7 – `low_vram_mode` rollout (finding #18)
 
@@ -662,37 +734,47 @@ node, but implement per-node:**
     `use_flash_decoder` per code review, but did not audit whether the
     flag is wired to anything real — verify or delete.)
   - [ ] #21 disk-space pre-flight
+  - [ ] #25a-#25f + D12 canonical `Model3DRef` contract + export metadata
   - [ ] Verify `PYTORCH_CUDA_ALLOC_CONF` rollout
 
-- [ ] **PR-3 "Renames & packaging"** *(high blast radius, ship last; spans 4 repos)*
-  - **`nodetool-core` first**: G2 alias mechanism in `get_node_class()`,
-    G3 `BaseNode.is_available()` hook.
-  - **`nodetool-sdk`**: extend discovery to surface `is_available()`,
-    regenerate types.
-  - **`nodetool` web**: sidebar warnings consume new metadata
-    (#8e + #20/D11 + #22/D10), D3 seed badge in `Model3DProperty.tsx`.
-    `electron/src/packageManager.ts` install actions for #8c.
-  - **`nodetool-huggingface` last**:
-    - **#1 + D2 module/namespace SPLIT** (correcting PR #26's single-file
-      rename): `local_3d.py` → `text_to_3d.py` + `image_to_3d.py` +
-      `_3d_common.py`. Aliases must cover **both** the original
-      `huggingface.text_to_3d.<NodeName>` *and* the interim
-      `huggingface.local_3d.<NodeName>` namespace from PR #26.
-    - #8a, #8b (env markers — PR #26 only landed the bare `[project.optional-dependencies]`
-      groups), #8c, #8d, #8e, #8f, #8h, plus G4 + G5 audits.
-    - #7 + G7 Hunyuan3D `low_vram_mode` hardening + version pin
-    - #18 + D7 `low_vram_mode` rollout (Trellis2 confirmed no-op)
-    - #9 OBJ default fix — *PR #26 added the docstring hint; the actual
-      `default=GLB` switch on Hunyuan3D / SF3D / TripoSR is still pending,
-      verify and finish.* See D1.
-    - #20 + D11 license warnings (data only)
-    - #22 + D10 VRAM budget class attrs
-    - G1 regenerate `package_metadata` (PR #26 already regenerated for
-      `local_3d.*` — will need another regen after the split)
-    - N1 confirm large-GLB delivery path
-    - N3 confirm asset-store dedup
+- [ ] **PR-3a "Split + metadata cleanup"** *(high blast radius, but single-repo first)*
+  - **`nodetool-huggingface` only**
+  - #1 + D2 module split: `local_3d.py` → `text_to_3d.py` + `image_to_3d.py`
+    + `_3d_common.py`
+  - #8a, #8b, #8e, #8f, #8h, plus G4 + G5 audits
+  - #20 + D11 license warnings (metadata + docs/log text only)
+  - #22a static VRAM budget class attrs
+  - G1 regenerate `package_metadata` after the split
 
-- [ ] **PR-4 (optional) "Apple experimental"** *(can ship anytime after PR-2)*
+- [ ] **PR-3b "Install UX + runtime hints"** *(cross-repo, product-facing but no new sidebar UI)*
+  - **`nodetool-huggingface`**: #8c, #8d installer inputs / pinned requirements
+  - **`nodetool`**: `electron/src/packageManager.ts` install actions for #8c
+  - **`nodetool-huggingface` / shared runtime path**: #22b-#22c runtime VRAM
+    warning via node logs using the existing hardware probe
+  - N1 confirm large-GLB delivery path
+  - N3 confirm asset-store dedup
+
+- [ ] **PR-3c "Quality + low-VRAM rollout"** *(3D-specific product hardening)*
+  - #7 + G7 Hunyuan3D `low_vram_mode` hardening + version pin
+  - #18 + D7 `low_vram_mode` rollout (Trellis2 confirmed no-op)
+  - #9 OBJ default fix — *PR #26 added the docstring hint; the actual
+    `default=GLB` switch on Hunyuan3D / SF3D / TripoSR is still pending,
+    verify and finish.* See D1.
+  - #25g manual export/viewer verification across generators
+  - #26 + D13 manual evaluation matrix for defaults
+
+- [ ] **PR-5 "Generic Model3D post-processing follow-up"** *(separate follow-up track in `nodetool`, not part of the core local-HF 3D fixes)*
+  - #28 audit existing `nodetool.model3d.*` nodes for real mesh behavior vs
+    heuristic / passthrough behavior
+  - #29 upgrade the high-value existing nodes first: `Decimate`,
+    `FormatConverter`, `GetModel3DMetadata`, `MergeMeshes`, `Boolean3D`
+  - #30 add `NormalizeModel3D` (axis/origin/scale normalization + optional
+    ground-plane placement)
+  - #31 add `ExtractLargestComponent` / `RemoveSmallComponents`
+  - #32 add conservative `RepairMesh`
+  - #33 keep UV unwrap / texture-bake / retopology as a later, heavier phase
+
+- [ ] **PR-4 "Apple experimental"** *(separate follow-up PR, after PR-2 or later)*
   - #8i soften SF3D / TripoSR CUDA gates
   - D8 docstring updates marking experimental on macOS
   - Ship as separate PR so it can be reverted independently if it breaks for
@@ -700,24 +782,75 @@ node, but implement per-node:**
 
 ---
 
-## Affected repos (revised after G2 / G3 verification)
+## Affected repos (revised)
 
-- **`nodetool-huggingface`** — ~80% of the work (all Python changes,
-  `pyproject.toml`, vendored docs, smoke tests).
-- **`nodetool-core`** — **confirmed required** in PR-3:
-  - `NODE_TYPE_ALIASES: dict[str, str]` + alias check in `_lookup()` of
-    `get_node_class()` (G2 — verified missing).
-  - `@classmethod is_available(cls) -> tuple[bool, str | None]` on
-    `BaseNode` returning `(available, reason)`. Default `(True, None)` (G3 —
-    verified missing).
-- **`nodetool-sdk`** — `csharp/Nodetool.Types/scripts/generation/discovery.py`
-  must surface `is_available()` into generated metadata (extends existing
-  `is_visible()` filter at line 201). Auto-regenerated types follow.
-- **`nodetool`** — PR-3:
+- **`nodetool-huggingface`** — the core of the work: Python changes,
+  `pyproject.toml`, vendored docs, smoke tests, metadata regeneration.
+- **`nodetool`** — needed for install UX and shared runtime plumbing:
   - `electron/src/packageManager.ts` for #8c install actions.
-  - `web/src/components/properties/Model3DProperty.tsx` and sidebar
-    component for #8e/#22/#20 warnings (license, VRAM budget, missing deps)
-    + D3 resolved-seed badge.
+  - `packages/base-nodes/src/nodes/model3d.ts` for the separate generic
+    post-processing follow-up track (audit / upgrades / missing nodes).
+- **`nodetool-core` / `nodetool-sdk`** — **not required for the current 3D
+  plan after dropping backward-compat aliasing and build-time `is_available()`
+  ideas.** They may still be part of the general local-HF execution work at
+  the end of this file.
+
+---
+
+## Generic Model3D post-processing follow-up
+
+This is a **separate follow-up track**, not part of the core local-HF 3D
+generation fixes above.
+
+Important context: nodetool already has a generic `Model3D` node surface in
+`nodetool/packages/base-nodes/src/nodes/model3d.ts` with nodes like
+`Decimate`, `Transform3D`, `CenterMesh`, `RecalculateNormals`,
+`FlipNormals`, `MergeMeshes`, `Boolean3D`, `FormatConverter`, and
+`GetModel3DMetadata`. The plan should build on that surface rather than talk as
+if post-processing starts from zero.
+
+- [ ] **#28 – Audit existing `nodetool.model3d.*` nodes for real mesh behavior**
+  Verify which nodes are already genuinely mesh-aware and which are currently
+  convenience-level / heuristic / passthrough implementations. Highest-value
+  audit targets: `Decimate`, `FormatConverter`, `GetModel3DMetadata`,
+  `MergeMeshes`, `Boolean3D`.
+
+- [ ] **#29 – Upgrade the highest-value existing nodes first**
+  Before adding many new nodes, make the obvious ones trustworthy:
+  - `Decimate` should do real polygon reduction, not byte-level shrinking
+  - `FormatConverter` should perform real mesh conversion
+  - `GetModel3DMetadata` should compute true mesh stats
+  - `MergeMeshes` / `Boolean3D` should operate on geometry, not raw bytes
+  If a node stays heuristic for now, label it clearly rather than silently
+  pretending it is production-grade.
+
+- [ ] **#30 – Add `NormalizeModel3D`**
+  Add a single convenience node for the most common cleanup step after AI
+  generation:
+  - normalize axis / orientation
+  - center at origin
+  - optional uniform scale-to-box
+  - optional "rest on ground plane"
+  This complements #25 / D12 by giving workflows an explicit postprocess node
+  when the upstream model does not export exactly how the user wants.
+
+- [ ] **#31 – Add `ExtractLargestComponent` / `RemoveSmallComponents`**
+  AI-generated meshes often include floaters, disconnected islands, and tiny
+  junk geometry. A component-cleanup node is one of the highest-value additions
+  for actual workflow quality.
+
+- [ ] **#32 – Add a conservative `RepairMesh` node**
+  Focus on reliable cleanup:
+  - remove degenerate faces
+  - merge duplicate / near-duplicate vertices
+  - fix simple non-manifold / winding issues when safe
+  - report watertightness / repair results in metadata
+  Keep scope conservative; do not promise CAD-grade healing in v1.
+
+- [ ] **#33 – Keep UV unwrap / texture-bake / retopology as a later phase**
+  These are still recommended eventually, but they are much heavier and more
+  failure-prone than the cleanup nodes above. Do not block the local 3D
+  generation plan on them.
 
 ---
 
@@ -812,6 +945,58 @@ Feb 2024) is superseded by TripoSG which we already have. Trellis original
   DreamGaussian). Not implemented anywhere in the four repos today.
 - Texture-bake post-processing for Hunyuan3D shape-only output (would
   require pulling in `hy3dgen.texgen` + its CUDA C++ extensions).
-- Pluggable mesh post-processing graph (decimation, remesh, UV unwrap) as
-  separate nodes that consume `Model3DRef`.
+- A **full** pluggable mesh post-processing graph with advanced operations like
+  UV unwrap, retopology, and texture baking. Targeted generic cleanup nodes are
+  now tracked in the "Generic Model3D post-processing follow-up" section above.
 - OBJ/PLY loaders in `Model3DViewer.tsx` (revisit if user demand surfaces).
+
+---
+
+## General local HuggingFace execution improvements (separate track, not 3D-specific)
+
+These items apply to local Hugging Face execution across nodetool, not just the
+3D nodes above. Keep them out of the 3D PR slicing unless we explicitly decide
+to broaden scope.
+
+- [ ] **GHF1 – Split static node metadata from live runtime availability**
+  Package metadata can safely ship static facts like `SUPPORTED_PLATFORMS`,
+  `INSTALL_HINT`, `license_warning`, and `MIN_VRAM_GB`. It should not encode
+  live machine state such as "dependency installed", "GPU present", or "GPU has
+  enough VRAM". If the app wants those answers, it should query the local
+  Python runtime at runtime.
+
+- [ ] **GHF2 – Progress lifecycle for long local inference jobs**
+  Standardize high-level stages like: `checking dependencies`,
+  `downloading weights`, `loading pipeline`, `preprocessing input`,
+  `running inference`, `post-processing output`, `exporting asset`. Long local
+  model runs feel broken without visible stage changes.
+
+- [ ] **GHF3 – Cancellation and cleanup semantics**
+  Define what happens when the user cancels a local HF job mid-download or
+  mid-inference. We need predictable cleanup for partial downloads, temp files,
+  and GPU memory so the next run starts from a healthy state.
+
+- [ ] **GHF4 – Better error taxonomy for local inference**
+  Distinguish at least: unsupported platform, missing dependency, model download
+  failure, out-of-disk, out-of-VRAM, user cancellation, and upstream pipeline
+  crash. Raw tracebacks are useful for logs, but the UI should surface concise
+  human-readable categories first.
+
+- [ ] **GHF5 – Warm/cold start visibility**
+  When preload succeeds, show that a model is warm; when a run pays full load
+  cost, show that it is a cold start. This matters for heavyweight local
+  inference where "nothing is happening" can just mean "loading 10 GB of
+  weights".
+
+- [ ] **GHF6 – CPU-vs-CUDA execution pool strategy**
+  `huggingface_pipeline.py` currently uses a global
+  `ThreadPoolExecutor(max_workers=1)`, which is reasonable for CUDA memory-pool
+  stability but serializes unrelated local HF work too. Add a clearly-scoped
+  follow-up design for when CPU-safe nodes should opt out to a separate worker
+  path without destabilizing GPU inference.
+
+Possible future product UX, if these warnings prove broadly useful:
+- A shared install/runtime status surface (panel, inspector section, or similar)
+  for local model availability, license notices, and VRAM guidance across all
+  local-HF nodes. This is a roadmap idea only, not a checkable item in this
+  plan.
