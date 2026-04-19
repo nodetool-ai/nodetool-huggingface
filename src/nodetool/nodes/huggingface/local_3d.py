@@ -24,6 +24,53 @@ if TYPE_CHECKING:
     import torch
 
 
+def _export_mesh(
+    mesh: Any,
+    format: str = "glb",
+    include_normals: bool = False,
+) -> bytes:
+    """Export a mesh (trimesh or raw vertices/faces object) to bytes.
+
+    Handles the common export pattern shared across 3D generation nodes:
+    - If *mesh* already has an ``.export()`` method (e.g. a trimesh object),
+      call it directly.
+    - Otherwise build a ``trimesh.Trimesh`` from ``.vertices`` / ``.faces``,
+      converting GPU tensors to numpy when necessary.
+
+    Parameters
+    ----------
+    mesh:
+        A trimesh ``Trimesh``, or any object with ``.vertices`` and ``.faces``
+        attributes.
+    format:
+        Target file type (``"glb"``, ``"obj"``, …).
+    include_normals:
+        If ``True``, pass ``include_normals=True`` to the trimesh exporter
+        (used by SF3D).
+    """
+    import trimesh as _trimesh
+
+    buffer = io.BytesIO()
+
+    if hasattr(mesh, "export"):
+        kwargs: dict[str, Any] = {"file_type": format}
+        if include_normals:
+            kwargs["include_normals"] = True
+        mesh.export(buffer, **kwargs)
+    else:
+        verts = mesh.vertices
+        faces = mesh.faces
+        if hasattr(verts, "cpu"):
+            verts = verts.cpu().numpy()
+        if hasattr(faces, "cpu"):
+            faces = faces.cpu().numpy()
+        tri = _trimesh.Trimesh(vertices=verts, faces=faces)
+        tri.export(buffer, file_type=format)
+
+    buffer.seek(0)
+    return buffer.read()
+
+
 class ShapETextTo3D(HuggingFacePipelineNode):
     """
     Generate 3D models from text descriptions using OpenAI Shap-E.
@@ -144,10 +191,7 @@ class ShapETextTo3D(HuggingFacePipelineNode):
             vertices=mesh.verts.cpu().numpy(),
             faces=mesh.faces.cpu().numpy(),
         )
-        buffer = io.BytesIO()
-        tri_mesh.export(buffer, file_type="glb")
-        buffer.seek(0)
-        model_bytes = buffer.read()
+        model_bytes = _export_mesh(tri_mesh, format="glb")
 
         return await context.model3d_from_bytes(
             model_bytes,
@@ -282,10 +326,7 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
             vertices=mesh.verts.cpu().numpy(),
             faces=mesh.faces.cpu().numpy(),
         )
-        buffer = io.BytesIO()
-        tri_mesh.export(buffer, file_type="glb")
-        buffer.seek(0)
-        model_bytes = buffer.read()
+        model_bytes = _export_mesh(tri_mesh, format="glb")
 
         return await context.model3d_from_bytes(
             model_bytes,
@@ -521,32 +562,9 @@ class Hunyuan3D(HuggingFacePipelineNode):
         )[0]
 
         run_gc("After Hunyuan3D inference", log_before_after=False)
-        # Export mesh to bytes via trimesh
+        # Export mesh to bytes
         format_str = self.output_format.value
-        buffer = io.BytesIO()
-
-        if hasattr(mesh, "export"):
-            # hy3dgen returns trimesh objects directly
-            mesh.export(buffer, file_type=format_str)
-        else:
-            import trimesh
-
-            tri_mesh = trimesh.Trimesh(
-                vertices=(
-                    mesh.vertices.cpu().numpy()
-                    if hasattr(mesh.vertices, "cpu")
-                    else mesh.vertices
-                ),
-                faces=(
-                    mesh.faces.cpu().numpy()
-                    if hasattr(mesh.faces, "cpu")
-                    else mesh.faces
-                ),
-            )
-            tri_mesh.export(buffer, file_type=format_str)
-
-        buffer.seek(0)
-        model_bytes = buffer.read()
+        model_bytes = _export_mesh(mesh, format=format_str)
 
         return await context.model3d_from_bytes(
             model_bytes,
@@ -710,14 +728,9 @@ class StableFast3D(HuggingFacePipelineNode):
         run_gc("After SF3D inference", log_before_after=False)
         # Export mesh
         format_str = self.output_format.value
-        buffer = io.BytesIO()
-
         if isinstance(mesh, list):
             mesh = mesh[0]
-        mesh.export(buffer, file_type=format_str, include_normals=True)
-
-        buffer.seek(0)
-        model_bytes = buffer.read()
+        model_bytes = _export_mesh(mesh, format=format_str, include_normals=True)
 
         return await context.model3d_from_bytes(
             model_bytes,
@@ -877,10 +890,7 @@ class TripoSR(HuggingFacePipelineNode):
         run_gc("After TripoSR inference", log_before_after=False)
         # Export mesh
         format_str = self.output_format.value
-        buffer = io.BytesIO()
-        mesh.export(buffer, file_type=format_str)
-        buffer.seek(0)
-        model_bytes = buffer.read()
+        model_bytes = _export_mesh(mesh, format=format_str)
 
         return await context.model3d_from_bytes(
             model_bytes,
@@ -1076,24 +1086,7 @@ class Trellis2(HuggingFacePipelineNode):
         except Exception as e:
             # Fallback: try basic trimesh export if o_voxel fails
             try:
-                import trimesh
-
-                tri_mesh = trimesh.Trimesh(
-                    vertices=(
-                        mesh.vertices.cpu().numpy()
-                        if hasattr(mesh.vertices, "cpu")
-                        else mesh.vertices
-                    ),
-                    faces=(
-                        mesh.faces.cpu().numpy()
-                        if hasattr(mesh.faces, "cpu")
-                        else mesh.faces
-                    ),
-                )
-                buffer = io.BytesIO()
-                tri_mesh.export(buffer, file_type="glb")
-                buffer.seek(0)
-                model_bytes = buffer.read()
+                model_bytes = _export_mesh(mesh, format="glb")
                 format_str = "glb"
             except Exception as fallback_error:
                 raise RuntimeError(
@@ -1420,10 +1413,7 @@ class TripoSG(HuggingFacePipelineNode):
             mesh = self._simplify_mesh(mesh, self.max_faces)
 
         # Export to GLB
-        buffer = io.BytesIO()
-        mesh.export(buffer, file_type="glb")
-        buffer.seek(0)
-        model_bytes = buffer.read()
+        model_bytes = _export_mesh(mesh, format="glb")
 
         return await context.model3d_from_bytes(
             model_bytes,
