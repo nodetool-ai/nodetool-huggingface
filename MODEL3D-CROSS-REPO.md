@@ -63,6 +63,51 @@ Notes:
 
 ---
 
+## Recommended later libraries
+
+These are worth evaluating after the first cleanup pass is stable. They are not
+part of the initial three-library stack above and should not be pulled in early
+without a concrete consumer.
+
+- **Add `@gltf-transform/functions` and `@gltf-transform/extensions` before
+  reaching for another general-purpose scene library**
+  Treat these as the natural next step on top of the chosen `glTF-Transform`
+  base layer. Prefer existing document helpers such as `NodeIO`, `weld()`,
+  `prune()`, `dedup()`, `reorder()`, and extension-aware material / texture
+  handling before inventing custom GLB plumbing.
+- **`three-mesh-bvh` is the first scene-preview helper worth adding**
+  Use it only when larger scene preview work needs better picking, raycasting,
+  or spatial-query performance. It is a viewer / interaction helper, not a
+  replacement for geometry processing.
+- **Keep gaussian splat support on a separate track**
+  If we want frontend preview of splats, prefer a dedicated viewer library such
+  as `@mkkellogg/gaussian-splats-3d` in the existing Three.js ecosystem, or a
+  Babylon.js-based preview path if Babylon becomes useful for richer inspection.
+  Do not force splats through mesh cleanup nodes.
+- **Treat Babylon.js as preview / inspection infrastructure, not the workflow
+  conversion backbone**
+  Babylon may be useful later for broader file preview, scene inspection,
+  lighting, PBR checks, and optional browser-side GLB export. It should not
+  displace `glTF-Transform` as the canonical document layer for `FormatConverter`
+  or metadata nodes.
+- **Consider `loaders.gl` only if broader import coverage becomes necessary**
+  This is an ingest helper candidate for formats we do not want to parse
+  ourselves. If adopted, normalize into GLB quickly and keep workflow operations
+  on the canonical GLB path.
+- **Defer texture / material pipeline additions until scene or PBR work proves
+  the need**
+  Good later candidates include KTX2 / Basis texture tooling and `xatlas` /
+  `xatlas-wasm` for UV unwrap, but neither should block the first trustworthy
+  mesh-node pass.
+
+Rule of thumb:
+
+- Preview breadth can use specialized viewer libraries.
+- Workflow nodes should still normalize into GLB and operate on honest,
+  geometry-aware document data.
+
+---
+
 ## Execution order
 
 Treat this as a strict queue. Do not skip ahead.

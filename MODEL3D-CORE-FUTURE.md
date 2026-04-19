@@ -45,8 +45,35 @@ workflow assets instead of flattening everything into meshes.
 - [ ] **Define minimum viewer and metadata support before adoption**
   A new asset type is not useful unless preview, persistence, and export
   expectations are clear.
+- [ ] **Keep splat support preview-first at the start**
+  If Gaussian splats become interesting, begin with a dedicated preview path
+  rather than pretending the existing mesh cleanup nodes can process them.
+- [ ] **Choose a dedicated splat contract if workflows need to pass them around**
+  Likely shape: `GaussianSplatRef` or another explicit non-mesh asset type with
+  its own storage, preview, metadata, and export rules.
 
-### 3. Shared metadata contract upgrades
+### 3. Scene-shaped 3D asset families
+
+Trigger: decide to support authored scenes with multiple meshes, transforms,
+materials, cameras, lights, or environment data as first-class workflow assets.
+
+- [ ] **Decide whether scenes belong in `Model3DRef`**
+  Default answer should be no unless we can preserve scene semantics honestly.
+  A centered single-model preview contract is not automatically a scene
+  contract.
+- [ ] **If needed, add a dedicated scene ref**
+  Likely shape: `Scene3DRef` or another explicit type that preserves hierarchy,
+  per-node transforms, materials, and optional cameras / lights.
+- [ ] **Define preview modes before adopting scene assets**
+  If scene refs land, specify whether the viewer should offer both asset-preview
+  mode (recenter, neutral lighting) and scene-preview mode (preserve authored
+  transforms, cameras, and lights).
+- [ ] **Keep scene metadata focused and stable**
+  Good candidates include mesh count, material count, texture presence, light
+  count, camera count, canonical orientation, and unit assumptions. Do not
+  promote speculative renderer-specific details into shared types too early.
+
+### 4. Shared metadata contract upgrades
 
 Trigger: two or more repos need the same additional 3D metadata fields.
 
