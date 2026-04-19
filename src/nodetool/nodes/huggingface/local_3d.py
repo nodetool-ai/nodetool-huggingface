@@ -26,6 +26,39 @@ if TYPE_CHECKING:
     from PIL import Image
 
 
+def _resolve_device() -> str:
+    """Return the best available torch device string (cuda > mps > cpu)."""
+    import torch
+
+    if torch.cuda.is_available():
+        return "cuda"
+    if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
+
+
+def _open_pil_image(image_bytes_io: Any, mode: str = "RGB") -> "Image.Image":
+    """Open a PIL image from an IO buffer with friendly error messages.
+
+    Wraps ``PIL.Image.open`` to convert common failure modes
+    (corrupt file, unsupported format, truncated download, etc.)
+    into a clear ``ValueError`` that surfaces in the node UI.
+    """
+    from PIL import Image, UnidentifiedImageError
+
+    try:
+        img = Image.open(image_bytes_io)
+        img.load()  # force full decode to catch truncated files
+        return img.convert(mode)
+    except UnidentifiedImageError:
+        raise ValueError(
+            "Invalid input image: the file could not be identified as an image. "
+            "Please provide a valid JPEG, PNG, or WebP file."
+        )
+    except OSError as exc:
+        raise ValueError(f"Invalid input image: {exc}") from exc
+
+
 def _export_mesh(
     mesh: Any,
     format: str = "glb",
@@ -147,7 +180,7 @@ class ShapETextTo3D(HuggingFacePipelineNode):
         import torch
         from diffusers import ShapEPipeline
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = _resolve_device()
         torch_dtype = torch.float16 if device == "cuda" else torch.float32
         self._pipeline = await self.load_model(
             context=context,
@@ -163,12 +196,13 @@ class ShapETextTo3D(HuggingFacePipelineNode):
             raise ValueError("Prompt is required")
 
         assert self._pipeline is not None, "Pipeline not initialized"
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = str(self._pipeline.device)
 
-        # Set seed
+        # Set seed – generator device must be "cpu" for MPS pipelines
+        gen_device = "cpu" if device.startswith("mps") else device
         generator = None
         if self.seed >= 0:
-            generator = torch.Generator(device=device).manual_seed(self.seed)
+            generator = torch.Generator(device=gen_device).manual_seed(self.seed)
 
         # Generate
         images = self._pipeline(
@@ -276,7 +310,7 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
         import torch
         from diffusers import ShapEImg2ImgPipeline
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = _resolve_device()
         torch_dtype = torch.float16 if device == "cuda" else torch.float32
         self._pipeline = await self.load_model(
             context=context,
@@ -287,7 +321,6 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
-        from PIL import Image
 
         if self.image.is_empty():
             raise ValueError("Input image is required")
@@ -296,14 +329,15 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
 
         # Load input image
         image_io = await context.asset_to_io(self.image)
-        input_image = Image.open(image_io).convert("RGB")
+        input_image = _open_pil_image(image_io, mode="RGB")
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = str(self._pipeline.device)
 
-        # Set seed
+        # Set seed – generator device must be "cpu" for MPS pipelines
+        gen_device = "cpu" if device.startswith("mps") else device
         generator = None
         if self.seed >= 0:
-            generator = torch.Generator(device=device).manual_seed(self.seed)
+            generator = torch.Generator(device=gen_device).manual_seed(self.seed)
 
         # Generate
         images = self._pipeline(
@@ -457,8 +491,8 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
     def _ensure_model_downloaded(self, variant: str) -> str:
         """
-        Pre-download only the shape-generation files to avoid downloading
-        the entire 75GB repo (which includes paint/texture models).
+        Pre-download only the shape-generation files (~5 GB standard, ~2 GB mini)
+        to avoid downloading the full repo (which includes paint/texture models).
         Returns the repo_id for the model.
         """
         from huggingface_hub import snapshot_download
@@ -528,7 +562,6 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
-        from PIL import Image
 
         if self.image.is_empty():
             raise ValueError("Input image is required")
@@ -543,7 +576,7 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
         # Load input image
         image_io = await context.asset_to_io(self.image)
-        input_image = Image.open(image_io).convert("RGB")
+        input_image = _open_pil_image(image_io, mode="RGB")
 
         # Load or reload pipeline if variant changed
         variant = self.model_variant.value
@@ -686,7 +719,6 @@ class StableFast3D(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
-        from PIL import Image
 
         if self.image.is_empty():
             raise ValueError("Input image is required")
@@ -702,7 +734,7 @@ class StableFast3D(HuggingFacePipelineNode):
 
         # Load input image
         image_io = await context.asset_to_io(self.image)
-        input_image = Image.open(image_io).convert("RGBA")
+        input_image = _open_pil_image(image_io, mode="RGBA")
 
         # Load model
         if self._model is None:
@@ -855,7 +887,7 @@ class TripoSR(HuggingFacePipelineNode):
 
         # Load input image
         image_io = await context.asset_to_io(self.image)
-        input_image = Image.open(image_io).convert("RGBA")
+        input_image = _open_pil_image(image_io, mode="RGBA")
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -1019,7 +1051,6 @@ class Trellis2(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
-        from PIL import Image
         import os
 
         # Enable OpenEXR support for environment maps (optional but recommended)
@@ -1031,7 +1062,7 @@ class Trellis2(HuggingFacePipelineNode):
 
         # Load input image
         image_io = await context.asset_to_io(self.image)
-        input_image = Image.open(image_io).convert("RGB")
+        input_image = _open_pil_image(image_io, mode="RGB")
 
         try:
             import o_voxel  # noqa: F401
@@ -1231,7 +1262,13 @@ class TripoSG(HuggingFacePipelineNode):
             return
         self._load_models()
 
-    def _prepare_image(self, img_pil: "Image.Image", rmbg_net: Any) -> "Image.Image":
+    def _prepare_image(
+        self,
+        img_pil: "Image.Image",
+        rmbg_net: Any,
+        *,
+        device: str = "cuda",
+    ) -> "Image.Image":
         """Remove background and center-crop the foreground."""
         import cv2
         import numpy as np
@@ -1262,19 +1299,21 @@ class TripoSG(HuggingFacePipelineNode):
             if alpha is not None:
                 alpha = cv2.resize(alpha, new_size, interpolation=cv2.INTER_AREA)
 
-        rgb_gpu = torch.from_numpy(rgb_image).cuda().float().permute(2, 0, 1) / 255.0
+        rgb_gpu = (
+            torch.from_numpy(rgb_image).to(device).float().permute(2, 0, 1) / 255.0
+        )
 
         if alpha is not None:
             _, alpha = cv2.threshold(alpha, 127, 255, cv2.THRESH_BINARY)
-            alpha_gpu = torch.from_numpy(alpha).cuda().float().unsqueeze(0) / 255.0
+            alpha_gpu = torch.from_numpy(alpha).to(device).float().unsqueeze(0) / 255.0
         else:
             resize_transform = transforms.Resize((1024, 1024), antialias=True)
             rgb_resized = resize_transform(rgb_gpu)
             max_val = rgb_resized.flatten().max()
             if max_val < 1e-3:
                 raise ValueError("Invalid image: pure black")
-            mean_color = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1).cuda()
-            norm_img = rgb_resized / max_val - mean_color
+            mean_color = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1).to(device)
+            norm_img = rgb_resized / max_val - mean_color  # noqa: F841
 
             rmbg_input = TF.normalize(rgb_resized, [0.5, 0.5, 0.5], [1.0, 1.0, 1.0])
             result = rmbg_net(rmbg_input.unsqueeze(0))
@@ -1291,8 +1330,8 @@ class TripoSG(HuggingFacePipelineNode):
             )
             labeled = label(alpha_np)
             cleaned = (remove_small_objects(labeled, min_size=200) > 0).astype(np.uint8)
-            alpha_np = cleaned * 255
-            alpha_gpu = torch.from_numpy(cleaned).cuda().float().unsqueeze(0)
+            alpha_np = cleaned * 255  # noqa: F841
+            alpha_gpu = torch.from_numpy(cleaned).to(device).float().unsqueeze(0)
 
         _, binary = cv2.threshold(
             (alpha_gpu.squeeze().cpu().numpy() * 255).astype(np.uint8),
@@ -1310,7 +1349,7 @@ class TripoSG(HuggingFacePipelineNode):
         bg = (
             torch.from_numpy(bg_color)
             .float()
-            .cuda()
+            .to(device)
             .repeat(alpha_gpu.shape[1], alpha_gpu.shape[2], 1)
             .permute(2, 0, 1)
         )
@@ -1355,7 +1394,6 @@ class TripoSG(HuggingFacePipelineNode):
         import torch
         import numpy as np
         import trimesh
-        from PIL import Image
 
         if self.image.is_empty():
             raise ValueError("Input image is required")
@@ -1371,8 +1409,8 @@ class TripoSG(HuggingFacePipelineNode):
 
         # Load and prepare input image
         image_io = await context.asset_to_io(self.image)
-        input_image = Image.open(image_io).convert("RGBA")
-        prepared_image = self._prepare_image(input_image, self._rmbg_net)
+        input_image = _open_pil_image(image_io, mode="RGBA")
+        prepared_image = self._prepare_image(input_image, self._rmbg_net, device=device)
 
         # Set seed
         seed = self.seed if self.seed >= 0 else torch.randint(0, 2**32, (1,)).item()

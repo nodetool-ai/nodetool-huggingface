@@ -201,7 +201,7 @@ and `ImportError` at runtime. We split this into A+C+D:
 
 ## Correctness fixes
 
-- [ ] **#4 – Shap-E ignores the device chosen by `_resolve_hf_device`**
+- [x] **#4 – Shap-E ignores the device chosen by `_resolve_hf_device`**
   `load_model` may place weights on `mps` (preferred on Apple Silicon by
   `local_provider_utils._resolve_hf_device`), but Shap-E's `process()` re-does
   `"cuda" if torch.cuda.is_available() else "cpu"` at lines 98, 114, 227,
@@ -223,7 +223,7 @@ and `ImportError` at runtime. We split this into A+C+D:
   try/except with a clear "low_vram_mode unavailable for this hy3dgen
   version" warning, and pin the validated `hy3dgen` version range (G7).
 
-- [ ] **#11 – TripoSG `_prepare_image` hard-codes `.cuda()`**
+- [x] **#11 – TripoSG `_prepare_image` hard-codes `.cuda()`**
   Lines 1181–1234 use literal `.cuda()`. Currently fine because `process()`
   gates on CUDA, but brittle. Use `device` consistently.
 
@@ -242,7 +242,7 @@ and `ImportError` at runtime. We split this into A+C+D:
 
 ## Polish / UX
 
-- [ ] **#17 – Document vendored `triposg` upstream**
+- [x] **#17 – Document vendored `triposg` upstream**
   `src/triposg/` is excluded from ruff but ships in the wheel. Add
   `src/triposg/UPSTREAM.md` with the upstream commit SHA and any local
   patches so future merges are tractable.
@@ -252,7 +252,7 @@ and `ImportError` at runtime. We split this into A+C+D:
   TripoSG (~8 GB) could expose `enable_sequential_cpu_offload()` /
   `enable_model_cpu_offload()` behind the same flag. See D7.
 
-- [ ] Hunyuan3D `_ensure_model_downloaded` docstring still says "75 GB repo"
+- [x] Hunyuan3D `_ensure_model_downloaded` docstring still says "75 GB repo"
   (line 412). Make sure the message matches reality after the
   `allow_patterns` fix.
 
@@ -366,7 +366,7 @@ and `ImportError` at runtime. We split this into A+C+D:
     manual verification note confirming the warning appears without blocking
     execution.
 
-- [ ] **#24 – Input image validation**
+- [x] **#24 – Input image validation**
   Each `process()` calls `await context.asset_to_io(self.image)` then opens
   with PIL. Failure modes (corrupt image, EXIF-rotated, palette-only) all
   bubble as raw `PIL.UnidentifiedImageError`. Wrap once in a helper that
@@ -707,17 +707,23 @@ node, but implement per-node:**
   below as a small follow-up to mop up the items the PR missed.
 
 - [ ] **PR-1.5 "PR #26 follow-ups"** *(small, low risk)*
-  - [ ] #4 Shap-E device fix (slipped from PR-1)
-  - [ ] #11 TripoSG `_prepare_image` cleanup
-  - [ ] Hunyuan3D docstring cleanup
+  - [x] #4 Shap-E device fix (slipped from PR-1) — use `self._pipeline.device`
+    and `_resolve_device()` helper; MPS generator uses "cpu" device
+  - [x] #11 TripoSG `_prepare_image` cleanup — accept `device` kwarg,
+    replace all `.cuda()` with `.to(device)`
+  - [x] Hunyuan3D docstring cleanup — updated `_ensure_model_downloaded`
+    docstring to say "~5 GB standard, ~2 GB mini" instead of "75 GB"
   - [ ] #14 verify per-call seed metadata is actually returned in
     `Model3DRef.metadata` (D3) — the PR's commit message claims #14 but
     needs verification that the seed is surfaced, not just used internally
   - [ ] #19 + D9 pin model revisions
-  - [ ] #24 input-image validation helper
-  - [ ] #17 vendored `triposg/UPSTREAM.md`
-  - [ ] Verify `_export_mesh` helper from PR #26 covers Trellis2's
+  - [x] #24 input-image validation helper — `_open_pil_image()` wraps
+    PIL open+load with friendly `ValueError` for corrupt/unsupported files
+  - [x] #17 vendored `triposg/UPSTREAM.md`
+  - [x] Verify `_export_mesh` helper from PR #26 covers Trellis2's
     `extension_webp=True` and SF3D's `include_normals=True` paths (C2)
+    — confirmed: SF3D passes `include_normals=True`, Trellis2 uses its own
+    `o_voxel.postprocess.to_glb()` path with `_export_mesh` as fallback
 
 - [ ] **PR-2 "Refactor & helpers"** *(reduced scope after PR #26)*
   - [x] #5 + C2 export helper — *PR #26 (verify C2 handled — see PR-1.5)*
