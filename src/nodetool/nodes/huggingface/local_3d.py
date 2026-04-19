@@ -37,6 +37,15 @@ def _resolve_device() -> str:
     return "cpu"
 
 
+def _resolve_seed(seed: int) -> int:
+    """Return *seed* unchanged when >= 0, otherwise a random 32-bit integer."""
+    if seed >= 0:
+        return seed
+    import torch
+
+    return torch.randint(0, 2**32, (1,)).item()
+
+
 def _open_pil_image(image_bytes_io: Any, mode: str = "RGB") -> "Image.Image":
     """Open a PIL image from an IO buffer with friendly error messages.
 
@@ -202,7 +211,7 @@ class ShapETextTo3D(HuggingFacePipelineNode):
 
         # Set seed – generator device must be "cpu" for MPS pipelines
         gen_device = "cpu" if device.startswith("mps") else device
-        seed = self.seed if self.seed >= 0 else torch.randint(0, 2**32, (1,)).item()
+        seed = _resolve_seed(self.seed)
         generator = torch.Generator(device=gen_device).manual_seed(seed)
 
         # Generate
@@ -339,7 +348,7 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
 
         # Set seed – generator device must be "cpu" for MPS pipelines
         gen_device = "cpu" if device.startswith("mps") else device
-        seed = self.seed if self.seed >= 0 else torch.randint(0, 2**32, (1,)).item()
+        seed = _resolve_seed(self.seed)
         generator = torch.Generator(device=gen_device).manual_seed(seed)
 
         # Generate
@@ -602,7 +611,7 @@ class Hunyuan3D(HuggingFacePipelineNode):
             self._load_pipeline(variant)
 
         # Set seed using per-call generator (avoids leaking global RNG state)
-        seed = self.seed if self.seed >= 0 else torch.randint(0, 2**32, (1,)).item()
+        seed = _resolve_seed(self.seed)
         generator = torch.Generator(
             device="cuda" if torch.cuda.is_available() else "cpu"
         ).manual_seed(seed)
@@ -1112,7 +1121,7 @@ class Trellis2(HuggingFacePipelineNode):
             self._load_pipeline()
 
         # Set seed using per-call generator (avoids leaking global RNG state)
-        seed = self.seed if self.seed >= 0 else torch.randint(0, 2**32, (1,)).item()
+        seed = _resolve_seed(self.seed)
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
 
@@ -1452,7 +1461,7 @@ class TripoSG(HuggingFacePipelineNode):
         prepared_image = self._prepare_image(input_image, self._rmbg_net, device=device)
 
         # Set seed
-        seed = self.seed if self.seed >= 0 else torch.randint(0, 2**32, (1,)).item()
+        seed = _resolve_seed(self.seed)
         generator = torch.Generator(device=device).manual_seed(seed)
 
         # Use flash decoder (diso) if available, fall back to marching cubes

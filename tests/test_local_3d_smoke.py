@@ -187,6 +187,25 @@ def test_resolve_device_returns_string():
     assert device in ("cuda", "mps", "cpu")
 
 
+def test_resolve_seed_passthrough():
+    """_resolve_seed returns the seed unchanged when >= 0."""
+    pytest.importorskip("torch")
+    from nodetool.nodes.huggingface.local_3d import _resolve_seed
+
+    assert _resolve_seed(42) == 42
+    assert _resolve_seed(0) == 0
+
+
+def test_resolve_seed_random():
+    """_resolve_seed returns a random uint32 when seed is -1."""
+    pytest.importorskip("torch")
+    from nodetool.nodes.huggingface.local_3d import _resolve_seed
+
+    seed = _resolve_seed(-1)
+    assert isinstance(seed, int)
+    assert 0 <= seed < 2**32
+
+
 def test_open_pil_image_rejects_garbage():
     """_open_pil_image raises ValueError on non-image bytes."""
     import io
