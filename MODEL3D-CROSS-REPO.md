@@ -65,9 +65,31 @@ Notes:
 
 ## Execution order
 
-Work these items from top to bottom.
+Treat this as a strict queue. Do not skip ahead.
 
-### 1. Upgrade the nodes that already exist
+Rule: do not start the next phase until the current phase is implemented,
+tested, and the plan file is updated.
+
+### 0. Establish the base layer first
+
+- [ ] **Install only the first-slice libraries**
+  Add `glTF-Transform` and `meshoptimizer` to `nodetool` first.
+- [ ] **Do not install `manifold-3d` yet**
+  Hold it back until work actually begins on `Boolean3D` or union-style
+  `MergeMeshes`.
+- [ ] **Create shared helpers before upgrading nodes**
+  Add focused internal helpers for GLB loading/writing and metadata extraction
+  so `FormatConverter`, `GetModel3DMetadata`, and later nodes do not each build
+  their own parsing path.
+
+Exit criteria for phase 0:
+
+- `nodetool` builds with the new first-slice dependencies.
+- There is one shared GLB/document helper path ready to reuse.
+
+### 1. Make the existing I/O and metadata nodes honest
+
+Start here. This is the first real implementation slice.
 
 - [ ] **Make `FormatConverter` a real converter**
   Keep GLB as the internal transport format. Replace byte-level or extension
@@ -77,9 +99,45 @@ Work these items from top to bottom.
   Return actual bounds, primitive counts, mesh counts, material presence, and
   other cheap-to-compute facts from parsed model data rather than filename or
   container heuristics.
+- [ ] **Add fixture tests for these two nodes immediately**
+  Do not defer tests to the end. Add at least one real GLB fixture and assert
+  geometry-aware outputs.
+
+Exit criteria for phase 1:
+
+- `FormatConverter` no longer lies by only relabeling bytes.
+- `GetModel3DMetadata` reports real geometry-derived values.
+- Tests cover both nodes with real fixtures.
+
+### 2. Upgrade simplification
+
 - [ ] **Make `Decimate` perform real simplification**
-  Use a real simplification path so triangle count changes are tied to mesh
-  geometry, not placeholder behavior.
+  Use `glTF-Transform` + `meshoptimizer` so triangle count changes are tied to
+  mesh geometry, not placeholder behavior.
+- [ ] **Use the wrapper path first**
+  Try `NodeIO` + `weld()` + `simplify()` before writing any custom low-level
+  simplification plumbing.
+- [ ] **Keep v1 GLB-focused**
+  Support real GLB decimation first. Do not block this phase on OBJ/STL/PLY.
+- [ ] **Document the truthful limits of `Decimate`**
+  If only a subset of meshes or formats is supported at first, say so in node
+  docs and metadata instead of pretending to support everything.
+- [ ] **Add fixture tests for `Decimate`**
+  Assert that simplification changes geometry statistics in the expected
+  direction, not just that some output bytes exist.
+
+Exit criteria for phase 2:
+
+- `Decimate` uses a real simplification path.
+- Supported inputs and limitations are documented.
+- Tests verify geometry-level effects.
+
+### 3. Then add boolean / merge work
+
+Only start this phase once phases 0-2 are stable.
+
+- [ ] **Install `manifold-3d`**
+  Add it only when work on booleans actually starts.
 - [ ] **Make `Boolean3D` geometry-aware**
   Implement union / difference / intersection on real meshes or narrow the
   supported modes until the implementation is truthful.
@@ -87,8 +145,16 @@ Work these items from top to bottom.
   Support at least one honest merge mode first: either scene merge
   (concatenate while preserving transforms) or boolean union. Do not keep one
   node that claims both if only one path is reliable.
+- [ ] **Add fixture tests for both nodes**
+  Include success cases and at least one documented unsupported-input case.
 
-### 2. Add the missing cleanup nodes needed by AI-generated meshes
+Exit criteria for phase 3:
+
+- `Boolean3D` and `MergeMeshes` have truthful behavior.
+- Unsupported cases are explicit.
+- Tests cover both success and failure/limit paths.
+
+### 4. Add the missing cleanup nodes
 
 - [ ] **Add `NormalizeModel3D`**
   Provide one focused node for centering, orientation normalization, optional
@@ -99,16 +165,23 @@ Work these items from top to bottom.
 - [ ] **Add a conservative `RepairMesh`**
   Start with reliable fixes only: degenerate-face removal, duplicate or
   near-duplicate vertex merging, and similarly safe cleanup passes.
+- [ ] **Add tests as each node lands**
+  Do not batch all cleanup-node tests into a later PR.
 
-### 3. Add verification before broadening scope
+Exit criteria for phase 4:
 
-- [ ] **Add fixture-driven tests for every upgraded node**
-  Include at least one real GLB fixture per node and assert geometry-level
-  outcomes, not just non-empty bytes.
-- [ ] **Document honest limits per node**
+- Each new cleanup node has one narrow purpose.
+- Each new cleanup node ships with focused fixture coverage.
+
+### 5. Final verification pass
+
+- [ ] **Review node docs and titles for honesty**
   If a node only supports triangular meshes, manifold inputs, or a subset of
   formats, state that in metadata and docs instead of implying universal mesh
   support.
+- [ ] **Run repo verification**
+  Run the relevant `nodetool` build, typecheck, lint, and tests before calling
+  the upgrade pass done.
 
 ---
 
