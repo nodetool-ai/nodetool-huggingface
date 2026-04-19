@@ -435,6 +435,54 @@ class Hunyuan3D(HuggingFacePipelineNode):
         )
         return repo_id
 
+    def _load_pipeline(self, variant: str):
+        """Load or retrieve the Hunyuan3D pipeline for the given variant."""
+        from nodetool.ml.core.model_manager import ModelManager
+
+        config = self.VARIANT_CONFIG[variant]
+        cache_key = f"hunyuan3d_{config['repo_id']}_{config['subfolder']}"
+        cached = ModelManager.get_model(cache_key)
+        if cached is not None:
+            self._pipeline = cached
+        else:
+            from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
+
+            # Pre-download only shape files to avoid 75GB full repo download
+            self._ensure_model_downloaded(variant)
+
+            # Now load the pipeline - hy3dgen will find the cached files
+            self._pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
+                config["repo_id"],
+                subfolder=config["subfolder"],
+                use_safetensors=True,
+                variant="fp16",
+            )
+
+            # Enable CPU offloading if requested
+            if self.low_vram_mode:
+                # hy3dgen pipeline lacks the `components` property that
+                # enable_model_cpu_offload() expects (upstream bug).
+                if not hasattr(self._pipeline, "components"):
+                    self._pipeline.components = {
+                        "conditioner": self._pipeline.conditioner,
+                        "model": self._pipeline.model,
+                        "vae": self._pipeline.vae,
+                        "scheduler": self._pipeline.scheduler,
+                        "image_processor": self._pipeline.image_processor,
+                    }
+                self._pipeline.enable_model_cpu_offload()
+
+            ModelManager.set_model(self.id, cache_key, self._pipeline)
+
+        self._loaded_variant = variant
+
+    async def preload_model(self, context: ProcessingContext):
+        try:
+            from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline  # noqa: F401
+        except ImportError:
+            return
+        self._load_pipeline(self.model_variant.value)
+
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
         from PIL import Image
@@ -443,7 +491,7 @@ class Hunyuan3D(HuggingFacePipelineNode):
             raise ValueError("Input image is required")
 
         try:
-            from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
+            from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline  # noqa: F401
         except ImportError:
             raise ImportError(
                 "Hunyuan3D requires the hy3dgen package (>=2.0.2). "
@@ -454,47 +502,10 @@ class Hunyuan3D(HuggingFacePipelineNode):
         image_io = await context.asset_to_io(self.image)
         input_image = Image.open(image_io).convert("RGB")
 
-        # Get variant config
-        variant = self.model_variant.value
-        config = self.VARIANT_CONFIG[variant]
-
         # Load or reload pipeline if variant changed
+        variant = self.model_variant.value
         if self._pipeline is None or self._loaded_variant != variant:
-            from nodetool.ml.core.model_manager import ModelManager
-
-            cache_key = f"hunyuan3d_{config['repo_id']}_{config['subfolder']}"
-            cached = ModelManager.get_model(cache_key)
-            if cached is not None:
-                self._pipeline = cached
-            else:
-                # Pre-download only shape files to avoid 75GB full repo download
-                self._ensure_model_downloaded(variant)
-
-                # Now load the pipeline - hy3dgen will find the cached files
-                self._pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
-                    config["repo_id"],
-                    subfolder=config["subfolder"],
-                    use_safetensors=True,
-                    variant="fp16",
-                )
-
-                # Enable CPU offloading if requested
-                if self.low_vram_mode:
-                    # hy3dgen pipeline lacks the `components` property that
-                    # enable_model_cpu_offload() expects (upstream bug).
-                    if not hasattr(self._pipeline, "components"):
-                        self._pipeline.components = {
-                            "conditioner": self._pipeline.conditioner,
-                            "model": self._pipeline.model,
-                            "vae": self._pipeline.vae,
-                            "scheduler": self._pipeline.scheduler,
-                            "image_processor": self._pipeline.image_processor,
-                        }
-                    self._pipeline.enable_model_cpu_offload()
-
-                ModelManager.set_model(self.id, cache_key, self._pipeline)
-
-            self._loaded_variant = variant
+            self._load_pipeline(variant)
 
         # Set seed using per-call generator (avoids leaking global RNG state)
         seed = self.seed if self.seed >= 0 else torch.randint(0, 2**32, (1,)).item()
@@ -619,6 +630,38 @@ class StableFast3D(HuggingFacePipelineNode):
     def requires_gpu(self) -> bool:
         return True
 
+    def _load_model(self):
+        """Load or retrieve the SF3D model from cache."""
+        import torch
+        from nodetool.ml.core.model_manager import ModelManager
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device != "cuda":
+            raise RuntimeError("SF3D requires a CUDA-capable GPU")
+
+        cache_key = "stabilityai/stable-fast-3d_SF3D"
+        cached = ModelManager.get_model(cache_key)
+        if cached is not None:
+            self._model = cached
+        else:
+            from sf3d.system import SF3D
+
+            self._model = SF3D.from_pretrained(
+                "stabilityai/stable-fast-3d",
+                config_name="config.yaml",
+                weight_name="model.safetensors",
+            )
+            self._model.to(device)
+            self._model.eval()
+            ModelManager.set_model(self.id, cache_key, self._model)
+
+    async def preload_model(self, context: ProcessingContext):
+        try:
+            from sf3d.system import SF3D  # noqa: F401
+        except ImportError:
+            return
+        self._load_model()
+
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
         from PIL import Image
@@ -627,7 +670,6 @@ class StableFast3D(HuggingFacePipelineNode):
             raise ValueError("Input image is required")
 
         try:
-            from sf3d.system import SF3D
             from sf3d.utils import remove_background, resize_foreground
             import rembg
         except ImportError:
@@ -640,27 +682,11 @@ class StableFast3D(HuggingFacePipelineNode):
         image_io = await context.asset_to_io(self.image)
         input_image = Image.open(image_io).convert("RGBA")
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        if device != "cuda":
-            raise RuntimeError("SF3D requires a CUDA-capable GPU")
-
         # Load model
         if self._model is None:
-            from nodetool.ml.core.model_manager import ModelManager
+            self._load_model()
 
-            cache_key = "stabilityai/stable-fast-3d_SF3D"
-            cached = ModelManager.get_model(cache_key)
-            if cached is not None:
-                self._model = cached
-            else:
-                self._model = SF3D.from_pretrained(
-                    "stabilityai/stable-fast-3d",
-                    config_name="config.yaml",
-                    weight_name="model.safetensors",
-                )
-                self._model.to(device)
-                self._model.eval()
-                ModelManager.set_model(self.id, cache_key, self._model)
+        from nodetool.ml.core.model_manager import ModelManager
 
         # Remove background and resize (cache rembg session to avoid re-loading U²-Net)
         rembg_cache_key = "rembg_u2net_session"
@@ -671,7 +697,8 @@ class StableFast3D(HuggingFacePipelineNode):
         image = remove_background(input_image, rembg_session)
         image = resize_foreground(image, self.foreground_ratio)
 
-        # Generate 3D mesh
+        # Generate 3D mesh (SF3D always requires CUDA)
+        device = "cuda"
         with torch.no_grad():
             with torch.autocast(device_type=device, dtype=torch.bfloat16):
                 mesh, _ = self._model.run_image(
@@ -764,6 +791,34 @@ class TripoSR(HuggingFacePipelineNode):
     def requires_gpu(self) -> bool:
         return True
 
+    def _load_model(self):
+        """Load or retrieve the TripoSR model from cache."""
+        import torch
+        from nodetool.ml.core.model_manager import ModelManager
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        cache_key = "stabilityai/TripoSR_TSR"
+        cached = ModelManager.get_model(cache_key)
+        if cached is not None:
+            self._model = cached
+        else:
+            from tsr.system import TSR
+
+            self._model = TSR.from_pretrained(
+                "stabilityai/TripoSR",
+                config_name="config.yaml",
+                weight_name="model.ckpt",
+            )
+            self._model.to(device)
+            ModelManager.set_model(self.id, cache_key, self._model)
+
+    async def preload_model(self, context: ProcessingContext):
+        try:
+            from tsr.system import TSR  # noqa: F401
+        except ImportError:
+            return
+        self._load_model()
+
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
         import numpy as np
@@ -773,7 +828,6 @@ class TripoSR(HuggingFacePipelineNode):
             raise ValueError("Input image is required")
 
         try:
-            from tsr.system import TSR
             from tsr.utils import remove_background, resize_foreground
             import rembg
         except ImportError:
@@ -790,20 +844,9 @@ class TripoSR(HuggingFacePipelineNode):
 
         # Load model
         if self._model is None:
-            from nodetool.ml.core.model_manager import ModelManager
+            self._load_model()
 
-            cache_key = "stabilityai/TripoSR_TSR"
-            cached = ModelManager.get_model(cache_key)
-            if cached is not None:
-                self._model = cached
-            else:
-                self._model = TSR.from_pretrained(
-                    "stabilityai/TripoSR",
-                    config_name="config.yaml",
-                    weight_name="model.ckpt",
-                )
-                self._model.to(device)
-                ModelManager.set_model(self.id, cache_key, self._model)
+        from nodetool.ml.core.model_manager import ModelManager
 
         # Remove background and resize (cache rembg session to avoid re-loading U²-Net)
         rembg_cache_key = "rembg_u2net_session"
@@ -928,6 +971,38 @@ class Trellis2(HuggingFacePipelineNode):
     def requires_gpu(self) -> bool:
         return True
 
+    def _load_pipeline(self):
+        """Load or retrieve the Trellis2 pipeline from cache."""
+        import torch
+        from nodetool.ml.core.model_manager import ModelManager
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device != "cuda":
+            raise RuntimeError(
+                "TRELLIS.2 requires a CUDA-capable GPU with at least 24GB memory"
+            )
+
+        cache_key = "microsoft/TRELLIS.2-4B_Trellis2"
+        cached = ModelManager.get_model(cache_key)
+        if cached is not None:
+            self._pipeline = cached
+        else:
+            from trellis2.pipelines import Trellis2ImageTo3DPipeline
+
+            self._pipeline = Trellis2ImageTo3DPipeline.from_pretrained(
+                "microsoft/TRELLIS.2-4B"
+            )
+            self._pipeline.cuda()
+            ModelManager.set_model(self.id, cache_key, self._pipeline)
+
+    async def preload_model(self, context: ProcessingContext):
+        try:
+            from trellis2.pipelines import Trellis2ImageTo3DPipeline  # noqa: F401
+            import o_voxel  # noqa: F401
+        except ImportError:
+            return
+        self._load_pipeline()
+
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
         from PIL import Image
@@ -944,15 +1019,8 @@ class Trellis2(HuggingFacePipelineNode):
         image_io = await context.asset_to_io(self.image)
         input_image = Image.open(image_io).convert("RGB")
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        if device != "cuda":
-            raise RuntimeError(
-                "TRELLIS.2 requires a CUDA-capable GPU with at least 24GB memory"
-            )
-
         try:
-            from trellis2.pipelines import Trellis2ImageTo3DPipeline
-            import o_voxel
+            import o_voxel  # noqa: F401
         except ImportError:
             raise ImportError(
                 "TRELLIS.2 requires the trellis2 and o_voxel packages. "
@@ -960,18 +1028,7 @@ class Trellis2(HuggingFacePipelineNode):
             )
 
         if self._pipeline is None:
-            from nodetool.ml.core.model_manager import ModelManager
-
-            cache_key = "microsoft/TRELLIS.2-4B_Trellis2"
-            cached = ModelManager.get_model(cache_key)
-            if cached is not None:
-                self._pipeline = cached
-            else:
-                self._pipeline = Trellis2ImageTo3DPipeline.from_pretrained(
-                    "microsoft/TRELLIS.2-4B"
-                )
-                self._pipeline.cuda()
-                ModelManager.set_model(self.id, cache_key, self._pipeline)
+            self._load_pipeline()
 
         # Set seed using per-call generator (avoids leaking global RNG state)
         seed = self.seed if self.seed >= 0 else torch.randint(0, 2**32, (1,)).item()
@@ -1135,6 +1192,48 @@ class TripoSG(HuggingFacePipelineNode):
     def requires_gpu(self) -> bool:
         return True
 
+    def _load_models(self):
+        """Load or retrieve the TripoSG pipeline and RMBG model from cache."""
+        import torch
+        from nodetool.ml.core.model_manager import ModelManager
+        from huggingface_hub import snapshot_download
+        from triposg.pipelines.pipeline_triposg import TripoSGPipeline
+        from triposg.briarmbg import BriaRMBG
+
+        device = "cuda"
+
+        # Load RMBG model for background removal
+        if self._rmbg_net is None:
+            cache_key = "briaai/RMBG-1.4_BriaRMBG"
+            cached = ModelManager.get_model(cache_key)
+            if cached is not None:
+                self._rmbg_net = cached
+            else:
+                rmbg_path = snapshot_download(repo_id="briaai/RMBG-1.4")
+                self._rmbg_net = BriaRMBG.from_pretrained(rmbg_path).to(device)
+                self._rmbg_net.eval()
+                ModelManager.set_model(self.id, cache_key, self._rmbg_net)
+
+        # Load TripoSG pipeline
+        if self._pipeline is None:
+            cache_key = "VAST-AI/TripoSG_Pipeline"
+            cached = ModelManager.get_model(cache_key)
+            if cached is not None:
+                self._pipeline = cached
+            else:
+                triposg_path = snapshot_download(repo_id="VAST-AI/TripoSG")
+                self._pipeline = TripoSGPipeline.from_pretrained(
+                    triposg_path
+                ).to(device, torch.float16)
+                ModelManager.set_model(self.id, cache_key, self._pipeline)
+
+    async def preload_model(self, context: ProcessingContext):
+        import torch
+
+        if not torch.cuda.is_available():
+            return
+        self._load_models()
+
     def _prepare_image(
         self, img_pil: "Image.Image", rmbg_net: Any
     ) -> "Image.Image":
@@ -1270,7 +1369,6 @@ class TripoSG(HuggingFacePipelineNode):
         import numpy as np
         import trimesh
         from PIL import Image
-        from huggingface_hub import snapshot_download
 
         if self.image.is_empty():
             raise ValueError("Input image is required")
@@ -1279,37 +1377,8 @@ class TripoSG(HuggingFacePipelineNode):
         if device != "cuda":
             raise RuntimeError("TripoSG requires a CUDA-capable GPU with at least 8GB VRAM")
 
-        from triposg.pipelines.pipeline_triposg import TripoSGPipeline
-        from triposg.briarmbg import BriaRMBG
-
-        # Load RMBG model for background removal
-        if self._rmbg_net is None:
-            from nodetool.ml.core.model_manager import ModelManager
-
-            cache_key = "briaai/RMBG-1.4_BriaRMBG"
-            cached = ModelManager.get_model(cache_key)
-            if cached is not None:
-                self._rmbg_net = cached
-            else:
-                rmbg_path = snapshot_download(repo_id="briaai/RMBG-1.4")
-                self._rmbg_net = BriaRMBG.from_pretrained(rmbg_path).to(device)
-                self._rmbg_net.eval()
-                ModelManager.set_model(self.id, cache_key, self._rmbg_net)
-
-        # Load TripoSG pipeline
-        if self._pipeline is None:
-            from nodetool.ml.core.model_manager import ModelManager
-
-            cache_key = "VAST-AI/TripoSG_Pipeline"
-            cached = ModelManager.get_model(cache_key)
-            if cached is not None:
-                self._pipeline = cached
-            else:
-                triposg_path = snapshot_download(repo_id="VAST-AI/TripoSG")
-                self._pipeline = TripoSGPipeline.from_pretrained(
-                    triposg_path
-                ).to(device, torch.float16)
-                ModelManager.set_model(self.id, cache_key, self._pipeline)
+        # Load models if not already loaded
+        self._load_models()
 
         # Load and prepare input image
         image_io = await context.asset_to_io(self.image)
