@@ -9,17 +9,17 @@ replicate.
 
 ## Quick-win priority (do these first)
 
-- [ ] **#2 – Delete dead `Trellis2._ensure_model_downloaded`**
+- [x] **#2 – Delete dead `Trellis2._ensure_model_downloaded`**
   Lines `918–939`. Copy-paste from `Hunyuan3D`, references a non-existent
   `self.VARIANT_CONFIG`. Currently unreachable but will `AttributeError` if any
   refactor wires it up. Just delete it.
 
-- [ ] **#3 – Override `requires_gpu() -> False` on both Shap-E nodes**
+- [x] **#3 – Override `requires_gpu() -> False` on both Shap-E nodes**
   Shap-E's `process()` already supports CPU (lines 98, 227), but the base
   class default `requires_gpu() -> True` (huggingface_pipeline.py line 171)
   prevents the scheduler from running these on CPU/MPS-only machines.
 
-- [ ] **#8 – Add `[project.optional-dependencies]` groups**
+- [x] **#8 – Add `[project.optional-dependencies]` groups**
   `pyproject.toml` does NOT declare `sf3d`, `tsr`, `trellis2`, `o_voxel`,
   `rembg`, `diso`. Each raises `ImportError` at runtime today. Add e.g.:
   ```toml
@@ -32,12 +32,12 @@ replicate.
   ```
   Plus a clear "missing dependency" UI hint or `is_available()` gating.
 
-- [ ] **#10 – Cache `rembg` session in `ModelManager`**
+- [x] **#10 – Cache `rembg` session in `ModelManager`**
   `SF3D` (line 661) and `TripoSR` (line 800) call `rembg.new_session()` per
   invocation, re-loading U²-Net every time. Cache once with key
   `"rembg_u2net_session"`.
 
-- [ ] **#13 – Standardize seeding to per-call `torch.Generator`**
+- [x] **#13 – Standardize seeding to per-call `torch.Generator`**
   Inconsistent today:
   - Shap-E: per-call `torch.Generator` (good).
   - Hunyuan3D / Trellis2: global `torch.manual_seed(...)` (leaks state across
@@ -45,28 +45,28 @@ replicate.
   - TripoSG: per-call `torch.Generator` (good).
   Pick per-call generators everywhere.
 
-- [ ] **#15 – Add `preload_model` to the 5 heavy nodes**
+- [x] **#15 – Add `preload_model` to the 5 heavy nodes**
   Only `ShapETextTo3D` and `ShapEImageTo3D` implement `preload_model`.
   `Hunyuan3D`, `StableFast3D`, `TripoSR`, `Trellis2`, `TripoSG` all load
   lazily inside `process()`, so the executor's preload phase is a no-op for
   them and the first run pays full cold-start.
 
-- [ ] **#9 – Resolve viewer/output format mismatch**
+- [x] **#9 – Resolve viewer/output format mismatch**
   `Model3DViewer.tsx` (lines 551–558) only renders GLB/GLTF, but Hunyuan3D /
   SF3D / TripoSR expose an OBJ output option. Either restrict outputs to GLB
   (simpler) or add `OBJLoader` / `PLYLoader` to the viewer (richer).
   See Decisions §D1.
 
-- [ ] **#5 – Extract a single `_export_mesh(mesh, format) -> bytes` helper**
+- [x] **#5 – Extract a single `_export_mesh(mesh, format) -> bytes` helper**
   The "trimesh export, with optional `.cpu().numpy()` fallback" code is
   duplicated 5× with slight per-node variations (`include_normals=True` only
   for SF3D, `extension_webp=True` only for Trellis2). Centralize.
 
-- [ ] **#1 – Rename module/namespace away from `text_to_3d`**
+- [x] **#1 – Rename module/namespace away from `text_to_3d`**
   Module name and node namespace `huggingface.text_to_3d.*` are misleading
   since 6 of 7 nodes are image→3D. See Decisions §D2.
 
-- [ ] **#16 – Add a no-GPU smoke test**
+- [x] **#16 – Add a no-GPU smoke test**
   At minimum: import the module, instantiate each node, assert
   `get_recommended_models()` returns valid `HuggingFaceModel`s. That single
   test would have caught finding #2.
@@ -105,7 +105,7 @@ replicate.
   at depth 9 this can blow VRAM if the pipeline preallocates flash buffers
   unconditionally.
 
-- [ ] **#14 – `seed=-1` semantics inconsistent**
+- [x] **#14 – `seed=-1` semantics inconsistent**
   Most nodes treat `-1` as "no generator". TripoSG defaults to `42` and
   converts `-1` to a freshly random seed it never echoes back. Pick one
   convention; if random is allowed, surface the actually-used seed in

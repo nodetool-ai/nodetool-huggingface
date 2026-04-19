@@ -22,6 +22,8 @@ from nodetool.workflows.memory_utils import run_gc
 
 if TYPE_CHECKING:
     import torch
+    import trimesh
+    from PIL import Image
 
 
 def _export_mesh(
@@ -550,7 +552,9 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
         # Set seed using per-call generator (avoids leaking global RNG state)
         seed = self.seed if self.seed >= 0 else torch.randint(0, 2**32, (1,)).item()
-        generator = torch.Generator(device="cuda" if torch.cuda.is_available() else "cpu").manual_seed(seed)
+        generator = torch.Generator(
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        ).manual_seed(seed)
 
         # Generate 3D mesh
         mesh = self._pipeline(
@@ -1215,9 +1219,9 @@ class TripoSG(HuggingFacePipelineNode):
                 self._pipeline = cached
             else:
                 triposg_path = snapshot_download(repo_id="VAST-AI/TripoSG")
-                self._pipeline = TripoSGPipeline.from_pretrained(
-                    triposg_path
-                ).to(device, torch.float16)
+                self._pipeline = TripoSGPipeline.from_pretrained(triposg_path).to(
+                    device, torch.float16
+                )
                 ModelManager.set_model(self.id, cache_key, self._pipeline)
 
     async def preload_model(self, context: ProcessingContext):
@@ -1227,9 +1231,7 @@ class TripoSG(HuggingFacePipelineNode):
             return
         self._load_models()
 
-    def _prepare_image(
-        self, img_pil: "Image.Image", rmbg_net: Any
-    ) -> "Image.Image":
+    def _prepare_image(self, img_pil: "Image.Image", rmbg_net: Any) -> "Image.Image":
         """Remove background and center-crop the foreground."""
         import cv2
         import numpy as np
@@ -1260,9 +1262,7 @@ class TripoSG(HuggingFacePipelineNode):
             if alpha is not None:
                 alpha = cv2.resize(alpha, new_size, interpolation=cv2.INTER_AREA)
 
-        rgb_gpu = (
-            torch.from_numpy(rgb_image).cuda().float().permute(2, 0, 1) / 255.0
-        )
+        rgb_gpu = torch.from_numpy(rgb_image).cuda().float().permute(2, 0, 1) / 255.0
 
         if alpha is not None:
             _, alpha = cv2.threshold(alpha, 127, 255, cv2.THRESH_BINARY)
@@ -1273,9 +1273,7 @@ class TripoSG(HuggingFacePipelineNode):
             max_val = rgb_resized.flatten().max()
             if max_val < 1e-3:
                 raise ValueError("Invalid image: pure black")
-            mean_color = (
-                torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1).cuda()
-            )
+            mean_color = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1).cuda()
             norm_img = rgb_resized / max_val - mean_color
 
             rmbg_input = TF.normalize(rgb_resized, [0.5, 0.5, 0.5], [1.0, 1.0, 1.0])
@@ -1292,15 +1290,15 @@ class TripoSG(HuggingFacePipelineNode):
                 alpha_np, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
             )
             labeled = label(alpha_np)
-            cleaned = (remove_small_objects(labeled, min_size=200) > 0).astype(
-                np.uint8
-            )
+            cleaned = (remove_small_objects(labeled, min_size=200) > 0).astype(np.uint8)
             alpha_np = cleaned * 255
             alpha_gpu = torch.from_numpy(cleaned).cuda().float().unsqueeze(0)
 
         _, binary = cv2.threshold(
             (alpha_gpu.squeeze().cpu().numpy() * 255).astype(np.uint8),
-            1, 255, cv2.THRESH_BINARY,
+            1,
+            255,
+            cv2.THRESH_BINARY,
         )
         contours, _ = cv2.findContours(
             binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
@@ -1345,11 +1343,7 @@ class TripoSG(HuggingFacePipelineNode):
         if mesh.faces.shape[0] <= n_faces:
             return mesh
         ms = pymeshlab.MeshSet()
-        ms.add_mesh(
-            pymeshlab.Mesh(
-                vertex_matrix=mesh.vertices, face_matrix=mesh.faces
-            )
-        )
+        ms.add_mesh(pymeshlab.Mesh(vertex_matrix=mesh.vertices, face_matrix=mesh.faces))
         ms.meshing_merge_close_vertices()
         ms.meshing_decimation_quadric_edge_collapse(targetfacenum=n_faces)
         result = ms.current_mesh()
@@ -1368,7 +1362,9 @@ class TripoSG(HuggingFacePipelineNode):
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
         if device != "cuda":
-            raise RuntimeError("TripoSG requires a CUDA-capable GPU with at least 8GB VRAM")
+            raise RuntimeError(
+                "TripoSG requires a CUDA-capable GPU with at least 8GB VRAM"
+            )
 
         # Load models if not already loaded
         self._load_models()
@@ -1385,6 +1381,7 @@ class TripoSG(HuggingFacePipelineNode):
         # Use flash decoder (diso) if available, fall back to marching cubes
         try:
             import diso
+
             use_flash = True
         except ImportError:
             use_flash = False
