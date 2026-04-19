@@ -10,6 +10,8 @@ These nodes run locally and do not require API keys.
 from __future__ import annotations
 
 import io
+import logging
+import shutil
 from enum import Enum
 from typing import Any, ClassVar, TYPE_CHECKING
 
@@ -24,6 +26,120 @@ if TYPE_CHECKING:
     import torch
     import trimesh
     from PIL import Image
+
+log = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Model revision pinning (D9 / #19)
+# ---------------------------------------------------------------------------
+# Map from HuggingFace repo_id → known-good commit SHA.
+# Pass these to ``from_pretrained(..., revision=...)`` and
+# ``snapshot_download(..., revision=...)`` calls so upstream
+# weight reorganizations don't silently break users.
+#
+# Values of ``None`` mean "use latest" — fill in verified SHAs
+# and bump intentionally.  Refresh quarterly.
+# ---------------------------------------------------------------------------
+MODEL_REVISIONS: dict[str, str | None] = {
+    "openai/shap-e": None,
+    "openai/shap-e-img2img": None,
+    "tencent/Hunyuan3D-2": None,
+    "tencent/Hunyuan3D-2mini": None,
+    "stabilityai/stable-fast-3d": None,
+    "stabilityai/TripoSR": None,
+    "microsoft/TRELLIS.2-4B": None,
+    "VAST-AI/TripoSG": None,
+    "briaai/RMBG-1.4": None,
+}
+
+
+def _model_revision(repo_id: str) -> str | None:
+    """Return the pinned revision for *repo_id*, or ``None`` (latest)."""
+    return MODEL_REVISIONS.get(repo_id)
+
+
+# ---------------------------------------------------------------------------
+# Disk-space pre-flight (#21)
+# ---------------------------------------------------------------------------
+_DISK_HEADROOM_GB = 2  # extra headroom beyond estimated model size
+
+
+def _check_disk_space(estimated_gb: float, cache_dir: str | None = None) -> None:
+    """Raise if the HF cache volume has less free space than *estimated_gb*.
+
+    Parameters
+    ----------
+    estimated_gb:
+        Approximate download size in GiB.
+    cache_dir:
+        Override for the cache directory to check.  When ``None``,
+        resolves from ``HF_HOME`` / ``HUGGINGFACE_HUB_CACHE`` env vars,
+        falling back to ``~/.cache/huggingface/hub``.
+    """
+    import os
+
+    if cache_dir is None:
+        cache_dir = os.environ.get(
+            "HUGGINGFACE_HUB_CACHE",
+            os.environ.get(
+                "HF_HOME",
+                os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub"),
+            ),
+        )
+    os.makedirs(cache_dir, exist_ok=True)
+    usage = shutil.disk_usage(cache_dir)
+    free_gb = usage.free / (1 << 30)
+    needed = estimated_gb + _DISK_HEADROOM_GB
+    if free_gb < needed:
+        raise OSError(
+            f"Not enough disk space to download model weights. "
+            f"Need ~{needed:.1f} GB free, but only {free_gb:.1f} GB available "
+            f"in {cache_dir}. Free up space or set HF_HOME / "
+            f"HUGGINGFACE_HUB_CACHE to a volume with more room."
+        )
+
+
+def _resolve_device() -> str:
+    """Return the best available torch device string (cuda > mps > cpu)."""
+    import torch
+
+    if torch.cuda.is_available():
+        return "cuda"
+    if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
+
+
+def _resolve_seed(seed: int) -> int:
+    """Return *seed* unchanged when >= 0, otherwise a random 32-bit integer."""
+    if seed >= 0:
+        return seed
+    import torch
+
+    return torch.randint(0, 2**32, (1,)).item()
+
+
+def _open_pil_image(image_bytes_io: Any, mode: str = "RGB") -> "Image.Image":
+    """Open a PIL image from an IO buffer with friendly error messages.
+
+    Wraps ``PIL.Image.open`` to convert common failure modes
+    (corrupt file, unsupported format, truncated download, etc.)
+    into a clear ``ValueError`` that surfaces in the node UI.
+    """
+    from PIL import Image, UnidentifiedImageError
+
+    try:
+        img = Image.open(image_bytes_io)
+        img.load()  # force full decode to catch truncated files
+        return img.convert(mode)
+    except UnidentifiedImageError:
+        raise ValueError(
+            "Invalid input image: the file could not be identified as an image. "
+            "Please provide a valid JPEG, PNG, or WebP file."
+        )
+    except OSError as exc:
+        raise ValueError(f"Invalid input image: {exc}") from exc
 
 
 def _export_mesh(
@@ -84,8 +200,15 @@ class ShapETextTo3D(HuggingFacePipelineNode):
     - Prototype 3D content quickly
     - Generate simple 3D objects for games/visualization
 
+    **Platforms:** all (CPU/MPS/CUDA).
+
     **Note:** Requires diffusers and torch. First run will download the model (~2.5GB).
     """
+
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 4
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 2.5
+    license_warning: ClassVar[str | None] = None  # MIT
 
     prompt: str = Field(
         default="a shark",
@@ -147,7 +270,7 @@ class ShapETextTo3D(HuggingFacePipelineNode):
         import torch
         from diffusers import ShapEPipeline
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = _resolve_device()
         torch_dtype = torch.float16 if device == "cuda" else torch.float32
         self._pipeline = await self.load_model(
             context=context,
@@ -163,12 +286,12 @@ class ShapETextTo3D(HuggingFacePipelineNode):
             raise ValueError("Prompt is required")
 
         assert self._pipeline is not None, "Pipeline not initialized"
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = str(self._pipeline.device)
 
-        # Set seed
-        generator = None
-        if self.seed >= 0:
-            generator = torch.Generator(device=device).manual_seed(self.seed)
+        # Set seed – generator device must be "cpu" for MPS pipelines
+        gen_device = "cpu" if device.startswith("mps") else device
+        seed = _resolve_seed(self.seed)
+        generator = torch.Generator(device=gen_device).manual_seed(seed)
 
         # Generate
         images = self._pipeline(
@@ -199,6 +322,7 @@ class ShapETextTo3D(HuggingFacePipelineNode):
             model_bytes,
             name=f"shap_e_{self.id}.glb",
             format="glb",
+            metadata={"seed": seed, "source_model": "openai/shap-e"},
         )
 
 
@@ -213,8 +337,15 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
     - Generate 3D content without API costs
     - Reconstruct 3D objects from single images
 
+    **Platforms:** all (CPU/MPS/CUDA).
+
     **Note:** Requires diffusers and torch. First run will download the model (~2.5GB).
     """
+
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 4
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 2.5
+    license_warning: ClassVar[str | None] = None  # MIT
 
     image: ImageRef = Field(
         default=ImageRef(),
@@ -276,7 +407,7 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
         import torch
         from diffusers import ShapEImg2ImgPipeline
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = _resolve_device()
         torch_dtype = torch.float16 if device == "cuda" else torch.float32
         self._pipeline = await self.load_model(
             context=context,
@@ -287,7 +418,6 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
-        from PIL import Image
 
         if self.image.is_empty():
             raise ValueError("Input image is required")
@@ -296,14 +426,14 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
 
         # Load input image
         image_io = await context.asset_to_io(self.image)
-        input_image = Image.open(image_io).convert("RGB")
+        input_image = _open_pil_image(image_io, mode="RGB")
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = str(self._pipeline.device)
 
-        # Set seed
-        generator = None
-        if self.seed >= 0:
-            generator = torch.Generator(device=device).manual_seed(self.seed)
+        # Set seed – generator device must be "cpu" for MPS pipelines
+        gen_device = "cpu" if device.startswith("mps") else device
+        seed = _resolve_seed(self.seed)
+        generator = torch.Generator(device=gen_device).manual_seed(seed)
 
         # Generate
         images = self._pipeline(
@@ -334,6 +464,7 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
             model_bytes,
             name=f"shap_e_img_{self.id}.glb",
             format="glb",
+            metadata={"seed": seed, "source_model": "openai/shap-e-img2img"},
         )
 
 
@@ -350,12 +481,22 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
     Produces untextured meshes (shape only). Use external tools for texturing.
 
+    **Platforms:** Linux+CUDA, Windows+CUDA. Installable on macOS but does not run.
+
     **Requirements:** hy3dgen>=2.0.2 package, torch with CUDA.
     First run downloads ~5GB model (shape-only, not full 75GB repo).
     Standard model needs ~6GB VRAM, mini needs ~5GB. Use low_vram_mode on constrained GPUs.
 
     Models: https://huggingface.co/tencent/Hunyuan3D-2
     """
+
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 5
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 5.0
+    license_warning: ClassVar[str | None] = (
+        "Tencent Hunyuan3D License — non-commercial use only. "
+        "See https://huggingface.co/tencent/Hunyuan3D-2/blob/main/LICENSE"
+    )
 
     class ModelVariant(str, Enum):
         STANDARD = "standard"
@@ -457,8 +598,8 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
     def _ensure_model_downloaded(self, variant: str) -> str:
         """
-        Pre-download only the shape-generation files to avoid downloading
-        the entire 75GB repo (which includes paint/texture models).
+        Pre-download only the shape-generation files (~5 GB standard, ~2 GB mini)
+        to avoid downloading the full repo (which includes paint/texture models).
         Returns the repo_id for the model.
         """
         from huggingface_hub import snapshot_download
@@ -469,8 +610,11 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
         # Only download the specific subfolder needed for shape generation
         # This avoids downloading paint, delight, turbo variants etc.
+        _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
+        revision = _model_revision(repo_id)
         snapshot_download(
             repo_id=repo_id,
+            revision=revision,
             allow_patterns=[
                 "config.json",  # Root config
                 f"{subfolder}/*",  # DiT model (includes bundled VAE)
@@ -493,27 +637,39 @@ class Hunyuan3D(HuggingFacePipelineNode):
             # Pre-download only shape files to avoid 75GB full repo download
             self._ensure_model_downloaded(variant)
 
+            if self.license_warning:
+                log.info("License notice: %s", self.license_warning)
+
             # Now load the pipeline - hy3dgen will find the cached files
+            revision = _model_revision(config["repo_id"])
             self._pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
                 config["repo_id"],
                 subfolder=config["subfolder"],
+                revision=revision,
                 use_safetensors=True,
                 variant="fp16",
             )
 
             # Enable CPU offloading if requested
             if self.low_vram_mode:
-                # hy3dgen pipeline lacks the `components` property that
-                # enable_model_cpu_offload() expects (upstream bug).
-                if not hasattr(self._pipeline, "components"):
-                    self._pipeline.components = {
-                        "conditioner": self._pipeline.conditioner,
-                        "model": self._pipeline.model,
-                        "vae": self._pipeline.vae,
-                        "scheduler": self._pipeline.scheduler,
-                        "image_processor": self._pipeline.image_processor,
-                    }
-                self._pipeline.enable_model_cpu_offload()
+                try:
+                    # hy3dgen pipeline lacks the `components` property that
+                    # enable_model_cpu_offload() expects (upstream bug).
+                    if not hasattr(self._pipeline, "components"):
+                        self._pipeline.components = {
+                            "conditioner": self._pipeline.conditioner,
+                            "model": self._pipeline.model,
+                            "vae": self._pipeline.vae,
+                            "scheduler": self._pipeline.scheduler,
+                            "image_processor": self._pipeline.image_processor,
+                        }
+                    self._pipeline.enable_model_cpu_offload()
+                except Exception as exc:
+                    log.warning(
+                        "low_vram_mode unavailable for this hy3dgen version "
+                        "(enable_model_cpu_offload failed: %s). Continuing without offloading.",
+                        exc,
+                    )
 
             ModelManager.set_model(self.id, cache_key, self._pipeline)
 
@@ -528,7 +684,9 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
-        from PIL import Image
+        import os
+
+        os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
         if self.image.is_empty():
             raise ValueError("Input image is required")
@@ -543,7 +701,7 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
         # Load input image
         image_io = await context.asset_to_io(self.image)
-        input_image = Image.open(image_io).convert("RGB")
+        input_image = _open_pil_image(image_io, mode="RGB")
 
         # Load or reload pipeline if variant changed
         variant = self.model_variant.value
@@ -551,7 +709,7 @@ class Hunyuan3D(HuggingFacePipelineNode):
             self._load_pipeline(variant)
 
         # Set seed using per-call generator (avoids leaking global RNG state)
-        seed = self.seed if self.seed >= 0 else torch.randint(0, 2**32, (1,)).item()
+        seed = _resolve_seed(self.seed)
         generator = torch.Generator(
             device="cuda" if torch.cuda.is_available() else "cpu"
         ).manual_seed(seed)
@@ -574,6 +732,10 @@ class Hunyuan3D(HuggingFacePipelineNode):
             model_bytes,
             name=f"hunyuan3d_{self.id}.{format_str}",
             format=format_str,
+            metadata={
+                "seed": seed,
+                "source_model": self.VARIANT_CONFIG[variant]["repo_id"],
+            },
         )
 
 
@@ -588,6 +750,8 @@ class StableFast3D(HuggingFacePipelineNode):
     - Generate UV-unwrapped meshes with materials
     - Real-time 3D reconstruction workflows
 
+    **Platforms:** Linux+CUDA, Windows+CUDA. macOS Metal experimental (untested).
+
     **Requirements:** sf3d package, rembg, torch with CUDA.
     First run downloads ~1GB model. Needs ~6GB VRAM.
     Generates textured meshes with UV maps, normal maps, and PBR materials.
@@ -595,6 +759,15 @@ class StableFast3D(HuggingFacePipelineNode):
     Model: https://huggingface.co/stabilityai/stable-fast-3d
     License: Free for <$1M revenue, enterprise license required above.
     """
+
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 6
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 1.0
+    license_warning: ClassVar[str | None] = (
+        "Stability AI Community License — free under $1 M annual revenue, "
+        "enterprise license required above. "
+        "See https://huggingface.co/stabilityai/stable-fast-3d/blob/main/LICENSE.md"
+    )
 
     class OutputFormat(str, Enum):
         GLB = "glb"
@@ -668,6 +841,10 @@ class StableFast3D(HuggingFacePipelineNode):
         else:
             from sf3d.system import SF3D
 
+            _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
+            if self.license_warning:
+                log.info("License notice: %s", self.license_warning)
+
             self._model = SF3D.from_pretrained(
                 "stabilityai/stable-fast-3d",
                 config_name="config.yaml",
@@ -686,7 +863,9 @@ class StableFast3D(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
-        from PIL import Image
+        import os
+
+        os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
         if self.image.is_empty():
             raise ValueError("Input image is required")
@@ -702,7 +881,7 @@ class StableFast3D(HuggingFacePipelineNode):
 
         # Load input image
         image_io = await context.asset_to_io(self.image)
-        input_image = Image.open(image_io).convert("RGBA")
+        input_image = _open_pil_image(image_io, mode="RGBA")
 
         # Load model
         if self._model is None:
@@ -740,6 +919,7 @@ class StableFast3D(HuggingFacePipelineNode):
             model_bytes,
             name=f"sf3d_{self.id}.{format_str}",
             format=format_str,
+            metadata={"source_model": "stabilityai/stable-fast-3d"},
         )
 
 
@@ -754,12 +934,19 @@ class TripoSR(HuggingFacePipelineNode):
     - Create 3D assets for games and visualization
     - Prototype 3D content quickly
 
+    **Platforms:** Linux+CUDA, Windows+CUDA. macOS CPU experimental (slow, untested).
+
     **Requirements:** tsr package (TripoSR), rembg, torch with CUDA.
     First run downloads ~1GB model. Needs ~6GB VRAM.
 
     Model: https://huggingface.co/stabilityai/TripoSR
     License: MIT
     """
+
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 6
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 1.0
+    license_warning: ClassVar[str | None] = None  # MIT
 
     class OutputFormat(str, Enum):
         GLB = "glb"
@@ -821,6 +1008,7 @@ class TripoSR(HuggingFacePipelineNode):
         else:
             from tsr.system import TSR
 
+            _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
             self._model = TSR.from_pretrained(
                 "stabilityai/TripoSR",
                 config_name="config.yaml",
@@ -838,8 +1026,11 @@ class TripoSR(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
+        import os
         import numpy as np
         from PIL import Image
+
+        os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
         if self.image.is_empty():
             raise ValueError("Input image is required")
@@ -855,7 +1046,7 @@ class TripoSR(HuggingFacePipelineNode):
 
         # Load input image
         image_io = await context.asset_to_io(self.image)
-        input_image = Image.open(image_io).convert("RGBA")
+        input_image = _open_pil_image(image_io, mode="RGBA")
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -900,6 +1091,7 @@ class TripoSR(HuggingFacePipelineNode):
             model_bytes,
             name=f"triposr_{self.id}.{format_str}",
             format=format_str,
+            metadata={"source_model": "stabilityai/TripoSR"},
         )
 
 
@@ -914,6 +1106,8 @@ class Trellis2(HuggingFacePipelineNode):
     - Handle complex topology including open surfaces and non-manifold geometry
     - Generate assets with transparency/translucency support
 
+    **Platforms:** Linux+CUDA only, 24 GB+ VRAM.
+
     **Note:** Requires trellis2, o_voxel, torch, and 24GB+ GPU memory.
     Currently only tested on Linux systems.
     First run will download the model (~10GB+).
@@ -921,6 +1115,14 @@ class Trellis2(HuggingFacePipelineNode):
     Model: https://huggingface.co/microsoft/TRELLIS.2-4B
     Paper: https://arxiv.org/abs/2512.14692
     """
+
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 24
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 10.0
+    license_warning: ClassVar[str | None] = (
+        "Microsoft Research License — non-commercial use only. "
+        "See https://huggingface.co/microsoft/TRELLIS.2-4B/blob/main/LICENSE"
+    )
 
     class Resolution(str, Enum):
         RES_512 = "512"  # ~3 seconds on H100
@@ -1003,6 +1205,10 @@ class Trellis2(HuggingFacePipelineNode):
         else:
             from trellis2.pipelines import Trellis2ImageTo3DPipeline
 
+            _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
+            if self.license_warning:
+                log.info("License notice: %s", self.license_warning)
+
             self._pipeline = Trellis2ImageTo3DPipeline.from_pretrained(
                 "microsoft/TRELLIS.2-4B"
             )
@@ -1019,7 +1225,6 @@ class Trellis2(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
-        from PIL import Image
         import os
 
         # Enable OpenEXR support for environment maps (optional but recommended)
@@ -1031,7 +1236,7 @@ class Trellis2(HuggingFacePipelineNode):
 
         # Load input image
         image_io = await context.asset_to_io(self.image)
-        input_image = Image.open(image_io).convert("RGB")
+        input_image = _open_pil_image(image_io, mode="RGB")
 
         try:
             import o_voxel  # noqa: F401
@@ -1045,7 +1250,7 @@ class Trellis2(HuggingFacePipelineNode):
             self._load_pipeline()
 
         # Set seed using per-call generator (avoids leaking global RNG state)
-        seed = self.seed if self.seed >= 0 else torch.randint(0, 2**32, (1,)).item()
+        seed = _resolve_seed(self.seed)
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
 
@@ -1101,6 +1306,7 @@ class Trellis2(HuggingFacePipelineNode):
             model_bytes,
             name=f"trellis2_{self.id}.{format_str}",
             format=format_str,
+            metadata={"seed": seed, "source_model": "microsoft/TRELLIS.2-4B"},
         )
 
 
@@ -1115,12 +1321,19 @@ class TripoSG(HuggingFacePipelineNode):
     - Produce meshes with sharp geometric features and fine surface details
     - Handle complex topology including thin structures
 
+    **Platforms:** Linux+CUDA, Windows+CUDA (build required).
+
     **Requirements:** CUDA GPU with at least 8GB VRAM.
     First run downloads ~3GB model weights.
 
     Model: https://huggingface.co/VAST-AI/TripoSG
     License: MIT
     """
+
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 8
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 3.0
+    license_warning: ClassVar[str | None] = None  # MIT
 
     image: ImageRef = Field(
         default=ImageRef(),
@@ -1206,7 +1419,11 @@ class TripoSG(HuggingFacePipelineNode):
             if cached is not None:
                 self._rmbg_net = cached
             else:
-                rmbg_path = snapshot_download(repo_id="briaai/RMBG-1.4")
+                _check_disk_space(0.5)  # RMBG is ~0.2 GB
+                rmbg_path = snapshot_download(
+                    repo_id="briaai/RMBG-1.4",
+                    revision=_model_revision("briaai/RMBG-1.4"),
+                )
                 self._rmbg_net = BriaRMBG.from_pretrained(rmbg_path).to(device)
                 self._rmbg_net.eval()
                 ModelManager.set_model(self.id, cache_key, self._rmbg_net)
@@ -1218,7 +1435,11 @@ class TripoSG(HuggingFacePipelineNode):
             if cached is not None:
                 self._pipeline = cached
             else:
-                triposg_path = snapshot_download(repo_id="VAST-AI/TripoSG")
+                _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
+                triposg_path = snapshot_download(
+                    repo_id="VAST-AI/TripoSG",
+                    revision=_model_revision("VAST-AI/TripoSG"),
+                )
                 self._pipeline = TripoSGPipeline.from_pretrained(triposg_path).to(
                     device, torch.float16
                 )
@@ -1231,7 +1452,13 @@ class TripoSG(HuggingFacePipelineNode):
             return
         self._load_models()
 
-    def _prepare_image(self, img_pil: "Image.Image", rmbg_net: Any) -> "Image.Image":
+    def _prepare_image(
+        self,
+        img_pil: "Image.Image",
+        rmbg_net: Any,
+        *,
+        device: str = "cuda",
+    ) -> "Image.Image":
         """Remove background and center-crop the foreground."""
         import cv2
         import numpy as np
@@ -1262,19 +1489,19 @@ class TripoSG(HuggingFacePipelineNode):
             if alpha is not None:
                 alpha = cv2.resize(alpha, new_size, interpolation=cv2.INTER_AREA)
 
-        rgb_gpu = torch.from_numpy(rgb_image).cuda().float().permute(2, 0, 1) / 255.0
+        rgb_gpu = (
+            torch.from_numpy(rgb_image).to(device).float().permute(2, 0, 1) / 255.0
+        )
 
         if alpha is not None:
             _, alpha = cv2.threshold(alpha, 127, 255, cv2.THRESH_BINARY)
-            alpha_gpu = torch.from_numpy(alpha).cuda().float().unsqueeze(0) / 255.0
+            alpha_gpu = torch.from_numpy(alpha).to(device).float().unsqueeze(0) / 255.0
         else:
             resize_transform = transforms.Resize((1024, 1024), antialias=True)
             rgb_resized = resize_transform(rgb_gpu)
             max_val = rgb_resized.flatten().max()
             if max_val < 1e-3:
                 raise ValueError("Invalid image: pure black")
-            mean_color = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1).cuda()
-            norm_img = rgb_resized / max_val - mean_color
 
             rmbg_input = TF.normalize(rgb_resized, [0.5, 0.5, 0.5], [1.0, 1.0, 1.0])
             result = rmbg_net(rmbg_input.unsqueeze(0))
@@ -1291,8 +1518,7 @@ class TripoSG(HuggingFacePipelineNode):
             )
             labeled = label(alpha_np)
             cleaned = (remove_small_objects(labeled, min_size=200) > 0).astype(np.uint8)
-            alpha_np = cleaned * 255
-            alpha_gpu = torch.from_numpy(cleaned).cuda().float().unsqueeze(0)
+            alpha_gpu = torch.from_numpy(cleaned).to(device).float().unsqueeze(0)
 
         _, binary = cv2.threshold(
             (alpha_gpu.squeeze().cpu().numpy() * 255).astype(np.uint8),
@@ -1310,7 +1536,7 @@ class TripoSG(HuggingFacePipelineNode):
         bg = (
             torch.from_numpy(bg_color)
             .float()
-            .cuda()
+            .to(device)
             .repeat(alpha_gpu.shape[1], alpha_gpu.shape[2], 1)
             .permute(2, 0, 1)
         )
@@ -1353,9 +1579,11 @@ class TripoSG(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
+        import os
         import numpy as np
         import trimesh
-        from PIL import Image
+
+        os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
         if self.image.is_empty():
             raise ValueError("Input image is required")
@@ -1371,11 +1599,11 @@ class TripoSG(HuggingFacePipelineNode):
 
         # Load and prepare input image
         image_io = await context.asset_to_io(self.image)
-        input_image = Image.open(image_io).convert("RGBA")
-        prepared_image = self._prepare_image(input_image, self._rmbg_net)
+        input_image = _open_pil_image(image_io, mode="RGBA")
+        prepared_image = self._prepare_image(input_image, self._rmbg_net, device=device)
 
         # Set seed
-        seed = self.seed if self.seed >= 0 else torch.randint(0, 2**32, (1,)).item()
+        seed = _resolve_seed(self.seed)
         generator = torch.Generator(device=device).manual_seed(seed)
 
         # Use flash decoder (diso) if available, fall back to marching cubes
@@ -1386,17 +1614,20 @@ class TripoSG(HuggingFacePipelineNode):
         except ImportError:
             use_flash_decoder = False
 
-        # Run inference
-        outputs = self._pipeline(
-            image=prepared_image,
-            generator=generator,
-            num_inference_steps=self.num_inference_steps,
-            guidance_scale=self.guidance_scale,
-            dense_octree_depth=self.octree_depth - 1,
-            hierarchical_octree_depth=self.octree_depth,
-            flash_octree_depth=self.octree_depth,
-            use_flash_decoder=use_flash_decoder,
-        ).samples[0]
+        # Run inference — only pass flash_octree_depth when flash decoder is active (#12)
+        pipeline_kwargs: dict[str, Any] = {
+            "image": prepared_image,
+            "generator": generator,
+            "num_inference_steps": self.num_inference_steps,
+            "guidance_scale": self.guidance_scale,
+            "dense_octree_depth": self.octree_depth - 1,
+            "hierarchical_octree_depth": self.octree_depth,
+            "use_flash_decoder": use_flash_decoder,
+        }
+        if use_flash_decoder:
+            pipeline_kwargs["flash_octree_depth"] = self.octree_depth
+
+        outputs = self._pipeline(**pipeline_kwargs).samples[0]
 
         mesh = trimesh.Trimesh(
             outputs[0].astype(np.float32),
@@ -1416,4 +1647,5 @@ class TripoSG(HuggingFacePipelineNode):
             model_bytes,
             name=f"triposg_{self.id}.glb",
             format="glb",
+            metadata={"seed": seed, "source_model": "VAST-AI/TripoSG"},
         )

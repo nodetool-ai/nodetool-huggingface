@@ -120,7 +120,7 @@ and `ImportError` at runtime. We split this into A+C+D:
 > or #8i (CUDA gate softening). Most of the value of the dependency rework
 > is still ahead of us.
 
-- [ ] **#8a – Demote heavy deps from hard to optional**
+- [x] **#8a – Demote heavy deps from hard to optional**
   Move `hy3dgen`, `pymeshlab`, `scikit-image` out of `[project] dependencies`.
   Goal: `pip install nodetool-huggingface` succeeds on a clean macOS box.
 
@@ -174,7 +174,7 @@ and `ImportError` at runtime. We split this into A+C+D:
   "Install with `nodetool install-extra trellis2`" separate from live-machine
   runtime checks.
 
-- [ ] **#8f – `**Platforms:**` line in every heavy-node docstring**
+- [x] **#8f – `**Platforms:**` line in every heavy-node docstring**
   - Shap-E: *"Platforms: all (CPU/MPS/CUDA)."*
   - Hunyuan3D: *"Platforms: Linux+CUDA, Windows+CUDA. Installable on macOS but does not run."*
   - SF3D: *"Platforms: Linux+CUDA, Windows+CUDA. macOS Metal experimental (untested)."*
@@ -201,7 +201,7 @@ and `ImportError` at runtime. We split this into A+C+D:
 
 ## Correctness fixes
 
-- [ ] **#4 – Shap-E ignores the device chosen by `_resolve_hf_device`**
+- [x] **#4 – Shap-E ignores the device chosen by `_resolve_hf_device`**
   `load_model` may place weights on `mps` (preferred on Apple Silicon by
   `local_provider_utils._resolve_hf_device`), but Shap-E's `process()` re-does
   `"cuda" if torch.cuda.is_available() else "cpu"` at lines 98, 114, 227,
@@ -216,18 +216,18 @@ and `ImportError` at runtime. We split this into A+C+D:
   `ModelManager.get_model(cache_key)` and don't stash on `self`.
   **See G6 — reconcile with `move_to_device`.**
 
-- [ ] **#7 – Hunyuan3D `low_vram_mode` monkey-patch may break silently**
+- [x] **#7 – Hunyuan3D `low_vram_mode` monkey-patch may break silently**
   Lines 476–487 fake a `.components` dict on the `hy3dgen` pipeline before
   calling `enable_model_cpu_offload()`. That helper relies on more than just
   `.components` (hooks, `_execution_device`, `_offload_gpu_id`). Wrap in a
   try/except with a clear "low_vram_mode unavailable for this hy3dgen
   version" warning, and pin the validated `hy3dgen` version range (G7).
 
-- [ ] **#11 – TripoSG `_prepare_image` hard-codes `.cuda()`**
+- [x] **#11 – TripoSG `_prepare_image` hard-codes `.cuda()`**
   Lines 1181–1234 use literal `.cuda()`. Currently fine because `process()`
   gates on CUDA, but brittle. Use `device` consistently.
 
-- [ ] **#12 – TripoSG always passes `flash_octree_depth`**
+- [x] **#12 – TripoSG always passes `flash_octree_depth`**
   Even when `use_flash_decoder=False` (line 1349). Verify upstream behavior;
   at depth 9 this can blow VRAM if the pipeline preallocates flash buffers
   unconditionally.
@@ -242,7 +242,7 @@ and `ImportError` at runtime. We split this into A+C+D:
 
 ## Polish / UX
 
-- [ ] **#17 – Document vendored `triposg` upstream**
+- [x] **#17 – Document vendored `triposg` upstream**
   `src/triposg/` is excluded from ruff but ships in the wheel. Add
   `src/triposg/UPSTREAM.md` with the upstream commit SHA and any local
   patches so future merges are tractable.
@@ -252,11 +252,11 @@ and `ImportError` at runtime. We split this into A+C+D:
   TripoSG (~8 GB) could expose `enable_sequential_cpu_offload()` /
   `enable_model_cpu_offload()` behind the same flag. See D7.
 
-- [ ] Hunyuan3D `_ensure_model_downloaded` docstring still says "75 GB repo"
+- [x] Hunyuan3D `_ensure_model_downloaded` docstring still says "75 GB repo"
   (line 412). Make sure the message matches reality after the
   `allow_patterns` fix.
 
-- [ ] Verify all heavy nodes set
+- [x] Verify all heavy nodes set
   `os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")`
   the way Trellis2 does (line 948) — fragmentation hurts every long-lived
   CUDA worker, not just Trellis2.
@@ -306,7 +306,7 @@ and `ImportError` at runtime. We split this into A+C+D:
     key.
   Pick before refactoring #6.
 
-- [ ] **G7 – Pin `hy3dgen` version**
+- [x] **G7 – Pin `hy3dgen` version**
   Today `hy3dgen>=2.0.2` (open upper bound). After validation, pin
   `hy3dgen>=2.0.2,<2.1`.
 
@@ -334,30 +334,27 @@ and `ImportError` at runtime. We split this into A+C+D:
 
 ## Additional findings (round 3)
 
-- [ ] **#19 – Pin model revisions in `from_pretrained`**
-  Every `from_pretrained` / `snapshot_download` call uses the bare repo id
-  with no `revision=` pin. If upstream pushes breaking changes (config rename,
-  weight reorganization), our nodes silently break for users. Pin a known-good
-  commit SHA per model; bump intentionally. Affects Shap-E (lines 100-105,
-  229-234), Hunyuan3D (line 423), SF3D (line 651), TripoSR (line 791),
-  Trellis2 (line 980), TripoSG (lines 1304, 1318).
+- [x] **#19 – Pin model revisions in `from_pretrained`**
+  Added `MODEL_REVISIONS` table + `_model_revision()` helper. All
+  `snapshot_download` / `from_pretrained` calls now pass `revision=`.
+  Values are currently `None` (latest) — fill in verified SHAs and bump
+  intentionally.
 
-- [ ] **#20 – SF3D licensing surfaced in node UI**
-  Stable Fast 3D is **Stability AI Community License** — free under
-  $1M revenue, enterprise license required above. Today buried in the
-  docstring (line 558). Surface as a `license_warning` field and emit it in
-  node logs / errors where appropriate. Any richer product UI for license
-  warnings belongs to later roadmap work, not this plan.
+- [x] **#20 – SF3D licensing surfaced in node UI**
+- [x] **#20 – SF3D licensing surfaced in node UI**
+  Surfaced as `license_warning: ClassVar[str | None]` on SF3D, Hunyuan3D,
+  and Trellis2. Emitted in node logs on first model load. MIT nodes have
+  `None`.
 
-- [ ] **#21 – Disk-space pre-flight for model downloads**
-  Trellis2 = 10 GB+, Hunyuan3D standard = 5 GB, TripoSG = 3 GB. A user on a
-  small SSD can hit "no space left on device" mid-download with a corrupt
-  cache. Add a pre-flight check via `shutil.disk_usage()` against the HF
-  cache directory before `snapshot_download`, with a clear error.
+- [x] **#21 – Disk-space pre-flight for model downloads**
+  Added `_check_disk_space(estimated_gb, cache_dir=)` helper. All
+  heavy-node load paths call it before `snapshot_download`. Raises `OSError`
+  with a human-readable message.
 
 - [ ] **#22 – Surface VRAM budgets cleanly**
   Break this into explicit, checkable deliverables:
-  - [ ] **#22a** Every heavy node exposes `MIN_VRAM_GB: ClassVar[int]`.
+  - [x] **#22a** Every heavy node exposes `MIN_VRAM_GB: ClassVar[int]`
+    and `ESTIMATED_DOWNLOAD_GB: ClassVar[float]`.
   - [ ] **#22b** At runtime, compare available VRAM against `MIN_VRAM_GB`
     using the existing/shared hardware probe where available (or a thin shared
     adapter), and emit a soft warning in node logs when the machine is under
@@ -366,7 +363,7 @@ and `ImportError` at runtime. We split this into A+C+D:
     manual verification note confirming the warning appears without blocking
     execution.
 
-- [ ] **#24 – Input image validation**
+- [x] **#24 – Input image validation**
   Each `process()` calls `await context.asset_to_io(self.image)` then opens
   with PIL. Failure modes (corrupt image, EXIF-rotated, palette-only) all
   bubble as raw `PIL.UnidentifiedImageError`. Wrap once in a helper that
@@ -706,18 +703,25 @@ node, but implement per-node:**
   partial #1/#8 (single-file rename + basic optional deps). Treat PR-1.5
   below as a small follow-up to mop up the items the PR missed.
 
-- [ ] **PR-1.5 "PR #26 follow-ups"** *(small, low risk)*
-  - [ ] #4 Shap-E device fix (slipped from PR-1)
-  - [ ] #11 TripoSG `_prepare_image` cleanup
-  - [ ] Hunyuan3D docstring cleanup
-  - [ ] #14 verify per-call seed metadata is actually returned in
-    `Model3DRef.metadata` (D3) — the PR's commit message claims #14 but
-    needs verification that the seed is surfaced, not just used internally
-  - [ ] #19 + D9 pin model revisions
-  - [ ] #24 input-image validation helper
-  - [ ] #17 vendored `triposg/UPSTREAM.md`
-  - [ ] Verify `_export_mesh` helper from PR #26 covers Trellis2's
+- [x] **PR-1.5 "PR #26 follow-ups"** *(small, low risk)*
+  - [x] #4 Shap-E device fix (slipped from PR-1) — use `self._pipeline.device`
+    and `_resolve_device()` helper; MPS generator uses "cpu" device
+  - [x] #11 TripoSG `_prepare_image` cleanup — accept `device` kwarg,
+    replace all `.cuda()` with `.to(device)`
+  - [x] Hunyuan3D docstring cleanup — updated `_ensure_model_downloaded`
+    docstring to say "~5 GB standard, ~2 GB mini" instead of "75 GB"
+  - [x] #14 verify per-call seed metadata is actually returned in
+    `Model3DRef.metadata` (D3) — all seeded nodes now pass
+    `metadata={"seed": seed, "source_model": ...}` to `model3d_from_bytes`
+  - [x] #19 + D9 pin model revisions — `MODEL_REVISIONS` table +
+    `_model_revision()` helper; values are `None` (latest), fill in SHAs
+  - [x] #24 input-image validation helper — `_open_pil_image()` wraps
+    PIL open+load with friendly `ValueError` for corrupt/unsupported files
+  - [x] #17 vendored `triposg/UPSTREAM.md`
+  - [x] Verify `_export_mesh` helper from PR #26 covers Trellis2's
     `extension_webp=True` and SF3D's `include_normals=True` paths (C2)
+    — confirmed: SF3D passes `include_normals=True`, Trellis2 uses its own
+    `o_voxel.postprocess.to_glb()` path with `_export_mesh` as fallback
 
 - [ ] **PR-2 "Refactor & helpers"** *(reduced scope after PR #26)*
   - [x] #5 + C2 export helper — *PR #26 (verify C2 handled — see PR-1.5)*
@@ -730,20 +734,22 @@ node, but implement per-node:**
   - [x] #15 + C1 `preload_model` rollout — *PR #26 (verify reconciliation
     with C1 / D4: do the preloaded models register with `ModelManager`, or
     do they still pin to `self`?)*
-  - [ ] #12 TripoSG flash flag audit (PR #26 *renamed* `use_flash` →
-    `use_flash_decoder` per code review, but did not audit whether the
-    flag is wired to anything real — verify or delete.)
-  - [ ] #21 disk-space pre-flight
+  - [x] #12 TripoSG flash flag audit — `flash_octree_depth` now only
+    passed when `use_flash_decoder=True` (diso available)
+  - [x] #21 disk-space pre-flight — `_check_disk_space()` wired into all
+    heavy-node load paths
   - [ ] #25a-#25f + D12 canonical `Model3DRef` contract + export metadata
-  - [ ] Verify `PYTORCH_CUDA_ALLOC_CONF` rollout
+  - [x] Verify `PYTORCH_CUDA_ALLOC_CONF` rollout — all heavy nodes
+    (Hunyuan3D, SF3D, TripoSR, Trellis2, TripoSG) now set it
 
 - [ ] **PR-3a "Split + metadata cleanup"** *(high blast radius, but single-repo first)*
   - **`nodetool-huggingface` only**
   - #1 + D2 module split: `local_3d.py` → `text_to_3d.py` + `image_to_3d.py`
     + `_3d_common.py`
-  - #8a, #8b, #8e, #8f, #8h, plus G4 + G5 audits
-  - #20 + D11 license warnings (metadata + docs/log text only)
-  - #22a static VRAM budget class attrs
+  - [x] #8a — done: demoted `hy3dgen`, `pymeshlab`, `scikit-image` to optional
+  - #8b, #8e, ~~#8f~~ (done), #8h, plus G4 + G5 audits
+  - [x] #20 + D11 license warnings — `license_warning: ClassVar` on each node
+  - [x] #22a static VRAM budget class attrs — `MIN_VRAM_GB`, `ESTIMATED_DOWNLOAD_GB`
   - G1 regenerate `package_metadata` after the split
 
 - [ ] **PR-3b "Install UX + runtime hints"** *(cross-repo, product-facing but no new sidebar UI)*
