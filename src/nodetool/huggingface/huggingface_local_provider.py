@@ -67,7 +67,7 @@ from nodetool.metadata.types import (
     LanguageModel,
     VideoRef,
 )
-from nodetool.workflows.types import Chunk, JobUpdate, NodeProgress
+from nodetool.workflows.types import Chunk, NodeProgress
 from nodetool.config.logging_config import get_logger
 from nodetool.ml.core.model_manager import ModelManager
 from nodetool.io.media_fetch import fetch_uri_bytes_and_mime_async
