@@ -91,6 +91,9 @@ class ShapETextTo3D(HuggingFacePipelineNode):
     def get_basic_fields(cls) -> list[str]:
         return ["prompt", "seed"]
 
+    def requires_gpu(self) -> bool:
+        return False
+
     async def preload_model(self, context: ProcessingContext):
         import torch
         from diffusers import ShapEPipeline
@@ -219,6 +222,9 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
     @classmethod
     def get_basic_fields(cls) -> list[str]:
         return ["image", "seed"]
+
+    def requires_gpu(self) -> bool:
+        return False
 
     async def preload_model(self, context: ProcessingContext):
         import torch
@@ -360,7 +366,7 @@ class Hunyuan3D(HuggingFacePipelineNode):
     )
     output_format: OutputFormat = Field(
         default=OutputFormat.GLB,
-        description="Output format for the 3D model.",
+        description="Output format for the 3D model. GLB is recommended; OBJ files are not previewable in the canvas viewer.",
     )
     seed: int = Field(
         default=-1,
@@ -490,11 +496,9 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
             self._loaded_variant = variant
 
-        # Set seed
-        if self.seed >= 0:
-            torch.manual_seed(self.seed)
-            if torch.cuda.is_available():
-                torch.cuda.manual_seed(self.seed)
+        # Set seed using per-call generator (avoids leaking global RNG state)
+        seed = self.seed if self.seed >= 0 else torch.randint(0, 2**32, (1,)).item()
+        generator = torch.Generator(device="cuda" if torch.cuda.is_available() else "cpu").manual_seed(seed)
 
         # Generate 3D mesh
         mesh = self._pipeline(
@@ -502,6 +506,7 @@ class Hunyuan3D(HuggingFacePipelineNode):
             num_inference_steps=self.num_inference_steps,
             guidance_scale=self.guidance_scale,
             octree_resolution=self.octree_resolution,
+            generator=generator,
         )[0]
 
         run_gc("After Hunyuan3D inference", log_before_after=False)
@@ -584,7 +589,7 @@ class StableFast3D(HuggingFacePipelineNode):
     )
     output_format: OutputFormat = Field(
         default=OutputFormat.GLB,
-        description="Output format for the 3D model.",
+        description="Output format for the 3D model. GLB is recommended; OBJ files are not previewable in the canvas viewer.",
     )
 
     _model: Any = None
@@ -657,8 +662,12 @@ class StableFast3D(HuggingFacePipelineNode):
                 self._model.eval()
                 ModelManager.set_model(self.id, cache_key, self._model)
 
-        # Remove background and resize
-        rembg_session = rembg.new_session()
+        # Remove background and resize (cache rembg session to avoid re-loading U²-Net)
+        rembg_cache_key = "rembg_u2net_session"
+        rembg_session = ModelManager.get_model(rembg_cache_key)
+        if rembg_session is None:
+            rembg_session = rembg.new_session()
+            ModelManager.set_model(self.id, rembg_cache_key, rembg_session)
         image = remove_background(input_image, rembg_session)
         image = resize_foreground(image, self.foreground_ratio)
 
@@ -730,7 +739,7 @@ class TripoSR(HuggingFacePipelineNode):
     )
     output_format: OutputFormat = Field(
         default=OutputFormat.GLB,
-        description="Output format for the 3D model.",
+        description="Output format for the 3D model. GLB is recommended; OBJ files are not previewable in the canvas viewer.",
     )
 
     _model: Any = None
@@ -796,8 +805,12 @@ class TripoSR(HuggingFacePipelineNode):
                 self._model.to(device)
                 ModelManager.set_model(self.id, cache_key, self._model)
 
-        # Remove background and resize
-        rembg_session = rembg.new_session()
+        # Remove background and resize (cache rembg session to avoid re-loading U²-Net)
+        rembg_cache_key = "rembg_u2net_session"
+        rembg_session = ModelManager.get_model(rembg_cache_key)
+        if rembg_session is None:
+            rembg_session = rembg.new_session()
+            ModelManager.set_model(self.id, rembg_cache_key, rembg_session)
         image = remove_background(input_image, rembg_session)
         image = resize_foreground(image, self.foreground_ratio)
 
@@ -915,29 +928,6 @@ class Trellis2(HuggingFacePipelineNode):
     def requires_gpu(self) -> bool:
         return True
 
-    def _ensure_model_downloaded(self, variant: str) -> str:
-        """
-        Pre-download only the shape-generation files to avoid downloading
-        the entire 75GB repo (which includes paint/texture models).
-        Returns the repo_id for the model.
-        """
-        from huggingface_hub import snapshot_download
-
-        config = self.VARIANT_CONFIG[variant]
-        repo_id = config["repo_id"]
-        subfolder = config["subfolder"]
-
-        # Only download the specific subfolder needed for shape generation
-        # This avoids downloading paint, delight, turbo variants etc.
-        snapshot_download(
-            repo_id=repo_id,
-            allow_patterns=[
-                "config.json",  # Root config
-                f"{subfolder}/*",  # DiT model (includes bundled VAE)
-            ],
-        )
-        return repo_id
-
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
         from PIL import Image
@@ -983,10 +973,10 @@ class Trellis2(HuggingFacePipelineNode):
                 self._pipeline.cuda()
                 ModelManager.set_model(self.id, cache_key, self._pipeline)
 
-        # Set seed
-        if self.seed >= 0:
-            torch.manual_seed(self.seed)
-            torch.cuda.manual_seed(self.seed)
+        # Set seed using per-call generator (avoids leaking global RNG state)
+        seed = self.seed if self.seed >= 0 else torch.randint(0, 2**32, (1,)).item()
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
 
         # Generate 3D model
         # The pipeline returns a list of meshes
@@ -1108,7 +1098,7 @@ class TripoSG(HuggingFacePipelineNode):
         description="Maximum number of faces in output mesh. -1 for no limit.",
     )
     seed: int = Field(
-        default=42,
+        default=-1,
         ge=-1,
         description="Random seed for reproducibility. -1 for random.",
     )
