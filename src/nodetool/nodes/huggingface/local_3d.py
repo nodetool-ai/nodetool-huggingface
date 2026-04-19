@@ -1380,11 +1380,11 @@ class TripoSG(HuggingFacePipelineNode):
 
         # Use flash decoder (diso) if available, fall back to marching cubes
         try:
-            import diso
+            import diso  # noqa: F401
 
-            use_flash = True
+            use_flash_decoder = True
         except ImportError:
-            use_flash = False
+            use_flash_decoder = False
 
         # Run inference
         outputs = self._pipeline(
@@ -1395,7 +1395,7 @@ class TripoSG(HuggingFacePipelineNode):
             dense_octree_depth=self.octree_depth - 1,
             hierarchical_octree_depth=self.octree_depth,
             flash_octree_depth=self.octree_depth,
-            use_flash_decoder=use_flash,
+            use_flash_decoder=use_flash_decoder,
         ).samples[0]
 
         mesh = trimesh.Trimesh(

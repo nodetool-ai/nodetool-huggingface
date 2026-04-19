@@ -9,9 +9,6 @@ correctly.  No GPU or model weights are required.
 import pytest
 from nodetool.metadata.types import HuggingFaceModel
 
-# All node classes under test
-NODE_CLASSES = []
-
 
 def _load_node_classes():
     """Import all 3D node classes from the renamed module."""
