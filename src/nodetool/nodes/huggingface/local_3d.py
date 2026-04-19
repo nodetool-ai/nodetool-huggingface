@@ -1312,8 +1312,6 @@ class TripoSG(HuggingFacePipelineNode):
             max_val = rgb_resized.flatten().max()
             if max_val < 1e-3:
                 raise ValueError("Invalid image: pure black")
-            mean_color = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1).to(device)
-            norm_img = rgb_resized / max_val - mean_color  # noqa: F841
 
             rmbg_input = TF.normalize(rgb_resized, [0.5, 0.5, 0.5], [1.0, 1.0, 1.0])
             result = rmbg_net(rmbg_input.unsqueeze(0))
@@ -1330,7 +1328,6 @@ class TripoSG(HuggingFacePipelineNode):
             )
             labeled = label(alpha_np)
             cleaned = (remove_small_objects(labeled, min_size=200) > 0).astype(np.uint8)
-            alpha_np = cleaned * 255  # noqa: F841
             alpha_gpu = torch.from_numpy(cleaned).to(device).float().unsqueeze(0)
 
         _, binary = cv2.threshold(
