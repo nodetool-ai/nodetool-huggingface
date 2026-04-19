@@ -665,9 +665,7 @@ class Hunyuan3D(HuggingFacePipelineNode):
                         }
                     self._pipeline.enable_model_cpu_offload()
                 except Exception as exc:
-                    import logging
-
-                    logging.getLogger(__name__).warning(
+                    log.warning(
                         "low_vram_mode unavailable for this hy3dgen version "
                         "(enable_model_cpu_offload failed: %s). Continuing without offloading.",
                         exc,
