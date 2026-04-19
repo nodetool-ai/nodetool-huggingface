@@ -92,8 +92,7 @@ rename to `local_3d.py`. The plan has since evolved:
   new D2 is the modality split.** Pending follow-up in PR-3:
   - Split `local_3d.py` → `text_to_3d.py` (`ShapETextTo3D`) +
     `image_to_3d.py` (the other six nodes) + `_3d_common.py` (shared helpers).
-  - Update `local_3d` → `image_to_3d` in `tests/test_local_3d_smoke.py`
-    (rename file too).
+  - Update imports in the existing smoke test to match (mechanical).
   - Add the per-node aliases listed in §G2 (now also need
     `huggingface.local_3d.<NodeName>` → `huggingface.image_to_3d.<NodeName>`
     on top of the original `huggingface.text_to_3d.*` aliases, since users
@@ -628,8 +627,7 @@ node, but implement per-node:**
   - [ ] #19 + D9 pin model revisions (table only, no behavior change)
   - [ ] #24 input-image validation helper
   - [ ] Hunyuan3D docstring cleanup
-  - [x] #16 + N2 smoke test — *PR #26 (file: `tests/test_local_3d_smoke.py`,
-    needs renaming when #1 split lands)*
+  - [x] #16 + N2 smoke test — *PR #26 (file: `tests/test_local_3d_smoke.py`)*
   - [ ] #17 vendored `triposg/UPSTREAM.md`
 
   **PR #26 also incidentally landed PR-2 work** (#5, #10, #13, #15) and a
@@ -680,9 +678,6 @@ node, but implement per-node:**
       `_3d_common.py`. Aliases must cover **both** the original
       `huggingface.text_to_3d.<NodeName>` *and* the interim
       `huggingface.local_3d.<NodeName>` namespace from PR #26.
-    - Rename `tests/test_local_3d_smoke.py` →
-      `tests/test_image_to_3d_smoke.py` (+ a tiny `test_text_to_3d_smoke.py`
-      for `ShapETextTo3D`), update imports.
     - #8a, #8b (env markers — PR #26 only landed the bare `[project.optional-dependencies]`
       groups), #8c, #8d, #8e, #8f, #8h, plus G4 + G5 audits.
     - #7 + G7 Hunyuan3D `low_vram_mode` hardening + version pin
