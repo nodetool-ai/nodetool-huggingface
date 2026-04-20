@@ -240,7 +240,7 @@ Exit criteria for phase 4:
 
 ### 5. Add the missing cleanup nodes
 
-This is the next active phase.
+This phase is complete.
 
 - [x] **Keep node declarations separate from pure mesh helpers**
   `BaseNode` subclasses, `@prop` fields, node metadata, and registry exports stay
@@ -253,17 +253,26 @@ This is the next active phase.
 - [x] **Do not add a deeper `model3d/nodes/` subfolder yet**
   Keep the folder flat until phase 5 adds enough new node families that a
   responsibility-based `nodes/` split is clearly justified.
-- [ ] **Add `NormalizeModel3D`**
+- [x] **Add `NormalizeModel3D`**
   Provide one focused node for centering, orientation normalization, optional
   uniform scale-to-box, and optional ground-plane placement.
-- [ ] **Add component cleanup**
+- Focused first pass landed in `nodetool` with explicit axis presets, optional
+  scale-to-size, optional ground placement, and focused GLB behavior tests.
+- [x] **Add component cleanup**
   Add `ExtractLargestComponent` and/or `RemoveSmallComponents` so workflows can
   remove floaters and disconnected junk geometry from AI-generated outputs.
-- [ ] **Add a conservative `RepairMesh`**
+- Focused first pass landed with `ExtractLargestComponent`, keeping the largest
+  connected GLB triangle component by face count and covering the behavior with
+  a disconnected-geometry fixture test.
+- [x] **Add a conservative `RepairMesh`**
   Start with reliable fixes only: degenerate-face removal, duplicate or
   near-duplicate vertex merging, and similarly safe cleanup passes.
-- [ ] **Add tests as each node lands**
+- Focused first pass landed with conservative GLB-only repair toggles for
+  near-duplicate vertex welding plus degenerate-face removal.
+- [x] **Add tests as each node lands**
   Do not batch all cleanup-node tests into a later PR.
+- Focused fixture tests now cover both `ExtractLargestComponent` and
+  `RepairMesh` behavior as each node landed.
 
 Exit criteria for phase 5:
 
@@ -271,6 +280,8 @@ Exit criteria for phase 5:
 - Each new cleanup node ships with focused fixture coverage.
 
 ### 6. Final verification pass
+
+This is the next active phase.
 
 - [ ] **Review node docs and titles for honesty**
   If a node only supports triangular meshes, manifold inputs, or a subset of

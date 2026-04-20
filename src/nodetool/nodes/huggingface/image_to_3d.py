@@ -197,7 +197,7 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
 
 class Hunyuan3D(HuggingFacePipelineNode):
     """
-    Generate 3D meshes from images using Tencent Hunyuan3D-2.
+    Generate 3D meshes from images using Tencent Hunyuan3D-2 or 2.1.
     3d, generation, image-to-3d, hunyuan3d, mesh, local, high-quality
 
     Use cases:
@@ -211,15 +211,16 @@ class Hunyuan3D(HuggingFacePipelineNode):
     **Platforms:** Linux+CUDA, Windows+CUDA. Installable on macOS but does not run.
 
     **Requirements:** hy3dgen>=2.0.2 package, torch with CUDA.
-    First run downloads ~5GB model (shape-only, not full 75GB repo).
-    Standard model needs ~6GB VRAM, mini needs ~5GB. Use low_vram_mode on constrained GPUs.
+    First run downloads ~5GB model (shape-only, not full repo).
+    Standard/2.1 models need ~6–8GB VRAM, mini needs ~5GB. Use low_vram_mode on constrained GPUs.
 
     Models: https://huggingface.co/tencent/Hunyuan3D-2
+            https://huggingface.co/tencent/Hunyuan3D-2.1
     """
 
     # -- static metadata ---------------------------------------------------
-    MIN_VRAM_GB: ClassVar[int] = 5
-    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 5.0
+    MIN_VRAM_GB: ClassVar[int] = 5  # mini variant; 2.1 needs ~8GB
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 8.0  # 2.1 default; 2.0 standard ~5GB
     license_warning: ClassVar[str | None] = (
         "Tencent Hunyuan3D License — non-commercial use only. "
         "See https://huggingface.co/tencent/Hunyuan3D-2/blob/main/LICENSE"
@@ -232,12 +233,14 @@ class Hunyuan3D(HuggingFacePipelineNode):
     class ModelVariant(str, Enum):
         STANDARD = "standard"
         MINI = "mini"
+        V2_1 = "v2_1"
 
     class OutputFormat(str, Enum):
         GLB = "glb"
         OBJ = "obj"
 
-    # Mapping from variant enum to HuggingFace repo and subfolder
+    # Mapping from variant enum to HuggingFace repo and subfolder.
+    # vae_subfolder: present when the VAE is a separate subfolder (2.1+).
     VARIANT_CONFIG: ClassVar[dict[str, dict[str, str]]] = {
         "standard": {
             "repo_id": "tencent/Hunyuan3D-2",
@@ -247,6 +250,11 @@ class Hunyuan3D(HuggingFacePipelineNode):
             "repo_id": "tencent/Hunyuan3D-2mini",
             "subfolder": "hunyuan3d-dit-v2-mini",
         },
+        "v2_1": {
+            "repo_id": "tencent/Hunyuan3D-2.1",
+            "subfolder": "hunyuan3d-dit-v2-1",
+            "vae_subfolder": "hunyuan3d-vae-v2-1",
+        },
     }
 
     image: ImageRef = Field(
@@ -254,8 +262,8 @@ class Hunyuan3D(HuggingFacePipelineNode):
         description="Input image to convert to 3D",
     )
     model_variant: ModelVariant = Field(
-        default=ModelVariant.STANDARD,
-        description="Model variant. Standard (1.1B params, ~6GB VRAM) or Mini (0.6B params, ~5GB VRAM, faster).",
+        default=ModelVariant.V2_1,
+        description="Model variant. V2.1 (3.3B params, best quality, ~8GB VRAM), Standard v2.0 (1.1B params, ~6GB VRAM), or Mini v2.0 (0.6B params, ~5GB VRAM, fastest).",
     )
     num_inference_steps: int = Field(
         default=50,
@@ -298,12 +306,21 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
-        # Only download shape-generation files (DiT model contains bundled VAE)
-        # Standard model: ~5GB, Mini model: ~2GB
         return [
+            # 2.1: separate VAE subfolder; shape DiT is 3.3B params (~8GB download)
+            HuggingFaceModel(
+                repo_id="tencent/Hunyuan3D-2.1",
+                allow_patterns=[
+                    "config.json",
+                    "hunyuan3d-dit-v2-1/*.yaml",
+                    "hunyuan3d-dit-v2-1/*.safetensors",
+                    "hunyuan3d-vae-v2-1/*.yaml",
+                    "hunyuan3d-vae-v2-1/*.safetensors",
+                ],
+            ),
+            # 2.0 standard: bundled VAE; ~5GB download
             HuggingFaceModel(
                 repo_id="tencent/Hunyuan3D-2",
-                # Only download the shape DiT subfolder (includes bundled VAE weights)
                 allow_patterns=[
                     "config.json",
                     "hunyuan3d-dit-v2-0/*.yaml",
@@ -322,7 +339,7 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
     @classmethod
     def get_title(cls) -> str:
-        return "Hunyuan3D-2"
+        return "Hunyuan3D"
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
@@ -333,9 +350,8 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
     def _ensure_model_downloaded(self, variant: str) -> str:
         """
-        Pre-download only the shape-generation files (~5 GB standard, ~2 GB mini)
-        to avoid downloading the full repo (which includes paint/texture models).
-        Returns the repo_id for the model.
+        Pre-download only the shape-generation files to avoid downloading the
+        full repo (which includes paint/texture models). Returns the repo_id.
         """
         from huggingface_hub import snapshot_download
 
@@ -343,17 +359,20 @@ class Hunyuan3D(HuggingFacePipelineNode):
         repo_id = config["repo_id"]
         subfolder = config["subfolder"]
 
-        # Only download the specific subfolder needed for shape generation
-        # This avoids downloading paint, delight, turbo variants etc.
+        allow_patterns = [
+            "config.json",
+            f"{subfolder}/*",
+        ]
+        # 2.1+ has a separate VAE subfolder; 2.0 bundles the VAE in the DiT dir
+        if "vae_subfolder" in config:
+            allow_patterns.append(f"{config['vae_subfolder']}/*")
+
         _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
         revision = _model_revision(repo_id)
         snapshot_download(
             repo_id=repo_id,
             revision=revision,
-            allow_patterns=[
-                "config.json",  # Root config
-                f"{subfolder}/*",  # DiT model (includes bundled VAE)
-            ],
+            allow_patterns=allow_patterns,
         )
         return repo_id
 

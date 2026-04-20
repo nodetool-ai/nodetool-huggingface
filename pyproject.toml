@@ -45,7 +45,7 @@ shape = []
 
 # Pure-Python / wheel deps — install everywhere, runtime gates CUDA
 hunyuan3d = [
-    "hy3dgen>=2.0.2,<2.1",
+    "hy3dgen>=2.0.2",
     "pymeshlab",
 ]
 triposg = [

@@ -206,12 +206,21 @@ These are not part of the active execution order above.
 
 ### Models we should evaluate
 
-- [ ] **Hunyuan3D-2.1 (Tencent, June 2025)**
-  Recommended upgrade candidate. Shape + Paint pipeline, open-source PBR
-  texture model, still under Tencent non-commercial terms.
+- [x] **Hunyuan3D-2.1 (Tencent, June 2025)**
+  Weights at `tencent/Hunyuan3D-2.1`. Shape DiT (3.3B) in subfolder
+  `hunyuan3d-dit-v2-1`; VAE is now separate (`hunyuan3d-vae-v2-1`). PBR paint
+  model (`hunyuan3d-paintpbr-v2-1`) exists but needs `hy3dshape`/`hy3dpaint`
+  local modules from the 2.1 git repo (not on PyPI) plus custom CUDA builds —
+  paint stays out of scope for now. **Shape-only support added** as `V2_1`
+  variant in the `Hunyuan3D` node; now the default variant. hy3dgen version
+  cap `<2.1` removed. Note: if `hy3dgen` 2.0.x cannot parse the 2.1 model
+  config (separate VAE path), users will need the git-based `hy3dshape`
+  install — treat that as a follow-up if reports come in.
 
-- [ ] **Hunyuan3D-2.5 (Tencent, April 2025)**
-  Investigate whether weights are actually available or API-only.
+- [x] **Hunyuan3D-2.5 (Tencent, April 2025)**
+  **API-only — no public weights.** 10B params, 4K textures, accessible only
+  via Tencent Cloud (20 free generations/day). Community requests for open
+  weights have received no official timeline. Skip; revisit if weights release.
 
 - [ ] **Direct3D-S2 (NeurIPS 2025, May 2025)**
   Track, but defer until a smaller / more practical upstream release exists.
@@ -227,8 +236,9 @@ These are not part of the active execution order above.
   0.36 had known issues; check for a patched release before bumping.
 - [ ] **transformers 5.0**
   Defer until GA and wider ecosystem compatibility.
-- [ ] **`hy3dgen` - re-pin for Hunyuan3D-2.1**
-  Revisit if 2.1 adoption changes the required package line.
+- [x] **`hy3dgen` - re-pin for Hunyuan3D-2.1**
+  Removed `<2.1` cap. If `hy3dgen` 2.0.x cannot load 2.1 weights (separate
+  VAE path), the fallback is a git-based `hy3dshape` install (not on PyPI).
 
 ### What we are not missing
 
