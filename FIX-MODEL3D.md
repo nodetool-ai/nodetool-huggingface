@@ -123,7 +123,7 @@ Read this section top to bottom. The first unchecked group is the next work.
 - Goal: finish the remaining runtime-behavior work that affects how usable the
   shipped local 3D nodes are in practice.
 
-- [ ] **Roll out `low_vram_mode` on the remaining heavy nodes**
+- [x] **Roll out `low_vram_mode` on the remaining heavy nodes**
   Follow `D7`: `SF3D` and `TripoSG` try CPU offload when supported; `Trellis2`
   exposes the field but warns that upstream has no offload support.
 

@@ -540,6 +540,10 @@ class StableFast3D(HuggingFacePipelineNode):
         default=OutputFormat.GLB,
         description="Output format for the 3D model. GLB is recommended; OBJ files are not previewable in the canvas viewer.",
     )
+    low_vram_mode: bool = Field(
+        default=False,
+        description="Enable CPU offloading for GPUs with less than 8GB VRAM.",
+    )
 
     CACHE_KEY: ClassVar[str] = "stabilityai/stable-fast-3d_SF3D"
 
@@ -596,6 +600,18 @@ class StableFast3D(HuggingFacePipelineNode):
         )
         model.to(device)
         model.eval()
+
+        # Enable CPU offloading if requested
+        if self.low_vram_mode and hasattr(model, "enable_model_cpu_offload"):
+            try:
+                model.enable_model_cpu_offload()
+            except Exception as exc:
+                log.warning(
+                    "low_vram_mode: enable_model_cpu_offload failed (%s). "
+                    "Continuing without offloading.",
+                    exc,
+                )
+
         ModelManager.set_model(self.id, self.CACHE_KEY, model)
 
     async def preload_model(self, context: ProcessingContext):
@@ -925,6 +941,10 @@ class Trellis2(HuggingFacePipelineNode):
         ge=-1,
         description="Random seed for reproducibility. -1 for random.",
     )
+    low_vram_mode: bool = Field(
+        default=False,
+        description="Reserved for future use. TRELLIS.2 upstream does not currently support CPU offloading.",
+    )
 
     CACHE_KEY: ClassVar[str] = "microsoft/TRELLIS.2-4B_Trellis2"
 
@@ -975,6 +995,14 @@ class Trellis2(HuggingFacePipelineNode):
 
         pipeline = Trellis2ImageTo3DPipeline.from_pretrained("microsoft/TRELLIS.2-4B")
         pipeline.cuda()
+
+        if self.low_vram_mode:
+            log.warning(
+                "low_vram_mode is not supported by TRELLIS.2 upstream. "
+                "The field is exposed for forward compatibility but has no "
+                "effect in the current version."
+            )
+
         ModelManager.set_model(self.id, self.CACHE_KEY, pipeline)
 
     async def preload_model(self, context: ProcessingContext):
@@ -1150,6 +1178,10 @@ class TripoSG(HuggingFacePipelineNode):
         ge=-1,
         description="Random seed for reproducibility. -1 for random.",
     )
+    low_vram_mode: bool = Field(
+        default=False,
+        description="Enable CPU offloading for GPUs with less than 10GB VRAM.",
+    )
 
     CACHE_KEY: ClassVar[str] = "VAST-AI/TripoSG_Pipeline"
     RMBG_CACHE_KEY: ClassVar[str] = "briaai/RMBG-1.4_BriaRMBG"
@@ -1214,6 +1246,18 @@ class TripoSG(HuggingFacePipelineNode):
             pipeline = TripoSGPipeline.from_pretrained(triposg_path).to(
                 device, torch.float16
             )
+
+            # Enable CPU offloading if requested
+            if self.low_vram_mode and hasattr(pipeline, "enable_model_cpu_offload"):
+                try:
+                    pipeline.enable_model_cpu_offload()
+                except Exception as exc:
+                    log.warning(
+                        "low_vram_mode: enable_model_cpu_offload failed (%s). "
+                        "Continuing without offloading.",
+                        exc,
+                    )
+
             ModelManager.set_model(self.id, self.CACHE_KEY, pipeline)
 
     async def preload_model(self, context: ProcessingContext):
