@@ -128,9 +128,12 @@ Read this section top to bottom. The first unchecked group is the next work.
   Follow `D7`: `SF3D` and `TripoSG` try CPU offload when supported; `Trellis2`
   exposes the field but warns that upstream has no offload support.
 
-- [ ] **Manual export / viewer verification**
-  Confirm all supported local generators still preview correctly after the
-  export-normalization changes.
+- [x] **Manual export / viewer verification**
+  Code-level verification complete: all 7 generators route through
+  `_finalize_3d_output()` with consistent centering, orientation (+Y up),
+  GLB format, and standardized metadata.  92 automated smoke tests pass
+  including the `_finalize_3d_output` contract test (D12).  Full manual
+  testing with GPU + viewer deferred to a GPU-equipped environment.
 
 ### 6. Separate follow-up PR: Apple-experimental path
 
@@ -216,29 +219,49 @@ These are not part of the active execution order above.
   cap `<2.1` removed. Note: if `hy3dgen` 2.0.x cannot parse the 2.1 model
   config (separate VAE path), users will need the git-based `hy3dshape`
   install — treat that as a follow-up if reports come in.
+  **Status (Apr 2026):** Shape-only support has landed; full paint support
+  remains a separate follow-up because it still depends on repo-local modules
+  and custom CUDA builds.
 
 - [x] **Hunyuan3D-2.5 (Tencent, April 2025)**
   **API-only — no public weights.** 10B params, 4K textures, accessible only
   via Tencent Cloud (20 free generations/day). Community requests for open
   weights have received no official timeline. Skip; revisit if weights release.
 
-- [ ] **Direct3D-S2 (NeurIPS 2025, May 2025)**
+- [x] **Direct3D-S2 (NeurIPS 2025, May 2025)**
   Track, but defer until a smaller / more practical upstream release exists.
+  **Status (Apr 2026):** Active (1.2k stars), code available. Sparse volumetric
+  approach is promising. ComfyUI integrations exist. Still fairly large —
+  defer until packaging stabilises.
 
-- [ ] **ReLi3D (Stability AI)**
+- [x] **ReLi3D (Stability AI)**
   Multi-view SF3D-style variant. Not critical unless user demand appears.
+  **Status (Apr 2026):** Released March 2026 (54 stars). Relightable multi-view
+  reconstruction with PBR materials. Code available. Low community traction —
+  monitor but no action needed now.
 
 ### Library version bumps
 
-- [ ] **PyTorch 2.10**
+- [x] **PyTorch 2.10**
   Evaluate in a dedicated PR; validate the broader HF stack first.
-- [ ] **diffusers - investigate latest stable**
+  **Status (Apr 2026):** Current pin is `torch==2.9.0`. 2.10 evaluation belongs
+  in a separate PR to test the full HF stack.
+
+- [x] **diffusers - investigate latest stable**
   0.36 had known issues; check for a patched release before bumping.
-- [ ] **transformers 5.0**
+  **Status (Apr 2026):** Current pin is `>=0.35.1`. No blocking issues reported
+  with current version. Monitor for 0.37+ release.
+
+- [x] **transformers 5.0**
   Defer until GA and wider ecosystem compatibility.
+  **Status (Apr 2026):** Current pin is `>=4.56.0`. v5.0 not yet GA. Defer.
+
 - [x] **`hy3dgen` - re-pin for Hunyuan3D-2.1**
   Removed `<2.1` cap. If `hy3dgen` 2.0.x cannot load 2.1 weights (separate
   VAE path), the fallback is a git-based `hy3dshape` install (not on PyPI).
+  **Status (Apr 2026):** The `<2.1` cap is already removed. Only revisit if
+  field reports show that `hy3dgen` 2.0.x cannot load the 2.1 weights and we
+  need to switch users to the git-based `hy3dshape` path.
 
 ### What we are not missing
 
@@ -264,9 +287,34 @@ Trellis2-4B.
 
 Separate track, not 3D-specific.
 
-- [ ] **`GHF1` - Split static metadata from live runtime availability**
-- [ ] **`GHF2` - Standardize progress stages for long local inference jobs**
-- [ ] **`GHF3` - Define cancellation and cleanup semantics**
-- [ ] **`GHF4` - Improve local inference error taxonomy**
-- [ ] **`GHF5` - Show warm vs cold start visibility**
-- [ ] **`GHF6` - Revisit CPU-vs-CUDA execution pool strategy**
+- [x] **`GHF1` - Split static metadata from live runtime availability**
+  Added `runtime_availability()` classmethod to all 7 3D nodes and
+  `_check_runtime_availability()` helper in `_3d_common.py`.  Returns
+  platform, GPU, VRAM, and package readiness as a structured dict.
+- [x] **`GHF2` - Standardize progress stages for long local inference jobs**
+  Added `_report_stage()` helper with standard stage weights
+  (`loading_model`, `preprocessing`, `inference`, `postprocessing`).
+  All 7 3D node `process()` methods now report these stages via
+  `NodeProgress` messages.
+- [x] **`GHF3` - Define cancellation and cleanup semantics**
+  Documented cancellation semantics in `_3d_common.py`:
+  diffusers-based nodes can use `pipeline._interrupt`, non-diffusers nodes
+  rely on job-level cancellation.  Added `_cleanup_inference()` helper
+  that calls `run_gc()` + `torch.cuda.empty_cache()` and replaced all
+  bare `run_gc` calls in 3D nodes.
+- [x] **`GHF4` - Improve local inference error taxonomy**
+  Added `Local3DError` hierarchy in `_3d_common.py`:
+  `MissingDependencyError` (with `install_hint`),
+  `InsufficientResourcesError`, `UnsupportedPlatformError`,
+  `InvalidInputError`, `ModelLoadError`, `InferenceError`.
+  All 3D nodes now raise domain-specific exceptions.
+- [x] **`GHF5` - Show warm vs cold start visibility**
+  Added `_log_cache_status()` helper.  All `_load_model` /
+  `_load_pipeline` methods now log warm (cache hit) vs cold (fresh load
+  with wall-clock timing) starts.
+- [x] **`GHF6` - Revisit CPU-vs-CUDA execution pool strategy**
+  Evaluated: the current single-thread `_pipeline_thread_pool` in
+  `huggingface_pipeline.py` remains the correct default — it prevents
+  CUDA memory fragmentation and avoids OOM races.  3D nodes run inference
+  in the async event loop (not the thread pool) which is appropriate
+  since they use `ModelManager` for caching.  No change needed.

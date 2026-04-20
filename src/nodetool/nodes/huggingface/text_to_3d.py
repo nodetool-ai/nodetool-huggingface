@@ -16,12 +16,17 @@ from pydantic import Field
 from nodetool.metadata.types import HuggingFaceModel, Model3DRef
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
-from nodetool.workflows.memory_utils import run_gc
 
 from nodetool.nodes.huggingface._3d_common import (
     _resolve_device,
     _resolve_seed,
     _finalize_3d_output,
+    _report_stage,
+    _log_cache_status,
+    _check_runtime_availability,
+    _cleanup_inference,
+    InvalidInputError,
+    InferenceError,
 )
 
 
@@ -101,6 +106,17 @@ class ShapETextTo3D(HuggingFacePipelineNode):
     def get_basic_fields(cls) -> list[str]:
         return ["prompt", "seed"]
 
+    @classmethod
+    def runtime_availability(cls) -> dict:
+        """Return runtime readiness for this node (GHF1)."""
+        return _check_runtime_availability(
+            node_name=cls.get_title(),
+            supported_platforms=cls.SUPPORTED_PLATFORMS,
+            requires_gpu=False,
+            min_vram_gb=cls.MIN_VRAM_GB,
+            optional_packages=["diffusers"],
+        )
+
     def requires_gpu(self) -> bool:
         return False
 
@@ -125,16 +141,19 @@ class ShapETextTo3D(HuggingFacePipelineNode):
         import torch
 
         if not self.prompt:
-            raise ValueError("Prompt is required")
+            raise InvalidInputError("Prompt is required")
 
+        _report_stage(context, self.id, "loading_model")
         pipeline = await self._get_pipeline(context)
         device = str(pipeline.device)
 
+        _report_stage(context, self.id, "preprocessing")
         # Set seed – generator device must be "cpu" for MPS pipelines
         gen_device = "cpu" if device.startswith("mps") else device
         seed = _resolve_seed(self.seed)
         generator = torch.Generator(device=gen_device).manual_seed(seed)
 
+        _report_stage(context, self.id, "inference")
         # Generate
         images = pipeline(
             self.prompt,
@@ -146,11 +165,12 @@ class ShapETextTo3D(HuggingFacePipelineNode):
         ).images
 
         if not images:
-            raise RuntimeError("No 3D model generated")
+            raise InferenceError("No 3D model generated")
 
         mesh = images[0]
 
-        run_gc("After ShapE Text-to-3D inference", log_before_after=False)
+        _report_stage(context, self.id, "postprocessing")
+        _cleanup_inference("After ShapE Text-to-3D inference")
         # Export to GLB
         import trimesh
 
