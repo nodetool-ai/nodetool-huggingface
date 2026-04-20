@@ -142,22 +142,22 @@ class HuggingFacePipelineNode(BaseNode):
         """
         import torch
         import gc
-        
+
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
         pipeline = self._pipeline
-        
+
         def _call():
             with torch.inference_mode():
                 result = pipeline(*args, **kwargs)
-            
+
             # Explicit cleanup: synchronize, clear any temporary allocations
             if torch.cuda.is_available():
                 torch.cuda.synchronize()
                 # Force Python GC to collect any temporary tensors
                 gc.collect()
-            
+
             return result
 
         # Use shared thread pool instead of asyncio.to_thread to ensure

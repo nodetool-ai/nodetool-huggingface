@@ -274,11 +274,11 @@ class KokoroTTS(HuggingFacePipelineNode):
         import torch
         import gc
         from nodetool.workflows.memory_utils import get_gpu_memory_usage_mb
-        
+
         assert self._kpipeline is not None, "Kokoro pipeline not initialized"
 
         text = self.text.replace("\n", " ")
-        
+
         # Debug: Log initial VRAM
         initial_vram = get_gpu_memory_usage_mb()
         log.info(f"[KOKORO VRAM] Start: {initial_vram[0]:.1f}MB" if initial_vram else "[KOKORO VRAM] CUDA not available")
@@ -289,7 +289,7 @@ class KokoroTTS(HuggingFacePipelineNode):
             voice=self.voice.value,
             speed=self.speed,
         )
-        
+
         # Debug: Log VRAM right after generator creation
         vram_after_gen = get_gpu_memory_usage_mb()
         if initial_vram and vram_after_gen:
@@ -298,16 +298,16 @@ class KokoroTTS(HuggingFacePipelineNode):
 
         audio_chunks: list[np.ndarray] = []
         chunk_idx = 0
-        
+
         try:
             for result in generator:
                 audio = result.audio
                 if audio is None:
                     continue
-                
+
                 # Debug: Log VRAM before processing chunk
                 vram_before = get_gpu_memory_usage_mb()
-                
+
                 # Move result.output to CPU to free GPU memory from pred_dur and other tensors
                 if result.output is not None and hasattr(result.output, 'audio'):
                     # Create a detached CPU copy
@@ -320,15 +320,15 @@ class KokoroTTS(HuggingFacePipelineNode):
                     audio_np = audio_cpu.numpy()
                     del audio
                     del audio_cpu
-                
+
                 # Delete result to free any remaining GPU references
                 del result
-                
+
                 # Ensure audio is float32 in [-1, 1] range for consistent processing
                 if audio_np.dtype != np.float32:
                     audio_np = audio_np.astype(np.float32)
                 audio_chunks.append(audio_np)
-                
+
                 # Debug: Log VRAM after processing chunk
                 vram_after = get_gpu_memory_usage_mb()
                 if vram_before and vram_after:
@@ -339,18 +339,18 @@ class KokoroTTS(HuggingFacePipelineNode):
             # Ensure generator is closed to release any GPU resources
             generator.close()
             del generator
-            
+
             # Clear KPipeline's voice cache - voice packs are loaded on GPU and cached
             # This is the main source of the ~12MB "leak" per run
             if self._kpipeline is not None and hasattr(self._kpipeline, 'voices'):
                 vram_before_clear = get_gpu_memory_usage_mb()
                 self._kpipeline.voices.clear()
                 if vram_before_clear:
-                    log.info(f"[KOKORO VRAM] Cleared voice cache")
-            
+                    log.info("[KOKORO VRAM] Cleared voice cache")
+
             # Force Python garbage collection to release any circular refs
             gc.collect()
-            
+
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
 
@@ -364,34 +364,34 @@ class KokoroTTS(HuggingFacePipelineNode):
 
         # Debug: Log VRAM before audio_from_numpy
         vram_before_audio = get_gpu_memory_usage_mb()
-        
+
         # Kokoro outputs 24kHz mono
         # audio_from_numpy expects float32 in [-1, 1] range
         audio_ref = await context.audio_from_numpy(combined, 24_000)
-        
+
         # Debug: Log VRAM after audio_from_numpy
         vram_after_audio = get_gpu_memory_usage_mb()
         if vram_before_audio and vram_after_audio:
             delta = vram_after_audio[0] - vram_before_audio[0]
             log.info(f"[KOKORO VRAM] audio_from_numpy: {vram_before_audio[0]:.1f}MB -> {vram_after_audio[0]:.1f}MB (delta: {delta:+.1f}MB)")
-        
+
         # Clean up audio chunks list
         audio_chunks.clear()
         del audio_chunks
         del combined
-        
+
         # Force CUDA cache clear after processing
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-        
+
         run_gc("After Kokoro TTS inference", log_before_after=True)
-        
+
         # Debug: Log final VRAM
         final_vram = get_gpu_memory_usage_mb()
         if initial_vram and final_vram:
             total_delta = final_vram[0] - initial_vram[0]
             log.info(f"[KOKORO VRAM] Total: {initial_vram[0]:.1f}MB -> {final_vram[0]:.1f}MB (delta: {total_delta:+.1f}MB)")
-        
+
         yield {
             "audio": audio_ref,
             "chunk": Chunk(content="", done=True, content_type="audio"),

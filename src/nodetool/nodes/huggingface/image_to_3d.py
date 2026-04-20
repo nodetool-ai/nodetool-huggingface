@@ -1,0 +1,1700 @@
+"""
+HuggingFace image-to-3D generation nodes.
+
+Provides local inference for image-to-3D model generation:
+- Shap-E Image-to-3D: Using OpenAI's diffusers pipeline
+- Hunyuan3D: Tencent Hunyuan3D-2
+- StableFast3D (SF3D): Stability AI
+- TripoSR: Stability AI / VAST
+- Trellis2: Microsoft TRELLIS.2-4B
+- TripoSG: VAST-AI
+
+These nodes run locally and do not require API keys.
+"""
+
+from __future__ import annotations
+
+import io
+import logging
+from enum import Enum
+from typing import Any, ClassVar, TYPE_CHECKING
+
+from pydantic import Field
+
+from nodetool.metadata.types import HuggingFaceModel, ImageRef, Model3DRef
+from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.workflows.processing_context import ProcessingContext
+
+from nodetool.nodes.huggingface._3d_common import (
+    _model_revision,
+    _check_disk_space,
+    _resolve_device,
+    _resolve_seed,
+    _open_pil_image,
+    _export_mesh,
+    _finalize_3d_output,
+    _warn_vram,
+    _warn_platform,
+    _report_stage,
+    _log_cache_status,
+    _check_runtime_availability,
+    _cleanup_inference,
+    MissingDependencyError,
+    InsufficientResourcesError,
+    UnsupportedPlatformError,
+    InvalidInputError,
+    ModelLoadError,
+    InferenceError,
+)
+
+if TYPE_CHECKING:
+    import torch
+    import trimesh
+    from PIL import Image
+
+log = logging.getLogger(__name__)
+
+
+class ShapEImageTo3D(HuggingFacePipelineNode):
+    """
+    Generate 3D models from images using OpenAI Shap-E.
+    3d, generation, image-to-3d, shap-e, mesh, local, reconstruction
+
+    Use cases:
+    - Convert images to 3D models locally
+    - Create 3D assets from product photos
+    - Generate 3D content without API costs
+    - Reconstruct 3D objects from single images
+
+    **Platforms:** all (CPU/MPS/CUDA).
+
+    **Note:** Requires diffusers and torch. First run will download the model (~2.5GB).
+    """
+
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 4
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 2.5
+    license_warning: ClassVar[str | None] = None  # MIT
+    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "macos", "windows"]
+    INSTALL_HINT: ClassVar[str | None] = None  # uses diffusers, already in core
+
+    image: ImageRef = Field(
+        default=ImageRef(),
+        description="Input image to convert to 3D",
+    )
+    guidance_scale: float = Field(
+        default=3.0,
+        ge=1.0,
+        le=15.0,
+        description="How strongly to follow the image. Higher = more image adherence.",
+    )
+    num_inference_steps: int = Field(
+        default=64,
+        ge=16,
+        le=128,
+        description="Number of denoising steps. More steps = better quality but slower.",
+    )
+    frame_size: int = Field(
+        default=256,
+        ge=64,
+        le=512,
+        description="Resolution of the internal representation. Higher = more detail.",
+    )
+    seed: int = Field(
+        default=-1,
+        ge=-1,
+        description="Random seed for reproducibility. -1 for random.",
+    )
+
+    CACHE_KEY: ClassVar[str] = "openai/shap-e-img2img_ShapEImg2ImgPipeline_None"
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HuggingFaceModel(
+                repo_id="openai/shap-e-img2img",
+                # Include safetensors + bin for shap_e_renderer (no safetensors available there)
+                allow_patterns=[
+                    "**/*.safetensors",
+                    "shap_e_renderer/*.bin",
+                    "**/*.json",
+                    "**/*.txt",
+                ],
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Shap-E Image-to-3D"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["image", "seed"]
+
+    @classmethod
+    def runtime_availability(cls) -> dict:
+        """Return runtime readiness for this node (GHF1)."""
+        return _check_runtime_availability(
+            node_name=cls.get_title(),
+            supported_platforms=cls.SUPPORTED_PLATFORMS,
+            requires_gpu=False,
+            min_vram_gb=cls.MIN_VRAM_GB,
+            optional_packages=["diffusers"],
+        )
+
+    def requires_gpu(self) -> bool:
+        return False
+
+    async def _get_pipeline(self, context: ProcessingContext):
+        """Load or retrieve the Shap-E image pipeline from ModelManager."""
+        import torch
+        from diffusers import ShapEImg2ImgPipeline
+
+        device = _resolve_device()
+        torch_dtype = torch.float16 if device == "cuda" else torch.float32
+        return await self.load_model(
+            context=context,
+            model_class=ShapEImg2ImgPipeline,
+            model_id="openai/shap-e-img2img",
+            torch_dtype=torch_dtype,
+        )
+
+    async def preload_model(self, context: ProcessingContext):
+        await self._get_pipeline(context)
+
+    async def process(self, context: ProcessingContext) -> Model3DRef:
+        import torch
+
+        if self.image.is_empty():
+            raise InvalidInputError("Input image is required")
+
+        _report_stage(context, self.id, "loading_model")
+        pipeline = await self._get_pipeline(context)
+
+        _report_stage(context, self.id, "preprocessing")
+        # Load input image
+        image_io = await context.asset_to_io(self.image)
+        input_image = _open_pil_image(image_io, mode="RGB")
+
+        device = str(pipeline.device)
+
+        # Set seed – generator device must be "cpu" for MPS pipelines
+        gen_device = "cpu" if device.startswith("mps") else device
+        seed = _resolve_seed(self.seed)
+        generator = torch.Generator(device=gen_device).manual_seed(seed)
+
+        _report_stage(context, self.id, "inference")
+        # Generate
+        images = pipeline(
+            input_image,
+            guidance_scale=self.guidance_scale,
+            num_inference_steps=self.num_inference_steps,
+            frame_size=self.frame_size,
+            generator=generator,
+            output_type="mesh",
+        ).images
+
+        if not images:
+            raise InferenceError("No 3D model generated")
+
+        mesh = images[0]
+
+        _report_stage(context, self.id, "postprocessing")
+        _cleanup_inference("After ShapE Image-to-3D inference")
+        # Export to GLB
+        import trimesh
+
+        tri_mesh = trimesh.Trimesh(
+            vertices=mesh.verts.cpu().numpy(),
+            faces=mesh.faces.cpu().numpy(),
+        )
+
+        return await _finalize_3d_output(
+            context,
+            mesh=tri_mesh,
+            source_model="openai/shap-e-img2img",
+            node_id=self.id,
+            name_prefix="shap_e_img",
+            seed=seed,
+        )
+
+
+class Hunyuan3D(HuggingFacePipelineNode):
+    """
+    Generate 3D meshes from images using Tencent Hunyuan3D-2 or 2.1.
+    3d, generation, image-to-3d, hunyuan3d, mesh, local, high-quality
+
+    Use cases:
+    - Generate 3D models from images locally
+    - Create 3D assets from product photos or concept art
+    - Convert single images to 3D meshes
+    - Prototype 3D content without API costs
+
+    Produces untextured meshes (shape only). Use external tools for texturing.
+
+    **Platforms:** Linux+CUDA, Windows+CUDA. Installable on macOS but does not run.
+
+    **Requirements:** hy3dgen>=2.0.2 package, torch with CUDA.
+    First run downloads ~5GB model (shape-only, not full repo).
+    Standard/2.1 models need ~6–8GB VRAM, mini needs ~5GB. Use low_vram_mode on constrained GPUs.
+
+    Models: https://huggingface.co/tencent/Hunyuan3D-2
+            https://huggingface.co/tencent/Hunyuan3D-2.1
+    """
+
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 5  # mini variant; 2.1 needs ~8GB
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 8.0  # 2.1 default; 2.0 standard ~5GB
+    license_warning: ClassVar[str | None] = (
+        "Tencent Hunyuan3D License — non-commercial use only. "
+        "See https://huggingface.co/tencent/Hunyuan3D-2/blob/main/LICENSE"
+    )
+    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "windows"]
+    INSTALL_HINT: ClassVar[str | None] = (
+        "Install with: pip install 'nodetool-huggingface[hunyuan3d]'"
+    )
+
+    class ModelVariant(str, Enum):
+        STANDARD = "standard"
+        MINI = "mini"
+        V2_1 = "v2_1"
+
+    class OutputFormat(str, Enum):
+        GLB = "glb"
+        OBJ = "obj"
+
+    # Mapping from variant enum to HuggingFace repo and subfolder.
+    # vae_subfolder: present when the VAE is a separate subfolder (2.1+).
+    VARIANT_CONFIG: ClassVar[dict[str, dict[str, str]]] = {
+        "standard": {
+            "repo_id": "tencent/Hunyuan3D-2",
+            "subfolder": "hunyuan3d-dit-v2-0",
+        },
+        "mini": {
+            "repo_id": "tencent/Hunyuan3D-2mini",
+            "subfolder": "hunyuan3d-dit-v2-mini",
+        },
+        "v2_1": {
+            "repo_id": "tencent/Hunyuan3D-2.1",
+            "subfolder": "hunyuan3d-dit-v2-1",
+            "vae_subfolder": "hunyuan3d-vae-v2-1",
+        },
+    }
+
+    image: ImageRef = Field(
+        default=ImageRef(),
+        description="Input image to convert to 3D",
+    )
+    model_variant: ModelVariant = Field(
+        default=ModelVariant.V2_1,
+        description="Model variant. V2.1 (3.3B params, best quality, ~8GB VRAM), Standard v2.0 (1.1B params, ~6GB VRAM), or Mini v2.0 (0.6B params, ~5GB VRAM, fastest).",
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        ge=10,
+        le=100,
+        description="Number of denoising steps. More steps = better quality but slower.",
+    )
+    guidance_scale: float = Field(
+        default=5.0,
+        ge=1.0,
+        le=20.0,
+        description="How strongly to follow the input. Higher = more adherence.",
+    )
+    octree_resolution: int = Field(
+        default=384,
+        ge=64,
+        le=512,
+        description="Resolution of the octree for mesh extraction. Higher = more detail.",
+    )
+    low_vram_mode: bool = Field(
+        default=False,
+        description="Enable CPU offloading for GPUs with less than 8GB VRAM.",
+    )
+    output_format: OutputFormat = Field(
+        default=OutputFormat.GLB,
+        description="Output format for the 3D model. GLB is recommended; OBJ files are not previewable in the canvas viewer.",
+    )
+    seed: int = Field(
+        default=-1,
+        ge=-1,
+        description="Random seed for reproducibility. -1 for random.",
+    )
+
+    _loaded_variant: str | None = None
+
+    @staticmethod
+    def _cache_key_for_variant(variant: str) -> str:
+        config = Hunyuan3D.VARIANT_CONFIG[variant]
+        return f"hunyuan3d_{config['repo_id']}_{config['subfolder']}"
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            # 2.1: separate VAE subfolder; shape DiT is 3.3B params (~8GB download)
+            HuggingFaceModel(
+                repo_id="tencent/Hunyuan3D-2.1",
+                allow_patterns=[
+                    "config.json",
+                    "hunyuan3d-dit-v2-1/*.yaml",
+                    "hunyuan3d-dit-v2-1/*.safetensors",
+                    "hunyuan3d-vae-v2-1/*.yaml",
+                    "hunyuan3d-vae-v2-1/*.safetensors",
+                ],
+            ),
+            # 2.0 standard: bundled VAE; ~5GB download
+            HuggingFaceModel(
+                repo_id="tencent/Hunyuan3D-2",
+                allow_patterns=[
+                    "config.json",
+                    "hunyuan3d-dit-v2-0/*.yaml",
+                    "hunyuan3d-dit-v2-0/*.safetensors",
+                ],
+            ),
+            HuggingFaceModel(
+                repo_id="tencent/Hunyuan3D-2mini",
+                allow_patterns=[
+                    "config.json",
+                    "hunyuan3d-dit-v2-mini/*.yaml",
+                    "hunyuan3d-dit-v2-mini/*.safetensors",
+                ],
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Hunyuan3D"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["image", "model_variant", "output_format", "seed"]
+
+    @classmethod
+    def runtime_availability(cls) -> dict:
+        """Return runtime readiness for this node (GHF1)."""
+        return _check_runtime_availability(
+            node_name=cls.get_title(),
+            supported_platforms=cls.SUPPORTED_PLATFORMS,
+            requires_gpu=True,
+            min_vram_gb=cls.MIN_VRAM_GB,
+            optional_packages=["hy3dgen"],
+        )
+
+    def requires_gpu(self) -> bool:
+        return True
+
+    def _ensure_model_downloaded(self, variant: str) -> str:
+        """
+        Pre-download only the shape-generation files to avoid downloading the
+        full repo (which includes paint/texture models). Returns the repo_id.
+        """
+        from huggingface_hub import snapshot_download
+
+        config = self.VARIANT_CONFIG[variant]
+        repo_id = config["repo_id"]
+        subfolder = config["subfolder"]
+
+        allow_patterns = [
+            "config.json",
+            f"{subfolder}/*",
+        ]
+        # 2.1+ has a separate VAE subfolder; 2.0 bundles the VAE in the DiT dir
+        if "vae_subfolder" in config:
+            allow_patterns.append(f"{config['vae_subfolder']}/*")
+
+        _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
+        revision = _model_revision(repo_id)
+        snapshot_download(
+            repo_id=repo_id,
+            revision=revision,
+            allow_patterns=allow_patterns,
+        )
+        return repo_id
+
+    def _load_pipeline(self, variant: str):
+        """Load or retrieve the Hunyuan3D pipeline for the given variant."""
+        import time as _time
+        from nodetool.ml.core.model_manager import ModelManager
+
+        config = self.VARIANT_CONFIG[variant]
+        cache_key = self._cache_key_for_variant(variant)
+        cached = ModelManager.get_model(cache_key)
+        if cached is not None:
+            _log_cache_status(cache_key, is_cached=True, node_name=self.get_title())
+            self._loaded_variant = variant
+            return
+
+        _log_cache_status(cache_key, is_cached=False, node_name=self.get_title())
+        t0 = _time.monotonic()
+        from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
+
+        # Pre-download only shape files to avoid 75GB full repo download
+        self._ensure_model_downloaded(variant)
+
+        if self.license_warning:
+            log.info("License notice: %s", self.license_warning)
+
+        # Now load the pipeline - hy3dgen will find the cached files
+        revision = _model_revision(config["repo_id"])
+        pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
+            config["repo_id"],
+            subfolder=config["subfolder"],
+            revision=revision,
+            use_safetensors=True,
+            variant="fp16",
+        )
+
+        # Enable CPU offloading if requested
+        if self.low_vram_mode:
+            try:
+                # hy3dgen pipeline lacks the `components` property that
+                # enable_model_cpu_offload() expects (upstream bug).
+                if not hasattr(pipeline, "components"):
+                    pipeline.components = {
+                        "conditioner": pipeline.conditioner,
+                        "model": pipeline.model,
+                        "vae": pipeline.vae,
+                        "scheduler": pipeline.scheduler,
+                        "image_processor": pipeline.image_processor,
+                    }
+                pipeline.enable_model_cpu_offload()
+            except Exception as exc:
+                log.warning(
+                    "low_vram_mode unavailable for this hy3dgen version "
+                    "(enable_model_cpu_offload failed: %s). Continuing without offloading.",
+                    exc,
+                )
+
+        ModelManager.set_model(self.id, cache_key, pipeline)
+        _log_cache_status(
+            cache_key,
+            is_cached=False,
+            node_name=self.get_title(),
+            load_time_s=_time.monotonic() - t0,
+        )
+        self._loaded_variant = variant
+
+    async def preload_model(self, context: ProcessingContext):
+        try:
+            from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline  # noqa: F401
+        except ImportError:
+            return
+        self._load_pipeline(self.model_variant.value)
+
+    async def process(self, context: ProcessingContext) -> Model3DRef:
+        import torch
+        import os
+
+        os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
+        _warn_platform(self.SUPPORTED_PLATFORMS, self.get_title())
+        _warn_vram(self.MIN_VRAM_GB, self.get_title())
+
+        if self.image.is_empty():
+            raise InvalidInputError("Input image is required")
+
+        try:
+            from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline  # noqa: F401
+        except ImportError:
+            raise MissingDependencyError(
+                "Hunyuan3D requires the hy3dgen package (>=2.0.2). "
+                "Install with: pip install hy3dgen>=2.0.2",
+                install_hint=self.INSTALL_HINT,
+            )
+
+        _report_stage(context, self.id, "preprocessing")
+        # Load input image
+        image_io = await context.asset_to_io(self.image)
+        input_image = _open_pil_image(image_io, mode="RGB")
+
+        _report_stage(context, self.id, "loading_model")
+        # Load or reload pipeline if variant changed
+        variant = self.model_variant.value
+        if self._loaded_variant != variant:
+            self._load_pipeline(variant)
+
+        from nodetool.ml.core.model_manager import ModelManager
+
+        pipeline = ModelManager.get_model(self._cache_key_for_variant(variant))
+        if pipeline is None:
+            self._load_pipeline(variant)
+            pipeline = ModelManager.get_model(self._cache_key_for_variant(variant))
+        assert pipeline is not None, "Pipeline not initialized"
+
+        _report_stage(context, self.id, "inference")
+        # Set seed using per-call generator (avoids leaking global RNG state)
+        seed = _resolve_seed(self.seed)
+        generator = torch.Generator(
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        ).manual_seed(seed)
+
+        # Generate 3D mesh
+        mesh = pipeline(
+            image=input_image,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            octree_resolution=self.octree_resolution,
+            generator=generator,
+        )[0]
+
+        _report_stage(context, self.id, "postprocessing")
+        _cleanup_inference("After Hunyuan3D inference")
+        # Export mesh to bytes
+        format_str = self.output_format.value
+
+        return await _finalize_3d_output(
+            context,
+            mesh=mesh,
+            source_model=self.VARIANT_CONFIG[variant]["repo_id"],
+            node_id=self.id,
+            name_prefix="hunyuan3d",
+            format=format_str,
+            seed=seed,
+        )
+
+
+class StableFast3D(HuggingFacePipelineNode):
+    """
+    Generate textured 3D meshes from images in under 1 second using Stability AI SF3D.
+    3d, generation, image-to-3d, sf3d, mesh, local, fast, textured
+
+    Use cases:
+    - Ultra-fast 3D asset generation from images
+    - Create game-ready 3D assets with textures
+    - Generate UV-unwrapped meshes with materials
+    - Real-time 3D reconstruction workflows
+
+    **Platforms:** Linux+CUDA, Windows+CUDA. macOS Metal experimental (untested, slow).
+
+    **Requirements:** sf3d package, rembg, torch. CUDA recommended; Metal/CPU experimental.
+    First run downloads ~1GB model. Needs ~6GB VRAM on CUDA.
+    Generates textured meshes with UV maps, normal maps, and PBR materials.
+
+    Model: https://huggingface.co/stabilityai/stable-fast-3d
+    License: Free for <$1M revenue, enterprise license required above.
+    """
+
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 6
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 1.0
+    license_warning: ClassVar[str | None] = (
+        "Stability AI Community License — free under $1 M annual revenue, "
+        "enterprise license required above. "
+        "See https://huggingface.co/stabilityai/stable-fast-3d/blob/main/LICENSE.md"
+    )
+    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "macos", "windows"]
+    INSTALL_HINT: ClassVar[str | None] = (
+        "Manual install required (terminal). The `sf3d` package is not on PyPI; "
+        "it builds C++/CUDA extensions (`texture_baker`, `uv_unwrapper`) at install "
+        "time and needs a working compiler toolchain (and the CUDA toolkit on "
+        "Linux/Windows for GPU support). "
+        "Run: `pip install -r requirements/sf3d.txt` from the nodetool-huggingface "
+        "repo. See https://github.com/Stability-AI/stable-fast-3d for upstream docs."
+    )
+
+    class OutputFormat(str, Enum):
+        GLB = "glb"
+        OBJ = "obj"
+
+    image: ImageRef = Field(
+        default=ImageRef(),
+        description="Input image to convert to 3D",
+    )
+    foreground_ratio: float = Field(
+        default=0.85,
+        ge=0.5,
+        le=1.0,
+        description="Ratio of foreground size to image size after background removal.",
+    )
+    texture_resolution: int = Field(
+        default=1024,
+        ge=256,
+        le=2048,
+        description="Resolution of the texture atlas.",
+    )
+    remesh: bool = Field(
+        default=False,
+        description="Whether to remesh the output for cleaner topology.",
+    )
+    output_format: OutputFormat = Field(
+        default=OutputFormat.GLB,
+        description="Output format for the 3D model. GLB is recommended; OBJ files are not previewable in the canvas viewer.",
+    )
+    low_vram_mode: bool = Field(
+        default=False,
+        description="Enable CPU offloading for GPUs with less than 8GB VRAM.",
+    )
+
+    CACHE_KEY: ClassVar[str] = "stabilityai/stable-fast-3d_SF3D"
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HuggingFaceModel(
+                repo_id="stabilityai/stable-fast-3d",
+                allow_patterns=[
+                    "**/*.safetensors",
+                    "**/*.yaml",
+                    "**/*.json",
+                    "**/*.txt",
+                ],
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "SF3D (Stable Fast 3D)"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["image", "output_format"]
+
+    @classmethod
+    def runtime_availability(cls) -> dict:
+        """Return runtime readiness for this node (GHF1)."""
+        return _check_runtime_availability(
+            node_name=cls.get_title(),
+            supported_platforms=cls.SUPPORTED_PLATFORMS,
+            requires_gpu=False,
+            min_vram_gb=cls.MIN_VRAM_GB,
+            optional_packages=["sf3d", "rembg"],
+        )
+
+    def requires_gpu(self) -> bool:
+        return False
+
+    def _load_model(self):
+        """Load or retrieve the SF3D model from cache."""
+        import time as _time
+        from nodetool.ml.core.model_manager import ModelManager
+
+        device = _resolve_device()
+        if device != "cuda":
+            log.warning(
+                "SF3D running on %s — experimental, may be slow or fail. "
+                "CUDA is the only fully supported device.",
+                device,
+            )
+
+        cached = ModelManager.get_model(self.CACHE_KEY)
+        if cached is not None:
+            _log_cache_status(
+                self.CACHE_KEY, is_cached=True, node_name=self.get_title()
+            )
+            return
+
+        _log_cache_status(self.CACHE_KEY, is_cached=False, node_name=self.get_title())
+        t0 = _time.monotonic()
+        from sf3d.system import SF3D
+
+        _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
+        if self.license_warning:
+            log.info("License notice: %s", self.license_warning)
+
+        model = SF3D.from_pretrained(
+            "stabilityai/stable-fast-3d",
+            config_name="config.yaml",
+            weight_name="model.safetensors",
+        )
+        model.to(device)
+        model.eval()
+
+        # Enable CPU offloading if requested
+        if self.low_vram_mode and hasattr(model, "enable_model_cpu_offload"):
+            try:
+                model.enable_model_cpu_offload()
+            except Exception as exc:
+                log.warning(
+                    "low_vram_mode: enable_model_cpu_offload failed (%s). "
+                    "Continuing without offloading.",
+                    exc,
+                )
+
+        ModelManager.set_model(self.id, self.CACHE_KEY, model)
+        _log_cache_status(
+            self.CACHE_KEY,
+            is_cached=False,
+            node_name=self.get_title(),
+            load_time_s=_time.monotonic() - t0,
+        )
+
+    async def preload_model(self, context: ProcessingContext):
+        try:
+            from sf3d.system import SF3D  # noqa: F401
+        except ImportError:
+            return
+        self._load_model()
+
+    async def process(self, context: ProcessingContext) -> Model3DRef:
+        import torch
+        import os
+
+        os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
+        _warn_platform(self.SUPPORTED_PLATFORMS, self.get_title())
+        _warn_vram(self.MIN_VRAM_GB, self.get_title())
+
+        if self.image.is_empty():
+            raise InvalidInputError("Input image is required")
+
+        try:
+            from sf3d.utils import remove_background, resize_foreground
+            import rembg
+        except ImportError:
+            raise MissingDependencyError(
+                "SF3D requires the sf3d package. "
+                "Install from: https://github.com/Stability-AI/stable-fast-3d",
+                install_hint=self.INSTALL_HINT,
+            )
+
+        _report_stage(context, self.id, "preprocessing")
+        # Load input image
+        image_io = await context.asset_to_io(self.image)
+        input_image = _open_pil_image(image_io, mode="RGBA")
+
+        _report_stage(context, self.id, "loading_model")
+        # Load model from ModelManager
+        from nodetool.ml.core.model_manager import ModelManager
+
+        model = ModelManager.get_model(self.CACHE_KEY)
+        if model is None:
+            self._load_model()
+            model = ModelManager.get_model(self.CACHE_KEY)
+        assert model is not None, "SF3D model not initialized"
+
+        # Remove background and resize (cache rembg session to avoid re-loading U²-Net)
+        rembg_cache_key = "rembg_u2net_session"
+        rembg_session = ModelManager.get_model(rembg_cache_key)
+        if rembg_session is None:
+            rembg_session = rembg.new_session()
+            ModelManager.set_model(self.id, rembg_cache_key, rembg_session)
+        image = remove_background(input_image, rembg_session)
+        image = resize_foreground(image, self.foreground_ratio)
+
+        _report_stage(context, self.id, "inference")
+        # Generate 3D mesh
+        device = _resolve_device()
+        # MPS only supports float16 autocast; CUDA uses bfloat16 for best quality
+        autocast_dtype = torch.float16 if device == "mps" else torch.bfloat16
+        with torch.no_grad():
+            with torch.autocast(device_type=device, dtype=autocast_dtype):
+                mesh, _ = model.run_image(
+                    [image],
+                    bake_resolution=self.texture_resolution,
+                    remesh="triangle" if self.remesh else "none",
+                )
+
+        _report_stage(context, self.id, "postprocessing")
+        _cleanup_inference("After SF3D inference")
+        # Export mesh
+        format_str = self.output_format.value
+        if isinstance(mesh, list):
+            mesh = mesh[0]
+
+        return await _finalize_3d_output(
+            context,
+            mesh=mesh,
+            source_model="stabilityai/stable-fast-3d",
+            node_id=self.id,
+            name_prefix="sf3d",
+            format=format_str,
+            include_normals=True,
+            has_texture=True,
+            center=False,  # SF3D handles its own coordinate space
+        )
+
+
+class TripoSR(HuggingFacePipelineNode):
+    """
+    Generate 3D meshes from images using Stability AI TripoSR.
+    3d, generation, image-to-3d, triposr, mesh, local, fast
+
+    Use cases:
+    - Fast 3D reconstruction from single images
+    - Generate 3D models from concept art
+    - Create 3D assets for games and visualization
+    - Prototype 3D content quickly
+
+    **Platforms:** Linux+CUDA, Windows+CUDA. macOS CPU experimental (slow, untested).
+
+    **Requirements:** tsr package (TripoSR), rembg, torch. CUDA recommended; CPU/MPS experimental.
+    First run downloads ~1GB model. Needs ~6GB VRAM on CUDA.
+
+    Model: https://huggingface.co/stabilityai/TripoSR
+    License: MIT
+    """
+
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 6
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 1.0
+    license_warning: ClassVar[str | None] = None  # MIT
+    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "macos", "windows"]
+    INSTALL_HINT: ClassVar[str | None] = (
+        "Manual install required (terminal). The `tsr` package is not on PyPI "
+        "and depends on `torchmcubes`, a C++ extension that needs a compiler "
+        "toolchain (and CUDA for fast GPU marching cubes). "
+        "Run: `pip install -r requirements/triposr.txt` from the "
+        "nodetool-huggingface repo. "
+        "See https://github.com/VAST-AI-Research/TripoSR for upstream docs."
+    )
+
+    class OutputFormat(str, Enum):
+        GLB = "glb"
+        OBJ = "obj"
+
+    image: ImageRef = Field(
+        default=ImageRef(),
+        description="Input image to convert to 3D",
+    )
+    foreground_ratio: float = Field(
+        default=0.85,
+        ge=0.5,
+        le=1.0,
+        description="Ratio of foreground size to image size after background removal.",
+    )
+    mc_resolution: int = Field(
+        default=256,
+        ge=64,
+        le=512,
+        description="Marching cubes resolution for mesh extraction. Higher = more detail.",
+    )
+    output_format: OutputFormat = Field(
+        default=OutputFormat.GLB,
+        description="Output format for the 3D model. GLB is recommended; OBJ files are not previewable in the canvas viewer.",
+    )
+
+    CACHE_KEY: ClassVar[str] = "stabilityai/TripoSR_TSR"
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HuggingFaceModel(
+                repo_id="stabilityai/TripoSR",
+                allow_patterns=["**/*.ckpt", "**/*.yaml", "**/*.json", "**/*.txt"],
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "TripoSR"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["image", "output_format"]
+
+    @classmethod
+    def runtime_availability(cls) -> dict:
+        """Return runtime readiness for this node (GHF1)."""
+        return _check_runtime_availability(
+            node_name=cls.get_title(),
+            supported_platforms=cls.SUPPORTED_PLATFORMS,
+            requires_gpu=False,
+            min_vram_gb=cls.MIN_VRAM_GB,
+            optional_packages=["tsr", "rembg"],
+        )
+
+    def requires_gpu(self) -> bool:
+        return False
+
+    def _load_model(self):
+        """Load or retrieve the TripoSR model from cache."""
+        import time as _time
+        from nodetool.ml.core.model_manager import ModelManager
+
+        device = _resolve_device()
+        if device != "cuda":
+            log.warning(
+                "TripoSR running on %s — experimental, may be slow or fail. "
+                "CUDA is the only fully supported device.",
+                device,
+            )
+        cached = ModelManager.get_model(self.CACHE_KEY)
+        if cached is not None:
+            _log_cache_status(
+                self.CACHE_KEY, is_cached=True, node_name=self.get_title()
+            )
+            return
+
+        _log_cache_status(self.CACHE_KEY, is_cached=False, node_name=self.get_title())
+        t0 = _time.monotonic()
+        from tsr.system import TSR
+
+        _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
+        model = TSR.from_pretrained(
+            "stabilityai/TripoSR",
+            config_name="config.yaml",
+            weight_name="model.ckpt",
+        )
+        model.to(device)
+        ModelManager.set_model(self.id, self.CACHE_KEY, model)
+        _log_cache_status(
+            self.CACHE_KEY,
+            is_cached=False,
+            node_name=self.get_title(),
+            load_time_s=_time.monotonic() - t0,
+        )
+
+    async def preload_model(self, context: ProcessingContext):
+        try:
+            from tsr.system import TSR  # noqa: F401
+        except ImportError:
+            return
+        self._load_model()
+
+    async def process(self, context: ProcessingContext) -> Model3DRef:
+        import torch
+        import os
+        import numpy as np
+        from PIL import Image
+
+        os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
+        _warn_platform(self.SUPPORTED_PLATFORMS, self.get_title())
+        _warn_vram(self.MIN_VRAM_GB, self.get_title())
+
+        if self.image.is_empty():
+            raise InvalidInputError("Input image is required")
+
+        try:
+            from tsr.utils import remove_background, resize_foreground
+            import rembg
+        except ImportError:
+            raise MissingDependencyError(
+                "TripoSR requires the tsr package. "
+                "Install from: https://github.com/VAST-AI-Research/TripoSR",
+                install_hint=self.INSTALL_HINT,
+            )
+
+        _report_stage(context, self.id, "preprocessing")
+        # Load input image
+        image_io = await context.asset_to_io(self.image)
+        input_image = _open_pil_image(image_io, mode="RGBA")
+
+        device = _resolve_device()
+
+        _report_stage(context, self.id, "loading_model")
+        # Load model from ModelManager
+        from nodetool.ml.core.model_manager import ModelManager
+
+        model = ModelManager.get_model(self.CACHE_KEY)
+        if model is None:
+            self._load_model()
+            model = ModelManager.get_model(self.CACHE_KEY)
+        assert model is not None, "TripoSR model not initialized"
+
+        # Remove background and resize (cache rembg session to avoid re-loading U²-Net)
+        rembg_cache_key = "rembg_u2net_session"
+        rembg_session = ModelManager.get_model(rembg_cache_key)
+        if rembg_session is None:
+            rembg_session = rembg.new_session()
+            ModelManager.set_model(self.id, rembg_cache_key, rembg_session)
+        image = remove_background(input_image, rembg_session)
+        image = resize_foreground(image, self.foreground_ratio)
+
+        # Convert to proper format
+        image = np.array(image).astype(np.float32) / 255.0
+        image = image[:, :, :3] * image[:, :, 3:4] + (1 - image[:, :, 3:4]) * 0.5
+        image = Image.fromarray((image * 255.0).astype(np.uint8))
+
+        _report_stage(context, self.id, "inference")
+        # Generate 3D mesh
+        with torch.no_grad():
+            scene_codes = model([image], device=device)
+            meshes = model.extract_mesh(
+                scene_codes, True, resolution=self.mc_resolution
+            )
+
+        if not meshes:
+            raise InferenceError("No mesh generated by TripoSR")
+
+        mesh = meshes[0]
+
+        _report_stage(context, self.id, "postprocessing")
+        _cleanup_inference("After TripoSR inference")
+        # Export mesh
+        format_str = self.output_format.value
+
+        return await _finalize_3d_output(
+            context,
+            mesh=mesh,
+            source_model="stabilityai/TripoSR",
+            node_id=self.id,
+            name_prefix="triposr",
+            format=format_str,
+        )
+
+
+class Trellis2(HuggingFacePipelineNode):
+    """
+    Generate high-fidelity 3D models from images using Microsoft TRELLIS.2-4B.
+    3d, generation, image-to-3d, trellis, mesh, local, high-quality, PBR, o-voxel
+
+    Use cases:
+    - Generate state-of-the-art 3D models from single images
+    - Create production-ready 3D assets with PBR materials
+    - Handle complex topology including open surfaces and non-manifold geometry
+    - Generate assets with transparency/translucency support
+
+    **Platforms:** Linux+CUDA only, 24 GB+ VRAM.
+
+    **Note:** Requires trellis2, o_voxel, torch, and 24GB+ GPU memory.
+    Currently only tested on Linux systems.
+    First run will download the model (~10GB+).
+
+    Model: https://huggingface.co/microsoft/TRELLIS.2-4B
+    Paper: https://arxiv.org/abs/2512.14692
+    """
+
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 24
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 10.0
+    license_warning: ClassVar[str | None] = (
+        "Microsoft Research License — non-commercial use only. "
+        "See https://huggingface.co/microsoft/TRELLIS.2-4B/blob/main/LICENSE"
+    )
+    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux"]
+    INSTALL_HINT: ClassVar[str | None] = (
+        "Manual install required (terminal). Linux + CUDA only. "
+        "Neither `trellis2` nor `o_voxel` is on PyPI; `o_voxel` builds CUDA C++ "
+        "extensions at install time and needs the CUDA toolkit (`nvcc`) plus a "
+        "C++ compiler. A 24 GB+ GPU is required at runtime. "
+        "Run: `pip install -r requirements/trellis2.txt` from the "
+        "nodetool-huggingface repo. "
+        "See https://github.com/microsoft/TRELLIS.2 for upstream docs."
+    )
+
+    class Resolution(str, Enum):
+        RES_512 = "512"  # ~3 seconds on H100
+        RES_1024 = "1024"  # ~17 seconds on H100
+        RES_1536 = "1536"  # ~60 seconds on H100
+
+    image: ImageRef = Field(
+        default=ImageRef(),
+        description="Input image to convert to 3D",
+    )
+    resolution: Resolution = Field(
+        default=Resolution.RES_1024,
+        description="Voxel grid resolution. Higher = more detail but slower. 512 (~3s), 1024 (~17s), 1536 (~60s) on H100.",
+    )
+    decimation_target: int = Field(
+        default=1000000,
+        ge=10000,
+        le=16777216,
+        description="Target number of faces for mesh decimation. Lower = smaller file size.",
+    )
+    texture_size: int = Field(
+        default=4096,
+        ge=512,
+        le=8192,
+        description="Texture resolution for PBR materials.",
+    )
+    remesh: bool = Field(
+        default=True,
+        description="Whether to remesh the output for cleaner topology.",
+    )
+    seed: int = Field(
+        default=-1,
+        ge=-1,
+        description="Random seed for reproducibility. -1 for random.",
+    )
+    low_vram_mode: bool = Field(
+        default=False,
+        description="Reserved for future use. TRELLIS.2 upstream does not currently support CPU offloading.",
+    )
+
+    CACHE_KEY: ClassVar[str] = "microsoft/TRELLIS.2-4B_Trellis2"
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HuggingFaceModel(
+                repo_id="microsoft/TRELLIS.2-4B",
+                allow_patterns=[
+                    "**/*.safetensors",
+                    "**/*.json",
+                    "**/*.txt",
+                    "*.json",
+                    "**/*.bin",
+                ],
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "TRELLIS.2-4B"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["image", "resolution", "seed"]
+
+    @classmethod
+    def runtime_availability(cls) -> dict:
+        """Return runtime readiness for this node (GHF1)."""
+        return _check_runtime_availability(
+            node_name=cls.get_title(),
+            supported_platforms=cls.SUPPORTED_PLATFORMS,
+            requires_gpu=True,
+            min_vram_gb=cls.MIN_VRAM_GB,
+            optional_packages=["trellis2", "o_voxel"],
+        )
+
+    def requires_gpu(self) -> bool:
+        return True
+
+    def _load_pipeline(self):
+        """Load or retrieve the Trellis2 pipeline from cache."""
+        import time as _time
+        from nodetool.ml.core.model_manager import ModelManager
+
+        device = _resolve_device()
+        if device != "cuda":
+            raise UnsupportedPlatformError(
+                "TRELLIS.2 requires a CUDA-capable GPU with at least 24GB memory"
+            )
+
+        cached = ModelManager.get_model(self.CACHE_KEY)
+        if cached is not None:
+            _log_cache_status(
+                self.CACHE_KEY, is_cached=True, node_name=self.get_title()
+            )
+            return
+
+        _log_cache_status(self.CACHE_KEY, is_cached=False, node_name=self.get_title())
+        t0 = _time.monotonic()
+        from trellis2.pipelines import Trellis2ImageTo3DPipeline
+
+        _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
+        if self.license_warning:
+            log.info("License notice: %s", self.license_warning)
+
+        pipeline = Trellis2ImageTo3DPipeline.from_pretrained("microsoft/TRELLIS.2-4B")
+        pipeline.cuda()
+
+        if self.low_vram_mode:
+            log.warning(
+                "low_vram_mode is not supported by TRELLIS.2 upstream. "
+                "The field is exposed for forward compatibility but has no "
+                "effect in the current version."
+            )
+
+        ModelManager.set_model(self.id, self.CACHE_KEY, pipeline)
+        _log_cache_status(
+            self.CACHE_KEY,
+            is_cached=False,
+            node_name=self.get_title(),
+            load_time_s=_time.monotonic() - t0,
+        )
+
+    async def preload_model(self, context: ProcessingContext):
+        try:
+            from trellis2.pipelines import Trellis2ImageTo3DPipeline  # noqa: F401
+            import o_voxel  # noqa: F401
+        except ImportError:
+            return
+        self._load_pipeline()
+
+    async def process(self, context: ProcessingContext) -> Model3DRef:
+        import torch
+        import os
+
+        # Enable OpenEXR support for environment maps (optional but recommended)
+        os.environ.setdefault("OPENCV_IO_ENABLE_OPENEXR", "1")
+        os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
+        _warn_platform(self.SUPPORTED_PLATFORMS, self.get_title())
+        _warn_vram(self.MIN_VRAM_GB, self.get_title())
+
+        if self.image.is_empty():
+            raise InvalidInputError("Input image is required")
+
+        _report_stage(context, self.id, "preprocessing")
+        # Load input image
+        image_io = await context.asset_to_io(self.image)
+        input_image = _open_pil_image(image_io, mode="RGB")
+
+        try:
+            import o_voxel  # noqa: F401
+        except ImportError:
+            raise MissingDependencyError(
+                "TRELLIS.2 requires the trellis2 and o_voxel packages. "
+                "See https://github.com/microsoft/TRELLIS.2 for installation instructions.",
+                install_hint=self.INSTALL_HINT,
+            )
+
+        _report_stage(context, self.id, "loading_model")
+        from nodetool.ml.core.model_manager import ModelManager
+
+        pipeline = ModelManager.get_model(self.CACHE_KEY)
+        if pipeline is None:
+            self._load_pipeline()
+            pipeline = ModelManager.get_model(self.CACHE_KEY)
+        assert pipeline is not None, "Trellis2 pipeline not initialized"
+
+        _report_stage(context, self.id, "inference")
+        # Set seed using per-call generator (avoids leaking global RNG state)
+        seed = _resolve_seed(self.seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+
+        # Generate 3D model
+        # The pipeline returns a list of meshes
+        meshes = pipeline.run(input_image, resolution=int(self.resolution.value))
+
+        if not meshes:
+            raise InferenceError("No mesh generated by TRELLIS.2")
+
+        mesh = meshes[0]
+
+        # Simplify if needed (nvdiffrast limit is 16M faces)
+        if hasattr(mesh, "simplify"):
+            mesh.simplify(min(self.decimation_target, 16777216))
+
+        _report_stage(context, self.id, "postprocessing")
+        _cleanup_inference("After Trellis2 inference")
+        # Export to GLB using o_voxel
+        try:
+            glb = o_voxel.postprocess.to_glb(
+                vertices=mesh.vertices,
+                faces=mesh.faces,
+                attr_volume=mesh.attrs,
+                coords=mesh.coords,
+                attr_layout=mesh.layout,
+                voxel_size=mesh.voxel_size,
+                aabb=[[-0.5, -0.5, -0.5], [0.5, 0.5, 0.5]],
+                decimation_target=self.decimation_target,
+                texture_size=self.texture_size,
+                remesh=self.remesh,
+                remesh_band=1,
+                remesh_project=0,
+                verbose=False,
+            )
+
+            # Export GLB to bytes
+            buffer = io.BytesIO()
+            glb.export(buffer, extension_webp=True)
+            buffer.seek(0)
+            raw_bytes = buffer.read()
+
+            return await _finalize_3d_output(
+                context,
+                mesh=mesh,
+                source_model="microsoft/TRELLIS.2-4B",
+                node_id=self.id,
+                name_prefix="trellis2",
+                seed=seed,
+                has_texture=True,
+                center=False,  # Trellis2 handles its own coordinate space
+                raw_bytes=raw_bytes,
+            )
+        except Exception as e:
+            # Fallback: try basic trimesh export if o_voxel fails
+            try:
+                return await _finalize_3d_output(
+                    context,
+                    mesh=mesh,
+                    source_model="microsoft/TRELLIS.2-4B",
+                    node_id=self.id,
+                    name_prefix="trellis2",
+                    seed=seed,
+                )
+            except Exception as fallback_error:
+                raise RuntimeError(
+                    f"Failed to export mesh: {e}. Fallback also failed: {fallback_error}"
+                )
+
+
+class TripoSG(HuggingFacePipelineNode):
+    """
+    Generate high-fidelity 3D meshes from images using VAST TripoSG.
+    3d, generation, image-to-3d, triposg, mesh, local, high-fidelity, rectified-flow
+
+    Use cases:
+    - Generate detailed 3D models from single images
+    - Create 3D assets from photos, cartoons, or sketches
+    - Produce meshes with sharp geometric features and fine surface details
+    - Handle complex topology including thin structures
+
+    **Platforms:** Linux+CUDA, Windows+CUDA (build required).
+
+    **Requirements:** CUDA GPU with at least 8GB VRAM.
+    First run downloads ~3GB model weights.
+
+    Model: https://huggingface.co/VAST-AI/TripoSG
+    License: MIT
+    """
+
+    # -- static metadata ---------------------------------------------------
+    MIN_VRAM_GB: ClassVar[int] = 8
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 3.0
+    license_warning: ClassVar[str | None] = None  # MIT
+    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "windows"]
+    INSTALL_HINT: ClassVar[str | None] = (
+        "Install with: pip install 'nodetool-huggingface[triposg]'"
+    )
+
+    image: ImageRef = Field(
+        default=ImageRef(),
+        description="Input image to convert to 3D",
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        ge=10,
+        le=100,
+        description="Number of denoising steps. More steps = better quality but slower.",
+    )
+    guidance_scale: float = Field(
+        default=7.0,
+        ge=1.0,
+        le=20.0,
+        description="Classifier-free guidance scale. Higher = more adherence to input.",
+    )
+    octree_depth: int = Field(
+        default=7,
+        ge=5,
+        le=9,
+        description="Octree depth for mesh extraction. Higher = finer detail but slower. "
+        "7 is a good balance (~30s). 9 gives maximum detail but requires diso for speed.",
+    )
+    max_faces: int = Field(
+        default=-1,
+        ge=-1,
+        le=500000,
+        description="Maximum number of faces in output mesh. -1 for no limit.",
+    )
+    seed: int = Field(
+        default=-1,
+        ge=-1,
+        description="Random seed for reproducibility. -1 for random.",
+    )
+    low_vram_mode: bool = Field(
+        default=False,
+        description="Enable CPU offloading for GPUs with less than 10GB VRAM.",
+    )
+
+    CACHE_KEY: ClassVar[str] = "VAST-AI/TripoSG_Pipeline"
+    RMBG_CACHE_KEY: ClassVar[str] = "briaai/RMBG-1.4_BriaRMBG"
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HuggingFaceModel(
+                repo_id="VAST-AI/TripoSG",
+                allow_patterns=[
+                    "**/*.safetensors",
+                    "**/*.json",
+                    "**/*.txt",
+                    "**/*.bin",
+                ],
+            ),
+            HuggingFaceModel(
+                repo_id="briaai/RMBG-1.4",
+                allow_patterns=["**/*.pth", "**/*.json", "**/*.py"],
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "TripoSG"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["image", "octree_depth", "max_faces", "seed"]
+
+    @classmethod
+    def runtime_availability(cls) -> dict:
+        """Return runtime readiness for this node (GHF1)."""
+        return _check_runtime_availability(
+            node_name=cls.get_title(),
+            supported_platforms=cls.SUPPORTED_PLATFORMS,
+            requires_gpu=True,
+            min_vram_gb=cls.MIN_VRAM_GB,
+            optional_packages=["triposg", "diso"],
+        )
+
+    def requires_gpu(self) -> bool:
+        return True
+
+    def _load_models(self):
+        """Load or retrieve the TripoSG pipeline and RMBG model from cache."""
+        import time as _time
+        import torch
+        from nodetool.ml.core.model_manager import ModelManager
+        from huggingface_hub import snapshot_download
+        from triposg.pipelines.pipeline_triposg import TripoSGPipeline
+        from triposg.briarmbg import BriaRMBG
+
+        device = "cuda"
+
+        # Load RMBG model for background removal
+        if ModelManager.get_model(self.RMBG_CACHE_KEY) is None:
+            _log_cache_status(
+                self.RMBG_CACHE_KEY, is_cached=False, node_name=self.get_title()
+            )
+            _check_disk_space(0.5)  # RMBG is ~0.2 GB
+            rmbg_path = snapshot_download(
+                repo_id="briaai/RMBG-1.4",
+                revision=_model_revision("briaai/RMBG-1.4"),
+            )
+            rmbg_net = BriaRMBG.from_pretrained(rmbg_path).to(device)
+            rmbg_net.eval()
+            ModelManager.set_model(self.id, self.RMBG_CACHE_KEY, rmbg_net)
+        else:
+            _log_cache_status(
+                self.RMBG_CACHE_KEY, is_cached=True, node_name=self.get_title()
+            )
+
+        # Load TripoSG pipeline
+        if ModelManager.get_model(self.CACHE_KEY) is None:
+            _log_cache_status(
+                self.CACHE_KEY, is_cached=False, node_name=self.get_title()
+            )
+            t0 = _time.monotonic()
+            _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
+            triposg_path = snapshot_download(
+                repo_id="VAST-AI/TripoSG",
+                revision=_model_revision("VAST-AI/TripoSG"),
+            )
+            pipeline = TripoSGPipeline.from_pretrained(triposg_path).to(
+                device, torch.float16
+            )
+
+            # Enable CPU offloading if requested
+            if self.low_vram_mode and hasattr(pipeline, "enable_model_cpu_offload"):
+                try:
+                    pipeline.enable_model_cpu_offload()
+                except Exception as exc:
+                    log.warning(
+                        "low_vram_mode: enable_model_cpu_offload failed (%s). "
+                        "Continuing without offloading.",
+                        exc,
+                    )
+
+            ModelManager.set_model(self.id, self.CACHE_KEY, pipeline)
+            _log_cache_status(
+                self.CACHE_KEY,
+                is_cached=False,
+                node_name=self.get_title(),
+                load_time_s=_time.monotonic() - t0,
+            )
+        else:
+            _log_cache_status(
+                self.CACHE_KEY, is_cached=True, node_name=self.get_title()
+            )
+
+    async def preload_model(self, context: ProcessingContext):
+        import torch
+
+        if not torch.cuda.is_available():
+            return
+        self._load_models()
+
+    def _prepare_image(
+        self,
+        img_pil: "Image.Image",
+        rmbg_net: Any,
+        *,
+        device: str = "cuda",
+    ) -> "Image.Image":
+        """Remove background and center-crop the foreground."""
+        import cv2
+        import numpy as np
+        import torch
+        import torch.nn.functional as F
+        import torchvision.transforms as transforms
+        import torchvision.transforms.functional as TF
+        from PIL import Image
+        from skimage.measure import label
+        from skimage.morphology import remove_small_objects
+
+        bg_color = np.array([1.0, 1.0, 1.0])
+        padding_ratio = 0.1
+        img = np.array(img_pil)
+
+        if img.shape[2] == 4:
+            alpha = img[:, :, 3]
+            rgb_image = img[:, :, :3]
+        else:
+            rgb_image = img
+            alpha = None
+
+        height, width = rgb_image.shape[:2]
+        scale = 2000 / max(height, width)
+        if scale < 1:
+            new_size = (int(width * scale), int(height * scale))
+            rgb_image = cv2.resize(rgb_image, new_size, interpolation=cv2.INTER_AREA)
+            if alpha is not None:
+                alpha = cv2.resize(alpha, new_size, interpolation=cv2.INTER_AREA)
+
+        rgb_gpu = (
+            torch.from_numpy(rgb_image).to(device).float().permute(2, 0, 1) / 255.0
+        )
+
+        if alpha is not None:
+            _, alpha = cv2.threshold(alpha, 127, 255, cv2.THRESH_BINARY)
+            alpha_gpu = torch.from_numpy(alpha).to(device).float().unsqueeze(0) / 255.0
+        else:
+            resize_transform = transforms.Resize((1024, 1024), antialias=True)
+            rgb_resized = resize_transform(rgb_gpu)
+            max_val = rgb_resized.flatten().max()
+            if max_val < 1e-3:
+                raise ValueError("Invalid image: pure black")
+
+            rmbg_input = TF.normalize(rgb_resized, [0.5, 0.5, 0.5], [1.0, 1.0, 1.0])
+            result = rmbg_net(rmbg_input.unsqueeze(0))
+            alpha_gpu = result[0][0].squeeze(0)
+            alpha_gpu = transforms.Resize(
+                (rgb_gpu.shape[1], rgb_gpu.shape[2]), antialias=True
+            )(alpha_gpu)
+            ma, mi = alpha_gpu.max(), alpha_gpu.min()
+            alpha_gpu = (alpha_gpu - mi) / (ma - mi)
+
+            alpha_np = (alpha_gpu * 255).to(torch.uint8).squeeze().cpu().numpy()
+            _, alpha_np = cv2.threshold(
+                alpha_np, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+            )
+            labeled = label(alpha_np)
+            cleaned = (remove_small_objects(labeled, min_size=200) > 0).astype(np.uint8)
+            alpha_gpu = torch.from_numpy(cleaned).to(device).float().unsqueeze(0)
+
+        _, binary = cv2.threshold(
+            (alpha_gpu.squeeze().cpu().numpy() * 255).astype(np.uint8),
+            1,
+            255,
+            cv2.THRESH_BINARY,
+        )
+        contours, _ = cv2.findContours(
+            binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+        if not contours:
+            raise ValueError("No foreground found in image")
+        x, y, w, h = cv2.boundingRect(max(contours, key=cv2.contourArea))
+
+        bg = (
+            torch.from_numpy(bg_color)
+            .float()
+            .to(device)
+            .repeat(alpha_gpu.shape[1], alpha_gpu.shape[2], 1)
+            .permute(2, 0, 1)
+        )
+        rgb_gpu = rgb_gpu * alpha_gpu + bg * (1 - alpha_gpu)
+
+        padding_size = [0] * 6
+        if w > h:
+            padding_size[0] = int(w * padding_ratio)
+            padding_size[2] = int(padding_size[0] + (w - h) / 2)
+        else:
+            padding_size[2] = int(h * padding_ratio)
+            padding_size[0] = int(padding_size[2] + (h - w) / 2)
+        padding_size[1] = padding_size[0]
+        padding_size[3] = padding_size[2]
+
+        padded = F.pad(
+            rgb_gpu[:, y : y + h, x : x + w],
+            pad=tuple(padding_size),
+            mode="constant",
+            value=bg_color[0],
+        )
+        result_np = padded.permute(1, 2, 0).cpu().numpy()
+        return Image.fromarray((result_np * 255).astype(np.uint8))
+
+    def _simplify_mesh(self, mesh: "trimesh.Trimesh", n_faces: int):
+        """Reduce mesh face count using quadric edge collapse."""
+        import pymeshlab
+        import trimesh
+
+        if mesh.faces.shape[0] <= n_faces:
+            return mesh
+        ms = pymeshlab.MeshSet()
+        ms.add_mesh(pymeshlab.Mesh(vertex_matrix=mesh.vertices, face_matrix=mesh.faces))
+        ms.meshing_merge_close_vertices()
+        ms.meshing_decimation_quadric_edge_collapse(targetfacenum=n_faces)
+        result = ms.current_mesh()
+        return trimesh.Trimesh(
+            vertices=result.vertex_matrix(), faces=result.face_matrix()
+        )
+
+    async def process(self, context: ProcessingContext) -> Model3DRef:
+        import torch
+        import os
+        import numpy as np
+        import trimesh
+
+        os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
+        _warn_platform(self.SUPPORTED_PLATFORMS, self.get_title())
+        _warn_vram(self.MIN_VRAM_GB, self.get_title())
+
+        if self.image.is_empty():
+            raise InvalidInputError("Input image is required")
+
+        device = _resolve_device()
+        if device != "cuda":
+            raise UnsupportedPlatformError(
+                "TripoSG requires a CUDA-capable GPU with at least 8GB VRAM"
+            )
+
+        _report_stage(context, self.id, "loading_model")
+        # Load models if not already loaded
+        self._load_models()
+
+        from nodetool.ml.core.model_manager import ModelManager
+
+        rmbg_net = ModelManager.get_model(self.RMBG_CACHE_KEY)
+        pipeline = ModelManager.get_model(self.CACHE_KEY)
+        assert rmbg_net is not None, "RMBG model not initialized"
+        assert pipeline is not None, "TripoSG pipeline not initialized"
+
+        _report_stage(context, self.id, "preprocessing")
+        # Load and prepare input image
+        image_io = await context.asset_to_io(self.image)
+        input_image = _open_pil_image(image_io, mode="RGBA")
+        prepared_image = self._prepare_image(input_image, rmbg_net, device=device)
+
+        # Set seed
+        seed = _resolve_seed(self.seed)
+        generator = torch.Generator(device=device).manual_seed(seed)
+
+        # Use flash decoder (diso) if available, fall back to marching cubes
+        try:
+            import diso  # noqa: F401
+
+            use_flash_decoder = True
+        except ImportError:
+            use_flash_decoder = False
+
+        _report_stage(context, self.id, "inference")
+        # Run inference — only pass flash_octree_depth when flash decoder is active (#12)
+        pipeline_kwargs: dict[str, Any] = {
+            "image": prepared_image,
+            "generator": generator,
+            "num_inference_steps": self.num_inference_steps,
+            "guidance_scale": self.guidance_scale,
+            "dense_octree_depth": self.octree_depth - 1,
+            "hierarchical_octree_depth": self.octree_depth,
+            "use_flash_decoder": use_flash_decoder,
+        }
+        if use_flash_decoder:
+            pipeline_kwargs["flash_octree_depth"] = self.octree_depth
+
+        outputs = pipeline(**pipeline_kwargs).samples[0]
+
+        mesh = trimesh.Trimesh(
+            outputs[0].astype(np.float32),
+            np.ascontiguousarray(outputs[1]),
+        )
+
+        _report_stage(context, self.id, "postprocessing")
+        _cleanup_inference("After TripoSG inference")
+
+        # Optionally simplify mesh
+        if self.max_faces > 0:
+            mesh = self._simplify_mesh(mesh, self.max_faces)
+
+        return await _finalize_3d_output(
+            context,
+            mesh=mesh,
+            source_model="VAST-AI/TripoSG",
+            node_id=self.id,
+            name_prefix="triposg",
+            seed=seed,
+        )

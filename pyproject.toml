@@ -34,13 +34,39 @@ dependencies = [
     "qwen-vl-utils",
     "bitsandbytes",
     "timm",
-    "hy3dgen>=2.0.2",
     "trimesh>=4.0.0",
-    "pymeshlab",
-    "scikit-image",
     "jaxtyping",
     "typeguard",
 ]
+
+[project.optional-dependencies]
+# Always installable — Shap-E only needs diffusers (already in core deps)
+shape = []
+
+# Pure-Python / wheel deps — install everywhere, runtime gates CUDA
+hunyuan3d = [
+    "hy3dgen>=2.0.2",
+    "pymeshlab",
+]
+triposg = [
+    "diso ; platform_system != 'Darwin'",
+    "rembg ; platform_system != 'Darwin'",
+    "pymeshlab",
+    "scikit-image",
+]
+
+# Git-only stacks — the upstream packages (sf3d, tsr, trellis2, o_voxel) are
+# NOT on PyPI.  Install them from the pinned requirement files in requirements/
+# (e.g. `pip install -r requirements/sf3d.txt`).  The extras here list only the
+# PyPI-available companion deps so `pip install nodetool-huggingface[sf3d]` still
+# pulls in what it can.  See D5 in FIX-MODEL3D.md.
+sf3d = ["rembg"]
+triposr = ["rembg"]
+trellis2 = []
+
+# Convenience meta-groups (PyPI-installable extras only)
+all-3d-pypi = ["nodetool-huggingface[hunyuan3d,triposg]"]
+all-3d = ["nodetool-huggingface[hunyuan3d,triposg,sf3d,triposr,trellis2]"]
 
 
 [tool.hatch.build.targets.wheel]
