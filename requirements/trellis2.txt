@@ -1,0 +1,12 @@
+# Pinned requirements for Microsoft TRELLIS.2-4B
+#
+# Neither trellis2 nor o_voxel is published to PyPI. Install from git.
+# Linux+CUDA only — o_voxel contains CUDA C++ extensions.
+# Requires 24 GB+ VRAM at runtime.
+#
+# Repository: https://github.com/microsoft/TRELLIS.2
+# License:    Microsoft Research License (non-commercial)
+# Pinned:     2026-01-10
+
+trellis2 @ git+https://github.com/microsoft/TRELLIS.2.git@5565d240c4a494caaf9ece7a554542b76ffa36d3#subdirectory=.
+o_voxel @ git+https://github.com/microsoft/TRELLIS.2.git@5565d240c4a494caaf9ece7a554542b76ffa36d3#subdirectory=o-voxel

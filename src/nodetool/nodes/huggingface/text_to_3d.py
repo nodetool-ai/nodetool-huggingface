@@ -9,7 +9,7 @@ These nodes run locally and do not require API keys.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from pydantic import Field
 
@@ -21,7 +21,7 @@ from nodetool.workflows.memory_utils import run_gc
 from nodetool.nodes.huggingface._3d_common import (
     _resolve_device,
     _resolve_seed,
-    _export_mesh,
+    _finalize_3d_output,
 )
 
 
@@ -76,10 +76,7 @@ class ShapETextTo3D(HuggingFacePipelineNode):
         description="Random seed for reproducibility. -1 for random.",
     )
 
-    # Note: self._pipeline is required by the HuggingFacePipelineNode base class
-    # (used by move_to_device, run_pipeline_in_thread). Refactoring this
-    # out requires upstream changes to nodetool-core's base class.
-    _pipeline: Any = None
+    CACHE_KEY: ClassVar[str] = "openai/shap-e_ShapEPipeline_None"
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
@@ -107,18 +104,22 @@ class ShapETextTo3D(HuggingFacePipelineNode):
     def requires_gpu(self) -> bool:
         return False
 
-    async def preload_model(self, context: ProcessingContext):
+    async def _get_pipeline(self, context: ProcessingContext):
+        """Load or retrieve the Shap-E text pipeline from ModelManager."""
         import torch
         from diffusers import ShapEPipeline
 
         device = _resolve_device()
         torch_dtype = torch.float16 if device == "cuda" else torch.float32
-        self._pipeline = await self.load_model(
+        return await self.load_model(
             context=context,
             model_class=ShapEPipeline,
             model_id="openai/shap-e",
             torch_dtype=torch_dtype,
         )
+
+    async def preload_model(self, context: ProcessingContext):
+        await self._get_pipeline(context)
 
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
@@ -126,8 +127,8 @@ class ShapETextTo3D(HuggingFacePipelineNode):
         if not self.prompt:
             raise ValueError("Prompt is required")
 
-        assert self._pipeline is not None, "Pipeline not initialized"
-        device = str(self._pipeline.device)
+        pipeline = await self._get_pipeline(context)
+        device = str(pipeline.device)
 
         # Set seed – generator device must be "cpu" for MPS pipelines
         gen_device = "cpu" if device.startswith("mps") else device
@@ -135,7 +136,7 @@ class ShapETextTo3D(HuggingFacePipelineNode):
         generator = torch.Generator(device=gen_device).manual_seed(seed)
 
         # Generate
-        images = self._pipeline(
+        images = pipeline(
             self.prompt,
             guidance_scale=self.guidance_scale,
             num_inference_steps=self.num_inference_steps,
@@ -157,11 +158,12 @@ class ShapETextTo3D(HuggingFacePipelineNode):
             vertices=mesh.verts.cpu().numpy(),
             faces=mesh.faces.cpu().numpy(),
         )
-        model_bytes = _export_mesh(tri_mesh, format="glb")
 
-        return await context.model3d_from_bytes(
-            model_bytes,
-            name=f"shap_e_{self.id}.glb",
-            format="glb",
-            metadata={"seed": seed, "source_model": "openai/shap-e"},
+        return await _finalize_3d_output(
+            context,
+            mesh=tri_mesh,
+            source_model="openai/shap-e",
+            node_id=self.id,
+            name_prefix="shap_e",
+            seed=seed,
         )

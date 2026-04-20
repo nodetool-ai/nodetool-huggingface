@@ -33,6 +33,7 @@ from nodetool.nodes.huggingface._3d_common import (
     _resolve_seed,
     _open_pil_image,
     _export_mesh,
+    _finalize_3d_output,
 )
 
 if TYPE_CHECKING:
@@ -94,10 +95,7 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
         description="Random seed for reproducibility. -1 for random.",
     )
 
-    # Note: self._pipeline is required by the HuggingFacePipelineNode base class
-    # (used by move_to_device, run_pipeline_in_thread). Refactoring this
-    # out requires upstream changes to nodetool-core's base class.
-    _pipeline: Any = None
+    CACHE_KEY: ClassVar[str] = "openai/shap-e-img2img_ShapEImg2ImgPipeline_None"
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
@@ -125,18 +123,22 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
     def requires_gpu(self) -> bool:
         return False
 
-    async def preload_model(self, context: ProcessingContext):
+    async def _get_pipeline(self, context: ProcessingContext):
+        """Load or retrieve the Shap-E image pipeline from ModelManager."""
         import torch
         from diffusers import ShapEImg2ImgPipeline
 
         device = _resolve_device()
         torch_dtype = torch.float16 if device == "cuda" else torch.float32
-        self._pipeline = await self.load_model(
+        return await self.load_model(
             context=context,
             model_class=ShapEImg2ImgPipeline,
             model_id="openai/shap-e-img2img",
             torch_dtype=torch_dtype,
         )
+
+    async def preload_model(self, context: ProcessingContext):
+        await self._get_pipeline(context)
 
     async def process(self, context: ProcessingContext) -> Model3DRef:
         import torch
@@ -144,13 +146,13 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
         if self.image.is_empty():
             raise ValueError("Input image is required")
 
-        assert self._pipeline is not None, "Pipeline not initialized"
+        pipeline = await self._get_pipeline(context)
 
         # Load input image
         image_io = await context.asset_to_io(self.image)
         input_image = _open_pil_image(image_io, mode="RGB")
 
-        device = str(self._pipeline.device)
+        device = str(pipeline.device)
 
         # Set seed – generator device must be "cpu" for MPS pipelines
         gen_device = "cpu" if device.startswith("mps") else device
@@ -158,7 +160,7 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
         generator = torch.Generator(device=gen_device).manual_seed(seed)
 
         # Generate
-        images = self._pipeline(
+        images = pipeline(
             input_image,
             guidance_scale=self.guidance_scale,
             num_inference_steps=self.num_inference_steps,
@@ -180,13 +182,14 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
             vertices=mesh.verts.cpu().numpy(),
             faces=mesh.faces.cpu().numpy(),
         )
-        model_bytes = _export_mesh(tri_mesh, format="glb")
 
-        return await context.model3d_from_bytes(
-            model_bytes,
-            name=f"shap_e_img_{self.id}.glb",
-            format="glb",
-            metadata={"seed": seed, "source_model": "openai/shap-e-img2img"},
+        return await _finalize_3d_output(
+            context,
+            mesh=tri_mesh,
+            source_model="openai/shap-e-img2img",
+            node_id=self.id,
+            name_prefix="shap_e_img",
+            seed=seed,
         )
 
 
@@ -463,16 +466,15 @@ class Hunyuan3D(HuggingFacePipelineNode):
         run_gc("After Hunyuan3D inference", log_before_after=False)
         # Export mesh to bytes
         format_str = self.output_format.value
-        model_bytes = _export_mesh(mesh, format=format_str)
 
-        return await context.model3d_from_bytes(
-            model_bytes,
-            name=f"hunyuan3d_{self.id}.{format_str}",
+        return await _finalize_3d_output(
+            context,
+            mesh=mesh,
+            source_model=self.VARIANT_CONFIG[variant]["repo_id"],
+            node_id=self.id,
+            name_prefix="hunyuan3d",
             format=format_str,
-            metadata={
-                "seed": seed,
-                "source_model": self.VARIANT_CONFIG[variant]["repo_id"],
-            },
+            seed=seed,
         )
 
 
@@ -538,6 +540,10 @@ class StableFast3D(HuggingFacePipelineNode):
         default=OutputFormat.GLB,
         description="Output format for the 3D model. GLB is recommended; OBJ files are not previewable in the canvas viewer.",
     )
+    low_vram_mode: bool = Field(
+        default=False,
+        description="Enable CPU offloading for GPUs with less than 8GB VRAM.",
+    )
 
     CACHE_KEY: ClassVar[str] = "stabilityai/stable-fast-3d_SF3D"
 
@@ -594,6 +600,18 @@ class StableFast3D(HuggingFacePipelineNode):
         )
         model.to(device)
         model.eval()
+
+        # Enable CPU offloading if requested
+        if self.low_vram_mode and hasattr(model, "enable_model_cpu_offload"):
+            try:
+                model.enable_model_cpu_offload()
+            except Exception as exc:
+                log.warning(
+                    "low_vram_mode: enable_model_cpu_offload failed (%s). "
+                    "Continuing without offloading.",
+                    exc,
+                )
+
         ModelManager.set_model(self.id, self.CACHE_KEY, model)
 
     async def preload_model(self, context: ProcessingContext):
@@ -658,13 +676,17 @@ class StableFast3D(HuggingFacePipelineNode):
         format_str = self.output_format.value
         if isinstance(mesh, list):
             mesh = mesh[0]
-        model_bytes = _export_mesh(mesh, format=format_str, include_normals=True)
 
-        return await context.model3d_from_bytes(
-            model_bytes,
-            name=f"sf3d_{self.id}.{format_str}",
+        return await _finalize_3d_output(
+            context,
+            mesh=mesh,
+            source_model="stabilityai/stable-fast-3d",
+            node_id=self.id,
+            name_prefix="sf3d",
             format=format_str,
-            metadata={"source_model": "stabilityai/stable-fast-3d"},
+            include_normals=True,
+            has_texture=True,
+            center=False,  # SF3D handles its own coordinate space
         )
 
 
@@ -840,13 +862,14 @@ class TripoSR(HuggingFacePipelineNode):
         run_gc("After TripoSR inference", log_before_after=False)
         # Export mesh
         format_str = self.output_format.value
-        model_bytes = _export_mesh(mesh, format=format_str)
 
-        return await context.model3d_from_bytes(
-            model_bytes,
-            name=f"triposr_{self.id}.{format_str}",
+        return await _finalize_3d_output(
+            context,
+            mesh=mesh,
+            source_model="stabilityai/TripoSR",
+            node_id=self.id,
+            name_prefix="triposr",
             format=format_str,
-            metadata={"source_model": "stabilityai/TripoSR"},
         )
 
 
@@ -918,6 +941,10 @@ class Trellis2(HuggingFacePipelineNode):
         ge=-1,
         description="Random seed for reproducibility. -1 for random.",
     )
+    low_vram_mode: bool = Field(
+        default=False,
+        description="Reserved for future use. TRELLIS.2 upstream does not currently support CPU offloading.",
+    )
 
     CACHE_KEY: ClassVar[str] = "microsoft/TRELLIS.2-4B_Trellis2"
 
@@ -968,6 +995,14 @@ class Trellis2(HuggingFacePipelineNode):
 
         pipeline = Trellis2ImageTo3DPipeline.from_pretrained("microsoft/TRELLIS.2-4B")
         pipeline.cuda()
+
+        if self.low_vram_mode:
+            log.warning(
+                "low_vram_mode is not supported by TRELLIS.2 upstream. "
+                "The field is exposed for forward compatibility but has no "
+                "effect in the current version."
+            )
+
         ModelManager.set_model(self.id, self.CACHE_KEY, pipeline)
 
     async def preload_model(self, context: ProcessingContext):
@@ -1050,24 +1085,34 @@ class Trellis2(HuggingFacePipelineNode):
             buffer = io.BytesIO()
             glb.export(buffer, extension_webp=True)
             buffer.seek(0)
-            model_bytes = buffer.read()
-            format_str = "glb"
+            raw_bytes = buffer.read()
+
+            return await _finalize_3d_output(
+                context,
+                mesh=mesh,
+                source_model="microsoft/TRELLIS.2-4B",
+                node_id=self.id,
+                name_prefix="trellis2",
+                seed=seed,
+                has_texture=True,
+                center=False,  # Trellis2 handles its own coordinate space
+                raw_bytes=raw_bytes,
+            )
         except Exception as e:
             # Fallback: try basic trimesh export if o_voxel fails
             try:
-                model_bytes = _export_mesh(mesh, format="glb")
-                format_str = "glb"
+                return await _finalize_3d_output(
+                    context,
+                    mesh=mesh,
+                    source_model="microsoft/TRELLIS.2-4B",
+                    node_id=self.id,
+                    name_prefix="trellis2",
+                    seed=seed,
+                )
             except Exception as fallback_error:
                 raise RuntimeError(
                     f"Failed to export mesh: {e}. Fallback also failed: {fallback_error}"
                 )
-
-        return await context.model3d_from_bytes(
-            model_bytes,
-            name=f"trellis2_{self.id}.{format_str}",
-            format=format_str,
-            metadata={"seed": seed, "source_model": "microsoft/TRELLIS.2-4B"},
-        )
 
 
 class TripoSG(HuggingFacePipelineNode):
@@ -1133,6 +1178,10 @@ class TripoSG(HuggingFacePipelineNode):
         ge=-1,
         description="Random seed for reproducibility. -1 for random.",
     )
+    low_vram_mode: bool = Field(
+        default=False,
+        description="Enable CPU offloading for GPUs with less than 10GB VRAM.",
+    )
 
     CACHE_KEY: ClassVar[str] = "VAST-AI/TripoSG_Pipeline"
     RMBG_CACHE_KEY: ClassVar[str] = "briaai/RMBG-1.4_BriaRMBG"
@@ -1197,6 +1246,18 @@ class TripoSG(HuggingFacePipelineNode):
             pipeline = TripoSGPipeline.from_pretrained(triposg_path).to(
                 device, torch.float16
             )
+
+            # Enable CPU offloading if requested
+            if self.low_vram_mode and hasattr(pipeline, "enable_model_cpu_offload"):
+                try:
+                    pipeline.enable_model_cpu_offload()
+                except Exception as exc:
+                    log.warning(
+                        "low_vram_mode: enable_model_cpu_offload failed (%s). "
+                        "Continuing without offloading.",
+                        exc,
+                    )
+
             ModelManager.set_model(self.id, self.CACHE_KEY, pipeline)
 
     async def preload_model(self, context: ProcessingContext):
@@ -1401,12 +1462,11 @@ class TripoSG(HuggingFacePipelineNode):
         if self.max_faces > 0:
             mesh = self._simplify_mesh(mesh, self.max_faces)
 
-        # Export to GLB
-        model_bytes = _export_mesh(mesh, format="glb")
-
-        return await context.model3d_from_bytes(
-            model_bytes,
-            name=f"triposg_{self.id}.glb",
-            format="glb",
-            metadata={"seed": seed, "source_model": "VAST-AI/TripoSG"},
+        return await _finalize_3d_output(
+            context,
+            mesh=mesh,
+            source_model="VAST-AI/TripoSG",
+            node_id=self.id,
+            name_prefix="triposg",
+            seed=seed,
         )
