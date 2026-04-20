@@ -654,3 +654,172 @@ def test_warn_platform_silent_when_supported(caplog):
         _warn_platform([current], "TestNode")
 
     assert "not supported" not in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# Error taxonomy tests (GHF4)
+# ---------------------------------------------------------------------------
+
+
+def test_error_taxonomy_hierarchy():
+    """All custom exceptions inherit from Local3DError."""
+    from nodetool.nodes.huggingface._3d_common import (
+        Local3DError,
+        MissingDependencyError,
+        InsufficientResourcesError,
+        UnsupportedPlatformError,
+        InvalidInputError,
+        ModelLoadError,
+        InferenceError,
+    )
+
+    for cls in [
+        MissingDependencyError,
+        InsufficientResourcesError,
+        UnsupportedPlatformError,
+        InvalidInputError,
+        ModelLoadError,
+        InferenceError,
+    ]:
+        assert issubclass(cls, Local3DError), f"{cls.__name__} should extend Local3DError"
+
+
+def test_error_taxonomy_stdlib_compatibility():
+    """Custom exceptions also inherit from appropriate stdlib types."""
+    from nodetool.nodes.huggingface._3d_common import (
+        MissingDependencyError,
+        InsufficientResourcesError,
+        UnsupportedPlatformError,
+        InvalidInputError,
+        ModelLoadError,
+        InferenceError,
+    )
+
+    assert issubclass(MissingDependencyError, ImportError)
+    assert issubclass(InsufficientResourcesError, OSError)
+    assert issubclass(UnsupportedPlatformError, RuntimeError)
+    assert issubclass(InvalidInputError, ValueError)
+    assert issubclass(ModelLoadError, RuntimeError)
+    assert issubclass(InferenceError, RuntimeError)
+
+
+def test_missing_dependency_error_install_hint():
+    """MissingDependencyError carries an install_hint attribute."""
+    from nodetool.nodes.huggingface._3d_common import MissingDependencyError
+
+    err = MissingDependencyError("need foo", install_hint="pip install foo")
+    assert err.install_hint == "pip install foo"
+    assert str(err) == "need foo"
+
+
+# ---------------------------------------------------------------------------
+# Runtime availability tests (GHF1)
+# ---------------------------------------------------------------------------
+
+
+def test_runtime_availability_returns_expected_keys():
+    """_check_runtime_availability returns all documented keys."""
+    from nodetool.nodes.huggingface._3d_common import _check_runtime_availability
+
+    result = _check_runtime_availability(
+        node_name="TestNode",
+        supported_platforms=["linux", "macos", "windows"],
+        requires_gpu=False,
+        min_vram_gb=0,
+    )
+    for key in ["available", "platform_ok", "gpu_ok", "vram_ok", "missing_packages", "issues"]:
+        assert key in result, f"missing key: {key}"
+
+
+def test_runtime_availability_detects_missing_package():
+    """_check_runtime_availability detects missing optional packages."""
+    from nodetool.nodes.huggingface._3d_common import _check_runtime_availability
+
+    result = _check_runtime_availability(
+        node_name="TestNode",
+        supported_platforms=["linux", "macos", "windows"],
+        requires_gpu=False,
+        min_vram_gb=0,
+        optional_packages=["_nonexistent_package_12345"],
+    )
+    assert not result["available"]
+    assert "_nonexistent_package_12345" in result["missing_packages"]
+    assert any("Missing packages" in issue for issue in result["issues"])
+
+
+def test_runtime_availability_classmethod_on_nodes():
+    """All 3D nodes expose a runtime_availability classmethod."""
+    from nodetool.nodes.huggingface.text_to_3d import ShapETextTo3D
+    from nodetool.nodes.huggingface.image_to_3d import (
+        ShapEImageTo3D,
+        Hunyuan3D,
+        StableFast3D,
+        TripoSR,
+        Trellis2,
+        TripoSG,
+    )
+
+    for cls in [ShapETextTo3D, ShapEImageTo3D, Hunyuan3D, StableFast3D, TripoSR, Trellis2, TripoSG]:
+        result = cls.runtime_availability()
+        assert isinstance(result, dict), f"{cls.__name__}.runtime_availability() should return dict"
+        assert "available" in result
+
+
+# ---------------------------------------------------------------------------
+# Progress-stage helper tests (GHF2)
+# ---------------------------------------------------------------------------
+
+
+def test_report_stage_sends_progress_message():
+    """_report_stage posts a NodeProgress message to the context."""
+    from unittest.mock import MagicMock
+    from nodetool.nodes.huggingface._3d_common import _report_stage
+
+    mock_context = MagicMock()
+    _report_stage(mock_context, "node_123", "inference")
+
+    mock_context.post_message.assert_called_once()
+    msg = mock_context.post_message.call_args[0][0]
+    assert msg.node_id == "node_123"
+    assert msg.total == 100
+
+
+def test_report_stage_custom_progress():
+    """_report_stage respects explicit progress/total values."""
+    from unittest.mock import MagicMock
+    from nodetool.nodes.huggingface._3d_common import _report_stage
+
+    mock_context = MagicMock()
+    _report_stage(mock_context, "node_456", "inference", progress=50, total=200)
+
+    msg = mock_context.post_message.call_args[0][0]
+    assert msg.progress == 50
+    assert msg.total == 200
+
+
+# ---------------------------------------------------------------------------
+# Warm / cold start visibility tests (GHF5)
+# ---------------------------------------------------------------------------
+
+
+def test_log_cache_status_warm(caplog):
+    """_log_cache_status logs 'warm start' for cached models."""
+    import logging
+    from nodetool.nodes.huggingface._3d_common import _log_cache_status
+
+    with caplog.at_level(logging.INFO):
+        _log_cache_status("test_key", is_cached=True, node_name="TestNode")
+
+    assert "warm start" in caplog.text
+
+
+def test_log_cache_status_cold(caplog):
+    """_log_cache_status logs 'cold start' for uncached models."""
+    import logging
+    from nodetool.nodes.huggingface._3d_common import _log_cache_status
+
+    with caplog.at_level(logging.INFO):
+        _log_cache_status("test_key", is_cached=False, node_name="TestNode", load_time_s=2.5)
+
+    assert "cold start" in caplog.text
+    assert "2.5s" in caplog.text
