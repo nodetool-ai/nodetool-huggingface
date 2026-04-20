@@ -2,8 +2,9 @@
 Shared helpers for local 3D generation nodes.
 
 Provides device resolution, seeding, mesh export, image validation,
-disk-space pre-flight, and model-revision pinning shared by
-``text_to_3d`` and ``image_to_3d`` modules.
+disk-space pre-flight, model-revision pinning, error taxonomy,
+progress-stage helpers, warm/cold-start logging, and runtime-availability
+checks shared by ``text_to_3d`` and ``image_to_3d`` modules.
 """
 
 from __future__ import annotations
@@ -11,12 +12,278 @@ from __future__ import annotations
 import io
 import logging
 import shutil
+import time
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from PIL import Image
 
 log = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Error taxonomy (GHF4)
+# ---------------------------------------------------------------------------
+# A small hierarchy of domain-specific exceptions that let callers (UI,
+# scheduler, retry logic) distinguish recoverable from fatal errors without
+# string-matching on messages.  All inherit from a common base so callers
+# can also catch broadly.
+# ---------------------------------------------------------------------------
+
+
+class Local3DError(Exception):
+    """Base for all local-3D-node errors."""
+
+
+class MissingDependencyError(Local3DError, ImportError):
+    """A required Python package is not installed.
+
+    Carries an *install_hint* string the UI can display to the user.
+    """
+
+    def __init__(self, message: str, *, install_hint: str | None = None):
+        super().__init__(message)
+        self.install_hint = install_hint
+
+
+class InsufficientResourcesError(Local3DError, OSError):
+    """Not enough VRAM, disk space, or other system resource."""
+
+
+class UnsupportedPlatformError(Local3DError, RuntimeError):
+    """The current platform is not supported by this node."""
+
+
+class InvalidInputError(Local3DError, ValueError):
+    """User-supplied input (image, prompt, etc.) is invalid."""
+
+
+class ModelLoadError(Local3DError, RuntimeError):
+    """The model failed to download or initialise."""
+
+
+class InferenceError(Local3DError, RuntimeError):
+    """The inference pipeline returned an unexpected result."""
+
+
+# ---------------------------------------------------------------------------
+# Progress-stage helpers (GHF2)
+# ---------------------------------------------------------------------------
+# Lightweight wrappers around ``context.post_message(NodeProgress(…))``
+# that let callers report named stages without importing message types
+# everywhere.
+# ---------------------------------------------------------------------------
+
+# Standard stage weights for 3D inference (must sum to 100).
+_STAGE_WEIGHTS: dict[str, tuple[int, int]] = {
+    "loading_model": (0, 10),
+    "preprocessing": (10, 20),
+    "inference": (20, 90),
+    "postprocessing": (90, 100),
+}
+
+
+def _report_stage(
+    context: Any,
+    node_id: str,
+    stage: str,
+    *,
+    progress: int | None = None,
+    total: int | None = None,
+) -> None:
+    """Report a progress stage to the processing context.
+
+    Parameters
+    ----------
+    context:
+        The ``ProcessingContext``.
+    node_id:
+        The node's unique id.
+    stage:
+        One of the standard stage names (``loading_model``, ``preprocessing``,
+        ``inference``, ``postprocessing``) or a free-form string.
+    progress / total:
+        Optional fine-grained position within the stage.  When omitted the
+        helper reports the stage start position from ``_STAGE_WEIGHTS``.
+    """
+    from nodetool.workflows.types import NodeProgress
+
+    if progress is None or total is None:
+        start, _end = _STAGE_WEIGHTS.get(stage, (0, 100))
+        progress = start
+        total = 100
+
+    context.post_message(NodeProgress(node_id=node_id, progress=progress, total=total))
+
+
+# ---------------------------------------------------------------------------
+# Warm / cold start visibility (GHF5)
+# ---------------------------------------------------------------------------
+
+
+def _log_cache_status(
+    cache_key: str,
+    *,
+    is_cached: bool,
+    node_name: str,
+    load_time_s: float | None = None,
+) -> None:
+    """Log whether a model load was a cache hit (warm) or miss (cold).
+
+    Parameters
+    ----------
+    cache_key:
+        The cache key used to look up the model.
+    is_cached:
+        ``True`` when the model was already in ``ModelManager``.
+    node_name:
+        Human-readable node title for the log line.
+    load_time_s:
+        Wall-clock seconds spent loading (only meaningful for cold starts).
+    """
+    if is_cached:
+        log.info(
+            "[%s] warm start — model already cached (key=%s)", node_name, cache_key
+        )
+    else:
+        if load_time_s is not None:
+            log.info(
+                "[%s] cold start — model loaded in %.1fs (key=%s)",
+                node_name,
+                load_time_s,
+                cache_key,
+            )
+        else:
+            log.info("[%s] cold start — model loaded (key=%s)", node_name, cache_key)
+
+
+# ---------------------------------------------------------------------------
+# Runtime-availability check (GHF1)
+# ---------------------------------------------------------------------------
+
+
+def _check_runtime_availability(
+    *,
+    node_name: str,
+    supported_platforms: list[str],
+    requires_gpu: bool,
+    min_vram_gb: int,
+    optional_packages: list[str] | None = None,
+) -> dict[str, Any]:
+    """Return a dict describing the runtime readiness of a node.
+
+    The returned dict always contains:
+
+    * ``available`` (bool) — ``True`` when the node is expected to work.
+    * ``platform_ok`` (bool)
+    * ``gpu_ok`` (bool)
+    * ``vram_ok`` (bool | None) — ``None`` when VRAM cannot be detected.
+    * ``missing_packages`` (list[str])
+    * ``issues`` (list[str]) — human-readable explanations for each failure.
+    """
+    import sys
+
+    issues: list[str] = []
+
+    # -- platform --
+    plat_map = {"linux": "linux", "darwin": "macos", "win32": "windows"}
+    current = plat_map.get(sys.platform, sys.platform)
+    platform_ok = current in supported_platforms
+    if not platform_ok:
+        issues.append(
+            f"{node_name} is not supported on {current} "
+            f"(supported: {', '.join(supported_platforms)})."
+        )
+
+    # -- GPU --
+    gpu_ok = True
+    if requires_gpu:
+        try:
+            import torch
+
+            gpu_ok = torch.cuda.is_available()
+        except ModuleNotFoundError:
+            gpu_ok = False
+        if not gpu_ok:
+            issues.append(f"{node_name} requires a CUDA GPU.")
+
+    # -- VRAM --
+    vram_ok: bool | None = None
+    if requires_gpu and gpu_ok:
+        try:
+            import torch
+
+            total_bytes = torch.cuda.get_device_properties(0).total_mem
+            total_gb = total_bytes / (1 << 30)
+            vram_ok = total_gb >= min_vram_gb
+            if not vram_ok:
+                issues.append(
+                    f"{node_name} recommends {min_vram_gb} GB VRAM "
+                    f"but only {total_gb:.1f} GB detected."
+                )
+        except Exception:
+            vram_ok = None  # can't detect
+
+    # -- packages --
+    missing: list[str] = []
+    for pkg in optional_packages or []:
+        try:
+            __import__(pkg)
+        except ImportError:
+            missing.append(pkg)
+    if missing:
+        issues.append(f"Missing packages: {', '.join(missing)}.")
+
+    available = platform_ok and gpu_ok and (vram_ok is not False) and not missing
+
+    return {
+        "available": available,
+        "platform_ok": platform_ok,
+        "gpu_ok": gpu_ok,
+        "vram_ok": vram_ok,
+        "missing_packages": missing,
+        "issues": issues,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Cancellation and cleanup semantics (GHF3)
+# ---------------------------------------------------------------------------
+# 3D inference jobs can be long-running (10s–120s on GPU).  The following
+# semantics apply:
+#
+# **Cancellation**
+# • Diffusers-based pipelines (Shap-E) support mid-step cancellation via
+#   ``pipeline._interrupt = True``.  Nodes that use diffusers *may* wire
+#   this up in the future via a progress callback.
+# • Non-diffusers pipelines (Hunyuan3D, SF3D, TripoSR, Trellis2, TripoSG)
+#   do not expose a cancellation API.  Cancellation is handled at the job
+#   level by the scheduler terminating the thread / process.
+#
+# **Cleanup**
+# After inference — whether it succeeds, fails, or is cancelled — nodes
+# must release transient GPU memory.  The ``_cleanup_inference`` helper
+# below wraps ``run_gc`` with a CUDA-cache flush and should be called at
+# the end of every ``process()`` method's inference step.
+# ---------------------------------------------------------------------------
+
+
+def _cleanup_inference(label: str) -> None:
+    """Release transient GPU memory after an inference step (GHF3).
+
+    Call this at the end of every ``process()`` method after the
+    inference pipeline returns, regardless of success or failure.
+    """
+    from nodetool.workflows.memory_utils import run_gc
+
+    run_gc(label, log_before_after=False)
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:
+        pass  # non-critical — best-effort cleanup
 
 
 # ---------------------------------------------------------------------------
