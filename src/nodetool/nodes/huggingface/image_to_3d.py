@@ -33,6 +33,7 @@ from nodetool.nodes.huggingface._3d_common import (
     _resolve_seed,
     _open_pil_image,
     _export_mesh,
+    _finalize_3d_output,
 )
 
 if TYPE_CHECKING:
@@ -181,13 +182,14 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
             vertices=mesh.verts.cpu().numpy(),
             faces=mesh.faces.cpu().numpy(),
         )
-        model_bytes = _export_mesh(tri_mesh, format="glb")
 
-        return await context.model3d_from_bytes(
-            model_bytes,
-            name=f"shap_e_img_{self.id}.glb",
-            format="glb",
-            metadata={"seed": seed, "source_model": "openai/shap-e-img2img"},
+        return await _finalize_3d_output(
+            context,
+            mesh=tri_mesh,
+            source_model="openai/shap-e-img2img",
+            node_id=self.id,
+            name_prefix="shap_e_img",
+            seed=seed,
         )
 
 
@@ -464,16 +466,15 @@ class Hunyuan3D(HuggingFacePipelineNode):
         run_gc("After Hunyuan3D inference", log_before_after=False)
         # Export mesh to bytes
         format_str = self.output_format.value
-        model_bytes = _export_mesh(mesh, format=format_str)
 
-        return await context.model3d_from_bytes(
-            model_bytes,
-            name=f"hunyuan3d_{self.id}.{format_str}",
+        return await _finalize_3d_output(
+            context,
+            mesh=mesh,
+            source_model=self.VARIANT_CONFIG[variant]["repo_id"],
+            node_id=self.id,
+            name_prefix="hunyuan3d",
             format=format_str,
-            metadata={
-                "seed": seed,
-                "source_model": self.VARIANT_CONFIG[variant]["repo_id"],
-            },
+            seed=seed,
         )
 
 
@@ -659,13 +660,17 @@ class StableFast3D(HuggingFacePipelineNode):
         format_str = self.output_format.value
         if isinstance(mesh, list):
             mesh = mesh[0]
-        model_bytes = _export_mesh(mesh, format=format_str, include_normals=True)
 
-        return await context.model3d_from_bytes(
-            model_bytes,
-            name=f"sf3d_{self.id}.{format_str}",
+        return await _finalize_3d_output(
+            context,
+            mesh=mesh,
+            source_model="stabilityai/stable-fast-3d",
+            node_id=self.id,
+            name_prefix="sf3d",
             format=format_str,
-            metadata={"source_model": "stabilityai/stable-fast-3d"},
+            include_normals=True,
+            has_texture=True,
+            center=False,  # SF3D handles its own coordinate space
         )
 
 
@@ -841,13 +846,14 @@ class TripoSR(HuggingFacePipelineNode):
         run_gc("After TripoSR inference", log_before_after=False)
         # Export mesh
         format_str = self.output_format.value
-        model_bytes = _export_mesh(mesh, format=format_str)
 
-        return await context.model3d_from_bytes(
-            model_bytes,
-            name=f"triposr_{self.id}.{format_str}",
+        return await _finalize_3d_output(
+            context,
+            mesh=mesh,
+            source_model="stabilityai/TripoSR",
+            node_id=self.id,
+            name_prefix="triposr",
             format=format_str,
-            metadata={"source_model": "stabilityai/TripoSR"},
         )
 
 
@@ -1051,24 +1057,34 @@ class Trellis2(HuggingFacePipelineNode):
             buffer = io.BytesIO()
             glb.export(buffer, extension_webp=True)
             buffer.seek(0)
-            model_bytes = buffer.read()
-            format_str = "glb"
+            raw_bytes = buffer.read()
+
+            return await _finalize_3d_output(
+                context,
+                mesh=mesh,
+                source_model="microsoft/TRELLIS.2-4B",
+                node_id=self.id,
+                name_prefix="trellis2",
+                seed=seed,
+                has_texture=True,
+                center=False,  # Trellis2 handles its own coordinate space
+                raw_bytes=raw_bytes,
+            )
         except Exception as e:
             # Fallback: try basic trimesh export if o_voxel fails
             try:
-                model_bytes = _export_mesh(mesh, format="glb")
-                format_str = "glb"
+                return await _finalize_3d_output(
+                    context,
+                    mesh=mesh,
+                    source_model="microsoft/TRELLIS.2-4B",
+                    node_id=self.id,
+                    name_prefix="trellis2",
+                    seed=seed,
+                )
             except Exception as fallback_error:
                 raise RuntimeError(
                     f"Failed to export mesh: {e}. Fallback also failed: {fallback_error}"
                 )
-
-        return await context.model3d_from_bytes(
-            model_bytes,
-            name=f"trellis2_{self.id}.{format_str}",
-            format=format_str,
-            metadata={"seed": seed, "source_model": "microsoft/TRELLIS.2-4B"},
-        )
 
 
 class TripoSG(HuggingFacePipelineNode):
@@ -1402,12 +1418,11 @@ class TripoSG(HuggingFacePipelineNode):
         if self.max_faces > 0:
             mesh = self._simplify_mesh(mesh, self.max_faces)
 
-        # Export to GLB
-        model_bytes = _export_mesh(mesh, format="glb")
-
-        return await context.model3d_from_bytes(
-            model_bytes,
-            name=f"triposg_{self.id}.glb",
-            format="glb",
-            metadata={"seed": seed, "source_model": "VAST-AI/TripoSG"},
+        return await _finalize_3d_output(
+            context,
+            mesh=mesh,
+            source_model="VAST-AI/TripoSG",
+            node_id=self.id,
+            name_prefix="triposg",
+            seed=seed,
         )

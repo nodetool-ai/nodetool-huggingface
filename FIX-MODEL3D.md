@@ -103,19 +103,19 @@ Read this section top to bottom. The first unchecked group is the next work.
 - Goal: all local 3D generators should produce assets that behave the same way
   in the viewer and downstream nodes, without per-model special cases.
 
-- [ ] **Make GLB the canonical transport format**
+- [x] **Make GLB the canonical transport format**
   Make GLB the default internal/export transport for the local generators.
-- [ ] **Standardize orientation**
+- [x] **Standardize orientation**
   Document `+Y` up once in `_3d_common.py`.
-- [ ] **Standardize centering / pivot**
+- [x] **Standardize centering / pivot**
   Default to bounding-box center at origin.
-- [ ] **Standardize metadata**
+- [x] **Standardize metadata**
   Minimum metadata set: `seed`, `source_model`, `vertex_count`, `face_count`,
   `has_texture`, `units`, `orientation`.
-- [ ] **Extract a shared normalization / metadata helper**
+- [x] **Extract a shared normalization / metadata helper**
   Route each local generator through one shared helper instead of ad hoc
   per-node export cleanup.
-- [ ] **Add one focused no-GPU contract test**
+- [x] **Add one focused no-GPU contract test**
   Verify the shared export contract without loading real models.
 
 ### 5. Then: runtime warnings, low-VRAM rollout, and manual quality checks

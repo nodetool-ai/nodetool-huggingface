@@ -176,3 +176,133 @@ def _export_mesh(
 
     buffer.seek(0)
     return buffer.read()
+
+
+# ---------------------------------------------------------------------------
+# Canonical orientation and units (D12)
+# ---------------------------------------------------------------------------
+# All local 3D generators use +Y up, matching glTF 2.0 spec and Three.js default.
+ORIENTATION_UP = "+Y"
+UNITS = "meters"  # nominal — models are not to real-world scale
+
+
+def _normalize_mesh(mesh: Any) -> Any:
+    """Center a trimesh ``Trimesh`` at the bounding-box center (D12).
+
+    Operates in-place when possible and returns the mesh for chaining.
+    Non-trimesh objects are returned unchanged (SF3D / Trellis2 textured
+    meshes handle their own coordinate space).
+    """
+    import trimesh as _trimesh
+
+    if not isinstance(mesh, _trimesh.Trimesh):
+        return mesh
+
+    centroid = mesh.bounding_box.centroid
+    mesh.vertices -= centroid
+    return mesh
+
+
+def _build_standard_metadata(
+    *,
+    source_model: str,
+    mesh: Any = None,
+    seed: int | None = None,
+    has_texture: bool = False,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the minimum metadata dict specified by D12.
+
+    Fields always present: ``source_model``, ``orientation``, ``units``.
+    Fields present when available: ``seed``, ``vertex_count``, ``face_count``,
+    ``has_texture``.
+    """
+    import trimesh as _trimesh
+
+    meta: dict[str, Any] = {
+        "source_model": source_model,
+        "orientation": ORIENTATION_UP,
+        "units": UNITS,
+        "has_texture": has_texture,
+    }
+
+    if seed is not None:
+        meta["seed"] = seed
+
+    if mesh is not None:
+        if isinstance(mesh, _trimesh.Trimesh):
+            meta["vertex_count"] = int(mesh.vertices.shape[0])
+            meta["face_count"] = int(mesh.faces.shape[0])
+        elif hasattr(mesh, "vertices") and hasattr(mesh, "faces"):
+            verts = mesh.vertices
+            faces = mesh.faces
+            if hasattr(verts, "shape"):
+                meta["vertex_count"] = int(verts.shape[0])
+            if hasattr(faces, "shape"):
+                meta["face_count"] = int(faces.shape[0])
+
+    if extra:
+        meta.update(extra)
+
+    return meta
+
+
+async def _finalize_3d_output(
+    context: Any,
+    *,
+    mesh: Any,
+    source_model: str,
+    node_id: str,
+    name_prefix: str,
+    format: str = "glb",
+    seed: int | None = None,
+    has_texture: bool = False,
+    include_normals: bool = False,
+    center: bool = True,
+    extra_metadata: dict[str, Any] | None = None,
+    raw_bytes: bytes | None = None,
+) -> Any:
+    """Shared finalization for all local 3D generators (D12).
+
+    Steps:
+    1. Optionally center the mesh at bounding-box origin.
+    2. Export to bytes (or use pre-exported *raw_bytes* for Trellis2).
+    3. Build standardized metadata.
+    4. Call ``context.model3d_from_bytes``.
+
+    Parameters
+    ----------
+    context:
+        The ``ProcessingContext``.
+    mesh:
+        A trimesh ``Trimesh`` or any mesh-like object. Used for centering,
+        metadata extraction, and export.  Ignored when *raw_bytes* is given
+        (but still used for metadata).
+    raw_bytes:
+        Pre-exported bytes (e.g. Trellis2 o_voxel export).  When provided,
+        the mesh is NOT re-exported; *raw_bytes* are used directly.
+    """
+    import trimesh as _trimesh
+
+    if center and isinstance(mesh, _trimesh.Trimesh):
+        _normalize_mesh(mesh)
+
+    if raw_bytes is None:
+        model_bytes = _export_mesh(mesh, format=format, include_normals=include_normals)
+    else:
+        model_bytes = raw_bytes
+
+    metadata = _build_standard_metadata(
+        source_model=source_model,
+        mesh=mesh,
+        seed=seed,
+        has_texture=has_texture,
+        extra=extra_metadata,
+    )
+
+    return await context.model3d_from_bytes(
+        model_bytes,
+        name=f"{name_prefix}_{node_id}.{format}",
+        format=format,
+        metadata=metadata,
+    )

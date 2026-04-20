@@ -21,7 +21,7 @@ from nodetool.workflows.memory_utils import run_gc
 from nodetool.nodes.huggingface._3d_common import (
     _resolve_device,
     _resolve_seed,
-    _export_mesh,
+    _finalize_3d_output,
 )
 
 
@@ -158,11 +158,12 @@ class ShapETextTo3D(HuggingFacePipelineNode):
             vertices=mesh.verts.cpu().numpy(),
             faces=mesh.faces.cpu().numpy(),
         )
-        model_bytes = _export_mesh(tri_mesh, format="glb")
 
-        return await context.model3d_from_bytes(
-            model_bytes,
-            name=f"shap_e_{self.id}.glb",
-            format="glb",
-            metadata={"seed": seed, "source_model": "openai/shap-e"},
+        return await _finalize_3d_output(
+            context,
+            mesh=tri_mesh,
+            source_model="openai/shap-e",
+            node_id=self.id,
+            name_prefix="shap_e",
+            seed=seed,
         )
