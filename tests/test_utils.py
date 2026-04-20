@@ -176,7 +176,7 @@ def _drop_node_model_references(node: GraphNode) -> None:
 def _remove_accelerate_hooks(node: GraphNode) -> None:
     """Detach Accelerate CPU offload hooks to avoid reallocating on GPU during cleanup."""
     try:
-        from accelerate.hooks import remove_hook_from_module  # type: ignore
+        from accelerate.hooks import remove_hook_from_module
         import torch
 
         Module = torch.nn.Module

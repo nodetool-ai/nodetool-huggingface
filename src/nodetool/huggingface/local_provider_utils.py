@@ -291,7 +291,7 @@ async def load_pipeline(
 
     if not skip_cache:
         ModelManager.set_model(node_id, cache_key, model)
-    return model  # type: ignore
+    return model
 
 
 async def load_model(

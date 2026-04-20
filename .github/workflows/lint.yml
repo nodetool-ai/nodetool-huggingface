@@ -36,5 +36,6 @@ jobs:
             --exclude 'src/nodetool/dsl/**' \
             --exclude 'notebooks/**' \
             --exclude 'scripts/**' \
+            --exclude 'src/triposg/**' \
             --exclude 'src/RealESRGAN/**' \
             --exclude 'test_qwen.py'
