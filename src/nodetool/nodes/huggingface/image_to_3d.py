@@ -663,7 +663,7 @@ class StableFast3D(HuggingFacePipelineNode):
 
         # Generate 3D mesh
         device = _resolve_device()
-        # MPS supports float16 autocast; CPU and CUDA support bfloat16
+        # MPS only supports float16 autocast; CUDA uses bfloat16 for best quality
         autocast_dtype = torch.float16 if device == "mps" else torch.bfloat16
         with torch.no_grad():
             with torch.autocast(device_type=device, dtype=autocast_dtype):
