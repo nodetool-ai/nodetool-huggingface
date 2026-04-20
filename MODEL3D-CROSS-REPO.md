@@ -115,14 +115,20 @@ Treat this as a strict queue. Do not skip ahead.
 Rule: do not start the next phase until the current phase is implemented,
 tested, and the plan file is updated.
 
+Current state:
+
+- Phases 0-4 are now landed in `nodetool` on the active branch.
+- The next active step is to add the missing cleanup nodes on top of the new
+  `model3d/` module layout.
+
 ### 0. Establish the base layer first
 
-- [ ] **Install only the first-slice libraries**
+- [x] **Install only the first-slice libraries**
   Add `glTF-Transform` and `meshoptimizer` to `nodetool` first.
-- [ ] **Do not install `manifold-3d` yet**
+- [x] **Do not install `manifold-3d` yet**
   Hold it back until work actually begins on `Boolean3D` or union-style
   `MergeMeshes`.
-- [ ] **Create shared helpers before upgrading nodes**
+- [x] **Create shared helpers before upgrading nodes**
   Add focused internal helpers for GLB loading/writing and metadata extraction
   so `FormatConverter`, `GetModel3DMetadata`, and later nodes do not each build
   their own parsing path.
@@ -136,15 +142,15 @@ Exit criteria for phase 0:
 
 Start here. This is the first real implementation slice.
 
-- [ ] **Make `FormatConverter` a real converter**
+- [x] **Make `FormatConverter` a real converter**
   Keep GLB as the internal transport format. Replace byte-level or extension
   rename behavior with real parse-and-write flows for the formats we actually
   claim to support.
-- [ ] **Make `GetModel3DMetadata` read real geometry**
+- [x] **Make `GetModel3DMetadata` read real geometry**
   Return actual bounds, primitive counts, mesh counts, material presence, and
   other cheap-to-compute facts from parsed model data rather than filename or
   container heuristics.
-- [ ] **Add fixture tests for these two nodes immediately**
+- [x] **Add fixture tests for these two nodes immediately**
   Do not defer tests to the end. Add at least one real GLB fixture and assert
   geometry-aware outputs.
 
@@ -156,18 +162,18 @@ Exit criteria for phase 1:
 
 ### 2. Upgrade simplification
 
-- [ ] **Make `Decimate` perform real simplification**
+- [x] **Make `Decimate` perform real simplification**
   Use `glTF-Transform` + `meshoptimizer` so triangle count changes are tied to
   mesh geometry, not placeholder behavior.
-- [ ] **Use the wrapper path first**
+- [x] **Use the wrapper path first**
   Try `NodeIO` + `weld()` + `simplify()` before writing any custom low-level
   simplification plumbing.
-- [ ] **Keep v1 GLB-focused**
+- [x] **Keep v1 GLB-focused**
   Support real GLB decimation first. Do not block this phase on OBJ/STL/PLY.
-- [ ] **Document the truthful limits of `Decimate`**
+- [x] **Document the truthful limits of `Decimate`**
   If only a subset of meshes or formats is supported at first, say so in node
   docs and metadata instead of pretending to support everything.
-- [ ] **Add fixture tests for `Decimate`**
+- [x] **Add fixture tests for `Decimate`**
   Assert that simplification changes geometry statistics in the expected
   direction, not just that some output bytes exist.
 
@@ -181,16 +187,16 @@ Exit criteria for phase 2:
 
 Only start this phase once phases 0-2 are stable.
 
-- [ ] **Install `manifold-3d`**
+- [x] **Install `manifold-3d`**
   Add it only when work on booleans actually starts.
-- [ ] **Make `Boolean3D` geometry-aware**
+- [x] **Make `Boolean3D` geometry-aware**
   Implement union / difference / intersection on real meshes or narrow the
   supported modes until the implementation is truthful.
-- [ ] **Make `MergeMeshes` explicit about behavior**
+- [x] **Make `MergeMeshes` explicit about behavior**
   Support at least one honest merge mode first: either scene merge
   (concatenate while preserving transforms) or boolean union. Do not keep one
   node that claims both if only one path is reliable.
-- [ ] **Add fixture tests for both nodes**
+- [x] **Add fixture tests for both nodes**
   Include success cases and at least one documented unsupported-input case.
 
 Exit criteria for phase 3:
@@ -199,8 +205,54 @@ Exit criteria for phase 3:
 - Unsupported cases are explicit.
 - Tests cover both success and failure/limit paths.
 
-### 4. Add the missing cleanup nodes
+### 4. Refactor `model3d.ts` before adding more scope
 
+This phase is complete.
+
+- [x] **Split `model3d.ts` into a `model3d/` folder**
+  Prefer a folder over more top-level flat files. Keep the public export surface
+  stable through `src/nodes/model3d.ts`.
+- [x] **Move low-level GLB helpers into a dedicated module**
+  Put binary parsing/building and accessor utilities in something like
+  `model3d/glb.ts`.
+- [x] **Move document / conversion helpers into their own module**
+  Put `glTF-Transform` I/O, conversion, merge, and decimation helpers in
+  something like `model3d/document-ops.ts`.
+- [x] **Move manifold boolean helpers into their own module**
+  Put mesh extraction, Manifold bridge code, and boolean result rebuilding in
+  something like `model3d/boolean-ops.ts`.
+- [x] **Move shared types / small utilities out of the node file**
+  Put `Model3DRefLike`, metadata types, format helpers, and byte helpers in
+  `model3d/types.ts` and `model3d/utils.ts` or equivalent.
+- [x] **Keep node classes together in a shallow node-facing module**
+  Either keep all node classes in `model3d/nodes.ts` or split them by concern
+  only if the split is obvious (`io-nodes.ts`, `mesh-nodes.ts`, `ai-nodes.ts`).
+- [x] **Do not change node names or exports during the refactor**
+  This should be structure cleanup, not another behavior change wave.
+- [x] **Keep the current behavior suite green during the split**
+  Use the existing focused GLB behavior tests as the guardrail for the refactor.
+
+Exit criteria for phase 4:
+
+- `model3d.ts` becomes a thin export/assembly layer or barrel.
+- GLB/document/boolean code is separated from node class declarations.
+- Existing focused `Model3D` behavior tests still pass after the split.
+
+### 5. Add the missing cleanup nodes
+
+This is the next active phase.
+
+- [x] **Keep node declarations separate from pure mesh helpers**
+  `BaseNode` subclasses, `@prop` fields, node metadata, and registry exports stay
+  in node-facing modules. Pure GLB/geometry logic should move into helper modules
+  that can be tested without `BaseNode`.
+- [x] **Do the mesh-edit helper split before adding more cleanup scope**
+  Extract the long pure-geometry parts of `Transform3D`, `RecalculateNormals`,
+  `CenterMesh`, and `FlipNormals` out of `model3d/nodes.ts` into a focused helper
+  module such as `model3d/mesh-ops.ts`, while keeping public node exports stable.
+- [x] **Do not add a deeper `model3d/nodes/` subfolder yet**
+  Keep the folder flat until phase 5 adds enough new node families that a
+  responsibility-based `nodes/` split is clearly justified.
 - [ ] **Add `NormalizeModel3D`**
   Provide one focused node for centering, orientation normalization, optional
   uniform scale-to-box, and optional ground-plane placement.
@@ -213,12 +265,12 @@ Exit criteria for phase 3:
 - [ ] **Add tests as each node lands**
   Do not batch all cleanup-node tests into a later PR.
 
-Exit criteria for phase 4:
+Exit criteria for phase 5:
 
 - Each new cleanup node has one narrow purpose.
 - Each new cleanup node ships with focused fixture coverage.
 
-### 5. Final verification pass
+### 6. Final verification pass
 
 - [ ] **Review node docs and titles for honesty**
   If a node only supports triangular meshes, manifold inputs, or a subset of
