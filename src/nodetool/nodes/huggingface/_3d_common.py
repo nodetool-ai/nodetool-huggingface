@@ -9,6 +9,7 @@ checks shared by ``text_to_3d`` and ``image_to_3d`` modules.
 
 from __future__ import annotations
 
+import importlib.util
 import io
 import logging
 import shutil
@@ -172,6 +173,9 @@ def _check_runtime_availability(
 ) -> dict[str, Any]:
     """Return a dict describing the runtime readiness of a node.
 
+    ``optional_packages`` is expected to contain importable module/package
+    names (for example ``diffusers``), not PyPI distribution names.
+
     The returned dict always contains:
 
     * ``available`` (bool) — ``True`` when the node is expected to work.
@@ -227,9 +231,7 @@ def _check_runtime_availability(
     # -- packages --
     missing: list[str] = []
     for pkg in optional_packages or []:
-        try:
-            __import__(pkg)
-        except ImportError:
+        if importlib.util.find_spec(pkg) is None:
             missing.append(pkg)
     if missing:
         issues.append(f"Missing packages: {', '.join(missing)}.")
