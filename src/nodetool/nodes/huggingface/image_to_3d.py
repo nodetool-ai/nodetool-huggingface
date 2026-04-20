@@ -626,10 +626,6 @@ class StableFast3D(HuggingFacePipelineNode):
         return ["image", "output_format"]
 
     @classmethod
-    def get_basic_fields(cls) -> list[str]:
-        return ["image", "output_format"]
-
-    @classmethod
     def runtime_availability(cls) -> dict:
         """Return runtime readiness for this node (GHF1)."""
         return _check_runtime_availability(
