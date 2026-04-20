@@ -489,10 +489,10 @@ class StableFast3D(HuggingFacePipelineNode):
     - Generate UV-unwrapped meshes with materials
     - Real-time 3D reconstruction workflows
 
-    **Platforms:** Linux+CUDA, Windows+CUDA. macOS Metal experimental (untested).
+    **Platforms:** Linux+CUDA, Windows+CUDA. macOS Metal experimental (untested, slow).
 
-    **Requirements:** sf3d package, rembg, torch with CUDA.
-    First run downloads ~1GB model. Needs ~6GB VRAM.
+    **Requirements:** sf3d package, rembg, torch. CUDA recommended; Metal/CPU experimental.
+    First run downloads ~1GB model. Needs ~6GB VRAM on CUDA.
     Generates textured meshes with UV maps, normal maps, and PBR materials.
 
     Model: https://huggingface.co/stabilityai/stable-fast-3d
@@ -507,7 +507,7 @@ class StableFast3D(HuggingFacePipelineNode):
         "enterprise license required above. "
         "See https://huggingface.co/stabilityai/stable-fast-3d/blob/main/LICENSE.md"
     )
-    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "windows"]
+    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "macos", "windows"]
     INSTALL_HINT: ClassVar[str | None] = (
         "Install from: https://github.com/Stability-AI/stable-fast-3d"
     )
@@ -570,7 +570,7 @@ class StableFast3D(HuggingFacePipelineNode):
         return ["image", "output_format"]
 
     def requires_gpu(self) -> bool:
-        return True
+        return False
 
     def _load_model(self):
         """Load or retrieve the SF3D model from cache."""
@@ -663,8 +663,10 @@ class StableFast3D(HuggingFacePipelineNode):
 
         # Generate 3D mesh
         device = _resolve_device()
+        # MPS supports float16 autocast; CPU and CUDA support bfloat16
+        autocast_dtype = torch.float16 if device == "mps" else torch.bfloat16
         with torch.no_grad():
-            with torch.autocast(device_type=device, dtype=torch.bfloat16):
+            with torch.autocast(device_type=device, dtype=autocast_dtype):
                 mesh, _ = model.run_image(
                     [image],
                     bake_resolution=self.texture_resolution,
@@ -703,8 +705,8 @@ class TripoSR(HuggingFacePipelineNode):
 
     **Platforms:** Linux+CUDA, Windows+CUDA. macOS CPU experimental (slow, untested).
 
-    **Requirements:** tsr package (TripoSR), rembg, torch with CUDA.
-    First run downloads ~1GB model. Needs ~6GB VRAM.
+    **Requirements:** tsr package (TripoSR), rembg, torch. CUDA recommended; CPU/MPS experimental.
+    First run downloads ~1GB model. Needs ~6GB VRAM on CUDA.
 
     Model: https://huggingface.co/stabilityai/TripoSR
     License: MIT
@@ -714,7 +716,7 @@ class TripoSR(HuggingFacePipelineNode):
     MIN_VRAM_GB: ClassVar[int] = 6
     ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 1.0
     license_warning: ClassVar[str | None] = None  # MIT
-    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "windows"]
+    SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "macos", "windows"]
     INSTALL_HINT: ClassVar[str | None] = (
         "Install from: https://github.com/VAST-AI-Research/TripoSR"
     )
@@ -764,7 +766,7 @@ class TripoSR(HuggingFacePipelineNode):
         return ["image", "output_format"]
 
     def requires_gpu(self) -> bool:
-        return True
+        return False
 
     def _load_model(self):
         """Load or retrieve the TripoSR model from cache."""

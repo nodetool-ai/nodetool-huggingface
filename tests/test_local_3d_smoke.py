@@ -159,14 +159,23 @@ def test_heavy_nodes_require_gpu():
     """Heavy pipeline nodes should require GPU."""
     from nodetool.nodes.huggingface.image_to_3d import (
         Hunyuan3D,
-        StableFast3D,
-        TripoSR,
         Trellis2,
         TripoSG,
     )
 
-    for cls in [Hunyuan3D, StableFast3D, TripoSR, Trellis2, TripoSG]:
+    for cls in [Hunyuan3D, Trellis2, TripoSG]:
         assert cls().requires_gpu() is True, f"{cls.__name__} should require GPU"
+
+
+def test_experimental_apple_nodes_do_not_require_gpu():
+    """SF3D and TripoSR allow non-GPU execution (experimental Apple path)."""
+    from nodetool.nodes.huggingface.image_to_3d import (
+        StableFast3D,
+        TripoSR,
+    )
+
+    assert StableFast3D().requires_gpu() is False
+    assert TripoSR().requires_gpu() is False
 
 
 def test_seed_defaults():
@@ -536,6 +545,7 @@ def test_finalize_3d_output_contract():
     No GPU or real model weights needed.
     """
     import asyncio
+
     trimesh = pytest.importorskip("trimesh")
     import numpy as np
     from unittest.mock import AsyncMock

@@ -136,7 +136,7 @@ Read this section top to bottom. The first unchecked group is the next work.
 - Goal: keep the optional Apple-expansion work isolated from the core cleanup
   and packaging work.
 
-- [ ] **Soften CUDA gates in SF3D and TripoSR**
+- [x] **Soften CUDA gates in SF3D and TripoSR**
   Let the upstream libraries attempt non-CUDA execution instead of hard-failing
   early in our wrapper code, while keeping support explicitly experimental.
 
