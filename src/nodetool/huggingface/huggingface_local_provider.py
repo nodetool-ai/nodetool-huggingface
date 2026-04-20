@@ -53,7 +53,6 @@ from nodetool.huggingface.local_provider_utils import (
 from nodetool.huggingface.text_to_image_pipelines import (
     load_text_to_image_pipeline,
 )
-from nodetool.types.job import JobUpdate
 from nodetool.types.model import UnifiedModel
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.metadata.types import (
@@ -68,11 +67,10 @@ from nodetool.metadata.types import (
     LanguageModel,
     VideoRef,
 )
-from nodetool.workflows.types import Chunk, NodeProgress
+from nodetool.workflows.types import Chunk, JobUpdate, NodeProgress
 from nodetool.config.logging_config import get_logger
 from nodetool.ml.core.model_manager import ModelManager
 from nodetool.io.media_fetch import fetch_uri_bytes_and_mime_async
-from nodetool.workflows.recommended_models import get_recommended_models
 
 if TYPE_CHECKING:
     import torch
