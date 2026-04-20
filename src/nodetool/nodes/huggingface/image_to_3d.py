@@ -584,7 +584,12 @@ class StableFast3D(HuggingFacePipelineNode):
     )
     SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "macos", "windows"]
     INSTALL_HINT: ClassVar[str | None] = (
-        "Install from: https://github.com/Stability-AI/stable-fast-3d"
+        "Manual install required (terminal). The `sf3d` package is not on PyPI; "
+        "it builds C++/CUDA extensions (`texture_baker`, `uv_unwrapper`) at install "
+        "time and needs a working compiler toolchain (and the CUDA toolkit on "
+        "Linux/Windows for GPU support). "
+        "Run: `pip install -r requirements/sf3d.txt` from the nodetool-huggingface "
+        "repo. See https://github.com/Stability-AI/stable-fast-3d for upstream docs."
     )
 
     class OutputFormat(str, Enum):
@@ -825,7 +830,12 @@ class TripoSR(HuggingFacePipelineNode):
     license_warning: ClassVar[str | None] = None  # MIT
     SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "macos", "windows"]
     INSTALL_HINT: ClassVar[str | None] = (
-        "Install from: https://github.com/VAST-AI-Research/TripoSR"
+        "Manual install required (terminal). The `tsr` package is not on PyPI "
+        "and depends on `torchmcubes`, a C++ extension that needs a compiler "
+        "toolchain (and CUDA for fast GPU marching cubes). "
+        "Run: `pip install -r requirements/triposr.txt` from the "
+        "nodetool-huggingface repo. "
+        "See https://github.com/VAST-AI-Research/TripoSR for upstream docs."
     )
 
     class OutputFormat(str, Enum):
@@ -1044,8 +1054,13 @@ class Trellis2(HuggingFacePipelineNode):
     )
     SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux"]
     INSTALL_HINT: ClassVar[str | None] = (
-        "Install trellis2 and o_voxel. "
-        "See https://github.com/microsoft/TRELLIS.2 for instructions."
+        "Manual install required (terminal). Linux + CUDA only. "
+        "Neither `trellis2` nor `o_voxel` is on PyPI; `o_voxel` builds CUDA C++ "
+        "extensions at install time and needs the CUDA toolkit (`nvcc`) plus a "
+        "C++ compiler. A 24 GB+ GPU is required at runtime. "
+        "Run: `pip install -r requirements/trellis2.txt` from the "
+        "nodetool-huggingface repo. "
+        "See https://github.com/microsoft/TRELLIS.2 for upstream docs."
     )
 
     class Resolution(str, Enum):

@@ -56,9 +56,27 @@ These came from the local 3D plan, but are not needed in the current
   surfaces. Keep this separate from live machine-state checks.
 
 - [ ] **3D-A2 - Runtime installer UX for git-only 3D stacks** (`#8c`)
-  We likely need a non-CLI path eventually so users can install `sf3d`,
-  `triposr`, and `trellis2` support without manually using the terminal.
-  Electron / package-manager integration belongs here.
+  *Status: deferred / may be dropped.*
+  `StableFast3D`, `TripoSR`, and `Trellis2` cannot be installed via `pip` from
+  PyPI — they pull C++/CUDA extensions from upstream git repos and need a
+  build toolchain (compiler, matching CUDA toolkit, sometimes ninja). A
+  proper non-CLI installer would have to ship a build environment, stream
+  pip progress through the GHF2 stage channel, map pip failures to the GHF4
+  error taxonomy, and refuse early on unsupported platforms. That is a
+  significant effort for three nodes whose audience is mostly
+  CLI-comfortable.
+
+  **For now:** leave the nodes registered as-is. Each node's `INSTALL_HINT`
+  must make the manual-effort cost obvious — point users at the pinned
+  `requirements/<node>.txt` file, mention the build toolchain / CUDA
+  requirement, and call out the platform constraints. PyPI-installable
+  nodes (Shap-E, Hunyuan3D, TripoSG) are unaffected and continue to use the
+  normal `pip install 'nodetool-huggingface[<extra>]'` path.
+
+  Revisit only if these three nodes get enough non-CLI demand to justify
+  the installer infrastructure; otherwise consider dropping them in favor
+  of provider-based 3D generation (Meshy / Rodin) which is in
+  `nodetool` core.
 
 - [x] **3D-A3 - VRAM guidance / warning path for 3D nodes** (`#22b`, `#22c`)
   Surface soft warnings when the detected machine is below a model's
