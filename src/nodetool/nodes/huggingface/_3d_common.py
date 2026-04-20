@@ -113,9 +113,7 @@ def _report_stage(
         progress = start
         total = 100
 
-    context.post_message(
-        NodeProgress(node_id=node_id, progress=progress, total=total)
-    )
+    context.post_message(NodeProgress(node_id=node_id, progress=progress, total=total))
 
 
 # ---------------------------------------------------------------------------
@@ -144,7 +142,9 @@ def _log_cache_status(
         Wall-clock seconds spent loading (only meaningful for cold starts).
     """
     if is_cached:
-        log.info("[%s] warm start — model already cached (key=%s)", node_name, cache_key)
+        log.info(
+            "[%s] warm start — model already cached (key=%s)", node_name, cache_key
+        )
     else:
         if load_time_s is not None:
             log.info(
@@ -244,6 +244,46 @@ def _check_runtime_availability(
         "missing_packages": missing,
         "issues": issues,
     }
+
+
+# ---------------------------------------------------------------------------
+# Cancellation and cleanup semantics (GHF3)
+# ---------------------------------------------------------------------------
+# 3D inference jobs can be long-running (10s–120s on GPU).  The following
+# semantics apply:
+#
+# **Cancellation**
+# • Diffusers-based pipelines (Shap-E) support mid-step cancellation via
+#   ``pipeline._interrupt = True``.  Nodes that use diffusers *may* wire
+#   this up in the future via a progress callback.
+# • Non-diffusers pipelines (Hunyuan3D, SF3D, TripoSR, Trellis2, TripoSG)
+#   do not expose a cancellation API.  Cancellation is handled at the job
+#   level by the scheduler terminating the thread / process.
+#
+# **Cleanup**
+# After inference — whether it succeeds, fails, or is cancelled — nodes
+# must release transient GPU memory.  The ``_cleanup_inference`` helper
+# below wraps ``run_gc`` with a CUDA-cache flush and should be called at
+# the end of every ``process()`` method's inference step.
+# ---------------------------------------------------------------------------
+
+
+def _cleanup_inference(label: str) -> None:
+    """Release transient GPU memory after an inference step (GHF3).
+
+    Call this at the end of every ``process()`` method after the
+    inference pipeline returns, regardless of success or failure.
+    """
+    from nodetool.workflows.memory_utils import run_gc
+
+    run_gc(label, log_before_after=False)
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:
+        pass  # non-critical — best-effort cleanup
 
 
 # ---------------------------------------------------------------------------

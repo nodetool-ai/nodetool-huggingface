@@ -24,7 +24,6 @@ from pydantic import Field
 from nodetool.metadata.types import HuggingFaceModel, ImageRef, Model3DRef
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
-from nodetool.workflows.memory_utils import run_gc
 
 from nodetool.nodes.huggingface._3d_common import (
     _model_revision,
@@ -39,6 +38,7 @@ from nodetool.nodes.huggingface._3d_common import (
     _report_stage,
     _log_cache_status,
     _check_runtime_availability,
+    _cleanup_inference,
     MissingDependencyError,
     InsufficientResourcesError,
     UnsupportedPlatformError,
@@ -200,7 +200,7 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
         mesh = images[0]
 
         _report_stage(context, self.id, "postprocessing")
-        run_gc("After ShapE Image-to-3D inference", log_before_after=False)
+        _cleanup_inference("After ShapE Image-to-3D inference")
         # Export to GLB
         import trimesh
 
@@ -519,7 +519,7 @@ class Hunyuan3D(HuggingFacePipelineNode):
         )[0]
 
         _report_stage(context, self.id, "postprocessing")
-        run_gc("After Hunyuan3D inference", log_before_after=False)
+        _cleanup_inference("After Hunyuan3D inference")
         # Export mesh to bytes
         format_str = self.output_format.value
 
@@ -658,7 +658,9 @@ class StableFast3D(HuggingFacePipelineNode):
 
         cached = ModelManager.get_model(self.CACHE_KEY)
         if cached is not None:
-            _log_cache_status(self.CACHE_KEY, is_cached=True, node_name=self.get_title())
+            _log_cache_status(
+                self.CACHE_KEY, is_cached=True, node_name=self.get_title()
+            )
             return
 
         _log_cache_status(self.CACHE_KEY, is_cached=False, node_name=self.get_title())
@@ -763,7 +765,7 @@ class StableFast3D(HuggingFacePipelineNode):
                 )
 
         _report_stage(context, self.id, "postprocessing")
-        run_gc("After SF3D inference", log_before_after=False)
+        _cleanup_inference("After SF3D inference")
         # Export mesh
         format_str = self.output_format.value
         if isinstance(mesh, list):
@@ -883,7 +885,9 @@ class TripoSR(HuggingFacePipelineNode):
             )
         cached = ModelManager.get_model(self.CACHE_KEY)
         if cached is not None:
-            _log_cache_status(self.CACHE_KEY, is_cached=True, node_name=self.get_title())
+            _log_cache_status(
+                self.CACHE_KEY, is_cached=True, node_name=self.get_title()
+            )
             return
 
         _log_cache_status(self.CACHE_KEY, is_cached=False, node_name=self.get_title())
@@ -981,7 +985,7 @@ class TripoSR(HuggingFacePipelineNode):
         mesh = meshes[0]
 
         _report_stage(context, self.id, "postprocessing")
-        run_gc("After TripoSR inference", log_before_after=False)
+        _cleanup_inference("After TripoSR inference")
         # Export mesh
         format_str = self.output_format.value
 
@@ -1120,7 +1124,9 @@ class Trellis2(HuggingFacePipelineNode):
 
         cached = ModelManager.get_model(self.CACHE_KEY)
         if cached is not None:
-            _log_cache_status(self.CACHE_KEY, is_cached=True, node_name=self.get_title())
+            _log_cache_status(
+                self.CACHE_KEY, is_cached=True, node_name=self.get_title()
+            )
             return
 
         _log_cache_status(self.CACHE_KEY, is_cached=False, node_name=self.get_title())
@@ -1214,7 +1220,7 @@ class Trellis2(HuggingFacePipelineNode):
             mesh.simplify(min(self.decimation_target, 16777216))
 
         _report_stage(context, self.id, "postprocessing")
-        run_gc("After Trellis2 inference", log_before_after=False)
+        _cleanup_inference("After Trellis2 inference")
         # Export to GLB using o_voxel
         try:
             glb = o_voxel.postprocess.to_glb(
@@ -1391,7 +1397,9 @@ class TripoSG(HuggingFacePipelineNode):
 
         # Load RMBG model for background removal
         if ModelManager.get_model(self.RMBG_CACHE_KEY) is None:
-            _log_cache_status(self.RMBG_CACHE_KEY, is_cached=False, node_name=self.get_title())
+            _log_cache_status(
+                self.RMBG_CACHE_KEY, is_cached=False, node_name=self.get_title()
+            )
             _check_disk_space(0.5)  # RMBG is ~0.2 GB
             rmbg_path = snapshot_download(
                 repo_id="briaai/RMBG-1.4",
@@ -1401,11 +1409,15 @@ class TripoSG(HuggingFacePipelineNode):
             rmbg_net.eval()
             ModelManager.set_model(self.id, self.RMBG_CACHE_KEY, rmbg_net)
         else:
-            _log_cache_status(self.RMBG_CACHE_KEY, is_cached=True, node_name=self.get_title())
+            _log_cache_status(
+                self.RMBG_CACHE_KEY, is_cached=True, node_name=self.get_title()
+            )
 
         # Load TripoSG pipeline
         if ModelManager.get_model(self.CACHE_KEY) is None:
-            _log_cache_status(self.CACHE_KEY, is_cached=False, node_name=self.get_title())
+            _log_cache_status(
+                self.CACHE_KEY, is_cached=False, node_name=self.get_title()
+            )
             t0 = _time.monotonic()
             _check_disk_space(self.ESTIMATED_DOWNLOAD_GB)
             triposg_path = snapshot_download(
@@ -1435,7 +1447,9 @@ class TripoSG(HuggingFacePipelineNode):
                 load_time_s=_time.monotonic() - t0,
             )
         else:
-            _log_cache_status(self.CACHE_KEY, is_cached=True, node_name=self.get_title())
+            _log_cache_status(
+                self.CACHE_KEY, is_cached=True, node_name=self.get_title()
+            )
 
     async def preload_model(self, context: ProcessingContext):
         import torch
@@ -1640,7 +1654,7 @@ class TripoSG(HuggingFacePipelineNode):
         )
 
         _report_stage(context, self.id, "postprocessing")
-        run_gc("After TripoSG inference", log_before_after=False)
+        _cleanup_inference("After TripoSG inference")
 
         # Optionally simplify mesh
         if self.max_faces > 0:

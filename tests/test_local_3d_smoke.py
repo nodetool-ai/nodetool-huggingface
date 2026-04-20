@@ -681,7 +681,9 @@ def test_error_taxonomy_hierarchy():
         ModelLoadError,
         InferenceError,
     ]:
-        assert issubclass(cls, Local3DError), f"{cls.__name__} should extend Local3DError"
+        assert issubclass(
+            cls, Local3DError
+        ), f"{cls.__name__} should extend Local3DError"
 
 
 def test_error_taxonomy_stdlib_compatibility():
@@ -727,7 +729,14 @@ def test_runtime_availability_returns_expected_keys():
         requires_gpu=False,
         min_vram_gb=0,
     )
-    for key in ["available", "platform_ok", "gpu_ok", "vram_ok", "missing_packages", "issues"]:
+    for key in [
+        "available",
+        "platform_ok",
+        "gpu_ok",
+        "vram_ok",
+        "missing_packages",
+        "issues",
+    ]:
         assert key in result, f"missing key: {key}"
 
 
@@ -759,9 +768,19 @@ def test_runtime_availability_classmethod_on_nodes():
         TripoSG,
     )
 
-    for cls in [ShapETextTo3D, ShapEImageTo3D, Hunyuan3D, StableFast3D, TripoSR, Trellis2, TripoSG]:
+    for cls in [
+        ShapETextTo3D,
+        ShapEImageTo3D,
+        Hunyuan3D,
+        StableFast3D,
+        TripoSR,
+        Trellis2,
+        TripoSG,
+    ]:
         result = cls.runtime_availability()
-        assert isinstance(result, dict), f"{cls.__name__}.runtime_availability() should return dict"
+        assert isinstance(
+            result, dict
+        ), f"{cls.__name__}.runtime_availability() should return dict"
         assert "available" in result
 
 
@@ -819,7 +838,22 @@ def test_log_cache_status_cold(caplog):
     from nodetool.nodes.huggingface._3d_common import _log_cache_status
 
     with caplog.at_level(logging.INFO):
-        _log_cache_status("test_key", is_cached=False, node_name="TestNode", load_time_s=2.5)
+        _log_cache_status(
+            "test_key", is_cached=False, node_name="TestNode", load_time_s=2.5
+        )
 
     assert "cold start" in caplog.text
     assert "2.5s" in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# Cancellation and cleanup tests (GHF3)
+# ---------------------------------------------------------------------------
+
+
+def test_cleanup_inference_does_not_crash():
+    """_cleanup_inference runs without error on CI (no GPU)."""
+    from nodetool.nodes.huggingface._3d_common import _cleanup_inference
+
+    # Should not raise even without CUDA
+    _cleanup_inference("test cleanup")

@@ -16,7 +16,6 @@ from pydantic import Field
 from nodetool.metadata.types import HuggingFaceModel, Model3DRef
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
-from nodetool.workflows.memory_utils import run_gc
 
 from nodetool.nodes.huggingface._3d_common import (
     _resolve_device,
@@ -25,6 +24,7 @@ from nodetool.nodes.huggingface._3d_common import (
     _report_stage,
     _log_cache_status,
     _check_runtime_availability,
+    _cleanup_inference,
     InvalidInputError,
     InferenceError,
 )
@@ -170,7 +170,7 @@ class ShapETextTo3D(HuggingFacePipelineNode):
         mesh = images[0]
 
         _report_stage(context, self.id, "postprocessing")
-        run_gc("After ShapE Text-to-3D inference", log_before_after=False)
+        _cleanup_inference("After ShapE Text-to-3D inference")
         # Export to GLB
         import trimesh
 
