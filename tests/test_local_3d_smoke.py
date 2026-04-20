@@ -576,7 +576,7 @@ def test_finalize_3d_output_contract():
     mock_context.model3d_from_bytes = AsyncMock(return_value="mock_ref")
 
     mesh2 = trimesh.Trimesh(vertices=verts.copy(), faces=faces.copy())
-    result = asyncio.get_event_loop().run_until_complete(
+    result = asyncio.run(
         _finalize_3d_output(
             mock_context,
             mesh=mesh2,
@@ -589,10 +589,10 @@ def test_finalize_3d_output_contract():
 
     assert result == "mock_ref"
     mock_context.model3d_from_bytes.assert_called_once()
-    call_kwargs = mock_context.model3d_from_bytes.call_args
-    assert call_kwargs.kwargs["name"] == "test_node123.glb"
-    assert call_kwargs.kwargs["format"] == "glb"
-    passed_meta = call_kwargs.kwargs["metadata"]
+    call_info = mock_context.model3d_from_bytes.call_args
+    assert call_info.kwargs["name"] == "test_node123.glb"
+    assert call_info.kwargs["format"] == "glb"
+    passed_meta = call_info.kwargs["metadata"]
     assert passed_meta["source_model"] == "test/model"
     assert passed_meta["seed"] == 7
     assert passed_meta["orientation"] == "+Y"
@@ -600,6 +600,6 @@ def test_finalize_3d_output_contract():
     assert "vertex_count" in passed_meta
     assert "face_count" in passed_meta
     # model_bytes should be valid GLB
-    model_bytes = call_kwargs.args[0]
+    model_bytes = call_info.args[0]
     assert isinstance(model_bytes, bytes)
     assert len(model_bytes) > 0
