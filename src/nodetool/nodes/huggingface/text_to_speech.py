@@ -237,6 +237,11 @@ class KokoroTTS(HuggingFacePipelineNode):
     def get_model_id(self):
         return self.model.repo_id
 
+    @staticmethod
+    def _is_cancelled(context: ProcessingContext) -> bool:
+        cancelled = getattr(context, "is_cancelled", False)
+        return bool(cancelled() if callable(cancelled) else cancelled)
+
     async def preload_model(self, context: ProcessingContext):
         from kokoro.pipeline import KPipeline
 
@@ -270,7 +275,7 @@ class KokoroTTS(HuggingFacePipelineNode):
         from nodetool.workflows.memory_utils import get_gpu_memory_usage_mb
 
         assert self._kpipeline is not None, "Kokoro pipeline not initialized"
-        if context.is_cancelled():
+        if self._is_cancelled(context):
             raise asyncio.CancelledError("Kokoro synthesis cancelled")
 
         text = self.text.replace("\n", " ")
@@ -297,7 +302,7 @@ class KokoroTTS(HuggingFacePipelineNode):
 
         try:
             for result in generator:
-                if context.is_cancelled():
+                if self._is_cancelled(context):
                     raise asyncio.CancelledError("Kokoro synthesis cancelled")
                 audio = result.audio
                 if audio is None:
@@ -354,7 +359,7 @@ class KokoroTTS(HuggingFacePipelineNode):
 
         if not audio_chunks:
             raise ValueError("Kokoro did not produce any audio")
-        if context.is_cancelled():
+        if self._is_cancelled(context):
             raise asyncio.CancelledError("Kokoro synthesis cancelled")
 
         if len(audio_chunks) == 1:
