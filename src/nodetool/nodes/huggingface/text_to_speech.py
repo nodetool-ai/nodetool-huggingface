@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 from enum import Enum
 from nodetool.workflows.types import Chunk
 from nodetool.metadata.types import AudioRef, HFTextToSpeech, HuggingFaceModel
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.memory_utils import run_gc, get_gpu_memory_usage_mb
-from nodetool.ml.core.model_manager import ModelManager
 from nodetool.config.logging_config import get_logger
 
 log = get_logger(__name__)
@@ -99,24 +99,15 @@ class KokoroTTS(HuggingFacePipelineNode):
     """
 
     class LanguageCode(str, Enum):
-        AMERICAN_ENGLISH = "a"
-        BRITISH_ENGLISH = "b"
-        ESPANOL = "e"
-        FRENCH = "f"
-        HINDI = "h"
-        ITALIAN = "i"
-        PORTUGUESE = "p"
-        JAPANESE = "j"
-        CHINESE = "z"
-        KOREAN = "k"
-        RUSSIAN = "r"
-        TURKISH = "t"
-        VIETNAMESE = "v"
-        ARABIC = "a"
-        GERMAN = "g"
-        POLISH = "p"
-        ROMANIAN = "r"
-        UKRAINIAN = "u"
+        AMERICAN_ENGLISH = "en-us"
+        BRITISH_ENGLISH = "en-gb"
+        ESPANOL = "es"
+        FRENCH = "fr-fr"
+        HINDI = "hi"
+        ITALIAN = "it"
+        PORTUGUESE = "pt-br"
+        JAPANESE = "ja"
+        CHINESE = "zh"
 
     class Voice(str, Enum):
         # af_*
@@ -230,31 +221,16 @@ class KokoroTTS(HuggingFacePipelineNode):
 
     async def preload_model(self, context: ProcessingContext):
         from kokoro.pipeline import KPipeline
-        from kokoro.model import KModel
 
         device = context.device
-
-        # Cache key for the underlying KModel
-        cache_key = f"{self.get_model_id()}_KModel"
-        cached_model = ModelManager.get_model(cache_key)
-
-        if cached_model is not None:
-            # Reuse the cached KModel instance
-            self._kpipeline = KPipeline(
-                lang_code=self.lang_code,
-                repo_id=self.get_model_id(),
-                model=cached_model,
-            )
-        else:
-            # Create a new KPipeline (which creates a new KModel)
-            self._kpipeline = KPipeline(
-                lang_code=self.lang_code,
-                repo_id=self.get_model_id(),
-                device=device if device else None,
-            )
-            # Cache the KModel for future reuse
-            if self._kpipeline.model is not None:
-                ModelManager.set_model(self.id, cache_key, self._kpipeline.model)
+        # Prefer a fresh Kokoro pipeline per run. Reusing the cached KModel
+        # looked attractive for startup time, but repeat runs could get stuck
+        # after cancellation or a previous incomplete synthesis.
+        self._kpipeline = KPipeline(
+            lang_code=self.lang_code,
+            repo_id=self.get_model_id(),
+            device=device if device else None,
+        )
 
     async def move_to_device(self, device: str):
         if (
@@ -276,6 +252,8 @@ class KokoroTTS(HuggingFacePipelineNode):
         from nodetool.workflows.memory_utils import get_gpu_memory_usage_mb
 
         assert self._kpipeline is not None, "Kokoro pipeline not initialized"
+        if context.is_cancelled():
+            raise asyncio.CancelledError("Kokoro synthesis cancelled")
 
         text = self.text.replace("\n", " ")
 
@@ -301,6 +279,8 @@ class KokoroTTS(HuggingFacePipelineNode):
 
         try:
             for result in generator:
+                if context.is_cancelled():
+                    raise asyncio.CancelledError("Kokoro synthesis cancelled")
                 audio = result.audio
                 if audio is None:
                     continue
@@ -356,6 +336,8 @@ class KokoroTTS(HuggingFacePipelineNode):
 
         if not audio_chunks:
             raise ValueError("Kokoro did not produce any audio")
+        if context.is_cancelled():
+            raise asyncio.CancelledError("Kokoro synthesis cancelled")
 
         if len(audio_chunks) == 1:
             combined = audio_chunks[0]
