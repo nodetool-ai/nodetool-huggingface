@@ -521,3 +521,85 @@ def test_install_hint_present(cls_name, module):
     assert hasattr(cls, "INSTALL_HINT"), f"{cls_name} missing INSTALL_HINT"
     val = cls.INSTALL_HINT
     assert val is None or isinstance(val, str)
+
+
+# ---------------------------------------------------------------------------
+# Shared export-contract test (D12 — no GPU required)
+# ---------------------------------------------------------------------------
+
+
+def test_finalize_3d_output_contract():
+    """Verify _finalize_3d_output produces standardized metadata and GLB bytes.
+
+    Creates a trivial trimesh triangle, runs it through the shared export
+    pipeline, and checks that the metadata contract (D12) is satisfied.
+    No GPU or real model weights needed.
+    """
+    import asyncio
+    trimesh = pytest.importorskip("trimesh")
+    import numpy as np
+    from unittest.mock import AsyncMock
+
+    from nodetool.nodes.huggingface._3d_common import (
+        _normalize_mesh,
+        _build_standard_metadata,
+        _finalize_3d_output,
+        ORIENTATION_UP,
+        UNITS,
+    )
+
+    # ------ _normalize_mesh centers the bounding box ------
+    verts = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
+    faces = np.array([[0, 1, 2]])
+    mesh = trimesh.Trimesh(vertices=verts.copy(), faces=faces.copy())
+    _normalize_mesh(mesh)
+    centroid = mesh.bounding_box.centroid
+    np.testing.assert_allclose(centroid, [0.0, 0.0, 0.0], atol=1e-6)
+
+    # ------ _build_standard_metadata has required fields ------
+    meta = _build_standard_metadata(
+        source_model="test/model",
+        mesh=mesh,
+        seed=42,
+        has_texture=False,
+    )
+    assert meta["source_model"] == "test/model"
+    assert meta["seed"] == 42
+    assert meta["orientation"] == ORIENTATION_UP
+    assert meta["units"] == UNITS
+    assert meta["has_texture"] is False
+    assert meta["vertex_count"] == 3
+    assert meta["face_count"] == 1
+
+    # ------ _finalize_3d_output calls model3d_from_bytes correctly ------
+    mock_context = AsyncMock()
+    mock_context.model3d_from_bytes = AsyncMock(return_value="mock_ref")
+
+    mesh2 = trimesh.Trimesh(vertices=verts.copy(), faces=faces.copy())
+    result = asyncio.run(
+        _finalize_3d_output(
+            mock_context,
+            mesh=mesh2,
+            source_model="test/model",
+            node_id="node123",
+            name_prefix="test",
+            seed=7,
+        )
+    )
+
+    assert result == "mock_ref"
+    mock_context.model3d_from_bytes.assert_called_once()
+    call_info = mock_context.model3d_from_bytes.call_args
+    assert call_info.kwargs["name"] == "test_node123.glb"
+    assert call_info.kwargs["format"] == "glb"
+    passed_meta = call_info.kwargs["metadata"]
+    assert passed_meta["source_model"] == "test/model"
+    assert passed_meta["seed"] == 7
+    assert passed_meta["orientation"] == "+Y"
+    assert passed_meta["units"] == "meters"
+    assert "vertex_count" in passed_meta
+    assert "face_count" in passed_meta
+    # model_bytes should be valid GLB
+    model_bytes = call_info.args[0]
+    assert isinstance(model_bytes, bytes)
+    assert len(model_bytes) > 0

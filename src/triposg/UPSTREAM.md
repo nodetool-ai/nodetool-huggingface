@@ -8,6 +8,7 @@ This directory contains a vendored copy of **TripoSG** from
 | Field | Value |
 |---|---|
 | Repository | https://github.com/VAST-AI-Research/TripoSG |
+| Commit | `fc5c40990181e2a756c4e0b1c2f4d6b5202faf8c` (2025-04-18) |
 | License | MIT |
 | HuggingFace model | https://huggingface.co/VAST-AI/TripoSG |
 

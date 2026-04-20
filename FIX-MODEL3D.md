@@ -43,7 +43,7 @@ Read this section top to bottom. The first unchecked group is the next work.
 
 ### 1. Next: fix model ownership and preload semantics
 
-- [ ] **Make `ModelManager` the single source of truth**
+- [x] **Make `ModelManager` the single source of truth**
   - Do not keep long-lived strong refs like `self._model` / `self._pipeline`
     on node instances.
   - Preferred implementation: keep this scoped to `local_3d.py`.
@@ -65,7 +65,7 @@ Read this section top to bottom. The first unchecked group is the next work.
 - Goal: break up the oversized 3D module along clear modality lines without
   changing behavior, then refresh generated metadata to match the new layout.
 
-- [ ] **Split `local_3d.py` by modality**
+- [x] **Split `local_3d.py` by modality**
   - `text_to_3d.py` for `ShapETextTo3D`
   - `image_to_3d.py` for the six image-to-3D nodes
   - `_3d_common.py` for shared helpers
@@ -77,18 +77,24 @@ Read this section top to bottom. The first unchecked group is the next work.
 - Goal: make the local 3D stacks installable in a predictable way without
   relying on unpublished dependency behavior.
 
-- [ ] **Add env-markered optional dependencies**
+- [x] **Add env-markered optional dependencies**
   Keep installable PyPI extras for pure-Python stacks and fail early only where
   platform constraints are real.
 
 - **Note:** keep direct VCS deps out of published package metadata. Use pinned
   requirement files for git-only stacks instead.
 
-- [ ] **Validate install combinations**
+- [x] **Validate install combinations**
   Confirm whether `[hunyuan3d,triposg]` resolves with `torch==2.9.0`; if not,
   document mutually-exclusive groups.
 
-- [ ] **Pin git-only upstream commits**
+  **Results:** `[hunyuan3d]` and `[sf3d]` (PyPI companion deps only) resolve
+  cleanly with `torch==2.9.0` + `transformers==5.5.4`.
+  `[hunyuan3d,triposg]` fails to build `diso` without CUDA headers at install
+  time — this is expected since `diso` is a CUDA C++ extension. On a CUDA system
+  both extras are compatible. No mutually-exclusive groups exist.
+
+- [x] **Pin git-only upstream commits**
   Maintain commit-pinned requirement files for `sf3d`, `triposr`, and
   `trellis2` so CI / local installs use known-good revisions.
 
@@ -97,19 +103,19 @@ Read this section top to bottom. The first unchecked group is the next work.
 - Goal: all local 3D generators should produce assets that behave the same way
   in the viewer and downstream nodes, without per-model special cases.
 
-- [ ] **Make GLB the canonical transport format**
+- [x] **Make GLB the canonical transport format**
   Make GLB the default internal/export transport for the local generators.
-- [ ] **Standardize orientation**
+- [x] **Standardize orientation**
   Document `+Y` up once in `_3d_common.py`.
-- [ ] **Standardize centering / pivot**
+- [x] **Standardize centering / pivot**
   Default to bounding-box center at origin.
-- [ ] **Standardize metadata**
+- [x] **Standardize metadata**
   Minimum metadata set: `seed`, `source_model`, `vertex_count`, `face_count`,
   `has_texture`, `units`, `orientation`.
-- [ ] **Extract a shared normalization / metadata helper**
+- [x] **Extract a shared normalization / metadata helper**
   Route each local generator through one shared helper instead of ad hoc
   per-node export cleanup.
-- [ ] **Add one focused no-GPU contract test**
+- [x] **Add one focused no-GPU contract test**
   Verify the shared export contract without loading real models.
 
 ### 5. Then: runtime warnings, low-VRAM rollout, and manual quality checks
@@ -117,7 +123,7 @@ Read this section top to bottom. The first unchecked group is the next work.
 - Goal: finish the remaining runtime-behavior work that affects how usable the
   shipped local 3D nodes are in practice.
 
-- [ ] **Roll out `low_vram_mode` on the remaining heavy nodes**
+- [x] **Roll out `low_vram_mode` on the remaining heavy nodes**
   Follow `D7`: `SF3D` and `TripoSG` try CPU offload when supported; `Trellis2`
   exposes the field but warns that upstream has no offload support.
 
