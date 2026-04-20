@@ -1,4 +1,4 @@
-from nodetool.nodes.nodetool.document import DocumentRef
+from nodetool.metadata.types import DocumentRef
 from nodetool.workflows.processing_context import ProcessingContext
 from typing import TypedDict, AsyncGenerator
 from nodetool.workflows.base_node import BaseNode
