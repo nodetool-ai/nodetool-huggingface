@@ -34,6 +34,8 @@ from nodetool.nodes.huggingface._3d_common import (
     _open_pil_image,
     _export_mesh,
     _finalize_3d_output,
+    _warn_vram,
+    _warn_platform,
 )
 
 if TYPE_CHECKING:
@@ -420,6 +422,9 @@ class Hunyuan3D(HuggingFacePipelineNode):
 
         os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
+        _warn_platform(self.SUPPORTED_PLATFORMS, self.get_title())
+        _warn_vram(self.MIN_VRAM_GB, self.get_title())
+
         if self.image.is_empty():
             raise ValueError("Input image is required")
 
@@ -627,6 +632,9 @@ class StableFast3D(HuggingFacePipelineNode):
 
         os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
+        _warn_platform(self.SUPPORTED_PLATFORMS, self.get_title())
+        _warn_vram(self.MIN_VRAM_GB, self.get_title())
+
         if self.image.is_empty():
             raise ValueError("Input image is required")
 
@@ -807,6 +815,9 @@ class TripoSR(HuggingFacePipelineNode):
         from PIL import Image
 
         os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
+        _warn_platform(self.SUPPORTED_PLATFORMS, self.get_title())
+        _warn_vram(self.MIN_VRAM_GB, self.get_title())
 
         if self.image.is_empty():
             raise ValueError("Input image is required")
@@ -1022,6 +1033,9 @@ class Trellis2(HuggingFacePipelineNode):
         # Enable OpenEXR support for environment maps (optional but recommended)
         os.environ.setdefault("OPENCV_IO_ENABLE_OPENEXR", "1")
         os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
+        _warn_platform(self.SUPPORTED_PLATFORMS, self.get_title())
+        _warn_vram(self.MIN_VRAM_GB, self.get_title())
 
         if self.image.is_empty():
             raise ValueError("Input image is required")
@@ -1401,6 +1415,9 @@ class TripoSG(HuggingFacePipelineNode):
         import trimesh
 
         os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
+        _warn_platform(self.SUPPORTED_PLATFORMS, self.get_title())
+        _warn_vram(self.MIN_VRAM_GB, self.get_title())
 
         if self.image.is_empty():
             raise ValueError("Input image is required")

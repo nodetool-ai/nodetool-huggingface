@@ -100,6 +100,57 @@ def _resolve_device() -> str:
     return "cpu"
 
 
+def _warn_vram(min_vram_gb: int, node_name: str) -> None:
+    """Log a warning if detected GPU VRAM is below *min_vram_gb* (D10).
+
+    Per D10, VRAM guidance is a soft warning — never a hard block.
+    Only checks the default CUDA device; silently skips on non-CUDA setups
+    or when torch is not installed.
+    """
+    try:
+        import torch
+    except ModuleNotFoundError:
+        return
+
+    if not torch.cuda.is_available():
+        return
+    try:
+        total_bytes = torch.cuda.get_device_properties(0).total_mem
+        total_gb = total_bytes / (1 << 30)
+        if total_gb < min_vram_gb:
+            log.warning(
+                "%s recommends at least %d GB VRAM but the current GPU "
+                "reports %.1f GB. The model may run out of memory or fall "
+                "back to CPU offloading.",
+                node_name,
+                min_vram_gb,
+                total_gb,
+            )
+    except Exception:
+        pass  # non-critical — skip silently
+
+
+def _warn_platform(supported_platforms: list[str], node_name: str) -> None:
+    """Log a warning if the current OS is not in *supported_platforms*.
+
+    Uses ``sys.platform`` to detect the current operating system and maps
+    it to the canonical platform names used by 3D nodes
+    (``linux``, ``macos``, ``windows``).
+    """
+    import sys
+
+    plat_map = {"linux": "linux", "darwin": "macos", "win32": "windows"}
+    current = plat_map.get(sys.platform)
+    if current and current not in supported_platforms:
+        log.warning(
+            "%s is not supported on %s. Supported platforms: %s. "
+            "The node may fail or produce unexpected results.",
+            node_name,
+            current,
+            ", ".join(supported_platforms),
+        )
+
+
 def _resolve_seed(seed: int) -> int:
     """Return *seed* unchanged when >= 0, otherwise a random 32-bit integer."""
     if seed >= 0:

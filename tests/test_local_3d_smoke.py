@@ -613,3 +613,44 @@ def test_finalize_3d_output_contract():
     model_bytes = call_info.args[0]
     assert isinstance(model_bytes, bytes)
     assert len(model_bytes) > 0
+
+
+# ---------------------------------------------------------------------------
+# VRAM and platform warning helpers (3D-A3 / D10)
+# ---------------------------------------------------------------------------
+
+
+def test_warn_vram_no_crash_without_cuda():
+    """_warn_vram does not crash when CUDA is unavailable."""
+    from nodetool.nodes.huggingface._3d_common import _warn_vram
+
+    # Should silently return on CI (no GPU)
+    _warn_vram(8, "TestNode")
+
+
+def test_warn_platform_warns_on_unsupported(caplog):
+    """_warn_platform logs a warning when platform is not in supported list."""
+    import logging
+    from nodetool.nodes.huggingface._3d_common import _warn_platform
+
+    with caplog.at_level(logging.WARNING):
+        # Use an empty list so any platform triggers the warning
+        _warn_platform([], "TestNode")
+
+    assert "TestNode" in caplog.text
+    assert "not supported" in caplog.text
+
+
+def test_warn_platform_silent_when_supported(caplog):
+    """_warn_platform does not warn when the current platform is supported."""
+    import logging
+    import sys
+    from nodetool.nodes.huggingface._3d_common import _warn_platform
+
+    plat_map = {"linux": "linux", "darwin": "macos", "win32": "windows"}
+    current = plat_map.get(sys.platform, "linux")
+
+    with caplog.at_level(logging.WARNING):
+        _warn_platform([current], "TestNode")
+
+    assert "not supported" not in caplog.text
