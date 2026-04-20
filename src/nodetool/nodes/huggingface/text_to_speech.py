@@ -109,6 +109,24 @@ class KokoroTTS(HuggingFacePipelineNode):
         JAPANESE = "ja"
         CHINESE = "zh"
 
+        @classmethod
+        def _missing_(cls, value: object):
+            if not isinstance(value, str):
+                return None
+
+            aliases = {
+                "a": cls.AMERICAN_ENGLISH,
+                "b": cls.BRITISH_ENGLISH,
+                "e": cls.ESPANOL,
+                "f": cls.FRENCH,
+                "h": cls.HINDI,
+                "i": cls.ITALIAN,
+                "p": cls.PORTUGUESE,
+                "j": cls.JAPANESE,
+                "z": cls.CHINESE,
+            }
+            return aliases.get(value.lower())
+
     class Voice(str, Enum):
         # af_*
         AF_ALLOY = "af_alloy"

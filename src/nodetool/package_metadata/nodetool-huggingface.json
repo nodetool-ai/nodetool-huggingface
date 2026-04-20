@@ -23174,28 +23174,19 @@
           "type": {
             "type": "enum",
             "values": [
-              "a",
-              "b",
-              "e",
-              "f",
-              "h",
-              "i",
-              "p",
-              "j",
-              "z",
-              "k",
-              "r",
-              "t",
-              "v",
-              "a",
-              "g",
-              "p",
-              "r",
-              "u"
+              "en-us",
+              "en-gb",
+              "es",
+              "fr-fr",
+              "hi",
+              "it",
+              "pt-br",
+              "ja",
+              "zh"
             ],
             "type_name": "nodetool.nodes.huggingface.text_to_speech.KokoroTTS.LanguageCode"
           },
-          "default": "a",
+          "default": "en-us",
           "title": "Language",
           "description": "Language for pronunciation. Choose based on your text's language."
         },

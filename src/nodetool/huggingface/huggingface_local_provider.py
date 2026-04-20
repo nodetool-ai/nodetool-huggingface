@@ -305,7 +305,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         if "kokoro" in model_lower:
             # Map voice string to Voice enum
             voice_value = voice or "af_heart"  # Default voice
-            lang_code = kwargs.get("lang_code", "a")  # Default to American English
+            lang_code = kwargs.get("lang_code", "en-us")  # Default to American English
 
             node = KokoroTTS(
                 model=HFTextToSpeech(repo_id=model),
