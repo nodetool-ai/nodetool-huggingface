@@ -27,10 +27,11 @@ us or upstream.
 
 ## Status snapshot
 
-- **Current code state:** implementation still lives in `local_3d.py`. The
-  split to `text_to_3d.py` + `image_to_3d.py` + `_3d_common.py` should be next priority
-- **Completed already:** the earlier quick fixes, doc / packaging cleanup,
-  smoke-test guardrails, and supporting housekeeping are done.
+- **Current code state:** implementation lives in `text_to_3d.py` +
+  `image_to_3d.py` + `_3d_common.py` (split from the original `local_3d.py`).
+- **Completed already:** module split, export normalization, packaging, smoke
+  tests, low-VRAM rollout, Apple-experimental CUDA-gate softening, and
+  runtime VRAM / platform guidance warnings.
 - **Non-HF follow-up work:** generic `Model3D` node upgrades now live in
   `MODEL3D-CROSS-REPO.md`; future shared-type ideas live in
   `MODEL3D-CORE-FUTURE.md`.
@@ -136,7 +137,7 @@ Read this section top to bottom. The first unchecked group is the next work.
 - Goal: keep the optional Apple-expansion work isolated from the core cleanup
   and packaging work.
 
-- [ ] **Soften CUDA gates in SF3D and TripoSR**
+- [x] **Soften CUDA gates in SF3D and TripoSR**
   Let the upstream libraries attempt non-CUDA execution instead of hard-failing
   early in our wrapper code, while keeping support explicitly experimental.
 

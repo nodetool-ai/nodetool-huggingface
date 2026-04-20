@@ -50,7 +50,7 @@ Possible future product UX, if these warnings prove broadly useful:
 These came from the local 3D plan, but are not needed in the current
 `FIX-MODEL3D.md` execution order.
 
-- [ ] **3D-A1 - Static capability metadata for local 3D nodes** (`#8e`)
+- [x] **3D-A1 - Static capability metadata for local 3D nodes** (`#8e`)
   Add static facts like `SUPPORTED_PLATFORMS`, `INSTALL_HINT`,
   `license_warning`, and `MIN_VRAM_GB` where useful for shared product
   surfaces. Keep this separate from live machine-state checks.
@@ -60,7 +60,7 @@ These came from the local 3D plan, but are not needed in the current
   `triposr`, and `trellis2` support without manually using the terminal.
   Electron / package-manager integration belongs here.
 
-- [ ] **3D-A3 - VRAM guidance / warning path for 3D nodes** (`#22b`, `#22c`)
+- [x] **3D-A3 - VRAM guidance / warning path for 3D nodes** (`#22b`, `#22c`)
   Surface soft warnings when the detected machine is below a model's
   recommended VRAM, plus add a focused test and one manual verification note.
 

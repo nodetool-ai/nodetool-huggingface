@@ -159,14 +159,23 @@ def test_heavy_nodes_require_gpu():
     """Heavy pipeline nodes should require GPU."""
     from nodetool.nodes.huggingface.image_to_3d import (
         Hunyuan3D,
-        StableFast3D,
-        TripoSR,
         Trellis2,
         TripoSG,
     )
 
-    for cls in [Hunyuan3D, StableFast3D, TripoSR, Trellis2, TripoSG]:
+    for cls in [Hunyuan3D, Trellis2, TripoSG]:
         assert cls().requires_gpu() is True, f"{cls.__name__} should require GPU"
+
+
+def test_experimental_apple_nodes_do_not_require_gpu():
+    """SF3D and TripoSR allow non-GPU execution (experimental Apple path)."""
+    from nodetool.nodes.huggingface.image_to_3d import (
+        StableFast3D,
+        TripoSR,
+    )
+
+    assert StableFast3D().requires_gpu() is False
+    assert TripoSR().requires_gpu() is False
 
 
 def test_seed_defaults():
@@ -536,6 +545,7 @@ def test_finalize_3d_output_contract():
     No GPU or real model weights needed.
     """
     import asyncio
+
     trimesh = pytest.importorskip("trimesh")
     import numpy as np
     from unittest.mock import AsyncMock
@@ -603,3 +613,44 @@ def test_finalize_3d_output_contract():
     model_bytes = call_info.args[0]
     assert isinstance(model_bytes, bytes)
     assert len(model_bytes) > 0
+
+
+# ---------------------------------------------------------------------------
+# VRAM and platform warning helpers (3D-A3 / D10)
+# ---------------------------------------------------------------------------
+
+
+def test_warn_vram_no_crash_without_cuda():
+    """_warn_vram does not crash when CUDA is unavailable."""
+    from nodetool.nodes.huggingface._3d_common import _warn_vram
+
+    # Should silently return on CI (no GPU)
+    _warn_vram(8, "TestNode")
+
+
+def test_warn_platform_warns_on_unsupported(caplog):
+    """_warn_platform logs a warning when platform is not in supported list."""
+    import logging
+    from nodetool.nodes.huggingface._3d_common import _warn_platform
+
+    with caplog.at_level(logging.WARNING):
+        # Use an empty list so any platform triggers the warning
+        _warn_platform([], "TestNode")
+
+    assert "TestNode" in caplog.text
+    assert "not supported" in caplog.text
+
+
+def test_warn_platform_silent_when_supported(caplog):
+    """_warn_platform does not warn when the current platform is supported."""
+    import logging
+    import sys
+    from nodetool.nodes.huggingface._3d_common import _warn_platform
+
+    plat_map = {"linux": "linux", "darwin": "macos", "win32": "windows"}
+    current = plat_map.get(sys.platform, "linux")
+
+    with caplog.at_level(logging.WARNING):
+        _warn_platform([current], "TestNode")
+
+    assert "not supported" not in caplog.text
