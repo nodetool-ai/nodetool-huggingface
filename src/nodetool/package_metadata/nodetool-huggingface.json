@@ -19002,7 +19002,7 @@
           "type": {
             "type": "int"
           },
-          "default": 50,
+          "default": 30,
           "title": "Num Inference Steps",
           "description": "Number of denoising steps. More steps = better quality but slower.",
           "min": 10.0,
@@ -19024,9 +19024,9 @@
           "type": {
             "type": "int"
           },
-          "default": 384,
+          "default": 256,
           "title": "Octree Resolution",
-          "description": "Resolution of the octree for mesh extraction. Higher = more detail.",
+          "description": "Resolution of the octree for mesh extraction. Higher = more detail but uses more VRAM and is more likely to crash on Windows. 256 is a safe default; 384+ requires plenty of VRAM.",
           "min": 64.0,
           "max": 512.0
         },

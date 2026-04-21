@@ -42,6 +42,10 @@ dependencies = [
 [project.optional-dependencies]
 # Always installable — Shap-E only needs diffusers (already in core deps)
 shape = []
+kokoro-ja = [
+    "misaki[ja]",
+    "pyopenjtalk",
+]
 
 # Pure-Python / wheel deps — install everywhere, runtime gates CUDA
 hunyuan3d = [
@@ -67,6 +71,9 @@ trellis2 = []
 # Convenience meta-groups (PyPI-installable extras only)
 all-3d-pypi = ["nodetool-huggingface[hunyuan3d,triposg]"]
 all-3d = ["nodetool-huggingface[hunyuan3d,triposg,sf3d,triposr,trellis2]"]
+
+[tool.uv.sources]
+nodetool-core = { path = "../nodetool-core", editable = true }
 
 
 [tool.hatch.build.targets.wheel]

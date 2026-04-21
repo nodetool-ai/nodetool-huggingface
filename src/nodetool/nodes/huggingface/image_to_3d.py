@@ -286,11 +286,17 @@ class Hunyuan3D(HuggingFacePipelineNode):
         description="Input image to convert to 3D",
     )
     model_variant: ModelVariant = Field(
-        default=ModelVariant.V2_1,
-        description="Model variant. V2.1 (3.3B params, best quality, ~8GB VRAM), Standard v2.0 (1.1B params, ~6GB VRAM), or Mini v2.0 (0.6B params, ~5GB VRAM, fastest).",
+        default=ModelVariant.STANDARD,
+        description=(
+            "Model variant. Standard v2.0 (1.1B params, ~6GB VRAM, most stable), "
+            "Mini v2.0 (0.6B params, ~5GB VRAM, fastest), "
+            "or V2.1 (3.3B params, best quality, ~8GB VRAM — requires "
+            "hy3dgen>=2.1; with hy3dgen 2.0.x V2.1 weights may fail to load "
+            "or crash mid-inference)."
+        ),
     )
     num_inference_steps: int = Field(
-        default=50,
+        default=30,
         ge=10,
         le=100,
         description="Number of denoising steps. More steps = better quality but slower.",
@@ -302,10 +308,14 @@ class Hunyuan3D(HuggingFacePipelineNode):
         description="How strongly to follow the input. Higher = more adherence.",
     )
     octree_resolution: int = Field(
-        default=384,
+        default=256,
         ge=64,
         le=512,
-        description="Resolution of the octree for mesh extraction. Higher = more detail.",
+        description=(
+            "Resolution of the octree for mesh extraction. Higher = more detail "
+            "but uses more VRAM and is more likely to crash on Windows. 256 is a "
+            "safe default; 384+ requires plenty of VRAM."
+        ),
     )
     low_vram_mode: bool = Field(
         default=False,
@@ -414,6 +424,7 @@ class Hunyuan3D(HuggingFacePipelineNode):
     def _load_pipeline(self, variant: str):
         """Load or retrieve the Hunyuan3D pipeline for the given variant."""
         import time as _time
+        import torch
         from nodetool.ml.core.model_manager import ModelManager
 
         config = self.VARIANT_CONFIG[variant]
@@ -434,15 +445,56 @@ class Hunyuan3D(HuggingFacePipelineNode):
         if self.license_warning:
             log.info("License notice: %s", self.license_warning)
 
-        # Now load the pipeline - hy3dgen will find the cached files
+        # Pick load dtype: hy3dgen ships fp16 weights for v2.0; v2.1's separate
+        # VAE may not have an fp16 variant in older hy3dgen versions, so we let
+        # the pipeline pick its own variant for V2_1 to avoid file-not-found
+        # errors that previously surfaced as native crashes.
+        from_pretrained_kwargs: dict[str, Any] = {
+            "subfolder": config["subfolder"],
+            "use_safetensors": True,
+        }
         revision = _model_revision(config["repo_id"])
-        pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
-            config["repo_id"],
-            subfolder=config["subfolder"],
-            revision=revision,
-            use_safetensors=True,
-            variant="fp16",
-        )
+        if revision is not None:
+            from_pretrained_kwargs["revision"] = revision
+        if variant != "v2_1":
+            from_pretrained_kwargs["variant"] = "fp16"
+
+        try:
+            pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
+                config["repo_id"],
+                **from_pretrained_kwargs,
+            )
+        except Exception as exc:
+            # V2.1 has a different on-disk layout (separate VAE subfolder).
+            # hy3dgen 2.0.x can't find the VAE and either raises here or
+            # later crashes the worker with an access violation. Surface a
+            # clear error instead.
+            if variant == "v2_1":
+                raise ModelLoadError(
+                    "Failed to load Hunyuan3D-2.1 with the installed hy3dgen "
+                    "version. hy3dgen 2.0.x does not understand the v2.1 "
+                    "separate-VAE layout. Either select the 'standard' or "
+                    "'mini' variant, or install hy3dshape from "
+                    "https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1. "
+                    f"Underlying error: {exc}"
+                ) from exc
+            raise ModelLoadError(
+                f"Failed to load Hunyuan3D '{variant}' pipeline: {exc}"
+            ) from exc
+
+        # Move pipeline onto CUDA + fp16 explicitly. Without this the pipeline
+        # stays on CPU while the user-supplied generator lives on CUDA, and the
+        # device/dtype mismatch can crash hy3dgen's native CUDA kernels with a
+        # Windows access violation (exit code 3221225477 / 0xC0000005).
+        if not self.low_vram_mode and torch.cuda.is_available():
+            try:
+                pipeline.to("cuda", dtype=torch.float16)
+            except Exception as exc:
+                log.warning(
+                    "Could not move Hunyuan3D pipeline to cuda+fp16 (%s). "
+                    "Falling back to default device placement.",
+                    exc,
+                )
 
         # Enable CPU offloading if requested
         if self.low_vram_mode:
@@ -522,20 +574,45 @@ class Hunyuan3D(HuggingFacePipelineNode):
         assert pipeline is not None, "Pipeline not initialized"
 
         _report_stage(context, self.id, "inference")
-        # Set seed using per-call generator (avoids leaking global RNG state)
+        # Set seed using per-call generator (avoids leaking global RNG state).
+        # The generator MUST live on the same device as the pipeline weights
+        # — a CUDA generator paired with a CPU pipeline (or vice versa) is
+        # the most common cause of access-violation crashes inside hy3dgen's
+        # native kernels on Windows.
         seed = _resolve_seed(self.seed)
-        generator = torch.Generator(
-            device="cuda" if torch.cuda.is_available() else "cpu"
-        ).manual_seed(seed)
+        try:
+            pipeline_device = str(getattr(pipeline, "device", "cpu"))
+        except Exception:
+            pipeline_device = "cpu"
+        gen_device = "cuda" if pipeline_device.startswith("cuda") else "cpu"
+        generator = torch.Generator(device=gen_device).manual_seed(seed)
 
-        # Generate 3D mesh
-        mesh = pipeline(
-            image=input_image,
-            num_inference_steps=self.num_inference_steps,
-            guidance_scale=self.guidance_scale,
-            octree_resolution=self.octree_resolution,
-            generator=generator,
-        )[0]
+        # Generate 3D mesh. Wrap the pipeline call so any native crash with a
+        # recognisable signature (CUDA OOM, access violation surfaced as a
+        # RuntimeError) gets a friendlier message.
+        try:
+            mesh = pipeline(
+                image=input_image,
+                num_inference_steps=self.num_inference_steps,
+                guidance_scale=self.guidance_scale,
+                octree_resolution=self.octree_resolution,
+                generator=generator,
+            )[0]
+        except torch.cuda.OutOfMemoryError as exc:
+            torch.cuda.empty_cache()
+            raise InsufficientResourcesError(
+                "Hunyuan3D ran out of GPU memory. Try a smaller "
+                "octree_resolution (e.g. 192 or 256), enable low_vram_mode, "
+                "or pick the 'mini' variant."
+            ) from exc
+        except RuntimeError as exc:
+            # hy3dgen's native code can raise opaque RuntimeErrors when device
+            # / dtype don't line up; surface a hint instead of failing silently.
+            raise InferenceError(
+                f"Hunyuan3D inference failed: {exc}. If this happened on "
+                "Windows with the V2.1 variant, try the 'standard' or 'mini' "
+                "variant — hy3dgen 2.0.x has known stability issues with V2.1."
+            ) from exc
 
         _report_stage(context, self.id, "postprocessing")
         _cleanup_inference("After Hunyuan3D inference")

@@ -421,12 +421,21 @@ def _warn_platform(supported_platforms: list[str], node_name: str) -> None:
 
 
 def _resolve_seed(seed: int) -> int:
-    """Return *seed* unchanged when >= 0, otherwise a random 32-bit integer."""
+    """Return *seed* unchanged when >= 0, otherwise a random non-negative seed.
+
+    The random branch is capped at ``2**31 - 1`` (signed int32 max) to stay
+    compatible with native CUDA / C++ kernels that interpret the seed as
+    signed ``int32``. Some upstream pipelines (notably ``hy3dgen``) pass the
+    Python int straight to a C++ kernel that overflows on values above
+    ``INT32_MAX`` and crashes the worker with a Windows access violation
+    (``0xC0000005`` / exit code 3221225477).
+    """
     if seed >= 0:
-        return seed
+        # Also clamp user-provided seeds to the safe range.
+        return min(seed, 2**31 - 1)
     import torch
 
-    return torch.randint(0, 2**32, (1,)).item()
+    return int(torch.randint(0, 2**31 - 1, (1,)).item())
 
 
 def _open_pil_image(image_bytes_io: Any, mode: str = "RGB") -> "Image.Image":
