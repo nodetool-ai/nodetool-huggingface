@@ -256,6 +256,12 @@ This package provides a rich set of HuggingFace nodes for integration with Nodet
 pip install nodetool-huggingface
 ```
 
+Japanese Kokoro text-to-speech needs additional G2P dependencies:
+
+```bash
+pip install "nodetool-huggingface[kokoro-ja]"
+```
+
 Or install from source:
 
 ```bash
