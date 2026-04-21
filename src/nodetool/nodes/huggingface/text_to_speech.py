@@ -4,6 +4,7 @@ import asyncio
 from enum import Enum
 from nodetool.workflows.types import Chunk
 from nodetool.metadata.types import AudioRef, HFTextToSpeech, HuggingFaceModel
+from nodetool.nodes.huggingface._3d_common import MissingDependencyError
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.memory_utils import run_gc, get_gpu_memory_usage_mb
@@ -242,6 +243,14 @@ class KokoroTTS(HuggingFacePipelineNode):
         cancelled = getattr(context, "is_cancelled", False)
         return bool(cancelled() if callable(cancelled) else cancelled)
 
+    def _missing_dependency_hint(self) -> str | None:
+        if self.lang_code == self.LanguageCode.JAPANESE:
+            return (
+                "Japanese Kokoro requires pyopenjtalk. "
+                "Install with: pip install nodetool-huggingface[kokoro-ja]"
+            )
+        return None
+
     async def preload_model(self, context: ProcessingContext):
         from kokoro.pipeline import KPipeline
 
@@ -249,11 +258,19 @@ class KokoroTTS(HuggingFacePipelineNode):
         # Prefer a fresh Kokoro pipeline per run. Reusing the cached KModel
         # looked attractive for startup time, but repeat runs could get stuck
         # after cancellation or a previous incomplete synthesis.
-        self._kpipeline = KPipeline(
-            lang_code=self.lang_code,
-            repo_id=self.get_model_id(),
-            device=device if device else None,
-        )
+        try:
+            self._kpipeline = KPipeline(
+                lang_code=self.lang_code,
+                repo_id=self.get_model_id(),
+                device=device if device else None,
+            )
+        except ImportError as exc:
+            if "pyopenjtalk" in str(exc):
+                raise MissingDependencyError(
+                    "Kokoro Japanese requires pyopenjtalk for text processing.",
+                    install_hint=self._missing_dependency_hint(),
+                ) from exc
+            raise
 
     async def move_to_device(self, device: str):
         if (
