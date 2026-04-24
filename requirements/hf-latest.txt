@@ -1,0 +1,11 @@
+# Latest Hugging Face stack snapshot as of 2026-04-23.
+# Use for local compatibility testing, not as the library's install contract.
+transformers==5.6.1
+diffusers==0.37.1
+huggingface_hub==1.11.0
+accelerate==1.13.0
+safetensors==0.7.0
+tokenizers==0.22.2
+mistral-common[image]==1.11.0
+peft==0.19.1
+sentence-transformers==5.4.1

@@ -1,7 +1,6 @@
 from enum import Enum
 from nodetool.metadata.types import HFTextGeneration, Message, Provider
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
-from nodetool.providers import get_provider
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import Chunk
 from typing import AsyncGenerator, TypedDict
@@ -171,7 +170,7 @@ class TextGeneration(HuggingFacePipelineNode):
     async def _gen_process_via_provider(
         self, context: ProcessingContext
     ) -> AsyncGenerator["TextGeneration.OutputType", None]:
-        provider = await get_provider(Provider.HuggingFace)
+        provider = await context.get_provider(Provider.HuggingFace)
         messages = self._build_provider_messages()
         model_id = self._provider_model_id()
         full_text = ""

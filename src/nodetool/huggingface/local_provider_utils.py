@@ -176,6 +176,14 @@ def _is_vram_error(exc: Exception) -> bool:
     return any(indicator in error_msg for indicator in vram_indicators)
 
 
+def _normalize_pipeline_task(pipeline_task: str) -> str:
+    """Map legacy/NodeTool task names to the task names supported by installed transformers."""
+    task = pipeline_task.strip().lower()
+    if task == "image-to-text":
+        return "image-text-to-text"
+    return task
+
+
 async def load_pipeline(
     node_id: str,
     context: ProcessingContext,
@@ -191,8 +199,10 @@ async def load_pipeline(
     if model_id == "" or model_id is None:
         raise ValueError("Please select a model")
 
+    normalized_pipeline_task = _normalize_pipeline_task(pipeline_task)
+
     if cache_key is None:
-        cache_key = f"{model_id}_{pipeline_task}"
+        cache_key = f"{model_id}_{normalized_pipeline_task}"
 
     cached_model = ModelManager.get_model(cache_key)
     if cached_model:
@@ -238,7 +248,7 @@ async def load_pipeline(
     context.post_message(
         JobUpdate(
             status="running",
-            message=f"Loading pipeline {type(model_id) == str and model_id or pipeline_task} from HuggingFace",
+            message=f"Loading pipeline {type(model_id) == str and model_id or normalized_pipeline_task} from HuggingFace",
         )
     )
     if "token" not in kwargs:
@@ -248,7 +258,7 @@ async def load_pipeline(
         from transformers import pipeline
 
         return pipeline(
-            pipeline_task,
+            normalized_pipeline_task,
             model=model_id,
             torch_dtype=torch_dtype,
             **kwargs,

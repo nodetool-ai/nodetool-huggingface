@@ -105,7 +105,7 @@ class VisualizeObjectDetection(
         list[types.ObjectDetectionResult]
         | OutputHandle[list[types.ObjectDetectionResult]]
     ) = connect_field(
-        default={},
+        default=[],
         description="List of detected objects from ObjectDetection or ZeroShotObjectDetection nodes.",
     )
 

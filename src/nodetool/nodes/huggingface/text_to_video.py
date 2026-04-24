@@ -17,6 +17,7 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
 )
 from nodetool.workflows.memory_utils import run_gc
 from nodetool.workflows.types import NodeProgress
+from nodetool.huggingface.video_utils import video_from_frames
 
 if TYPE_CHECKING:
     import torch
@@ -449,4 +450,4 @@ class Wan_T2V(HuggingFacePipelineNode):
         )
 
         run_gc("After Wan T2V inference", log_before_after=False)
-        return await context.video_from_frames(output.frames[0], fps=self.fps)
+        return await video_from_frames(context, output.frames[0], fps=self.fps)
