@@ -121,7 +121,15 @@ class ImageToText(HuggingFacePipelineNode):
         if self.max_new_tokens is not None:
             kwargs["max_new_tokens"] = self.max_new_tokens
 
-        result = await self.run_pipeline_in_thread(image, **kwargs)
+        pipeline_task = getattr(self._pipeline, "task", None)
+        if pipeline_task == "image-text-to-text":
+            result = await self.run_pipeline_in_thread(
+                images=image,
+                text="",
+                **kwargs,
+            )
+        else:
+            result = await self.run_pipeline_in_thread(image, **kwargs)
 
         # Handle different output formats from different models
         if isinstance(result, list) and len(result) > 0:
