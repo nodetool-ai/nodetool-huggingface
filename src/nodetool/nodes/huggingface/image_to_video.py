@@ -17,6 +17,7 @@ from nodetool.metadata.types import (
 )
 from nodetool.workflows.types import NodeProgress
 from nodetool.workflows.memory_utils import run_gc
+from nodetool.huggingface.video_utils import video_from_frames
 from .huggingface_pipeline import HuggingFacePipelineNode
 
 if TYPE_CHECKING:
@@ -275,7 +276,7 @@ class Wan_I2V(HuggingFacePipelineNode):
         )
 
         run_gc("After Wan I2V inference", log_before_after=False)
-        return await context.video_from_frames(output.frames[0], fps=self.fps)
+        return await video_from_frames(context, output.frames[0], fps=self.fps)
 
     def required_inputs(self):
         return ["input_image"]

@@ -23,13 +23,11 @@ class DepthEstimation(SingleOutputGraphNode[types.ImageRef], GraphNode[types.Ima
     """
 
     Generates depth maps from single RGB images using monocular depth estimation models.
-    image, depth-estimation, 3D, huggingface, computer-vision
+    image, depth-estimation, 3D, huggingface, computer-vision, depth-anything, dpt
 
     Use cases:
     - Create depth maps for 3D modeling and scene reconstruction
-    - Enable augmented reality applications with depth awareness
-    - Improve robotic navigation and obstacle detection
-    - Enhance scene understanding in autonomous vehicles
+    - Enhance scene understanding
     - Generate depth-based visual effects for images and video
     """
 

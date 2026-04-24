@@ -19,15 +19,17 @@ dependencies = [
     "torchaudio",
     "hf_xet",
     "kokoro>=0.9.4",
-    "diffusers[torch]>=0.35.1",
+    "diffusers[torch]>=0.35.1,<1",
     "llama-index-embeddings-huggingface>=0.6.1",
-    "transformers>=4.56.0",
-    "huggingface_hub>=0.25.2",
-    "accelerate>=0.34.0",
-    "safetensors>=0.4.2",
+    "transformers>=5.6.0,<6",
+    "mistral-common[image]>=1.10.0,<2",
+    "huggingface_hub>=1.11.0,<2",
+    "accelerate>=1.13.0,<2",
+    "safetensors>=0.7.0,<1",
+    "tokenizers>=0.22.2,<1",
     "paddleocr",
     "paddlepaddle",
-    "peft>=0.17.0",
+    "peft>=0.19.1,<1",
     "sentencepiece",
     "sam2",
     "accelerate",
@@ -82,6 +84,7 @@ include = [
     "src/nodetool/package_metadata/*.json",
     "src/nodetool/assets/**/*.jpg",
     "src/nodetool/assets/**/*.png",
+    "src/nodetool/integrations/huggingface/*.json",
 ]
 
 [tool.setuptools]
@@ -90,6 +93,7 @@ include-package-data = true
 [tool.setuptools.package-data]
 nodetool = [
     "package_metadata/nodetool-huggingface.json",
+    "integrations/huggingface/*.json",
     "assets/nodetool-huggingface/Image to Image.jpg",
     "assets/nodetool-huggingface/Stable Diffusion.jpg",
     "assets/nodetool-huggingface/Image Enhance.jpg",

@@ -53,6 +53,7 @@ from nodetool.huggingface.local_provider_utils import (
 from nodetool.huggingface.text_to_image_pipelines import (
     load_text_to_image_pipeline,
 )
+from nodetool.huggingface.video_utils import video_from_frames
 from nodetool.types.model import UnifiedModel
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.metadata.types import (
@@ -658,7 +659,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         frames = output.frames[0]  # pyright: ignore[reportAttributeAccessIssue]
 
         # Convert frames to video
-        video_ref = await context.video_from_frames(frames, fps=fps)
+        video_ref = await video_from_frames(context, frames, fps=fps)
 
         return video_ref
 

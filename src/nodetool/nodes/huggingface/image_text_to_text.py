@@ -1,9 +1,11 @@
-from nodetool.media.video.video_utils import extract_video_frames
+import io
+import asyncio
+from typing import Any, AsyncGenerator, TypedDict
+
+import PIL.Image
 from nodetool.metadata.types import MessageTextContent
 from nodetool.metadata.types import MessageImageContent
 from nodetool.metadata.types import MessageContent
-import asyncio
-from typing import Any, AsyncGenerator, TypedDict
 from enum import Enum
 from pydantic import Field
 import logging
@@ -21,12 +23,83 @@ from nodetool.metadata.types import (
     VideoRef,
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
-from nodetool.providers import get_provider
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import Chunk
+from nodetool.media.video.video_utils import (
+    _is_imageio_available,
+    _is_opencv_available,
+    _legacy_read_video_frames,
+)
 from queue import Queue
 import threading
 
+def extract_video_frames(
+    input_video: str | bytes,
+    fps: int = 1,
+) -> list[PIL.Image.Image]:
+    """
+    Extract frames from a video at a specific fps.
+
+    Args:
+        input_video: Path to video file or video bytes
+        fps: Frames per second to sample. Default is 1.
+
+    Returns:
+        List[PIL.Image.Image]: List of PIL images
+    """
+    if not _is_imageio_available():
+        if not _is_opencv_available():
+            raise ImportError(
+                "imageio or OpenCV is required for video reading. Please install imageio: `pip install imageio imageio-ffmpeg`"
+            )
+        import logging
+
+        logging.warning(
+            "imageio not available, falling back to OpenCV backend. "
+            "For better quality, install imageio: `pip install imageio imageio-ffmpeg`"
+        )
+        return _legacy_read_video_frames(input_video, fps)
+
+    import imageio
+
+    # Check for ffmpeg availability for imageio
+    try:
+        imageio.plugins.ffmpeg.get_exe()
+    except (AttributeError, RuntimeError):
+        import logging
+
+        logging.warning(
+            "ffmpeg not found for imageio, falling back to OpenCV backend. "
+            "Install ffmpeg support: `pip install imageio-ffmpeg`"
+        )
+        return _legacy_read_video_frames(input_video, fps)
+
+    frames = []
+
+    # Handle bytes - create a BytesIO for imageio
+    video_source = io.BytesIO(input_video) if isinstance(input_video, bytes) else input_video
+
+    try:
+        reader = imageio.get_reader(video_source, format="ffmpeg")  # type: ignore[arg-type]
+        meta = reader.get_meta_data()
+        video_fps = meta.get("fps", 30)
+
+        # Calculate sampling interval
+        step = max(1, int(video_fps / fps))
+
+        for i, frame in enumerate(reader):  # type: ignore[arg-type]
+            if i % step == 0:
+                frames.append(PIL.Image.fromarray(frame))
+
+        reader.close()
+    except Exception as e:
+        import logging
+
+        logging.error(f"Error reading video with imageio: {e}")
+        # Try fallback
+        return _legacy_read_video_frames(input_video, fps)
+
+    return frames
 
 class LoadImageTextToTextModel(HuggingFacePipelineNode):
     """
@@ -161,7 +234,7 @@ class ImageTextToText(HuggingFacePipelineNode):
     async def gen_process(
         self, context: ProcessingContext
     ) -> AsyncGenerator["ImageTextToText.OutputType", None]:
-        provider = await get_provider(Provider.HuggingFace)
+        provider = await context.get_provider(Provider.HuggingFace)
         messages = self._prepare_messages()
 
         full_text: str = ""
