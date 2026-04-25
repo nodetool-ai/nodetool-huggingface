@@ -147,6 +147,28 @@ class TextGeneration(HuggingFacePipelineNode):
             HFTextGeneration(
                 repo_id="unsloth/Ministral-3-3B-Base-2512-unsloth-bnb-4bit"
             ),
+            # Phi-4 family (Microsoft)
+            HFTextGeneration(repo_id="microsoft/phi-4"),
+            HFTextGeneration(repo_id="microsoft/phi-4-mini-instruct"),
+            HFTextGeneration(repo_id="microsoft/phi-4-reasoning"),
+            HFTextGeneration(repo_id="microsoft/phi-4-reasoning-plus"),
+            HFTextGeneration(repo_id="unsloth/phi-4-bnb-4bit"),
+            HFTextGeneration(repo_id="unsloth/phi-4-mini-instruct-bnb-4bit"),
+            # DeepSeek-R1 reasoning distillations
+            HFTextGeneration(repo_id="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"),
+            HFTextGeneration(repo_id="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"),
+            HFTextGeneration(repo_id="deepseek-ai/DeepSeek-R1-Distill-Llama-8B"),
+            HFTextGeneration(repo_id="deepseek-ai/DeepSeek-R1-Distill-Qwen-14B"),
+            HFTextGeneration(repo_id="unsloth/DeepSeek-R1-Distill-Qwen-7B-bnb-4bit"),
+            HFTextGeneration(repo_id="unsloth/DeepSeek-R1-Distill-Llama-8B-bnb-4bit"),
+            # Gemma 3 native (Google)
+            HFTextGeneration(repo_id="google/gemma-3-1b-it"),
+            HFTextGeneration(repo_id="google/gemma-3-4b-it"),
+            HFTextGeneration(repo_id="google/gemma-3-12b-it"),
+            HFTextGeneration(repo_id="google/gemma-3-27b-it"),
+            # Mistral Small 3.1
+            HFTextGeneration(repo_id="mistralai/Mistral-Small-3.1-24B-Instruct-2503"),
+            HFTextGeneration(repo_id="unsloth/Mistral-Small-3.1-24B-Instruct-2503-bnb-4bit"),
         ]
 
     def _provider_model_id(self) -> str:

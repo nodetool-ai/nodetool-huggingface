@@ -280,3 +280,169 @@ class Wan_I2V(HuggingFacePipelineNode):
 
     def required_inputs(self):
         return ["input_image"]
+
+
+class Wan_FLF2V(HuggingFacePipelineNode):
+    """
+    Generates smooth video transitions between a first and last frame using Wan FLF2V.
+    video, generation, AI, image-to-video, first-last-frame, interpolation, diffusion, Wan
+
+    Use cases:
+    - Create seamless transitions between two keyframe images
+    - Animate the journey from one scene to another
+    - Generate motion-filled clips from start and end frames
+    - Build scene interpolation workflows for film and VFX
+    - Produce smooth morphing effects for creative projects
+    """
+
+    first_image: ImageRef = Field(
+        default=ImageRef(),
+        description="The first frame (starting image) for the video transition.",
+    )
+    last_image: ImageRef = Field(
+        default=ImageRef(),
+        description="The last frame (ending image) for the video transition.",
+    )
+    prompt: str = Field(
+        default="A smooth transition between the two scenes, cinematic motion",
+        description="Text description guiding the motion and style of the generated transition.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Describe what to avoid in the generated video (e.g., 'blurry, distorted').",
+    )
+    num_frames: int = Field(
+        default=81,
+        description="Total frames in the output video. More frames = longer duration.",
+        ge=16,
+        le=129,
+    )
+    guidance_scale: float = Field(
+        default=5.0,
+        description="How strongly to follow the prompt.",
+        ge=1.0,
+        le=20.0,
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        description="Denoising steps. More steps = better quality but slower.",
+        ge=1,
+        le=100,
+    )
+    height: int = Field(
+        default=480,
+        description="Output video height in pixels.",
+        ge=256,
+        le=1080,
+    )
+    width: int = Field(
+        default=832,
+        description="Output video width in pixels.",
+        ge=256,
+        le=1920,
+    )
+    fps: int = Field(
+        default=16,
+        description="Frames per second for the output video file.",
+        ge=1,
+        le=60,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducibility. Use -1 for random.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFTextToVideo(
+                repo_id="Wan-AI/Wan2.2-FLF2V-14B-720P-Diffusers",
+                allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
+            ),
+            HFTextToVideo(
+                repo_id="Wan-AI/Wan2.1-FLF2V-14B-720P-diffusers",
+                allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Wan (First-Last-Frame to Video)"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["first_image", "last_image", "prompt", "num_frames", "height", "width"]
+
+    def get_model_id(self) -> str:
+        return "Wan-AI/Wan2.2-FLF2V-14B-720P-Diffusers"
+
+    def required_inputs(self):
+        return ["first_image", "last_image"]
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.wan.pipeline_wan_flf2v import WanFLF2VPipeline
+        from nodetool.nodes.huggingface.stable_diffusion_base import available_torch_dtype
+
+        torch_dtype = available_torch_dtype()
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=WanFLF2VPipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=torch_dtype,
+            variant=None,
+        )
+        if self.enable_cpu_offload:
+            self._pipeline.enable_model_cpu_offload()
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None and not self.enable_cpu_offload:
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> VideoRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        import torch
+
+        first_frame = await context.image_to_pil(self.first_image)
+        last_frame = await context.image_to_pil(self.last_image)
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        def callback_on_step_end(
+            pipeline: Any, step_index: int, timesteps: int, callback_kwargs: dict
+        ) -> dict:
+            context.post_message(
+                NodeProgress(
+                    node_id=self.id,
+                    progress=step_index,
+                    total=self.num_inference_steps,
+                )
+            )
+            return callback_kwargs
+
+        output = await self.run_pipeline_in_thread(
+            image=first_frame,
+            last_image=last_frame,
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt,
+            height=self.height,
+            width=self.width,
+            num_frames=self.num_frames,
+            guidance_scale=self.guidance_scale,
+            num_inference_steps=self.num_inference_steps,
+            generator=generator,
+            callback_on_step_end=callback_on_step_end,
+        )
+
+        run_gc("After Wan FLF2V inference", log_before_after=False)
+        return await video_from_frames(context, output.frames[0], fps=self.fps)

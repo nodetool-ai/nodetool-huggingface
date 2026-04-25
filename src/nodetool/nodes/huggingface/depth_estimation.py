@@ -50,6 +50,15 @@ class DepthEstimation(HuggingFacePipelineNode):
                     "txt",
                 ],
             ),
+            HFDepthEstimation(
+                repo_id="apple/DepthPro-hf",
+            ),
+            HFDepthEstimation(
+                repo_id="depth-anything/Depth-Anything-V2-Metric-Indoor-Small-hf",
+            ),
+            HFDepthEstimation(
+                repo_id="depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf",
+            ),
         ]
 
     def required_inputs(self):

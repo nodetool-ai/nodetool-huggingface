@@ -550,6 +550,26 @@ class TextToSpeech(HuggingFacePipelineNode):
                 repo_id="facebook/mms-tts-deu",
                 allow_patterns=["*.bin", "*.json", "*.txt"],
             ),
+            HFTextToSpeech(
+                repo_id="facebook/mms-tts-jpn",
+                allow_patterns=["*.bin", "*.json", "*.txt"],
+            ),
+            HFTextToSpeech(
+                repo_id="facebook/mms-tts-zho",
+                allow_patterns=["*.bin", "*.json", "*.txt"],
+            ),
+            HFTextToSpeech(
+                repo_id="OuteAI/OuteTTS-0.2-500M",
+                allow_patterns=["*.safetensors", "*.json", "*.txt"],
+            ),
+            HFTextToSpeech(
+                repo_id="OuteAI/OuteTTS-0.3-1B",
+                allow_patterns=["*.safetensors", "*.json", "*.txt"],
+            ),
+            HFTextToSpeech(
+                repo_id="microsoft/speecht5_tts",
+                allow_patterns=["*.safetensors", "*.json", "*.txt"],
+            ),
         ]
 
     def get_model_id(self):
