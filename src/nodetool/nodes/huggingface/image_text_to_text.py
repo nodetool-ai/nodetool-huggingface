@@ -210,6 +210,45 @@ class ImageTextToText(HuggingFacePipelineNode):
             HFImageTextToText(
                 repo_id="zai-org/GLM-4.6V-Flash",
             ),
+            # Florence-2: multi-task vision (captioning, detection, grounding, OCR)
+            HFImageTextToText(
+                repo_id="microsoft/Florence-2-base",
+                allow_patterns=["*.safetensors", "*.json", "*.txt"],
+            ),
+            HFImageTextToText(
+                repo_id="microsoft/Florence-2-large",
+                allow_patterns=["*.safetensors", "*.json", "*.txt"],
+            ),
+            HFImageTextToText(
+                repo_id="microsoft/Florence-2-base-ft",
+                allow_patterns=["*.safetensors", "*.json", "*.txt"],
+            ),
+            HFImageTextToText(
+                repo_id="microsoft/Florence-2-large-ft",
+                allow_patterns=["*.safetensors", "*.json", "*.txt"],
+            ),
+            # Phi-4 multimodal
+            HFImageTextToText(
+                repo_id="microsoft/Phi-4-multimodal-instruct",
+            ),
+            # SmolVLM variants
+            HFImageTextToText(
+                repo_id="HuggingFaceTB/SmolVLM2-2.2B-Instruct",
+            ),
+            HFImageTextToText(
+                repo_id="HuggingFaceTB/SmolVLM2-500M-Video-Instruct",
+            ),
+            # InternVL2 series
+            HFImageTextToText(
+                repo_id="OpenGVLab/InternVL2_5-8B",
+            ),
+            HFImageTextToText(
+                repo_id="OpenGVLab/InternVL2_5-4B",
+            ),
+            # Idefics3
+            HFImageTextToText(
+                repo_id="HuggingFaceM4/Idefics3-8B-Llama3",
+            ),
         ]
 
     @classmethod

@@ -125,6 +125,15 @@ class SAM2Segmentation(HuggingFacePipelineNode):
             HuggingFaceModel(
                 repo_id="facebook/sam2-hiera-large",
             ),
+            HuggingFaceModel(
+                repo_id="facebook/sam2-hiera-base-plus",
+            ),
+            HuggingFaceModel(
+                repo_id="facebook/sam2.1-hiera-large",
+            ),
+            HuggingFaceModel(
+                repo_id="facebook/sam3",
+            ),
         ]
 
     def required_inputs(self):
@@ -177,6 +186,109 @@ class SAM2Segmentation(HuggingFacePipelineNode):
                 result.append(mask_ref)
 
             return result
+
+
+class MaskGeneration(HuggingFacePipelineNode):
+    """
+    Generates segmentation masks for all objects in an image using the SAM/SAM2/SAM3 mask-generation pipeline.
+    image, segmentation, mask-generation, SAM, SAM2, SAM3, zero-shot
+
+    Use cases:
+    - Automatically generate masks for every object in an image without prompts
+    - Prepare masks for downstream editing, compositing, or inpainting
+    - Build interactive object selection tools
+    - Enable instance-level image understanding without class labels
+    - Create training data annotations automatically
+    """
+
+    model: HuggingFaceModel = Field(
+        default=HuggingFaceModel(repo_id="facebook/sam2.1-hiera-large"),
+        title="Model",
+        description="The SAM model to use. SAM2.1/SAM3 offer best quality; SAM-ViT-base is fastest.",
+    )
+    image: ImageRef = Field(
+        default=ImageRef(),
+        title="Input Image",
+        description="The image for which to generate segmentation masks.",
+    )
+    points_per_side: int = Field(
+        default=32,
+        title="Points Per Side",
+        description="Number of grid points to sample along each image dimension. Higher = more masks found but slower.",
+        ge=8,
+        le=128,
+    )
+    pred_iou_thresh: float = Field(
+        default=0.88,
+        title="Predicted IoU Threshold",
+        description="Masks with predicted IoU below this threshold are filtered out. Higher = fewer, higher-quality masks.",
+        ge=0.0,
+        le=1.0,
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HuggingFaceModel(
+                repo_id="facebook/sam2.1-hiera-large",
+            ),
+            HuggingFaceModel(
+                repo_id="facebook/sam2.1-hiera-base-plus",
+            ),
+            HuggingFaceModel(
+                repo_id="facebook/sam3",
+            ),
+            HuggingFaceModel(
+                repo_id="facebook/sam-vit-huge",
+            ),
+            HuggingFaceModel(
+                repo_id="facebook/sam-vit-large",
+            ),
+            HuggingFaceModel(
+                repo_id="facebook/sam-vit-base",
+            ),
+        ]
+
+    def required_inputs(self):
+        return ["image"]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Mask Generation (SAM)"
+
+    def get_model_id(self):
+        return self.model.repo_id
+
+    async def preload_model(self, context: ProcessingContext):
+        self._pipeline = await self.load_pipeline(
+            context=context,
+            pipeline_task="mask-generation",
+            model_id=self.get_model_id(),
+            device=context.device,
+        )
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None:
+            self._pipeline.model.to(device)
+
+    async def process(self, context: ProcessingContext) -> list[ImageRef]:
+        assert self._pipeline is not None
+        import numpy as np
+
+        image = await context.image_to_pil(self.image)
+        result = await self.run_pipeline_in_thread(
+            image,
+            points_per_side=self.points_per_side,
+            pred_iou_thresh=self.pred_iou_thresh,
+        )
+
+        masks_out = []
+        for mask_data in result.get("masks", []):
+            mask_np = (np.array(mask_data) * 255).astype("uint8")
+            masks_out.append(await context.image_from_numpy(mask_np))
+        return masks_out
 
 
 class FindSegment(BaseNode):

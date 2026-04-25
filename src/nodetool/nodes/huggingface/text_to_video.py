@@ -329,6 +329,14 @@ class Wan_T2V(HuggingFacePipelineNode):
                 repo_id="Wan-AI/Wan2.2-TI2V-5B-Diffusers",
                 allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
             ),
+            HFTextToVideo(
+                repo_id="Wan-AI/Wan2.2-T2V-14B-Diffusers",
+                allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
+            ),
+            HFTextToVideo(
+                repo_id="Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
+                allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
+            ),
         ]
 
     @classmethod
