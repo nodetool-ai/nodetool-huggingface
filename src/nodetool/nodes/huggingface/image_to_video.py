@@ -295,6 +295,14 @@ class Wan_FLF2V(HuggingFacePipelineNode):
     - Produce smooth morphing effects for creative projects
     """
 
+    class WanFLF2VModel(str, Enum):
+        WAN_2_2_FLF2V_14B_720P = "Wan-AI/Wan2.2-FLF2V-14B-720P-Diffusers"
+        WAN_2_1_FLF2V_14B_720P = "Wan-AI/Wan2.1-FLF2V-14B-720P-diffusers"
+
+    model_variant: WanFLF2VModel = Field(
+        default=WanFLF2VModel.WAN_2_2_FLF2V_14B_720P,
+        description="The Wan FLF2V model variant. 2.2 is the latest; 2.1 is the previous generation.",
+    )
     first_image: ImageRef = Field(
         default=ImageRef(),
         description="The first frame (starting image) for the video transition.",
@@ -381,7 +389,7 @@ class Wan_FLF2V(HuggingFacePipelineNode):
         return ["first_image", "last_image", "prompt", "num_frames", "height", "width"]
 
     def get_model_id(self) -> str:
-        return "Wan-AI/Wan2.2-FLF2V-14B-720P-Diffusers"
+        return self.model_variant.value
 
     def required_inputs(self):
         return ["first_image", "last_image"]

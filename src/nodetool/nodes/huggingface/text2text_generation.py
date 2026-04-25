@@ -3,7 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 from nodetool.metadata.types import HuggingFaceModel
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.huggingface_pipeline import (
+    HuggingFacePipelineNode,
+    select_inference_dtype,
+)
 from nodetool.workflows.processing_context import ProcessingContext
 
 from pydantic import Field
@@ -123,14 +126,16 @@ class Text2TextGeneration(HuggingFacePipelineNode):
             pipeline_task="text2text-generation",
             model_id=self.get_model_id(),
             device=context.device,
+            torch_dtype=select_inference_dtype(),
         )
 
     async def process(self, context: ProcessingContext) -> str:
         assert self._pipeline is not None
-        result = await self.run_pipeline_in_thread(
-            self.text,
-            max_new_tokens=self.max_new_tokens,
-            temperature=self.temperature if self.do_sample else None,
-            do_sample=self.do_sample,
-        )
+        kwargs: dict = {
+            "max_new_tokens": self.max_new_tokens,
+            "do_sample": self.do_sample,
+        }
+        if self.do_sample:
+            kwargs["temperature"] = self.temperature
+        result = await self.run_pipeline_in_thread(self.text, **kwargs)
         return str(result[0]["generated_text"])

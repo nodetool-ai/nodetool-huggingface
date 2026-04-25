@@ -3,7 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 from nodetool.metadata.types import HuggingFaceModel
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.huggingface_pipeline import (
+    HuggingFacePipelineNode,
+    select_inference_dtype,
+)
 from nodetool.workflows.processing_context import ProcessingContext
 
 from pydantic import Field
@@ -115,6 +118,7 @@ class Summarization(HuggingFacePipelineNode):
             pipeline_task="summarization",
             model_id=self.get_model_id(),
             device=context.device,
+            torch_dtype=select_inference_dtype(),
         )
 
     async def process(self, context: ProcessingContext) -> str:

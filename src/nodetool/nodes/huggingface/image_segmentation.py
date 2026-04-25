@@ -201,6 +201,11 @@ class MaskGeneration(HuggingFacePipelineNode):
     - Create training data annotations automatically
     """
 
+    model: HuggingFaceModel = Field(
+        default=HuggingFaceModel(repo_id="facebook/sam2.1-hiera-large"),
+        title="Model",
+        description="The SAM model to use. SAM2.1/SAM3 offer best quality; SAM-ViT-base is fastest.",
+    )
     image: ImageRef = Field(
         default=ImageRef(),
         title="Input Image",
@@ -254,13 +259,13 @@ class MaskGeneration(HuggingFacePipelineNode):
         return "Mask Generation (SAM)"
 
     def get_model_id(self):
-        return self.model.repo_id if hasattr(self, "model") else "facebook/sam2.1-hiera-large"
+        return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context=context,
             pipeline_task="mask-generation",
-            model_id="facebook/sam2.1-hiera-large",
+            model_id=self.get_model_id(),
             device=context.device,
         )
 
