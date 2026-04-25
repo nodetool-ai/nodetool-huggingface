@@ -33,7 +33,6 @@ jobs:
       - name: Run ty
         run: |
           ty check . \
-            --exclude 'src/nodetool/dsl/**' \
             --exclude 'notebooks/**' \
             --exclude 'scripts/**' \
             --exclude 'src/triposg/**' \

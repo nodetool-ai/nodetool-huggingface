@@ -11,7 +11,5 @@ unresolved-attribute = "ignore"
 possibly-missing-attribute = "ignore"
 # Intentional covariant return type overrides (e.g. get_recommended_models, process)
 invalid-method-override = "ignore"
-# Auto-generated DSL files have pydantic Field defaults that don't match declared types
 invalid-assignment = "ignore"
-# Auto-generated DSL files use redundant casts
 redundant-cast = "ignore"

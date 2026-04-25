@@ -118,7 +118,6 @@ nodetool = [
 [tool.ruff]
 # Exclude auto-generated files, notebooks, scripts, and third-party code
 exclude = [
-    "src/nodetool/dsl/",
     "notebooks/",
     "scripts/",
     "src/RealESRGAN/",

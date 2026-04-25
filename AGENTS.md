@@ -23,11 +23,10 @@ conda activate nodetool
 
 ## Commands
 
-After adding or changing nodes run these commands to generate metadata and DSL.
+After adding or changing nodes run this command to generate metadata.
 
 ```bash
 nodetool package scan
-nodetool codegen
 ```
 
 ## Linting and Tests
