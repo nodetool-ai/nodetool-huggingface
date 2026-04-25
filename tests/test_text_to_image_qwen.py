@@ -1,6 +1,5 @@
 import pytest
 from nodetool.nodes.huggingface.text_to_image import QwenImage, QwenQuantization
-from tests.test_utils import main
 
 async def test_qwen_image_quantization():
     qwen = QwenImage()
