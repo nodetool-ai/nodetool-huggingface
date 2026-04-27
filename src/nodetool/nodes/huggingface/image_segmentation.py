@@ -258,6 +258,10 @@ class MaskGeneration(HuggingFacePipelineNode):
     def get_title(cls) -> str:
         return "Mask Generation (SAM)"
 
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "image", "points_per_side", "pred_iou_thresh"]
+
     def get_model_id(self):
         return self.model.repo_id
 

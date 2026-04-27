@@ -38,3 +38,14 @@ def test_mask_generation_defaults():
     node = MaskGeneration()
     assert node.points_per_side == 32
     assert node.pred_iou_thresh == 0.88
+
+
+def test_mask_generation_basic_fields():
+    assert MaskGeneration.get_basic_fields() == [
+        "model",
+        "image",
+        "points_per_side",
+        "pred_iou_thresh",
+    ]
+
+
