@@ -7,8 +7,6 @@ from nodetool.metadata.types import (
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
-from paddleocr import PaddleOCR
-
 from nodetool.workflows.types import NodeUpdate
 
 
