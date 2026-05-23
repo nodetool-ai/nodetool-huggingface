@@ -274,17 +274,24 @@ class Whisper(HuggingFacePipelineNode):
         self._pipeline.model.to(device)
         logger.info(f"Moved Whisper model to device: {device}")
 
-    async def process(self, context: ProcessingContext) -> OutputType:
-        assert self._pipeline
+    def _build_pipeline_kwargs(self) -> dict[str, Any]:
+        """Map the node's Timestamps/language enums to what HF's ASR pipeline expects.
 
-        logger.info("Starting audio processing...")
+        HF's AutomaticSpeechRecognitionPipeline accepts:
+            return_timestamps=True   -> segment-level ("sentence") timestamps
+            return_timestamps="word" -> word-level timestamps
+            return_timestamps=None   -> no timestamps
+        Passing the literal "sentence" passes validation but yields no chunks.
+        """
+        if self.timestamps == Timestamps.WORD:
+            return_timestamps: Any = "word"
+        elif self.timestamps == Timestamps.SENTENCE:
+            return_timestamps = True
+        else:
+            return_timestamps = None
 
-        samples, _, _ = await context.audio_to_numpy(self.audio, sample_rate=16_000)
-
-        pipeline_kwargs = {
-            "return_timestamps": (
-                self.timestamps.value if self.timestamps != Timestamps.NONE else None
-            ),
+        return {
+            "return_timestamps": return_timestamps,
             "chunk_length_s": 30.0,
             "generate_kwargs": {
                 "language": (
@@ -294,6 +301,15 @@ class Whisper(HuggingFacePipelineNode):
                 ),
             },
         }
+
+    async def process(self, context: ProcessingContext) -> OutputType:
+        assert self._pipeline
+
+        logger.info("Starting audio processing...")
+
+        samples, _, _ = await context.audio_to_numpy(self.audio, sample_rate=16_000)
+
+        pipeline_kwargs = self._build_pipeline_kwargs()
 
         result = await self.run_pipeline_in_thread(samples, **pipeline_kwargs)
 
