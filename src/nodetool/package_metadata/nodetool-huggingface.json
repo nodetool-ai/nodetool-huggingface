@@ -134,6 +134,9 @@
         "top_k"
       ],
       "description": "Classifies audio into predefined categories using pretrained transformer models.\n    audio, classification, labeling, categorization, sound-recognition\n\n    Use cases:\n    - Classify music by genre or mood\n    - Detect speech vs. non-speech audio segments\n    - Identify environmental sounds (e.g., car horn, dog bark)\n    - Recognize emotions in speech recordings\n    - Content moderation for audio platforms",
+      "input_fields": [
+        "audio"
+      ],
       "namespace": "huggingface.audio_classification",
       "node_type": "huggingface.audio_classification.AudioClassifier",
       "outputs": [
@@ -225,6 +228,9 @@
         "candidate_labels"
       ],
       "description": "Classifies audio into custom categories without requiring task-specific training data.\n    audio, classification, labeling, categorization, zero-shot, flexible\n\n    Use cases:\n    - Categorize audio with custom, user-defined labels on the fly\n    - Identify sounds or music genres without predefined model training\n    - Quickly prototype audio classification systems\n    - Automate tagging for large audio datasets with dynamic categories",
+      "input_fields": [
+        "audio"
+      ],
       "namespace": "huggingface.audio_classification",
       "node_type": "huggingface.audio_classification.ZeroShotAudioClassifier",
       "outputs": [
@@ -306,6 +312,9 @@
         "time_offset"
       ],
       "description": "Converts Whisper audio chunks to SubRip Subtitle (SRT) format for video captioning.\n    subtitle, srt, whisper, transcription, captions\n\n    Use cases:\n    - Generate .srt subtitle files for video players\n    - Create closed captions for accessibility compliance\n    - Convert Whisper transcription output to industry-standard format\n    - Build automated subtitle generation pipelines",
+      "input_fields": [
+        "chunks"
+      ],
       "namespace": "huggingface.automatic_speech_recognition",
       "node_type": "huggingface.automatic_speech_recognition.ChunksToSRT",
       "outputs": [
@@ -350,6 +359,9 @@
         "task"
       ],
       "description": "Converts speech to text using OpenAI's Whisper models with multilingual support.\n    asr, automatic-speech-recognition, speech-to-text, translate, transcribe, audio, huggingface\n\n    Use cases:\n    - Transcribe audio files into text for documentation or analysis\n    - Enable voice input for chatbots and virtual assistants\n    - Create subtitles and closed captions for videos\n    - Translate speech from one language to English\n    - Build voice-controlled applications\n\n    **Note:** Language selection follows Whisper's FLEURS benchmark word error rate ranking.\n    Multiple model variants are available, optimized for different speed/accuracy trade-offs.\n\n    **Links:**\n    - https://github.com/openai/whisper\n    - https://platform.openai.com/docs/guides/speech-to-text/supported-languages",
+      "input_fields": [
+        "audio"
+      ],
       "namespace": "huggingface.automatic_speech_recognition",
       "node_type": "huggingface.automatic_speech_recognition.Whisper",
       "outputs": [
@@ -583,6 +595,9 @@
         "image"
       ],
       "description": "Generates depth maps from single RGB images using monocular depth estimation models.\n    image, depth-estimation, 3D, huggingface, computer-vision, depth-anything, dpt\n\n    Use cases:\n    - Create depth maps for 3D modeling and scene reconstruction\n    - Enhance scene understanding\n    - Generate depth-based visual effects for images and video",
+      "input_fields": [
+        "image"
+      ],
       "namespace": "huggingface.depth_estimation",
       "node_type": "huggingface.depth_estimation.DepthEstimation",
       "outputs": [
@@ -1009,6 +1024,9 @@
         "image"
       ],
       "description": "Classifies images into predefined categories using vision transformer models.\n    image, classification, labeling, categorization, computer-vision\n\n    Use cases:\n    - Automatically tag and organize photo libraries\n    - Detect inappropriate or NSFW content for moderation\n    - Classify product images in e-commerce catalogs\n    - Identify age, gender, or other attributes in photos\n    - Sort images by scene type, object presence, or style",
+      "input_fields": [
+        "image"
+      ],
       "namespace": "huggingface.image_classification",
       "node_type": "huggingface.image_classification.ImageClassifier",
       "outputs": [
@@ -1167,6 +1185,9 @@
         "candidate_labels"
       ],
       "description": "Classifies images into custom categories without requiring task-specific training data.\n    image, classification, labeling, categorization, zero-shot, flexible\n\n    Use cases:\n    - Categorize images with custom, user-defined labels on the fly\n    - Quickly prototype image classification systems without training\n    - Identify objects or scenes without predefined model categories\n    - Build flexible image tagging workflows with dynamic categories\n    - Test hypotheses about image content using natural language labels",
+      "input_fields": [
+        "image"
+      ],
       "namespace": "huggingface.image_classification",
       "node_type": "huggingface.image_classification.ZeroShotImageClassifier",
       "outputs": [
@@ -1273,6 +1294,9 @@
         "segment_label"
       ],
       "description": "Extracts a specific segment mask by label from a list of segmentation results.\n    image, segmentation, object-detection, mask, filter\n\n    Use cases:\n    - Extract a specific object mask (e.g., 'person', 'car') from segmentation output\n    - Filter segmentation results to focus on a single category\n    - Isolate regions for further processing or compositing",
+      "input_fields": [
+        "segments"
+      ],
       "namespace": "huggingface.image_segmentation",
       "node_type": "huggingface.image_segmentation.FindSegment",
       "outputs": [
@@ -1433,6 +1457,9 @@
         "image"
       ],
       "description": "Performs automatic instance segmentation using Meta's Segment Anything Model 2 (SAM2).\n    image, segmentation, object-detection, scene-parsing, mask, SAM2\n\n    Use cases:\n    - Automatically segment all distinct objects in an image\n    - Generate high-quality masks without manual prompts\n    - Extract individual objects for image editing workflows\n    - Build interactive segmentation applications\n    - Enable precise object selection in creative tools",
+      "input_fields": [
+        "image"
+      ],
       "namespace": "huggingface.image_segmentation",
       "node_type": "huggingface.image_segmentation.SAM2Segmentation",
       "outputs": [
@@ -1499,6 +1526,9 @@
         "image"
       ],
       "description": "Performs semantic segmentation on images, identifying and labeling different regions with pixel-level precision.\n    image, segmentation, object-detection, scene-parsing, computer-vision\n\n    Use cases:\n    - Segment and identify objects, people, or regions in images\n    - Extract clothing items or body parts for fashion applications\n    - Parse indoor/outdoor scenes into semantic components\n    - Enable background removal or replacement in photos\n    - Build autonomous driving perception systems",
+      "input_fields": [
+        "image"
+      ],
       "namespace": "huggingface.image_segmentation",
       "node_type": "huggingface.image_segmentation.Segmentation",
       "outputs": [
@@ -1581,6 +1611,9 @@
         "segments"
       ],
       "description": "Renders segmentation masks as colored overlays on the original image with labeled regions.\n    image, segmentation, visualization, mask, annotation\n\n    Use cases:\n    - Visualize and verify segmentation model results\n    - Create labeled images for documentation or presentations\n    - Compare different segmentation techniques visually\n    - Generate annotated images for training data review",
+      "input_fields": [
+        "image"
+      ],
       "namespace": "huggingface.image_segmentation",
       "node_type": "huggingface.image_segmentation.VisualizeSegmentation",
       "outputs": [
@@ -1730,6 +1763,9 @@
         "prompt"
       ],
       "description": "Generates text responses based on an image and text prompt using vision-language models.\n    image, text, visual-question-answering, multimodal, VLM, captioning\n\n    Use cases:\n    - Answer questions about image content with detailed explanations\n    - Generate comprehensive image descriptions and captions\n    - Extract structured information (objects, text, layout) from images\n    - Perform OCR-free document understanding via natural language\n    - Build multi-turn visual conversations and assistants",
+      "input_fields": [
+        "image"
+      ],
       "is_streaming_output": true,
       "namespace": "huggingface.image_text_to_text",
       "node_type": "huggingface.image_text_to_text.ImageTextToText",
@@ -3097,6 +3133,10 @@
         "seed"
       ],
       "description": "Performs image inpainting/filling using FLUX Fill models with support for GGUF quantization.\n    image, inpainting, fill, flux, quantization, mask\n\n    Use cases:\n    - Fill masked regions in images with high-quality content\n    - Remove unwanted objects from images\n    - Complete missing parts of images\n    - Memory-efficient inpainting using GGUF quantization\n    - High-quality image editing with FLUX models",
+      "input_fields": [
+        "image",
+        "mask_image"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.FluxFill",
       "outputs": [
@@ -3295,6 +3335,9 @@
         "quantization"
       ],
       "description": "Performs image editing using FLUX Kontext models for context-aware image generation.\n    image, editing, flux, kontext, context-aware, generation\n\n    Use cases:\n    - Edit images based on reference context\n    - Add elements to images guided by prompts\n    - Context-aware image modifications\n    - High-quality image editing with FLUX models",
+      "input_fields": [
+        "image"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.FluxKontext",
       "outputs": [
@@ -3425,6 +3468,9 @@
         "strength"
       ],
       "description": "Transforms existing images based on text prompts using AutoPipeline for Image-to-Image.\n    This node automatically detects the appropriate pipeline class based on the model used.\n    image, generation, image-to-image, autopipeline\n\n    Use cases:\n    - Transform existing images with any compatible model (Stable Diffusion, SDXL, Kandinsky, etc.)\n    - Apply specific styles or concepts to photographs or artwork\n    - Modify existing images based on text descriptions\n    - Create variations of existing visual content with automatic pipeline selection",
+      "input_fields": [
+        "image"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.ImageToImage",
       "outputs": [
@@ -3727,6 +3773,9 @@
         "quantization"
       ],
       "description": "Performs image editing using the Qwen Image Edit model with support for Nunchaku quantization.\n    image, editing, semantic, appearance, qwen, multimodal, quantization\n\n    Use cases:\n    - Semantic editing (object rotation, style transfer)\n    - Appearance editing (adding/removing elements)\n    - Precise text modifications in images\n    - Background and clothing changes\n    - Complex image transformations guided by text\n    - Memory-efficient editing using Nunchaku quantization",
+      "input_fields": [
+        "image"
+      ],
       "model_packs": [
         {
           "category": "image_editing",
@@ -4057,6 +4106,9 @@
         "controlnet_conditioning_scale"
       ],
       "description": "Generates images using Stable Diffusion with ControlNet guidance.\n    image, generation, text-to-image, controlnet, SD\n\n    Use cases:\n    - Generate images with precise control over composition and structure\n    - Create variations of existing images while maintaining specific features\n    - Artistic image generation with guided outputs",
+      "input_fields": [
+        "control_image"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.StableDiffusionControlNet",
       "outputs": [
@@ -4504,6 +4556,10 @@
         "control_image"
       ],
       "description": "Transforms existing images using Stable Diffusion with ControlNet guidance.\n    image, generation, image-to-image, controlnet, SD, style-transfer\n\n    Use cases:\n    - Modify existing images with precise control over composition and structure\n    - Apply specific styles or concepts to photographs or artwork with guided transformations\n    - Create variations of existing visual content while maintaining certain features\n    - Enhance image editing capabilities with AI-guided transformations",
+      "input_fields": [
+        "image",
+        "control_image"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.StableDiffusionControlNetImg2Img",
       "outputs": [
@@ -4967,6 +5023,11 @@
         "controlnet_conditioning_scale"
       ],
       "description": "Performs inpainting on images using Stable Diffusion with ControlNet guidance.\n    image, inpainting, controlnet, SD, style-transfer\n\n    Use cases:\n    - Remove unwanted objects from images with precise control\n    - Fill in missing parts of images guided by control images\n    - Modify specific areas of images while preserving the rest and maintaining structure",
+      "input_fields": [
+        "init_image",
+        "mask_image",
+        "control_image"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.StableDiffusionControlNetInpaint",
       "outputs": [
@@ -5377,6 +5438,9 @@
         "strength"
       ],
       "description": "Transforms existing images based on text prompts using Stable Diffusion.\n    image, generation, image-to-image, SD, img2img, style-transfer\n\n    Use cases:\n    - Modifying existing images to fit a specific style or theme\n    - Enhancing or altering photographs\n    - Creating variations of existing artwork\n    - Applying text-guided edits to images",
+      "input_fields": [
+        "init_image"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.StableDiffusionImg2Img",
       "outputs": [
@@ -5745,6 +5809,10 @@
         "strength"
       ],
       "description": "Performs inpainting on images using Stable Diffusion.\n    image, inpainting, SD\n\n    Use cases:\n    - Remove unwanted objects from images\n    - Fill in missing parts of images\n    - Modify specific areas of images while preserving the rest",
+      "input_fields": [
+        "init_image",
+        "mask_image"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.StableDiffusionInpaint",
       "outputs": [
@@ -6128,6 +6196,9 @@
         "guidance_scale"
       ],
       "description": "Upscales Stable Diffusion latents (x2) using the SD Latent Upscaler pipeline.\n    tensor, upscaling, stable-diffusion, latent, SD\n\n    Input and output are tensors for chaining with latent-based workflows.",
+      "input_fields": [
+        "latents"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.StableDiffusionLatentUpscaler",
       "outputs": [
@@ -6223,6 +6294,9 @@
         "image"
       ],
       "description": "Upscales an image using Stable Diffusion 4x upscaler.\n    image, upscaling, stable-diffusion, SD\n\n    Use cases:\n    - Enhance low-resolution images\n    - Improve image quality for printing or display\n    - Create high-resolution versions of small images",
+      "input_fields": [
+        "image"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.StableDiffusionUpscale",
       "outputs": [
@@ -6356,6 +6430,9 @@
         "controlnet_conditioning_scale"
       ],
       "description": "Generates images using Stable Diffusion XL with ControlNet guidance.\n    image, generation, text-to-image, controlnet, SDXL\n\n    Use cases:\n    - Generate images with precise control over composition and structure\n    - Create variations of existing images while maintaining specific features\n    - Artistic image generation with guided outputs",
+      "input_fields": [
+        "control_image"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.StableDiffusionXLControlNet",
       "outputs": [
@@ -7036,6 +7113,10 @@
         "controlnet_conditioning_scale"
       ],
       "description": "Transforms existing images using Stable Diffusion XL with ControlNet guidance.\n    image, generation, image-to-image, controlnet, SDXL\n\n    Use cases:\n    - Modify existing images with precise control over composition and structure\n    - Apply specific styles or concepts to photographs or artwork with guided transformations\n    - Create variations of existing visual content while maintaining certain features\n    - Enhance image editing capabilities with AI-guided transformations",
+      "input_fields": [
+        "control_image",
+        "init_image"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.StableDiffusionXLControlNetImg2Img",
       "outputs": [
@@ -7739,6 +7820,9 @@
         "strength"
       ],
       "description": "Transforms existing images based on text prompts using Stable Diffusion XL.\n    image, generation, image-to-image, SDXL, style-transfer\n\n    Use cases:\n    - Modifying existing images to fit a specific style or theme\n    - Enhancing or altering photographs\n    - Creating variations of existing artwork\n    - Applying text-guided edits to images",
+      "input_fields": [
+        "init_image"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.StableDiffusionXLImg2Img",
       "outputs": [
@@ -8120,6 +8204,10 @@
         "strength"
       ],
       "description": "Performs inpainting on images using Stable Diffusion XL.\n    image, inpainting, SDXL\n\n    Use cases:\n    - Remove unwanted objects from images\n    - Fill in missing parts of images\n    - Modify specific areas of images while preserving the rest",
+      "input_fields": [
+        "image",
+        "mask_image"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.StableDiffusionXLInpainting",
       "outputs": [
@@ -8511,6 +8599,9 @@
         "model"
       ],
       "description": "Performs image super-resolution using the Swin2SR model.\n    image, super-resolution, enhancement, huggingface\n\n    Use cases:\n    - Enhance low-resolution images\n    - Improve image quality for printing or display\n    - Upscale images for better detail",
+      "input_fields": [
+        "image"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.Swin2SR",
       "outputs": [
@@ -8634,6 +8725,9 @@
         "scale_factor"
       ],
       "description": "Decodes latents into an image using a VAE.\n    tensor (TorchTensor) -> image",
+      "input_fields": [
+        "latents"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.VAEDecode",
       "outputs": [
@@ -8724,6 +8818,9 @@
         "scale_factor"
       ],
       "description": "Encodes an image into latents using a VAE.\n    image -> tensor (TorchTensor)",
+      "input_fields": [
+        "image"
+      ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.VAEEncode",
       "outputs": [
@@ -8812,6 +8909,9 @@
         "image"
       ],
       "description": "Generates textual descriptions and captions from images using vision-language models.\n    image, captioning, OCR, image-to-text, accessibility\n\n    Use cases:\n    - Automatically generate captions for photos and artwork\n    - Extract visible text from images (OCR-style functionality)\n    - Create alt-text descriptions for web accessibility\n    - Build image search engines with text-based queries\n    - Generate descriptions for visually impaired users",
+      "input_fields": [
+        "image"
+      ],
       "namespace": "huggingface.image_to_text",
       "node_type": "huggingface.image_to_text.ImageToText",
       "outputs": [
@@ -9156,6 +9256,9 @@
         "model_variant"
       ],
       "description": "Transforms a static image into a dynamic video clip using Wan image-to-video diffusion models.\n    video, generation, AI, image-to-video, diffusion, Wan, animation\n\n    Use cases:\n    - Animate photographs and artwork into short video clips\n    - Create motion from still images with text-guided direction\n    - Generate video content for social media from static images\n    - Bring product images to life with realistic movement\n    - Create dynamic visual effects from single frames\n\n    **Note:** Model variants offer different quality/speed tradeoffs. A14B is balanced; 720P provides higher resolution.",
+      "input_fields": [
+        "input_image"
+      ],
       "namespace": "huggingface.image_to_video",
       "node_type": "huggingface.image_to_video.Wan_I2V",
       "outputs": [
@@ -10130,6 +10233,9 @@
         "max_new_tokens"
       ],
       "description": "Generates descriptive text captions from images using vision-language models.\n    image, text, captioning, vision-language, accessibility\n\n    Use cases:\n    - Generate natural language descriptions of image content\n    - Create alt-text for web accessibility compliance\n    - Build automatic image cataloging and search systems\n    - Enable content discovery through text-based image queries",
+      "input_fields": [
+        "image"
+      ],
       "namespace": "huggingface.multimodal",
       "node_type": "huggingface.multimodal.ImageToText",
       "outputs": [
@@ -10310,6 +10416,9 @@
         "image"
       ],
       "description": "Detects and localizes objects in images with bounding boxes and confidence scores.\n    image, object-detection, bounding-boxes, huggingface, computer-vision\n\n    Use cases:\n    - Count and identify objects in photographs and videos\n    - Locate specific items in complex scenes for robotics\n    - Analyze security camera footage for monitoring systems\n    - Detect tables and structures in documents\n    - Build automated inventory and inspection systems",
+      "input_fields": [
+        "image"
+      ],
       "namespace": "huggingface.object_detection",
       "node_type": "huggingface.object_detection.ObjectDetection",
       "outputs": [
@@ -10470,6 +10579,10 @@
         "objects"
       ],
       "description": "Renders object detection results as labeled bounding boxes overlaid on the original image.\n    image, object-detection, bounding-boxes, visualization, annotation\n\n    Use cases:\n    - Visualize and verify object detection model outputs\n    - Create annotated images for documentation and presentations\n    - Debug and analyze detection accuracy and coverage\n    - Generate labeled images for training data review",
+      "input_fields": [
+        "image",
+        "objects"
+      ],
       "namespace": "huggingface.object_detection",
       "node_type": "huggingface.object_detection.VisualizeObjectDetection",
       "outputs": [
@@ -10522,6 +10635,9 @@
         "candidate_labels"
       ],
       "description": "Detects objects in images using custom labels without requiring task-specific training.\n    image, object-detection, bounding-boxes, zero-shot, flexible\n\n    Use cases:\n    - Detect custom objects without training a specialized model\n    - Search for specific items described in natural language\n    - Build flexible object detection systems with dynamic categories\n    - Prototype detection applications with arbitrary object classes",
+      "input_fields": [
+        "image"
+      ],
       "namespace": "huggingface.object_detection",
       "node_type": "huggingface.object_detection.ZeroShotObjectDetection",
       "outputs": [
@@ -13399,6 +13515,9 @@
         "seed"
       ],
       "description": "Generates images using FLUX Control models with depth or other control guidance.\n    image, generation, AI, text-to-image, flux, control, depth, guidance\n\n    Use cases:\n    - Generate images with depth-based control guidance\n    - Create images following structural guidance from control images\n    - High-quality controlled generation with FLUX models\n    - Depth-aware image generation",
+      "input_fields": [
+        "control_image"
+      ],
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.FluxControl",
       "outputs": [
