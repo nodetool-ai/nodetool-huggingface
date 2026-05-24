@@ -2543,7 +2543,6 @@ dependencies = [
     { name = "kokoro" },
     { name = "llama-index-embeddings-huggingface" },
     { name = "nodetool-core" },
-    { name = "nunchaku", marker = "sys_platform != 'darwin'" },
     { name = "paddleocr" },
     { name = "paddlepaddle" },
     { name = "peft" },
@@ -2614,7 +2613,6 @@ requires-dist = [
     { name = "nodetool-core", editable = "../nodetool-core" },
     { name = "nodetool-huggingface", extras = ["hunyuan3d", "triposg"], marker = "extra == 'all-3d-pypi'" },
     { name = "nodetool-huggingface", extras = ["hunyuan3d", "triposg", "sf3d", "triposr", "trellis2"], marker = "extra == 'all-3d'" },
-    { name = "nunchaku", marker = "sys_platform != 'darwin'" },
     { name = "paddleocr" },
     { name = "paddlepaddle" },
     { name = "peft", specifier = ">=0.17.0" },
@@ -2730,22 +2728,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/76/95/bef5b37f29fc5e739947e9ce5179ad402875633308504a52d188302319c8/numpy-2.2.6-cp313-cp313t-musllinux_1_2_x86_64.whl", hash = "sha256:8e9ace4a37db23421249ed236fdcdd457d671e25146786dfc96835cd951aa7c1", size = 18385260, upload-time = "2025-05-17T21:43:05.189Z" },
     { url = "https://files.pythonhosted.org/packages/09/04/f2f83279d287407cf36a7a8053a5abe7be3622a4363337338f2585e4afda/numpy-2.2.6-cp313-cp313t-win32.whl", hash = "sha256:038613e9fb8c72b0a41f025a7e4c3f0b7a1b5d768ece4796b674c8f3fe13efff", size = 6377225, upload-time = "2025-05-17T21:43:16.254Z" },
     { url = "https://files.pythonhosted.org/packages/67/0e/35082d13c09c02c011cf21570543d202ad929d961c02a147493cb0c2bdf5/numpy-2.2.6-cp313-cp313t-win_amd64.whl", hash = "sha256:6031dd6dfecc0cf9f668681a37648373bddd6421fff6c66ec1624eed0180ee06", size = 12771374, upload-time = "2025-05-17T21:43:35.479Z" },
-]
-
-[[package]]
-name = "nunchaku"
-version = "0.16.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "matplotlib", marker = "sys_platform != 'darwin'" },
-    { name = "numpy", marker = "sys_platform != 'darwin'" },
-    { name = "pandas", marker = "sys_platform != 'darwin'" },
-    { name = "scipy", marker = "sys_platform != 'darwin'" },
-    { name = "tqdm", marker = "sys_platform != 'darwin'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/48/da/5d9ffee84b7858763a58dfd44d347e85913ec55c822c6188388deb6d3b3a/nunchaku-0.16.1.tar.gz", hash = "sha256:b59a59768baae97649143757a4943e71f70431aef2a1b6c551df9e24090a5b56", size = 16405, upload-time = "2025-10-12T19:16:49.122Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/76/c044cfe343d0e19d513f16cbea91fd46bce378bc50a14ff30fe81715d60a/nunchaku-0.16.1-py3-none-any.whl", hash = "sha256:a8fd5bf9bf9adcc59871d5cd8f902265f3a55f900ac41caf1bd2941120e7e8ab", size = 17766, upload-time = "2025-10-12T19:16:47.826Z" },
 ]
 
 [[package]]

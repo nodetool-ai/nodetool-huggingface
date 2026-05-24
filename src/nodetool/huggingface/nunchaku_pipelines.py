@@ -30,11 +30,13 @@ NUNCHAKU_AVAILABLE: bool | None = None
 
 
 def _check_nunchaku_available() -> bool:
-    """Check if the nunchaku package is available (lazy check)."""
+    """Check if the SVDQuant nunchaku runtime is available (lazy check)."""
     global NUNCHAKU_AVAILABLE
     if NUNCHAKU_AVAILABLE is None:
         try:
-            import nunchaku
+            from nunchaku import NunchakuFluxTransformer2dModel
+
+            _ = NunchakuFluxTransformer2dModel
             NUNCHAKU_AVAILABLE = True
         except ImportError:
             NUNCHAKU_AVAILABLE = False
@@ -50,8 +52,9 @@ def _require_nunchaku() -> None:
     """Raise an error if nunchaku is not available."""
     if not _check_nunchaku_available():
         raise ImportError(
-            "nunchaku is required for this operation but is not installed. "
-            "nunchaku is only available on non-Darwin platforms."
+            "The SVDQuant nunchaku runtime is required for this operation but is not installed. "
+            "Install it from the NodeTool package manager (nunchaku-tech/nunchaku) or from the "
+            "NodeTool registry wheel index. Do not install the unrelated PyPI 'nunchaku' package."
         )
 
 
