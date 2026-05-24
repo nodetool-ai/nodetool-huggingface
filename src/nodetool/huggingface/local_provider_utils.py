@@ -28,6 +28,12 @@ _ALLOW_DOWNLOAD_VALUES = {"1", "true", "yes", "on"}
 _PREFERRED_HF_DEVICE = "mps"
 
 
+def _loads_safetensors_via_pretrained(model_class: type) -> bool:
+    """Nunchaku SVDQ weights load via ``from_pretrained(path.safetensors)``, not diffusers ``from_single_file``."""
+    module = getattr(model_class, "__module__", "")
+    return module.startswith("nunchaku.")
+
+
 def _get_torch():
     """Lazy import for torch."""
     import torch
@@ -347,7 +353,13 @@ async def load_model(
                 )
             )
 
-            if hasattr(model_class, "from_single_file"):
+            if _loads_safetensors_via_pretrained(model_class):
+                model = model_class.from_pretrained(  # type: ignore[attr-defined]
+                    cache_path,
+                    torch_dtype=torch_dtype,
+                    **kwargs,
+                )
+            elif hasattr(model_class, "from_single_file"):
                 model = model_class.from_single_file(  # type: ignore
                     cache_path,
                     torch_dtype=torch_dtype,

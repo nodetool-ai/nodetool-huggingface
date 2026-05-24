@@ -116,7 +116,8 @@ async def get_nunchaku_text_encoder(
     torch = _get_torch()
     return await load_model(
         context=context,
-        model_id=str(cache_path),
+        model_id=repo_id,
+        path=path,
         model_class=NunchakuT5EncoderModel,
         node_id=node_id,
         torch_dtype=torch.bfloat16,
@@ -194,11 +195,10 @@ async def get_nunchaku_transformer(
             "Download it from recommended models before running this node."
         )
 
-    transformer_identifier = cache_path or f"{repo_id}/{path}"
-
     transformer = await load_model(
         context=context,
-        model_id=transformer_identifier,
+        model_id=repo_id,
+        path=path,
         model_class=model_class,
         node_id=node_id,
         torch_dtype=torch_dtype,
