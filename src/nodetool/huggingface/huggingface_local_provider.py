@@ -29,7 +29,6 @@ from typing import (
 from io import BytesIO
 
 import numpy as np
-from pydub import AudioSegment
 from PIL import Image
 from pydantic import BaseModel
 
@@ -343,6 +342,8 @@ class HuggingFaceLocalProvider(BaseProvider):
 
             # Convert AudioRef to numpy array
             audio_bytes = await context.asset_to_bytes(audio_ref)
+            from pydub import AudioSegment
+
             audio = AudioSegment.from_file(BytesIO(audio_bytes))
 
             # Convert to mono if stereo
@@ -447,6 +448,8 @@ class HuggingFaceLocalProvider(BaseProvider):
 
             # Cache the pipeline
             ModelManager.set_model(None, model, asr_pipeline)
+
+        from pydub import AudioSegment
 
         audio_segment = AudioSegment.from_file(BytesIO(audio))
         # Whisper expects 16kHz mono audio

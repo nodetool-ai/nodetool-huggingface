@@ -29,6 +29,7 @@ dependencies = [
     "tokenizers>=0.22.2,<1",
     "peft>=0.19.1,<1",
     "sentencepiece",
+    "pydub>=0.25.1",
     "sam2",
     "accelerate",
     "qwen-vl-utils",
