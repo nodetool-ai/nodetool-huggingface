@@ -82,12 +82,9 @@ class HuggingFacePipelineNode(BaseNode):
 
     async def pre_process(self, context: ProcessingContext):
         """Base pre_process that sets up HuggingFace logging for all HF nodes."""
-        log.info("HF pre_process: importing transformers/diffusers for %s", self.get_title())
         # Heavy imports inside setup_hf_logging must not run on the asyncio event
         # loop — they block stdin/cancel handling and can deadlock the stdio worker.
         await asyncio.to_thread(setup_hf_logging, context, self.id, self.get_title())
-        log.info("HF pre_process complete for %s", self.get_title())
-        # Call parent implementation
 
     _pipeline: Any = None
 

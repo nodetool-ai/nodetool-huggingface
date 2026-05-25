@@ -695,11 +695,9 @@ class Flux(HuggingFacePipelineNode):
         return flux_model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
-        # FluxPipeline is warm-imported at worker startup (see stdio_server.py)
-        # so this is just a cache lookup — safe to do on the event loop.
-        # Doing it via asyncio.to_thread() hangs indefinitely on Windows in the
-        # stdio worker (observed with diffusers' lazy import chain).
-        log.info("Flux preload_model: resolving cached imports [FLUX_FIX=v3]")
+        # Diffusers' lazy Flux import chain hangs on Windows when triggered
+        # from a worker thread (asyncio.to_thread). The stdio worker warm-imports
+        # it on the main thread at startup, so this is just a cache lookup.
         from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 
         transformer_model, text_encoder_model = self._resolve_model_config()
@@ -741,21 +739,12 @@ class Flux(HuggingFacePipelineNode):
                     "(configs, VAE, CLIP tokenizer). Use the Flux Schnell (Nunchaku INT4) model pack."
                 )
 
-            log.info("Flux preload: cache checks passed, loading pipeline modules")
-
             from nodetool.huggingface.nunchaku_pipelines import (
                 load_nunchaku_flux_pipeline,
             )
 
             cache_key = (
                 f"{base_model.repo_id}:{self.variant.value}:{self.quantization.value}"
-            )
-
-            log.info(
-                "Flux preload: loading Nunchaku pipeline (%s, %s, cpu_offload=%s)",
-                self.variant.value,
-                self.quantization.value,
-                self.enable_cpu_offload,
             )
 
             self._pipeline = await load_nunchaku_flux_pipeline(
@@ -795,13 +784,9 @@ class Flux(HuggingFacePipelineNode):
 
             apply_cpu_offload_if_needed(self._pipeline, method="sequential")
 
-        log.info("Flux preload complete")
-
     async def move_to_device(self, device: str):
         if self._pipeline is None:
             return
-
-        log.info("Flux move_to_device: %s (cpu_offload=%s)", device, self.enable_cpu_offload)
 
         pipeline_ref = self._pipeline
 
@@ -829,8 +814,6 @@ class Flux(HuggingFacePipelineNode):
                 "Try enabling 'CPU offload' in the advanced node properties, "
                 "reduce image size, or lower steps."
             ) from e
-
-        log.info("Flux move_to_device complete (%s)", device)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         import threading
