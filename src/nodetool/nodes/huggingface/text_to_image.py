@@ -429,8 +429,9 @@ class Flux(HuggingFacePipelineNode):
         description="Quantization level: INT4/FP4 for lower VRAM, FP16 for full precision.",
     )
     enable_cpu_offload: bool = Field(
-        default=True,
-        description="Offload model components to CPU to reduce VRAM usage.",
+        default=False,
+        description="Offload model components to CPU to reduce VRAM usage. "
+        "Leave off for Nunchaku INT4/FP4 on 8GB+ GPUs; enable only if you hit OOM.",
     )
     prompt: str = Field(
         default="A cat holding a sign that says hello world",
@@ -694,7 +695,11 @@ class Flux(HuggingFacePipelineNode):
         return flux_model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
-        import torch
+        # FluxPipeline is warm-imported at worker startup (see stdio_server.py)
+        # so this is just a cache lookup — safe to do on the event loop.
+        # Doing it via asyncio.to_thread() hangs indefinitely on Windows in the
+        # stdio worker (observed with diffusers' lazy import chain).
+        log.info("Flux preload_model: resolving cached imports [FLUX_FIX=v3]")
         from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 
         transformer_model, text_encoder_model = self._resolve_model_config()
@@ -729,14 +734,28 @@ class Flux(HuggingFacePipelineNode):
                     f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded"
                 )
 
+            base_model = self._get_base_model(self.variant)
+            if not await HF_FAST_CACHE.resolve(base_model.repo_id, "model_index.json"):
+                raise ValueError(
+                    f"Base Flux model {base_model.repo_id} must be downloaded "
+                    "(configs, VAE, CLIP tokenizer). Use the Flux Schnell (Nunchaku INT4) model pack."
+                )
+
+            log.info("Flux preload: cache checks passed, loading pipeline modules")
+
             from nodetool.huggingface.nunchaku_pipelines import (
                 load_nunchaku_flux_pipeline,
             )
-            from nodetool.ml.core.model_manager import ModelManager
 
-            base_model = self._get_base_model(self.variant)
             cache_key = (
                 f"{base_model.repo_id}:{self.variant.value}:{self.quantization.value}"
+            )
+
+            log.info(
+                "Flux preload: loading Nunchaku pipeline (%s, %s, cpu_offload=%s)",
+                self.variant.value,
+                self.quantization.value,
+                self.enable_cpu_offload,
             )
 
             self._pipeline = await load_nunchaku_flux_pipeline(
@@ -776,39 +795,42 @@ class Flux(HuggingFacePipelineNode):
 
             apply_cpu_offload_if_needed(self._pipeline, method="sequential")
 
+        log.info("Flux preload complete")
+
     async def move_to_device(self, device: str):
-        if self._pipeline is not None:
-            # If CPU offload is enabled, we need to handle device movement differently
+        if self._pipeline is None:
+            return
+
+        log.info("Flux move_to_device: %s (cpu_offload=%s)", device, self.enable_cpu_offload)
+
+        pipeline_ref = self._pipeline
+
+        # Pipeline.to() and CPU offload setup move multi-GB of weights — pure
+        # CUDA/native work that blocks the asyncio event loop and starves the
+        # stdio worker's stdin reader. Always run in a thread.
+        def _do_move() -> None:
             if self.enable_cpu_offload:
-                # With CPU offload, components are automatically managed
-                # When moving to CPU, we should disable CPU offload and move everything to CPU
                 if device == "cpu":
-                    # Disable CPU offload and move all components to CPU
-                    try:
-                        self._pipeline.to(device)
-                    except torch.OutOfMemoryError as e:
-                        raise ValueError(
-                            "VRAM out of memory while moving Flux to device. "
-                            "Enable 'CPU offload' in the advanced node properties or reduce image size/steps."
-                        ) from e
-                # When moving to GPU with CPU offload, re-enable CPU offload
-                elif device in ["cuda", "mps"]:
+                    pipeline_ref.to(device)
+                elif device in ("cuda", "mps"):
                     from nodetool.huggingface.memory_utils import (
                         apply_cpu_offload_if_needed,
                     )
-
-                    apply_cpu_offload_if_needed(self._pipeline, method="sequential")
+                    apply_cpu_offload_if_needed(pipeline_ref, method="sequential")
             else:
-                # Normal device movement without CPU offload
-                try:
-                    self._pipeline.to(device)
-                except torch.OutOfMemoryError as e:
-                    raise ValueError(
-                        "VRAM out of memory while moving Flux to device. "
-                        "Try enabling 'CPU offload' in the advanced node properties, reduce image size, or lower steps."
-                    ) from e
+                pipeline_ref.to(device)
+            _apply_vae_optimizations(pipeline_ref)
 
-            _apply_vae_optimizations(self._pipeline)
+        try:
+            await asyncio.to_thread(_do_move)
+        except torch.OutOfMemoryError as e:
+            raise ValueError(
+                "VRAM out of memory while moving Flux to device. "
+                "Try enabling 'CPU offload' in the advanced node properties, "
+                "reduce image size, or lower steps."
+            ) from e
+
+        log.info("Flux move_to_device complete (%s)", device)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         import threading
@@ -822,12 +844,6 @@ class Flux(HuggingFacePipelineNode):
             f"Flux.process START (variant={self.variant.value}, {self.width}x{self.height})"
         )
 
-        # Set up the generator for reproducibility
-        generator = None
-        if self.seed != -1:
-            generator = torch.Generator(device="cpu").manual_seed(self.seed)
-
-        # Adjust parameters based on detected variant
         guidance_scale = self.guidance_scale
         num_inference_steps = self.num_inference_steps
         max_sequence_length = self.max_sequence_length
@@ -836,7 +852,12 @@ class Flux(HuggingFacePipelineNode):
             guidance_scale = 0.0
             max_sequence_length = 256
             num_inference_steps = 4
-        max_sequence_length = self.max_sequence_length
+
+        # Set up the generator for reproducibility
+        generator = None
+        if self.seed != -1:
+            gen_device = "cuda" if torch.cuda.is_available() else "cpu"
+            generator = torch.Generator(device=gen_device).manual_seed(self.seed)
 
         # Cancellation event for signalling the inference thread to stop.
         # Checked in the progress callback and used to set pipeline._interrupt.

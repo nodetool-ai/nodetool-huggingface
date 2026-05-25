@@ -337,63 +337,63 @@ async def load_model(
         if cached_model:
             return _ensure_model_on_device(cached_model, target_device)
 
-    async def _do_load() -> T:
+    load_kwargs = dict(kwargs)
+    cache_path: str | None = None
+    if path:
+        cache_path = await HF_FAST_CACHE.resolve(model_id, path)
+        if not cache_path:
+            raise ValueError(
+                f"Download model {model_id}/{path} first from recommended models"
+            )
+        log.info("Loading model %s from %s", model_id, cache_path)
+        context.post_message(
+            JobUpdate(
+                status="running",
+                message=f"Loading model {model_id}/{path}…",
+            )
+        )
+    else:
+        log.info("Loading model %s from HuggingFace", model_id)
+        context.post_message(
+            JobUpdate(
+                status="running",
+                message=f"Loading model {model_id} from HuggingFace…",
+            )
+        )
+        if "token" not in load_kwargs:
+            load_kwargs["token"] = await context.get_secret("HF_TOKEN")
+
+    def _load_sync() -> T:
         if path:
-            cache_path = await HF_FAST_CACHE.resolve(model_id, path)
-            if not cache_path:
-                raise ValueError(
-                    f"Download model {model_id}/{path} first from recommended models"
-                )
-
-            log.info("Loading model %s from %s", model_id, cache_path)
-            context.post_message(
-                JobUpdate(
-                    status="running",
-                    message=f"Loading model {model_id}",
-                )
-            )
-
+            assert cache_path is not None
             if _loads_safetensors_via_pretrained(model_class):
-                model = model_class.from_pretrained(  # type: ignore[attr-defined]
+                return model_class.from_pretrained(  # type: ignore[attr-defined]
                     cache_path,
                     torch_dtype=torch_dtype,
-                    **kwargs,
+                    **load_kwargs,
                 )
-            elif hasattr(model_class, "from_single_file"):
-                model = model_class.from_single_file(  # type: ignore
+            if hasattr(model_class, "from_single_file"):
+                return model_class.from_single_file(  # type: ignore
                     cache_path,
                     torch_dtype=torch_dtype,
                     variant=variant,
-                    **kwargs,
+                    **load_kwargs,
                 )
-            else:
-                model = model_class.from_pretrained(
-                    model_id,
-                    torch_dtype=torch_dtype,
-                    variant=variant,
-                    **kwargs,
-                )
-        else:
-            log.info("Loading model %s from HuggingFace", model_id)
-            context.post_message(
-                JobUpdate(
-                    status="running",
-                    message=f"Loading model {model_id} from HuggingFace",
-                )
-            )
-            if "token" not in kwargs:
-                kwargs["token"] = await context.get_secret("HF_TOKEN")
-
-            model = model_class.from_pretrained(
+            return model_class.from_pretrained(
                 model_id,
                 torch_dtype=torch_dtype,
                 variant=variant,
-                **kwargs,
+                **load_kwargs,
             )
-        return model
+        return model_class.from_pretrained(
+            model_id,
+            torch_dtype=torch_dtype,
+            variant=variant,
+            **load_kwargs,
+        )
 
     try:
-        model = await _do_load()
+        model = await asyncio.to_thread(_load_sync)
     except (ValueError, RuntimeError) as exc:
         if not _is_vram_error(exc):
             raise
@@ -416,7 +416,7 @@ async def load_model(
         )
 
         try:
-            model = await _do_load()
+            model = await asyncio.to_thread(_load_sync)
             log.info("Successfully loaded model %s after freeing VRAM", model_id)
         except Exception as retry_exc:
             log.error(

@@ -7,6 +7,7 @@ All nunchaku-specific code is isolated here to allow the main huggingface
 module to work without nunchaku installed.
 """
 
+import asyncio
 from typing import Any, TYPE_CHECKING
 
 from nodetool.config.logging_config import get_logger
@@ -16,6 +17,7 @@ from nodetool.huggingface.flux_utils import (
 )
 from nodetool.huggingface.local_provider_utils import _get_torch, load_model
 from nodetool.workflows.memory_utils import log_memory, run_gc, MemoryTracker
+from nodetool.workflows.types import JobUpdate
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 
 if TYPE_CHECKING:
@@ -275,11 +277,25 @@ async def load_nunchaku_flux_pipeline(
     if text_encoder is not None:
         pipeline_kwargs["text_encoder_2"] = text_encoder
 
+    base_cached = await HF_FAST_CACHE.resolve(base_model_id, "model_index.json")
+    if base_cached:
+        pipeline_kwargs["local_files_only"] = True
+
+    context.post_message(
+        JobUpdate(
+            status="running",
+            message=f"Assembling Flux pipeline from {base_model_id}…",
+        )
+    )
+
+    def _build_pipeline():
+        return pipeline_class.from_pretrained(base_model_id, **pipeline_kwargs)
+
     try:
         with MemoryTracker(
             f"Building {pipeline_name} from pretrained", run_gc_after=True
         ):
-            pipeline = pipeline_class.from_pretrained(base_model_id, **pipeline_kwargs)
+            pipeline = await asyncio.to_thread(_build_pipeline)
 
         if cache_key and node_id:
             ModelManager.set_model(node_id, cache_key, pipeline)
