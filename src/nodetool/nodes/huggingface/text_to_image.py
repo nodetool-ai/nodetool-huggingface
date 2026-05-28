@@ -847,6 +847,8 @@ class Flux(HuggingFacePipelineNode):
         cancel_event = threading.Event()
 
         pipeline_ref = self._pipeline
+        import time as _time
+        step_timer = {"last": _time.perf_counter(), "started": False}
 
         def progress_callback(
             pipeline: Any, step: int, timestep: int, callback_kwargs: dict
@@ -863,7 +865,14 @@ class Flux(HuggingFacePipelineNode):
                     total=num_inference_steps,
                 )
             )
-            # Log memory every 5 steps to track usage during inference
+            now = _time.perf_counter()
+            dt = now - step_timer["last"]
+            step_timer["last"] = now
+            tag = "warmup" if not step_timer["started"] else "step"
+            step_timer["started"] = True
+            log.info(
+                f"Flux {tag} {step}/{num_inference_steps} took {dt:.2f}s"
+            )
             if step % 5 == 0:
                 log_memory(f"Flux inference step {step}/{num_inference_steps}")
             return callback_kwargs
@@ -890,6 +899,7 @@ class Flux(HuggingFacePipelineNode):
         # Generate the image off the event loop
         def _run_pipeline_sync():
             with torch.inference_mode():
+                t_pipe = _time.perf_counter()
                 result = pipeline_ref(
                     prompt=self.prompt,
                     guidance_scale=guidance_scale,
@@ -901,8 +911,12 @@ class Flux(HuggingFacePipelineNode):
                     callback_on_step_end=progress_callback,
                     callback_on_step_end_tensor_inputs=["latents"],
                 )
-                # Log after VAE decoding completes (this is inside the thread)
-                log.info("Flux VAE decoding completed")
+                t_vae = _time.perf_counter() - step_timer["last"]
+                t_total = _time.perf_counter() - t_pipe
+                log.info(
+                    f"Flux VAE decoding completed in {t_vae:.2f}s "
+                    f"(total pipeline: {t_total:.2f}s)"
+                )
                 return result
 
         # Use a per-step timeout: if no progress is made within this time,
