@@ -219,7 +219,7 @@
           "type": "hf.audio_classification"
         }
       ],
-      "title": "Audio Classifier"
+      "title": "HF Audio Classifier"
     },
     {
       "basic_fields": [
@@ -304,7 +304,7 @@
           "type": "hf.zero_shot_audio_classification"
         }
       ],
-      "title": "Zero Shot Audio Classifier"
+      "title": "HF Zero Shot Audio Classifier"
     },
     {
       "basic_fields": [
@@ -692,7 +692,7 @@
           "type": "hf.depth_estimation"
         }
       ],
-      "title": "Depth Estimation"
+      "title": "HF Depth Estimation"
     },
     {
       "basic_fields": [
@@ -827,7 +827,7 @@
           "type": "hf.model"
         }
       ],
-      "title": "Document Question Answering"
+      "title": "HF Document Question Answering"
     },
     {
       "basic_fields": [
@@ -907,7 +907,7 @@
           "type": "hf.feature_extraction"
         }
       ],
-      "title": "Feature Extraction"
+      "title": "HF Feature Extraction"
     },
     {
       "basic_fields": [
@@ -1016,7 +1016,7 @@
           "type": "hf.fill_mask"
         }
       ],
-      "title": "Fill Mask"
+      "title": "HF Fill Mask"
     },
     {
       "basic_fields": [
@@ -1176,7 +1176,7 @@
           "type": "hf.image_classification"
         }
       ],
-      "title": "Image Classifier"
+      "title": "HF Image Classifier"
     },
     {
       "basic_fields": [
@@ -1286,7 +1286,7 @@
           "type": "hf.zero_shot_image_classification"
         }
       ],
-      "title": "Zero-Shot Image Classifier"
+      "title": "HF Zero-Shot Image Classifier"
     },
     {
       "basic_fields": [
@@ -1603,7 +1603,7 @@
           "type": "hf.image_segmentation"
         }
       ],
-      "title": "Image Segmentation"
+      "title": "HF Image Segmentation"
     },
     {
       "basic_fields": [
@@ -1753,7 +1753,7 @@
           }
         }
       ],
-      "title": "Base Qwen VL"
+      "title": "HF Base Qwen VL"
     },
     {
       "basic_fields": [
@@ -1977,7 +1977,7 @@
           "type": "hf.image_text_to_text"
         }
       ],
-      "title": "Image Text To Text"
+      "title": "HF Image Text To Text"
     },
     {
       "basic_fields": [
@@ -2005,7 +2005,7 @@
           }
         }
       ],
-      "title": "Load Image Text To Text Model"
+      "title": "HF Load Image Text To Text Model"
     },
     {
       "basic_fields": [
@@ -2193,7 +2193,7 @@
           "type": "hf.qwen2_5_vl"
         }
       ],
-      "title": "Qwen 2 5 VL"
+      "title": "Qwen2.5-VL"
     },
     {
       "basic_fields": [
@@ -2441,7 +2441,7 @@
           "type": "hf.qwen3_vl"
         }
       ],
-      "title": "Qwen 3 VL"
+      "title": "Qwen3-VL"
     },
     {
       "basic_fields": [
@@ -3580,7 +3580,7 @@
           }
         }
       ],
-      "title": "Image to Image"
+      "title": "HF Image to Image"
     },
     {
       "basic_fields": [
@@ -3608,7 +3608,7 @@
           }
         }
       ],
-      "title": "Load Image To Image Model"
+      "title": "HF Load Image To Image Model"
     },
     {
       "basic_fields": [
@@ -4095,7 +4095,7 @@
           "type": "hf.real_esrgan"
         }
       ],
-      "title": "Real ESRGAN"
+      "title": "RealESRGAN"
     },
     {
       "basic_fields": [
@@ -9019,7 +9019,7 @@
           "type": "hf.image_to_text"
         }
       ],
-      "title": "Image To Text"
+      "title": "HF Image To Text"
     },
     {
       "basic_fields": [
@@ -9047,7 +9047,7 @@
           }
         }
       ],
-      "title": "Load Image To Text Model"
+      "title": "HF Load Image To Text Model"
     },
     {
       "basic_fields": [
@@ -10334,7 +10334,7 @@
           "type": "hf.image_to_text"
         }
       ],
-      "title": "Image To Text"
+      "title": "HF Image To Text"
     },
     {
       "basic_fields": [
@@ -10408,7 +10408,7 @@
           "type": "hf.visual_question_answering"
         }
       ],
-      "title": "Visual Question Answering"
+      "title": "HF Visual Question Answering"
     },
     {
       "basic_fields": [
@@ -10571,7 +10571,7 @@
           "type": "hf.object_detection"
         }
       ],
-      "title": "Object Detection"
+      "title": "HF Object Detection"
     },
     {
       "basic_fields": [
@@ -10793,7 +10793,7 @@
           "type": "hf.zero_shot_object_detection"
         }
       ],
-      "title": "Zero-Shot Object Detection"
+      "title": "HF Zero-Shot Object Detection"
     },
     {
       "basic_fields": [
@@ -10912,7 +10912,7 @@
           "type": "hf.question_answering"
         }
       ],
-      "title": "Question Answering"
+      "title": "HF Question Answering"
     },
     {
       "basic_fields": [
@@ -11045,7 +11045,7 @@
           "type": "hf.table_question_answering"
         }
       ],
-      "title": "Table Question Answering"
+      "title": "HF Table Question Answering"
     },
     {
       "basic_fields": [
@@ -11148,7 +11148,7 @@
           "type": "hf.reranker"
         }
       ],
-      "title": "Reranker"
+      "title": "HF Reranker"
     },
     {
       "basic_fields": [
@@ -11239,7 +11239,7 @@
           "type": "hf.sentence_similarity"
         }
       ],
-      "title": "Sentence Similarity"
+      "title": "HF Sentence Similarity"
     },
     {
       "basic_fields": [
@@ -11496,7 +11496,7 @@
           "type": "hf.model"
         }
       ],
-      "title": "Summarization"
+      "title": "HF Summarization"
     },
     {
       "basic_fields": [
@@ -11711,7 +11711,7 @@
           "type": "hf.model"
         }
       ],
-      "title": "Text-to-Text Generation"
+      "title": "HF Text-to-Text Generation"
     },
     {
       "basic_fields": [
@@ -11788,7 +11788,7 @@
           "type": "hf.text_classification"
         }
       ],
-      "title": "Text Classifier"
+      "title": "HF Text Classifier"
     },
     {
       "basic_fields": [
@@ -11940,7 +11940,7 @@
           "type": "hf.zero_shot_classification"
         }
       ],
-      "title": "Zero Shot Text Classifier"
+      "title": "HF Zero Shot Text Classifier"
     },
     {
       "basic_fields": [
@@ -12466,7 +12466,7 @@
           "type": "hf.text_generation"
         }
       ],
-      "title": "Text Generation"
+      "title": "HF Text Generation"
     },
     {
       "basic_fields": [
@@ -12626,7 +12626,7 @@
           "type": "hf.text_to_audio"
         }
       ],
-      "title": "Audio LDM"
+      "title": "AudioLDM"
     },
     {
       "basic_fields": [
@@ -12720,7 +12720,7 @@
           "type": "hf.text_to_audio"
         }
       ],
-      "title": "Audio LDM2"
+      "title": "AudioLDM2"
     },
     {
       "basic_fields": [
@@ -12907,7 +12907,7 @@
           "type": "hf.text_to_audio"
         }
       ],
-      "title": "Music Gen"
+      "title": "MusicGen"
     },
     {
       "basic_fields": [
@@ -12983,7 +12983,7 @@
           "type": "hf.text_to_audio"
         }
       ],
-      "title": "Music LDM"
+      "title": "MusicLDM"
     },
     {
       "basic_fields": [
@@ -13745,7 +13745,7 @@
           }
         }
       ],
-      "title": "Load Text To Image Model"
+      "title": "HF Load Text To Image Model"
     },
     {
       "basic_fields": [
@@ -14760,7 +14760,7 @@
           }
         }
       ],
-      "title": "Text to Image"
+      "title": "HF Text to Image"
     },
     {
       "basic_fields": [
@@ -14991,7 +14991,7 @@
           "type": "hf.text_to_speech"
         }
       ],
-      "title": "Kokoro TTS"
+      "title": "KokoroTTS"
     },
     {
       "basic_fields": [
@@ -15137,7 +15137,7 @@
           "type": "hf.text_to_speech"
         }
       ],
-      "title": "Text To Speech"
+      "title": "HF Text To Speech"
     },
     {
       "basic_fields": [
@@ -15616,7 +15616,7 @@
           }
         }
       ],
-      "title": "Token Classification"
+      "title": "HF Token Classification"
     },
     {
       "basic_fields": [
@@ -15798,7 +15798,7 @@
           "type": "hf.translation"
         }
       ],
-      "title": "Translation"
+      "title": "HF Translation"
     },
     {
       "basic_fields": [
@@ -15945,7 +15945,7 @@
           "type": "hf.model"
         }
       ],
-      "title": "Video Classifier"
+      "title": "HF Video Classifier"
     }
   ],
   "repo_id": "",

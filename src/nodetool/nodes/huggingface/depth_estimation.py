@@ -66,7 +66,7 @@ class DepthEstimation(HuggingFacePipelineNode):
 
     @classmethod
     def get_title(cls) -> str:
-        return "Depth Estimation"
+        return "HF Depth Estimation"
 
     def get_model_id(self):
         return self.model.repo_id

@@ -72,7 +72,7 @@ class Segmentation(HuggingFacePipelineNode):
 
     @classmethod
     def get_title(cls) -> str:
-        return "Image Segmentation"
+        return "HF Image Segmentation"
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:

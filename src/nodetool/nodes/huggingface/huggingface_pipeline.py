@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from nodetool.workflows.graph import BaseNode
+from nodetool.workflows.base_node import split_camel_case
 import asyncio
 import concurrent.futures
 from nodetool.config.logging_config import get_logger
@@ -79,6 +80,12 @@ class HuggingFacePipelineNode(BaseNode):
     @classmethod
     def is_visible(cls) -> bool:
         return cls is not HuggingFacePipelineNode
+
+    @classmethod
+    def get_title(cls) -> str:
+        class_name = cls.__name__
+        title = class_name[:-4] if class_name.endswith("Node") else class_name
+        return f"HF {split_camel_case(title)}"
 
     async def pre_process(self, context: ProcessingContext):
         """Base pre_process that sets up HuggingFace logging for all HF nodes."""

@@ -103,7 +103,7 @@ class Summarization(HuggingFacePipelineNode):
 
     @classmethod
     def get_title(cls) -> str:
-        return "Summarization"
+        return "HF Summarization"
 
     def get_model_id(self):
         return self.model.repo_id

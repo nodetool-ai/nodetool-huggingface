@@ -318,7 +318,7 @@ class Text2Image(HuggingFacePipelineNode):
 
     @classmethod
     def get_title(cls) -> str:
-        return "Text to Image"
+        return "HF Text to Image"
 
     def get_model_id(self) -> str:
         return self.model.repo_id

@@ -77,7 +77,7 @@ class DocumentQuestionAnswering(HuggingFacePipelineNode):
 
     @classmethod
     def get_title(cls) -> str:
-        return "Document Question Answering"
+        return "HF Document Question Answering"
 
     def get_model_id(self):
         return self.model.repo_id
