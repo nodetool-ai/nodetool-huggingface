@@ -9,7 +9,7 @@ from nodetool.nodes.huggingface.huggingface_node import (
     setup_hf_logging,
 )
 from nodetool.workflows.processing_context import ProcessingContext
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 from nodetool.huggingface.local_provider_utils import load_model, load_pipeline
 
 if TYPE_CHECKING:
@@ -46,6 +46,63 @@ def select_inference_dtype() -> "torch.dtype":
 
 
 class HuggingFacePipelineNode(BaseNode):
+    # Field names commonly used across HF nodes to carry primary data into the node.
+    # These get input handles even when their type is a primitive.
+    DATA_INPUT_NAMES: ClassVar[frozenset[str]] = frozenset(
+        {
+            "prompt",
+            "negative_prompt",
+            "text",
+            "inputs",
+            "query",
+            "question",
+            "context",
+            "candidate_labels",
+            "messages",
+            "system_prompt",
+            "source_text",
+            "target_text",
+            "sentences",
+            "hypothesis_template",
+        }
+    )
+
+    # Fields rendered inline on the node body. The model selector is the high-value
+    # control everywhere; "prompt"/"text" is the primary creative input where present.
+    INLINE_NAMES: ClassVar[frozenset[str]] = frozenset({"model", "prompt", "text"})
+
+    @classmethod
+    def get_input_fields(cls) -> list[str]:
+        """All asset-typed fields plus conventional data-input names."""
+        names: list[str] = []
+        for prop in cls.properties():
+            hint = cls._expose_hint(prop)
+            if hint in ("inline", "none"):
+                continue
+            if hint in ("handle", "both"):
+                names.append(prop.name)
+                continue
+            if prop.type.is_asset_type(recursive=True):
+                names.append(prop.name)
+            elif prop.name in cls.DATA_INPUT_NAMES:
+                names.append(prop.name)
+        return names
+
+    @classmethod
+    def get_inline_fields(cls) -> list[str]:
+        """Curated short list rendered inside the node body."""
+        names: list[str] = []
+        for prop in cls.properties():
+            hint = cls._expose_hint(prop)
+            if hint == "inline" or hint == "both":
+                names.append(prop.name)
+                continue
+            if hint in ("handle", "none"):
+                continue
+            if prop.name in cls.INLINE_NAMES:
+                names.append(prop.name)
+        return names
+
     @classmethod
     def unified_recommended_models(
         cls, include_model_info: bool = False
