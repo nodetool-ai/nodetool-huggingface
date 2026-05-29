@@ -71,6 +71,23 @@ class HuggingFacePipelineNode(BaseNode):
     # control everywhere; "prompt"/"text" is the primary creative input where present.
     INLINE_NAMES: ClassVar[frozenset[str]] = frozenset({"model", "prompt", "text"})
 
+    # Primary-output type names that warrant a media/text-forward content card.
+    # Structured-data nodes (classifiers, detectors, feature extraction) fall
+    # through to the generic body.
+    CONTENT_CARD_OUTPUT_TYPES: ClassVar[frozenset[str]] = frozenset(
+        {
+            "image",
+            "image_mask",
+            "mask",
+            "video",
+            "audio",
+            "model_3d",
+            "asset_3d",
+            "str",
+            "text",
+        }
+    )
+
     @classmethod
     def get_input_fields(cls) -> list[str]:
         """All asset-typed fields plus conventional data-input names."""
@@ -143,6 +160,23 @@ class HuggingFacePipelineNode(BaseNode):
         class_name = cls.__name__
         title = class_name[:-4] if class_name.endswith("Node") else class_name
         return f"HF {split_camel_case(title)}"
+
+    @classmethod
+    def body(cls) -> str:
+        """Render media/text-producing HF nodes as content cards.
+
+        Opt-in is derived from the primary (first) output type. The frontend
+        derives the concrete variant (image/audio/video/text/3D) from the same
+        output, so an image generator gets an image body for free. Structured-
+        data nodes (classifiers, detectors) keep the generic input/output body.
+        """
+        outputs = cls.outputs()
+        if not outputs:
+            return "default"
+        primary_type = getattr(getattr(outputs[0], "type", None), "type", None)
+        if primary_type in cls.CONTENT_CARD_OUTPUT_TYPES:
+            return "content_card"
+        return "default"
 
     async def pre_process(self, context: ProcessingContext):
         """Base pre_process that sets up HuggingFace logging for all HF nodes."""
