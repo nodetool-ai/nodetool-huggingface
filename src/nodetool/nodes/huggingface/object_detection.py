@@ -91,7 +91,7 @@ class ObjectDetection(HuggingFacePipelineNode):
 
     @classmethod
     def get_title(cls) -> str:
-        return "Object Detection"
+        return "HF Object Detection"
 
     def get_model_id(self):
         return self.model.repo_id
@@ -290,7 +290,7 @@ class ZeroShotObjectDetection(HuggingFacePipelineNode):
 
     @classmethod
     def get_title(cls) -> str:
-        return "Zero-Shot Object Detection"
+        return "HF Zero-Shot Object Detection"
 
     def get_model_id(self):
         return self.model.repo_id

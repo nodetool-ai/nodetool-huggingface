@@ -169,6 +169,10 @@ class Whisper(HuggingFacePipelineNode):
     _pipeline: Any = None
 
     @classmethod
+    def get_title(cls) -> str:
+        return "Whisper"
+
+    @classmethod
     def get_basic_fields(cls):
         return ["model", "audio", "task"]
 

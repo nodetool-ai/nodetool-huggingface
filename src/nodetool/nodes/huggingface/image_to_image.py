@@ -189,6 +189,10 @@ class RealESRGANNode(HuggingFacePipelineNode):
     _model: Any = None
 
     @classmethod
+    def get_title(cls) -> str:
+        return "RealESRGAN"
+
+    @classmethod
     def get_recommended_models(cls) -> list[HFRealESRGAN]:
         return [
             HFRealESRGAN(
@@ -399,7 +403,7 @@ class ImageToImage(HuggingFacePipelineNode):
 
     @classmethod
     def get_title(cls) -> str:
-        return "Image to Image"
+        return "HF Image to Image"
 
     def get_model_id(self) -> str:
         return self.model.repo_id

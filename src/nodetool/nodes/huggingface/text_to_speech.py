@@ -48,6 +48,10 @@ class Bark(HuggingFacePipelineNode):
     _pipeline: Any = None
 
     @classmethod
+    def get_title(cls) -> str:
+        return "Bark"
+
+    @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
         return [
             HFTextToSpeech(
@@ -225,6 +229,10 @@ class KokoroTTS(HuggingFacePipelineNode):
     )
 
     _kpipeline: Any = None
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "KokoroTTS"
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:

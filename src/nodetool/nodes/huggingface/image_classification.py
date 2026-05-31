@@ -89,7 +89,7 @@ class ImageClassifier(HuggingFacePipelineNode):
 
     @classmethod
     def get_title(cls) -> str:
-        return "Image Classifier"
+        return "HF Image Classifier"
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
@@ -161,7 +161,7 @@ class ZeroShotImageClassifier(HuggingFacePipelineNode):
 
     @classmethod
     def get_title(cls) -> str:
-        return "Zero-Shot Image Classifier"
+        return "HF Zero-Shot Image Classifier"
 
     def get_model_id(self):
         return self.model.repo_id

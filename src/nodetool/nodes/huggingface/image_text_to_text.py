@@ -594,6 +594,10 @@ class Qwen2_5_VL(BaseQwenVL):
     )
 
     @classmethod
+    def get_title(cls) -> str:
+        return "Qwen2.5-VL"
+
+    @classmethod
     def get_recommended_models(cls) -> list[HFQwen2_5_VL]:
         # All bnb models from the Unsloth Qwen2.5-VL (All Versions) collection
         bnb_models = [
@@ -678,6 +682,10 @@ class Qwen3_VL(BaseQwenVL):
         title="Model",
         description="The Qwen3-VL model variant. Thinking variants add chain-of-thought; BNB-4bit reduces memory; larger models improve accuracy.",
     )
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Qwen3-VL"
 
     @classmethod
     def get_recommended_models(cls) -> list[HFQwen3_VL]:

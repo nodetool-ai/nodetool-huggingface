@@ -64,6 +64,10 @@ class MusicGen(HuggingFacePipelineNode):
     _model: Any = None
 
     @classmethod
+    def get_title(cls) -> str:
+        return "MusicGen"
+
+    @classmethod
     def get_basic_fields(cls) -> list[str]:
         return ["model", "prompt"]
 
@@ -183,6 +187,10 @@ class MusicLDM(HuggingFacePipelineNode):
     _pipeline: Any = None
 
     @classmethod
+    def get_title(cls) -> str:
+        return "MusicLDM"
+
+    @classmethod
     def get_basic_fields(cls) -> list[str]:
         return ["model", "prompt"]
 
@@ -254,6 +262,10 @@ class AudioLDM(HuggingFacePipelineNode):
     )
 
     _pipeline: Any = None
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "AudioLDM"
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
@@ -357,6 +369,10 @@ class AudioLDM2(HuggingFacePipelineNode):
     _pipeline: Any = None
 
     @classmethod
+    def get_title(cls) -> str:
+        return "AudioLDM2"
+
+    @classmethod
     def get_basic_fields(cls) -> list[str]:
         return ["model", "prompt"]
 
@@ -446,6 +462,10 @@ class DanceDiffusion(HuggingFacePipelineNode):
     _pipeline: Any = None
 
     @classmethod
+    def get_title(cls) -> str:
+        return "Dance Diffusion"
+
+    @classmethod
     def get_basic_fields(cls) -> list[str]:
         return ["model", "prompt"]
 
@@ -526,6 +546,10 @@ class StableAudioNode(HuggingFacePipelineNode):
     )
 
     _pipeline: Any = None
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Stable Audio"
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:

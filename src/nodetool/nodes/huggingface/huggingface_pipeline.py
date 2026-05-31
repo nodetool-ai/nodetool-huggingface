@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from nodetool.workflows.graph import BaseNode
+from nodetool.workflows.base_node import split_camel_case
 import asyncio
 import concurrent.futures
 from nodetool.config.logging_config import get_logger
@@ -8,7 +9,7 @@ from nodetool.nodes.huggingface.huggingface_node import (
     setup_hf_logging,
 )
 from nodetool.workflows.processing_context import ProcessingContext
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 from nodetool.huggingface.local_provider_utils import load_model, load_pipeline
 
 if TYPE_CHECKING:
@@ -45,6 +46,80 @@ def select_inference_dtype() -> "torch.dtype":
 
 
 class HuggingFacePipelineNode(BaseNode):
+    # Field names commonly used across HF nodes to carry primary data into the node.
+    # These get input handles even when their type is a primitive.
+    DATA_INPUT_NAMES: ClassVar[frozenset[str]] = frozenset(
+        {
+            "prompt",
+            "negative_prompt",
+            "text",
+            "inputs",
+            "query",
+            "question",
+            "context",
+            "candidate_labels",
+            "messages",
+            "system_prompt",
+            "source_text",
+            "target_text",
+            "sentences",
+            "hypothesis_template",
+        }
+    )
+
+    # Fields rendered inline on the node body. The model selector is the high-value
+    # control everywhere; "prompt"/"text" is the primary creative input where present.
+    INLINE_NAMES: ClassVar[frozenset[str]] = frozenset({"model", "prompt", "text"})
+
+    # Primary-output type names that warrant a media/text-forward content card.
+    # Structured-data nodes (classifiers, detectors, feature extraction) fall
+    # through to the generic body.
+    CONTENT_CARD_OUTPUT_TYPES: ClassVar[frozenset[str]] = frozenset(
+        {
+            "image",
+            "image_mask",
+            "mask",
+            "video",
+            "audio",
+            "model_3d",
+            "asset_3d",
+            "str",
+            "text",
+        }
+    )
+
+    @classmethod
+    def get_input_fields(cls) -> list[str]:
+        """All asset-typed fields plus conventional data-input names."""
+        names: list[str] = []
+        for prop in cls.properties():
+            hint = cls._expose_hint(prop)
+            if hint in ("inline", "none"):
+                continue
+            if hint in ("handle", "both"):
+                names.append(prop.name)
+                continue
+            if prop.type.is_asset_type(recursive=True):
+                names.append(prop.name)
+            elif prop.name in cls.DATA_INPUT_NAMES:
+                names.append(prop.name)
+        return names
+
+    @classmethod
+    def get_inline_fields(cls) -> list[str]:
+        """Curated short list rendered inside the node body."""
+        names: list[str] = []
+        for prop in cls.properties():
+            hint = cls._expose_hint(prop)
+            if hint == "inline" or hint == "both":
+                names.append(prop.name)
+                continue
+            if hint in ("handle", "none"):
+                continue
+            if prop.name in cls.INLINE_NAMES:
+                names.append(prop.name)
+        return names
+
     @classmethod
     def unified_recommended_models(
         cls, include_model_info: bool = False
@@ -79,6 +154,29 @@ class HuggingFacePipelineNode(BaseNode):
     @classmethod
     def is_visible(cls) -> bool:
         return cls is not HuggingFacePipelineNode
+
+    @classmethod
+    def get_title(cls) -> str:
+        class_name = cls.__name__
+        title = class_name[:-4] if class_name.endswith("Node") else class_name
+        return f"HF {split_camel_case(title)}"
+
+    @classmethod
+    def body(cls) -> str:
+        """Render media/text-producing HF nodes as content cards.
+
+        Opt-in is derived from the primary (first) output type. The frontend
+        derives the concrete variant (image/audio/video/text/3D) from the same
+        output, so an image generator gets an image body for free. Structured-
+        data nodes (classifiers, detectors) keep the generic input/output body.
+        """
+        outputs = cls.outputs()
+        if not outputs:
+            return "default"
+        primary_type = getattr(getattr(outputs[0], "type", None), "type", None)
+        if primary_type in cls.CONTENT_CARD_OUTPUT_TYPES:
+            return "content_card"
+        return "default"
 
     async def pre_process(self, context: ProcessingContext):
         """Base pre_process that sets up HuggingFace logging for all HF nodes."""

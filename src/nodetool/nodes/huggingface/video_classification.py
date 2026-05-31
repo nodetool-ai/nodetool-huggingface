@@ -79,7 +79,7 @@ class VideoClassifier(HuggingFacePipelineNode):
 
     @classmethod
     def get_title(cls) -> str:
-        return "Video Classifier"
+        return "HF Video Classifier"
 
     def get_model_id(self):
         return self.model.repo_id

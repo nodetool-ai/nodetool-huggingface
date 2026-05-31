@@ -111,7 +111,7 @@ class Text2TextGeneration(HuggingFacePipelineNode):
 
     @classmethod
     def get_title(cls) -> str:
-        return "Text-to-Text Generation"
+        return "HF Text-to-Text Generation"
 
     def get_model_id(self):
         return self.model.repo_id
