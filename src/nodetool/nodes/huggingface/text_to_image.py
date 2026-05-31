@@ -875,18 +875,23 @@ class Flux(HuggingFacePipelineNode):
             )
             if step % 5 == 0:
                 log_memory(f"Flux inference step {step}/{num_inference_steps}")
+            # Free the denoising loop's fragmented segments right before VAE
+            # decode. Without this the large decode buffer can't find a
+            # contiguous block and spills over PCIe on Windows/WDDM (5s → 10min).
+            if step == num_inference_steps - 1:
+                try:
+                    torch.cuda.empty_cache()
+                except Exception:
+                    pass
             return callback_kwargs
 
         # Run GC before inference to free any unused memory
         run_gc("Before Flux inference", log_before_after=True)
 
-        # Enable VAE tiling for large images to prevent OOM during decoding
-        # VAE decoding happens after denoising and can hang on large images
-        large_image = self.width * self.height > 1024 * 1024  # > 1 megapixel
+        # VAE tiling for >1MP images only — tiling on small images with the
+        # Nunchaku-wrapped pipeline triggers a very slow code path on Windows.
+        large_image = self.width * self.height > 1024 * 1024
         if large_image and hasattr(self._pipeline, "vae"):
-            log.info(
-                f"Enabling VAE tiling for large image ({self.width}x{self.height})"
-            )
             try:
                 self._pipeline.vae.enable_tiling()
             except Exception as e:
