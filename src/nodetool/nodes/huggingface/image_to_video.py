@@ -25,6 +25,10 @@ if TYPE_CHECKING:
     from transformers import CLIPVisionModel
     from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
     from diffusers.pipelines.wan.pipeline_wan_i2v import WanImageToVideoPipeline
+    from diffusers.pipelines.ltx.pipeline_ltx_image2video import LTXImageToVideoPipeline
+    from diffusers.pipelines.ltx2.pipeline_ltx2_image2video import (
+        LTX2ImageToVideoPipeline,
+    )
 
 
 class Wan_I2V(HuggingFacePipelineNode):
@@ -396,7 +400,9 @@ class Wan_FLF2V(HuggingFacePipelineNode):
 
     async def preload_model(self, context: ProcessingContext):
         from diffusers.pipelines.wan.pipeline_wan_flf2v import WanFLF2VPipeline
-        from nodetool.nodes.huggingface.stable_diffusion_base import available_torch_dtype
+        from nodetool.nodes.huggingface.stable_diffusion_base import (
+            available_torch_dtype,
+        )
 
         torch_dtype = available_torch_dtype()
         self._pipeline = await self.load_model(
@@ -454,3 +460,397 @@ class Wan_FLF2V(HuggingFacePipelineNode):
 
         run_gc("After Wan FLF2V inference", log_before_after=False)
         return await video_from_frames(context, output.frames[0], fps=self.fps)
+
+
+class LTXVideoI2V(HuggingFacePipelineNode):
+    """
+    Animates a static image into a video using LTX-Video image-to-video diffusion models.
+    video, generation, AI, image-to-video, diffusion, LTX, Lightricks, animation
+
+    Use cases:
+    - Animate photographs or artwork into dynamic video clips
+    - Create motion-driven video from a single input image with text guidance
+    - Generate content for social media or creative projects from still images
+    - Bring product images or illustrations to life
+    - Produce smooth animated sequences with fine temporal control
+
+    **Note:** LTX-Video-0.9.5 is recommended for best quality.
+    """
+
+    class LTXModel(str, Enum):
+        LTX_VIDEO_0_9_5 = "Lightricks/LTX-Video-0.9.5"
+        LTX_VIDEO_0_9_1 = "Lightricks/LTX-Video-0.9.1"
+        LTX_VIDEO = "Lightricks/LTX-Video"
+
+    model_variant: LTXModel = Field(
+        default=LTXModel.LTX_VIDEO_0_9_5,
+        description="The LTX-Video model variant. 0.9.5 is the latest and recommended.",
+    )
+    input_image: ImageRef = Field(
+        default=ImageRef(),
+        description="The source image to animate. Image content guides the video's appearance.",
+    )
+    prompt: str = Field(
+        default="The scene comes to life with smooth, natural motion, cinematic quality",
+        description="Text description guiding how the image should animate and move.",
+    )
+    negative_prompt: str = Field(
+        default="worst quality, inconsistent motion, blurry, jittery, distorted",
+        description="Describe what to avoid in the generated video.",
+    )
+    num_frames: int = Field(
+        default=161,
+        description="Total frames in the output video. Must be 8n+1 (e.g. 65, 97, 129, 161). More frames = longer video.",
+        ge=9,
+        le=257,
+    )
+    guidance_scale: float = Field(
+        default=3.0,
+        description="How strongly to follow the prompt. 3.0 is typical for LTX-Video.",
+        ge=1.0,
+        le=20.0,
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        description="Denoising steps. 50 is recommended; lower for faster generation.",
+        ge=1,
+        le=100,
+    )
+    height: int = Field(
+        default=480,
+        description="Output video height in pixels.",
+        ge=64,
+        le=1024,
+    )
+    width: int = Field(
+        default=704,
+        description="Output video width in pixels.",
+        ge=64,
+        le=1280,
+    )
+    frame_rate: int = Field(
+        default=25,
+        description="Frame rate for the output video file.",
+        ge=1,
+        le=60,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    max_sequence_length: int = Field(
+        default=128,
+        description="Maximum prompt encoding length. Higher allows longer prompts.",
+        ge=32,
+        le=512,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+    enable_vae_slicing: bool = Field(
+        default=True,
+        description="Process VAE in slices to reduce peak memory usage.",
+    )
+    enable_vae_tiling: bool = Field(
+        default=False,
+        description="Process VAE in tiles for large videos. May affect quality.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFTextToVideo(
+                repo_id="Lightricks/LTX-Video-0.9.5",
+                allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
+            ),
+            HFTextToVideo(
+                repo_id="Lightricks/LTX-Video-0.9.1",
+                allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
+            ),
+            HFTextToVideo(
+                repo_id="Lightricks/LTX-Video",
+                allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "LTX-Video (Image-to-Video)"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return [
+            "input_image",
+            "prompt",
+            "model_variant",
+            "num_frames",
+            "height",
+            "width",
+        ]
+
+    def get_model_id(self) -> str:
+        return self.model_variant.value
+
+    def required_inputs(self):
+        return ["input_image"]
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.ltx.pipeline_ltx_image2video import (
+            LTXImageToVideoPipeline,
+        )
+
+        torch_dtype = available_torch_dtype()
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=LTXImageToVideoPipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=torch_dtype,
+            device="cpu",
+        )
+
+        if self._pipeline is not None:
+            if self.enable_cpu_offload:
+                self._pipeline.enable_model_cpu_offload()
+            if self.enable_vae_slicing and hasattr(self._pipeline, "vae"):
+                try:
+                    self._pipeline.vae.enable_slicing()
+                except Exception:
+                    pass
+            if self.enable_vae_tiling and hasattr(self._pipeline, "vae"):
+                try:
+                    self._pipeline.vae.enable_tiling()
+                except Exception:
+                    pass
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None and not self.enable_cpu_offload:
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> VideoRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        import torch
+
+        input_image = await context.image_to_pil(self.input_image)
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        def callback_on_step_end(
+            pipeline: Any, step_index: int, timesteps: int, callback_kwargs: dict
+        ) -> dict:
+            context.post_message(
+                NodeProgress(
+                    node_id=self.id,
+                    progress=step_index,
+                    total=self.num_inference_steps,
+                )
+            )
+            return callback_kwargs
+
+        output = await self.run_pipeline_in_thread(
+            image=input_image,
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt,
+            num_frames=self.num_frames,
+            guidance_scale=self.guidance_scale,
+            num_inference_steps=self.num_inference_steps,
+            height=self.height,
+            width=self.width,
+            frame_rate=self.frame_rate,
+            generator=generator,
+            max_sequence_length=self.max_sequence_length,
+            callback_on_step_end=callback_on_step_end,
+            callback_on_step_end_tensor_inputs=["latents"],
+        )
+
+        run_gc("After LTX-Video I2V inference", log_before_after=False)
+        return await video_from_frames(context, output.frames[0], fps=self.frame_rate)
+
+
+class LTX2VideoI2V(HuggingFacePipelineNode):
+    """
+    Animates a static image into a video using LTX-2, the newest Lightricks image-to-video model.
+    video, generation, AI, image-to-video, diffusion, LTX2, Lightricks, animation
+
+    Use cases:
+    - Animate images with the latest LTX-2 model for improved quality
+    - Create smooth video transitions from a single reference image
+    - Generate motion-driven video content with extended prompt support
+    - Produce high-fidelity animated clips for creative and commercial use
+    - Build next-generation image animation workflows
+
+    **Note:** LTX-2 uses a Gemma3 text encoder and requires more VRAM than LTX-Video.
+    """
+
+    input_image: ImageRef = Field(
+        default=ImageRef(),
+        description="The source image to animate. Image content guides the video's appearance.",
+    )
+    prompt: str = Field(
+        default="The scene comes to life with smooth, natural motion, cinematic quality",
+        description="Text description guiding how the image should animate and move.",
+    )
+    negative_prompt: str = Field(
+        default="worst quality, inconsistent motion, blurry, jittery, distorted",
+        description="Describe what to avoid in the generated video.",
+    )
+    num_frames: int = Field(
+        default=121,
+        description="Total frames in the output video. 121 is the default (about 5 seconds at 24fps).",
+        ge=9,
+        le=257,
+    )
+    guidance_scale: float = Field(
+        default=4.0,
+        description="How strongly to follow the prompt. 4.0 is recommended for LTX-2.",
+        ge=1.0,
+        le=20.0,
+    )
+    num_inference_steps: int = Field(
+        default=40,
+        description="Denoising steps. 40 is recommended; lower for faster generation.",
+        ge=1,
+        le=100,
+    )
+    height: int = Field(
+        default=512,
+        description="Output video height in pixels.",
+        ge=64,
+        le=1024,
+    )
+    width: int = Field(
+        default=768,
+        description="Output video width in pixels.",
+        ge=64,
+        le=1280,
+    )
+    frame_rate: float = Field(
+        default=24.0,
+        description="Frame rate for the output video file.",
+        ge=1.0,
+        le=60.0,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    max_sequence_length: int = Field(
+        default=1024,
+        description="Maximum prompt encoding length. LTX-2 supports long prompts up to 1024 tokens.",
+        ge=64,
+        le=2048,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+    enable_vae_slicing: bool = Field(
+        default=True,
+        description="Process VAE in slices to reduce peak memory usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFTextToVideo(
+                repo_id="Lightricks/LTX-2",
+                allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "LTX-2 (Image-to-Video)"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["input_image", "prompt", "num_frames", "height", "width"]
+
+    def get_model_id(self) -> str:
+        return "Lightricks/LTX-2"
+
+    def required_inputs(self):
+        return ["input_image"]
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.ltx2.pipeline_ltx2_image2video import (
+            LTX2ImageToVideoPipeline,
+        )
+
+        import torch
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=LTX2ImageToVideoPipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=torch.bfloat16,
+            device="cpu",
+        )
+
+        if self._pipeline is not None:
+            if self.enable_cpu_offload:
+                self._pipeline.enable_model_cpu_offload()
+            if self.enable_vae_slicing and hasattr(self._pipeline, "vae"):
+                try:
+                    self._pipeline.vae.enable_slicing()
+                except Exception:
+                    pass
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None and not self.enable_cpu_offload:
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> VideoRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        import torch
+
+        input_image = await context.image_to_pil(self.input_image)
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        def callback_on_step_end(
+            pipeline: Any, step_index: int, timesteps: int, callback_kwargs: dict
+        ) -> dict:
+            context.post_message(
+                NodeProgress(
+                    node_id=self.id,
+                    progress=step_index,
+                    total=self.num_inference_steps,
+                )
+            )
+            return callback_kwargs
+
+        output = await self.run_pipeline_in_thread(
+            image=input_image,
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt,
+            num_frames=self.num_frames,
+            guidance_scale=self.guidance_scale,
+            num_inference_steps=self.num_inference_steps,
+            height=self.height,
+            width=self.width,
+            frame_rate=self.frame_rate,
+            generator=generator,
+            max_sequence_length=self.max_sequence_length,
+            callback_on_step_end=callback_on_step_end,
+            callback_on_step_end_tensor_inputs=["latents"],
+            output_type="np",
+        )
+
+        fps = int(self.frame_rate)
+        run_gc("After LTX-2 I2V inference", log_before_after=False)
+        return await video_from_frames(context, output.frames[0], fps=fps)
