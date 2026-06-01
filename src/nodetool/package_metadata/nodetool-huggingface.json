@@ -13343,6 +13343,149 @@
         "prompt",
         "negative_prompt"
       ],
+      "description": "Generates high-quality, commercial-ready images from text prompts using Bria 3.2.\n    image, generation, AI, text-to-image, bria, transformer, commercial, licensed\n\n    Use cases:\n    - Generate commercial-ready images trained entirely on licensed data\n    - Produce images with exceptional aesthetics and accurate text rendering\n    - Create professional images using an efficient 4B-parameter MMDiT model\n    - Build enterprise image generation applications with predictable licensing",
+      "namespace": "huggingface.text_to_image",
+      "node_type": "huggingface.text_to_image.Bria",
+      "body": "content_card",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "image"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": "Photorealistic food photography of a stack of fluffy pancakes on a white plate, with maple syrup being poured over them. On top of the pancakes are the words 'BRIA 3.2' in bold, yellow, 3D letters. The background is dark and out of focus.",
+          "description": "Detailed text description of the image to generate.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Describe what to avoid (e.g., 'blurry, low quality, distorted').",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 5.0,
+          "description": "Prompt adherence strength. Around 5 is typical for Bria 3.2.",
+          "max": 30.0,
+          "min": 0.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 30,
+          "description": "Denoising steps. 30-50 is typical; more = better quality but slower.",
+          "max": 100.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 1024,
+          "description": "Output image height in pixels.",
+          "max": 2048.0,
+          "min": 256.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 1024,
+          "description": "Output image width in pixels.",
+          "max": 2048.0,
+          "min": 256.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 128,
+          "description": "Maximum prompt length in tokens.",
+          "max": 512.0,
+          "min": 1.0,
+          "name": "max_sequence_length",
+          "title": "Max Sequence Length",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": true,
+          "description": "Process attention in slices to reduce memory usage.",
+          "name": "enable_attention_slicing",
+          "title": "Enable Attention Slicing",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "*.json"
+          ],
+          "id": "briaai/BRIA-3.2",
+          "name": "briaai/BRIA-3.2",
+          "repo_id": "briaai/BRIA-3.2",
+          "type": "hf.text_to_image"
+        }
+      ],
+      "title": "Bria 3.2"
+    },
+    {
+      "basic_fields": [
+        "prompt",
+        "height",
+        "width",
+        "seed"
+      ],
+      "input_fields": [
+        "prompt",
+        "negative_prompt"
+      ],
       "description": "Generates high-quality images from text prompts using Chroma, a Flux-based architecture with enhanced color control.\n    image, generation, AI, text-to-image, flux, chroma, transformer, artistic\n\n    Use cases:\n    - Generate professional-quality images with precise color control\n    - Create artistic images with advanced attention mechanisms\n    - Produce images with optimized memory usage via CPU offload\n    - Build creative applications requiring high-fidelity output",
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.Chroma",

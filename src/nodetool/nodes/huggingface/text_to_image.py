@@ -36,6 +36,7 @@ import torch
 if TYPE_CHECKING:
     import huggingface_hub
     from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
+    from diffusers.pipelines.bria.pipeline_bria import BriaPipeline
     from diffusers.pipelines.chroma.pipeline_chroma import ChromaPipeline
     from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
     from diffusers.pipelines.flux.pipeline_flux_control import FluxControlPipeline
@@ -1116,6 +1117,215 @@ class Chroma(HuggingFacePipelineNode):
         pipeline_kwargs = {
             "prompt": self.prompt,
             "negative_prompt": self.negative_prompt,
+            "guidance_scale": self.guidance_scale,
+            "num_inference_steps": self.num_inference_steps,
+            "height": self.height,
+            "width": self.width,
+            "generator": generator,
+            "max_sequence_length": self.max_sequence_length,
+            "callback_on_step_end": pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            ),
+            "callback_on_step_end_tensor_inputs": ["latents"],
+        }
+
+        # Generate the image off the event loop
+        pipeline = self._pipeline
+        assert pipeline is not None
+
+        def _run_pipeline_sync():
+            with torch.inference_mode():
+                return pipeline(**pipeline_kwargs)
+
+        output = await asyncio.to_thread(_run_pipeline_sync)
+
+        image = output.images[0]
+
+        return await context.image_from_pil(image)
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return [
+            "prompt",
+            "height",
+            "width",
+            "seed",
+        ]
+
+
+class Bria(HuggingFacePipelineNode):
+    """
+    Generates high-quality, commercial-ready images from text prompts using Bria 3.2.
+    image, generation, AI, text-to-image, bria, transformer, commercial, licensed
+
+    Use cases:
+    - Generate commercial-ready images trained entirely on licensed data
+    - Produce images with exceptional aesthetics and accurate text rendering
+    - Create professional images using an efficient 4B-parameter MMDiT model
+    - Build enterprise image generation applications with predictable licensing
+    """
+
+    prompt: str = Field(
+        default="Photorealistic food photography of a stack of fluffy pancakes on a white plate, with maple syrup being poured over them. On top of the pancakes are the words 'BRIA 3.2' in bold, yellow, 3D letters. The background is dark and out of focus.",
+        description="Detailed text description of the image to generate.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Describe what to avoid (e.g., 'blurry, low quality, distorted').",
+    )
+    guidance_scale: float = Field(
+        default=5.0,
+        description="Prompt adherence strength. Around 5 is typical for Bria 3.2.",
+        ge=0.0,
+        le=30.0,
+    )
+    num_inference_steps: int = Field(
+        default=30,
+        description="Denoising steps. 30-50 is typical; more = better quality but slower.",
+        ge=1,
+        le=100,
+    )
+    height: int = Field(
+        default=1024,
+        description="Output image height in pixels.",
+        ge=256,
+        le=2048,
+    )
+    width: int = Field(
+        default=1024,
+        description="Output image width in pixels.",
+        ge=256,
+        le=2048,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    max_sequence_length: int = Field(
+        default=128,
+        description="Maximum prompt length in tokens.",
+        ge=1,
+        le=512,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+    enable_attention_slicing: bool = Field(
+        default=True,
+        description="Process attention in slices to reduce memory usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HFTextToImage]:
+        return [
+            HFTextToImage(
+                repo_id="briaai/BRIA-3.2",
+                allow_patterns=[
+                    "**/*.safetensors",
+                    "**/*.json",
+                    "**/*.txt",
+                    "**/*.model",
+                    "*.json",
+                ],
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Bria 3.2"
+
+    def get_model_id(self) -> str:
+        return "briaai/BRIA-3.2"
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.bria.pipeline_bria import BriaPipeline
+
+        torch_dtype = available_torch_dtype()
+        # Load the pipeline with reduced precision when available
+        self._pipeline = await self.load_model(
+            context=context,
+            model_id=self.get_model_id(),
+            model_class=BriaPipeline,
+            torch_dtype=torch_dtype,
+        )
+        self._apply_precision_fixes()
+        _enable_pytorch2_attention(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
+
+    def _apply_precision_fixes(self):
+        """Apply Bria-specific precision requirements.
+
+        BRIA's T5 text encoder is sensitive to precision: cast it to bfloat16 but
+        keep the final dense layer in float32. The VAE is not supported in mixed
+        precision, so it is kept in float32 when its shift factor is zero.
+        """
+        pipeline = self._pipeline
+        if pipeline is None:
+            return
+
+        text_encoder = getattr(pipeline, "text_encoder", None)
+        if text_encoder is not None:
+            try:
+                text_encoder.to(dtype=torch.bfloat16)
+                for block in text_encoder.encoder.block:
+                    block.layer[-1].DenseReluDense.wo.to(dtype=torch.float32)
+            except Exception as e:
+                log.warning("Failed to apply Bria text encoder precision fix: %s", e)
+
+        vae = getattr(pipeline, "vae", None)
+        if vae is not None:
+            try:
+                if getattr(vae.config, "shift_factor", None) == 0:
+                    vae.to(dtype=torch.float32)
+            except Exception as e:
+                log.warning("Failed to apply Bria VAE precision fix: %s", e)
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is not None:
+            # Handle CPU offload case
+            if self.enable_cpu_offload:
+                # When moving to CPU, disable CPU offload and move all components to CPU
+                if device == "cpu":
+                    try:
+                        self._pipeline.to(device)
+                    except torch.OutOfMemoryError as e:
+                        raise ValueError(
+                            "VRAM out of memory while moving Bria pipeline to device. "
+                            "Enable 'CPU offload' in the advanced node properties or reduce image size/steps."
+                        ) from e
+                # When moving to GPU with CPU offload, re-enable CPU offload
+                elif device in ["cuda", "mps"]:
+                    self._pipeline.enable_model_cpu_offload()
+            else:
+                # Normal device movement without CPU offload
+                try:
+                    self._pipeline.to(device)
+                except torch.OutOfMemoryError as e:
+                    raise ValueError(
+                        "VRAM out of memory while moving Bria pipeline to device. "
+                        "Try enabling 'CPU offload' in the advanced node properties, reduce image size, or lower steps."
+                    ) from e
+
+            if self.enable_attention_slicing and device != "cpu":
+                self._pipeline.enable_attention_slicing()
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        # Set up the generator for reproducibility
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        # Generate the image
+        pipeline_kwargs = {
+            "prompt": self.prompt,
+            "negative_prompt": self.negative_prompt or None,
             "guidance_scale": self.guidance_scale,
             "num_inference_steps": self.num_inference_steps,
             "height": self.height,
