@@ -635,16 +635,14 @@ _ACE_STEP_REPOS: dict[AceStepVariant, str] = {
 }
 
 
-class AceStep(HuggingFacePipelineNode):
+class AceStepBaseNode(HuggingFacePipelineNode):
     """
-    Generates commercial-grade stereo music with lyrics using ACE-Step 1.5.
-    audio, music, generation, text-to-music, lyrics, stereo, ace-step, song
+    Shared base for the ACE-Step 1.5 task nodes.
 
-    Use cases:
-    - Generate full songs with vocals from a style prompt and structured lyrics
-    - Produce 48 kHz stereo music in 50+ languages
-    - Create instrumental tracks, background music, and soundtracks
-    - Fast 8-step generation with the guidance-distilled turbo checkpoint
+    Holds the conditioning fields (prompt, lyrics, language), the sampling
+    controls (steps, guidance, shift, seed), checkpoint loading, and the audio
+    helpers. Concrete task nodes add their task-specific inputs and call
+    ``_run`` with the matching ``task_type``.
     """
 
     variant: AceStepVariant = Field(
@@ -665,19 +663,12 @@ class AceStep(HuggingFacePipelineNode):
         ),
     )
     lyrics: str = Field(
-        default="[verse]\nSoft notes in the morning light\nDancing through the air so bright\n[chorus]\nMusic fills the air tonight\nEvery note feels just right",
+        default="",
         title="Lyrics",
         description=(
             "Lyrics for the song. Structure with tags like [verse], [chorus], "
             "[bridge]. Leave empty for instrumental music."
         ),
-    )
-    audio_duration: float = Field(
-        default=60.0,
-        title="Audio Duration",
-        description="Duration of the generated music in seconds (10 to 600).",
-        ge=10.0,
-        le=600.0,
     )
     vocal_language: str = Field(
         default="en",
@@ -715,12 +706,8 @@ class AceStep(HuggingFacePipelineNode):
     _pipeline: Any = None
 
     @classmethod
-    def get_title(cls) -> str:
-        return "ACE-Step 1.5"
-
-    @classmethod
-    def get_basic_fields(cls) -> list[str]:
-        return ["variant", "prompt", "lyrics", "audio_duration"]
+    def is_visible(cls) -> bool:
+        return cls is not AceStepBaseNode
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
@@ -746,7 +733,35 @@ class AceStep(HuggingFacePipelineNode):
             variant=None,
         )
 
-    async def process(self, context: ProcessingContext) -> AudioRef:
+    def _resolved_guidance_scale(self) -> float:
+        # Turbo is guidance-distilled: CFG is baked into the weights, so a scale
+        # above 1.0 is ignored by the pipeline. Pass 1.0 to skip the warning.
+        if self.variant == AceStepVariant.TURBO:
+            return 1.0
+        return self.guidance_scale
+
+    async def _audio_to_tensor(
+        self, context: ProcessingContext, audio: AudioRef
+    ) -> "torch.Tensor":
+        """Decode an AudioRef into a stereo ``[channels, samples]`` tensor at the
+        pipeline sample rate (48 kHz for the released checkpoints)."""
+        import torch
+
+        sample_rate = self._pipeline.sample_rate
+        samples, _, _ = await context.audio_to_numpy(audio, sample_rate=sample_rate)
+        tensor = torch.from_numpy(samples).float()
+        if tensor.ndim == 1:
+            tensor = tensor.unsqueeze(0)
+        # ACE-Step expects stereo input; duplicate a mono channel.
+        if tensor.shape[0] == 1:
+            tensor = tensor.repeat(2, 1)
+        return tensor
+
+    async def _run(
+        self, context: ProcessingContext, *, task_type: str, **task_kwargs: Any
+    ) -> AudioRef:
+        """Run the pipeline with the shared conditioning plus task-specific
+        keyword arguments and return the generated stereo audio."""
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
@@ -755,12 +770,6 @@ class AceStep(HuggingFacePipelineNode):
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
-
-        # Turbo is guidance-distilled: CFG is baked into the weights, so a scale
-        # above 1.0 is ignored by the pipeline. Pass 1.0 to skip the warning.
-        guidance_scale = (
-            1.0 if self.variant == AceStepVariant.TURBO else self.guidance_scale
-        )
 
         def progress_callback(
             step: int, timestep: int, latents: "torch.FloatTensor"
@@ -776,14 +785,15 @@ class AceStep(HuggingFacePipelineNode):
         result = await self.run_pipeline_in_thread(
             prompt=self.prompt,
             lyrics=self.lyrics,
-            audio_duration=self.audio_duration,
             vocal_language=self.vocal_language,
             num_inference_steps=self.num_inference_steps,
-            guidance_scale=guidance_scale,
+            guidance_scale=self._resolved_guidance_scale(),
             shift=self.shift,
+            task_type=task_type,
             generator=generator,
             callback=progress_callback,
             callback_steps=1,
+            **task_kwargs,
         )
 
         # audios[0] is a stereo tensor of shape [channels, samples]; transpose to
@@ -791,8 +801,298 @@ class AceStep(HuggingFacePipelineNode):
         audio = result.audios[0]
         output = audio.T.float().cpu().numpy()
         sampling_rate = self._pipeline.sample_rate
-        run_gc("After ACE-Step inference", log_before_after=False)
+        run_gc(f"After ACE-Step {task_type} inference", log_before_after=False)
         return await context.audio_from_numpy(output, sampling_rate)
+
+
+class AceStep(AceStepBaseNode):
+    """
+    Generates commercial-grade stereo music with lyrics using ACE-Step 1.5.
+    audio, music, generation, text-to-music, lyrics, stereo, ace-step, song
+
+    Use cases:
+    - Generate full songs with vocals from a style prompt and structured lyrics
+    - Produce 48 kHz stereo music in 50+ languages
+    - Create instrumental tracks, background music, and soundtracks
+    - Fast 8-step generation with the guidance-distilled turbo checkpoint
+    """
+
+    lyrics: str = Field(
+        default="[verse]\nSoft notes in the morning light\nDancing through the air so bright\n[chorus]\nMusic fills the air tonight\nEvery note feels just right",
+        title="Lyrics",
+        description=(
+            "Lyrics for the song. Structure with tags like [verse], [chorus], "
+            "[bridge]. Leave empty for instrumental music."
+        ),
+    )
+    audio_duration: float = Field(
+        default=60.0,
+        title="Audio Duration",
+        description="Duration of the generated music in seconds (10 to 600).",
+        ge=10.0,
+        le=600.0,
+    )
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "ACE-Step 1.5"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["variant", "prompt", "lyrics", "audio_duration"]
+
+    async def process(self, context: ProcessingContext) -> AudioRef:
+        return await self._run(
+            context,
+            task_type="text2music",
+            audio_duration=self.audio_duration,
+        )
+
+
+class AceStepCover(AceStepBaseNode):
+    """
+    Re-records source audio in a new timbre using ACE-Step 1.5 cover mode.
+    audio, music, cover, timbre-transfer, voice-conversion, ace-step
+
+    Use cases:
+    - Re-sing an existing song with a different voice or instrument timbre
+    - Transfer the style of a reference recording onto source audio
+    - Create covers that keep the melody but change the sound
+    """
+
+    src_audio: AudioRef = Field(
+        default=AudioRef(),
+        title="Source Audio",
+        description="Source audio (stereo, 48 kHz) providing the musical content to cover.",
+    )
+    reference_audio: AudioRef = Field(
+        default=AudioRef(),
+        title="Reference Audio",
+        description="Reference audio whose timbre/style is transferred onto the source.",
+    )
+    audio_cover_strength: float = Field(
+        default=1.0,
+        title="Cover Strength",
+        description="Strength of the cover blending (0.0 keeps the source, 1.0 fully re-records).",
+        ge=0.0,
+        le=1.0,
+    )
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "ACE-Step Cover"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["variant", "src_audio", "reference_audio", "audio_cover_strength"]
+
+    def required_inputs(self):
+        return ["src_audio", "reference_audio"]
+
+    async def process(self, context: ProcessingContext) -> AudioRef:
+        src = await self._audio_to_tensor(context, self.src_audio)
+        reference = await self._audio_to_tensor(context, self.reference_audio)
+        return await self._run(
+            context,
+            task_type="cover",
+            src_audio=src,
+            reference_audio=reference,
+            audio_cover_strength=self.audio_cover_strength,
+        )
+
+
+class AceStepRepaint(AceStepBaseNode):
+    """
+    Regenerates a section of existing audio while keeping the rest with ACE-Step 1.5.
+    audio, music, repaint, inpainting, edit, ace-step
+
+    Use cases:
+    - Replace a verse or chorus while preserving the surrounding song
+    - Fix or rework a specific time range of a track
+    - Generate variations of one section without re-rendering the whole piece
+    """
+
+    src_audio: AudioRef = Field(
+        default=AudioRef(),
+        title="Source Audio",
+        description="Audio (stereo, 48 kHz) to repaint. The region outside the range is kept.",
+    )
+    repainting_start: float = Field(
+        default=0.0,
+        title="Repaint Start",
+        description="Start time in seconds of the region to regenerate.",
+        ge=0.0,
+    )
+    repainting_end: float = Field(
+        default=-1.0,
+        title="Repaint End",
+        description="End time in seconds of the region to regenerate. Use -1 for until the end.",
+        ge=-1.0,
+    )
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "ACE-Step Repaint"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["src_audio", "repainting_start", "repainting_end", "prompt"]
+
+    def required_inputs(self):
+        return ["src_audio"]
+
+    async def process(self, context: ProcessingContext) -> AudioRef:
+        src = await self._audio_to_tensor(context, self.src_audio)
+        return await self._run(
+            context,
+            task_type="repaint",
+            src_audio=src,
+            repainting_start=self.repainting_start,
+            repainting_end=self.repainting_end,
+        )
+
+
+class AceStepExtract(AceStepBaseNode):
+    """
+    Extracts a single track (e.g. vocals, drums) from audio with ACE-Step 1.5.
+    audio, music, extract, stem-separation, vocals, drums, ace-step
+
+    Use cases:
+    - Isolate vocals, drums, bass, or other stems from a mix
+    - Build acapellas or instrumentals from a full track
+    - Prepare stems for remixing and sampling
+    """
+
+    src_audio: AudioRef = Field(
+        default=AudioRef(),
+        title="Source Audio",
+        description="Audio (stereo, 48 kHz) to extract a track from.",
+    )
+    track_name: str = Field(
+        default="vocals",
+        title="Track Name",
+        description="Track to extract (e.g. 'vocals', 'drums', 'bass', 'guitar', 'piano').",
+    )
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "ACE-Step Extract"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["src_audio", "track_name"]
+
+    def required_inputs(self):
+        return ["src_audio"]
+
+    async def process(self, context: ProcessingContext) -> AudioRef:
+        src = await self._audio_to_tensor(context, self.src_audio)
+        return await self._run(
+            context,
+            task_type="extract",
+            src_audio=src,
+            track_name=self.track_name,
+        )
+
+
+class AceStepLego(AceStepBaseNode):
+    """
+    Generates a specific track conditioned on existing audio with ACE-Step 1.5 lego mode.
+    audio, music, lego, accompaniment, stem-generation, ace-step
+
+    Use cases:
+    - Add a new instrument track that fits an existing arrangement
+    - Generate a drum or bass line for a given musical context
+    - Regenerate a single track within a chosen time range
+    """
+
+    src_audio: AudioRef = Field(
+        default=AudioRef(),
+        title="Source Audio",
+        description="Audio (stereo, 48 kHz) providing the musical context.",
+    )
+    track_name: str = Field(
+        default="drums",
+        title="Track Name",
+        description="Track to generate (e.g. 'vocals', 'drums', 'bass', 'guitar', 'piano').",
+    )
+    repainting_start: float = Field(
+        default=0.0,
+        title="Region Start",
+        description="Start time in seconds of the region to generate.",
+        ge=0.0,
+    )
+    repainting_end: float = Field(
+        default=-1.0,
+        title="Region End",
+        description="End time in seconds of the region to generate. Use -1 for until the end.",
+        ge=-1.0,
+    )
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "ACE-Step Lego"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["src_audio", "track_name", "repainting_start", "repainting_end"]
+
+    def required_inputs(self):
+        return ["src_audio"]
+
+    async def process(self, context: ProcessingContext) -> AudioRef:
+        src = await self._audio_to_tensor(context, self.src_audio)
+        return await self._run(
+            context,
+            task_type="lego",
+            src_audio=src,
+            track_name=self.track_name,
+            repainting_start=self.repainting_start,
+            repainting_end=self.repainting_end,
+        )
+
+
+class AceStepComplete(AceStepBaseNode):
+    """
+    Completes input audio with additional tracks using ACE-Step 1.5.
+    audio, music, complete, arrangement, accompaniment, ace-step
+
+    Use cases:
+    - Flesh out a sparse demo with extra instrument tracks
+    - Add accompaniment around a lead vocal or melody
+    - Turn a single stem into a fuller arrangement
+    """
+
+    src_audio: AudioRef = Field(
+        default=AudioRef(),
+        title="Source Audio",
+        description="Audio (stereo, 48 kHz) to complete with additional tracks.",
+    )
+    complete_track_classes: list[str] = Field(
+        default_factory=list,
+        title="Track Classes",
+        description="Track classes to add (e.g. ['drums', 'bass', 'guitar']). Empty lets the model decide.",
+    )
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "ACE-Step Complete"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["src_audio", "complete_track_classes", "prompt"]
+
+    def required_inputs(self):
+        return ["src_audio"]
+
+    async def process(self, context: ProcessingContext) -> AudioRef:
+        src = await self._audio_to_tensor(context, self.src_audio)
+        return await self._run(
+            context,
+            task_type="complete",
+            src_audio=src,
+            complete_track_classes=self.complete_track_classes or None,
+        )
 
 
 # class ParlerTTSNode(HuggingFacePipelineNode):

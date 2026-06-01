@@ -13389,6 +13389,58 @@
           }
         },
         {
+          "default": "en",
+          "description": "Language code for the lyrics (e.g., 'en', 'zh', 'ja', 'ko', 'fr', 'de', 'es').",
+          "name": "vocal_language",
+          "title": "Vocal Language",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Denoising steps. Turbo is tuned for 8; use 30-60 on base/sft for higher quality.",
+          "max": 200.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 7.0,
+          "description": "Classifier-free guidance scale for base/sft. Ignored for the turbo variant.",
+          "max": 15.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 3.0,
+          "description": "Shift parameter for the flow-matching timestep schedule (1.0, 2.0, or 3.0).",
+          "max": 3.0,
+          "min": 1.0,
+          "name": "shift",
+          "title": "Shift",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
           "default": 60.0,
           "description": "Duration of the generated music in seconds (10 to 600).",
           "max": 600.0,
@@ -13397,6 +13449,105 @@
           "title": "Audio Duration",
           "type": {
             "type": "float"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/Ace-Step1.5",
+          "name": "ACE-Step/Ace-Step1.5",
+          "repo_id": "ACE-Step/Ace-Step1.5",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/acestep-v15-base",
+          "name": "ACE-Step/acestep-v15-base",
+          "repo_id": "ACE-Step/acestep-v15-base",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/acestep-v15-sft",
+          "name": "ACE-Step/acestep-v15-sft",
+          "repo_id": "ACE-Step/acestep-v15-sft",
+          "type": "hf.text_to_audio"
+        }
+      ],
+      "title": "ACE-Step 1.5"
+    },
+    {
+      "basic_fields": [
+        "variant",
+        "src_audio",
+        "reference_audio",
+        "audio_cover_strength"
+      ],
+      "input_fields": [
+        "prompt",
+        "src_audio",
+        "reference_audio"
+      ],
+      "description": "Re-records source audio in a new timbre using ACE-Step 1.5 cover mode.\n    audio, music, cover, timbre-transfer, voice-conversion, ace-step\n\n    Use cases:\n    - Re-sing an existing song with a different voice or instrument timbre\n    - Transfer the style of a reference recording onto source audio\n    - Create covers that keep the melody but change the sound",
+      "namespace": "huggingface.text_to_audio",
+      "node_type": "huggingface.text_to_audio.AceStepCover",
+      "body": "content_card",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": "turbo",
+          "description": "DiT checkpoint to use. 'turbo' is guidance-distilled (8 steps, CFG ignored); 'base' and 'sft' use classifier-free guidance and benefit from more steps (30-60) for higher quality.",
+          "name": "variant",
+          "title": "Variant",
+          "type": {
+            "type": "enum",
+            "type_name": "nodetool.nodes.huggingface.text_to_audio.AceStepVariant",
+            "values": [
+              "turbo",
+              "base",
+              "sft"
+            ]
+          }
+        },
+        {
+          "default": "A beautiful piano piece with soft melodies and gentle rhythm",
+          "description": "Describe the music style, instruments, mood, and tempo (e.g., 'upbeat pop song with electric guitar and drums').",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Lyrics for the song. Structure with tags like [verse], [chorus], [bridge]. Leave empty for instrumental music.",
+          "name": "lyrics",
+          "title": "Lyrics",
+          "type": {
+            "type": "str"
           }
         },
         {
@@ -13450,6 +13601,47 @@
           "type": {
             "type": "int"
           }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "Source audio (stereo, 48 kHz) providing the musical content to cover.",
+          "name": "src_audio",
+          "title": "Source Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "Reference audio whose timbre/style is transferred onto the source.",
+          "name": "reference_audio",
+          "title": "Reference Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "Strength of the cover blending (0.0 keeps the source, 1.0 fully re-records).",
+          "max": 1.0,
+          "min": 0.0,
+          "name": "audio_cover_strength",
+          "title": "Cover Strength",
+          "type": {
+            "type": "float"
+          }
         }
       ],
       "recommended_models": [
@@ -13490,7 +13682,736 @@
           "type": "hf.text_to_audio"
         }
       ],
-      "title": "ACE-Step 1.5"
+      "title": "ACE-Step Cover"
+    },
+    {
+      "basic_fields": [
+        "src_audio",
+        "repainting_start",
+        "repainting_end",
+        "prompt"
+      ],
+      "input_fields": [
+        "prompt",
+        "src_audio"
+      ],
+      "description": "Regenerates a section of existing audio while keeping the rest with ACE-Step 1.5.\n    audio, music, repaint, inpainting, edit, ace-step\n\n    Use cases:\n    - Replace a verse or chorus while preserving the surrounding song\n    - Fix or rework a specific time range of a track\n    - Generate variations of one section without re-rendering the whole piece",
+      "namespace": "huggingface.text_to_audio",
+      "node_type": "huggingface.text_to_audio.AceStepRepaint",
+      "body": "content_card",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": "turbo",
+          "description": "DiT checkpoint to use. 'turbo' is guidance-distilled (8 steps, CFG ignored); 'base' and 'sft' use classifier-free guidance and benefit from more steps (30-60) for higher quality.",
+          "name": "variant",
+          "title": "Variant",
+          "type": {
+            "type": "enum",
+            "type_name": "nodetool.nodes.huggingface.text_to_audio.AceStepVariant",
+            "values": [
+              "turbo",
+              "base",
+              "sft"
+            ]
+          }
+        },
+        {
+          "default": "A beautiful piano piece with soft melodies and gentle rhythm",
+          "description": "Describe the music style, instruments, mood, and tempo (e.g., 'upbeat pop song with electric guitar and drums').",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Lyrics for the song. Structure with tags like [verse], [chorus], [bridge]. Leave empty for instrumental music.",
+          "name": "lyrics",
+          "title": "Lyrics",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "en",
+          "description": "Language code for the lyrics (e.g., 'en', 'zh', 'ja', 'ko', 'fr', 'de', 'es').",
+          "name": "vocal_language",
+          "title": "Vocal Language",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Denoising steps. Turbo is tuned for 8; use 30-60 on base/sft for higher quality.",
+          "max": 200.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 7.0,
+          "description": "Classifier-free guidance scale for base/sft. Ignored for the turbo variant.",
+          "max": 15.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 3.0,
+          "description": "Shift parameter for the flow-matching timestep schedule (1.0, 2.0, or 3.0).",
+          "max": 3.0,
+          "min": 1.0,
+          "name": "shift",
+          "title": "Shift",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "Audio (stereo, 48 kHz) to repaint. The region outside the range is kept.",
+          "name": "src_audio",
+          "title": "Source Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": 0.0,
+          "description": "Start time in seconds of the region to regenerate.",
+          "min": 0.0,
+          "name": "repainting_start",
+          "title": "Repaint Start",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1.0,
+          "description": "End time in seconds of the region to regenerate. Use -1 for until the end.",
+          "min": -1.0,
+          "name": "repainting_end",
+          "title": "Repaint End",
+          "type": {
+            "type": "float"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/Ace-Step1.5",
+          "name": "ACE-Step/Ace-Step1.5",
+          "repo_id": "ACE-Step/Ace-Step1.5",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/acestep-v15-base",
+          "name": "ACE-Step/acestep-v15-base",
+          "repo_id": "ACE-Step/acestep-v15-base",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/acestep-v15-sft",
+          "name": "ACE-Step/acestep-v15-sft",
+          "repo_id": "ACE-Step/acestep-v15-sft",
+          "type": "hf.text_to_audio"
+        }
+      ],
+      "title": "ACE-Step Repaint"
+    },
+    {
+      "basic_fields": [
+        "src_audio",
+        "track_name"
+      ],
+      "input_fields": [
+        "prompt",
+        "src_audio"
+      ],
+      "description": "Extracts a single track (e.g. vocals, drums) from audio with ACE-Step 1.5.\n    audio, music, extract, stem-separation, vocals, drums, ace-step\n\n    Use cases:\n    - Isolate vocals, drums, bass, or other stems from a mix\n    - Build acapellas or instrumentals from a full track\n    - Prepare stems for remixing and sampling",
+      "namespace": "huggingface.text_to_audio",
+      "node_type": "huggingface.text_to_audio.AceStepExtract",
+      "body": "content_card",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": "turbo",
+          "description": "DiT checkpoint to use. 'turbo' is guidance-distilled (8 steps, CFG ignored); 'base' and 'sft' use classifier-free guidance and benefit from more steps (30-60) for higher quality.",
+          "name": "variant",
+          "title": "Variant",
+          "type": {
+            "type": "enum",
+            "type_name": "nodetool.nodes.huggingface.text_to_audio.AceStepVariant",
+            "values": [
+              "turbo",
+              "base",
+              "sft"
+            ]
+          }
+        },
+        {
+          "default": "A beautiful piano piece with soft melodies and gentle rhythm",
+          "description": "Describe the music style, instruments, mood, and tempo (e.g., 'upbeat pop song with electric guitar and drums').",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Lyrics for the song. Structure with tags like [verse], [chorus], [bridge]. Leave empty for instrumental music.",
+          "name": "lyrics",
+          "title": "Lyrics",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "en",
+          "description": "Language code for the lyrics (e.g., 'en', 'zh', 'ja', 'ko', 'fr', 'de', 'es').",
+          "name": "vocal_language",
+          "title": "Vocal Language",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Denoising steps. Turbo is tuned for 8; use 30-60 on base/sft for higher quality.",
+          "max": 200.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 7.0,
+          "description": "Classifier-free guidance scale for base/sft. Ignored for the turbo variant.",
+          "max": 15.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 3.0,
+          "description": "Shift parameter for the flow-matching timestep schedule (1.0, 2.0, or 3.0).",
+          "max": 3.0,
+          "min": 1.0,
+          "name": "shift",
+          "title": "Shift",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "Audio (stereo, 48 kHz) to extract a track from.",
+          "name": "src_audio",
+          "title": "Source Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": "vocals",
+          "description": "Track to extract (e.g. 'vocals', 'drums', 'bass', 'guitar', 'piano').",
+          "name": "track_name",
+          "title": "Track Name",
+          "type": {
+            "type": "str"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/Ace-Step1.5",
+          "name": "ACE-Step/Ace-Step1.5",
+          "repo_id": "ACE-Step/Ace-Step1.5",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/acestep-v15-base",
+          "name": "ACE-Step/acestep-v15-base",
+          "repo_id": "ACE-Step/acestep-v15-base",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/acestep-v15-sft",
+          "name": "ACE-Step/acestep-v15-sft",
+          "repo_id": "ACE-Step/acestep-v15-sft",
+          "type": "hf.text_to_audio"
+        }
+      ],
+      "title": "ACE-Step Extract"
+    },
+    {
+      "basic_fields": [
+        "src_audio",
+        "track_name",
+        "repainting_start",
+        "repainting_end"
+      ],
+      "input_fields": [
+        "prompt",
+        "src_audio"
+      ],
+      "description": "Generates a specific track conditioned on existing audio with ACE-Step 1.5 lego mode.\n    audio, music, lego, accompaniment, stem-generation, ace-step\n\n    Use cases:\n    - Add a new instrument track that fits an existing arrangement\n    - Generate a drum or bass line for a given musical context\n    - Regenerate a single track within a chosen time range",
+      "namespace": "huggingface.text_to_audio",
+      "node_type": "huggingface.text_to_audio.AceStepLego",
+      "body": "content_card",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": "turbo",
+          "description": "DiT checkpoint to use. 'turbo' is guidance-distilled (8 steps, CFG ignored); 'base' and 'sft' use classifier-free guidance and benefit from more steps (30-60) for higher quality.",
+          "name": "variant",
+          "title": "Variant",
+          "type": {
+            "type": "enum",
+            "type_name": "nodetool.nodes.huggingface.text_to_audio.AceStepVariant",
+            "values": [
+              "turbo",
+              "base",
+              "sft"
+            ]
+          }
+        },
+        {
+          "default": "A beautiful piano piece with soft melodies and gentle rhythm",
+          "description": "Describe the music style, instruments, mood, and tempo (e.g., 'upbeat pop song with electric guitar and drums').",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Lyrics for the song. Structure with tags like [verse], [chorus], [bridge]. Leave empty for instrumental music.",
+          "name": "lyrics",
+          "title": "Lyrics",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "en",
+          "description": "Language code for the lyrics (e.g., 'en', 'zh', 'ja', 'ko', 'fr', 'de', 'es').",
+          "name": "vocal_language",
+          "title": "Vocal Language",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Denoising steps. Turbo is tuned for 8; use 30-60 on base/sft for higher quality.",
+          "max": 200.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 7.0,
+          "description": "Classifier-free guidance scale for base/sft. Ignored for the turbo variant.",
+          "max": 15.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 3.0,
+          "description": "Shift parameter for the flow-matching timestep schedule (1.0, 2.0, or 3.0).",
+          "max": 3.0,
+          "min": 1.0,
+          "name": "shift",
+          "title": "Shift",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "Audio (stereo, 48 kHz) providing the musical context.",
+          "name": "src_audio",
+          "title": "Source Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": "drums",
+          "description": "Track to generate (e.g. 'vocals', 'drums', 'bass', 'guitar', 'piano').",
+          "name": "track_name",
+          "title": "Track Name",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 0.0,
+          "description": "Start time in seconds of the region to generate.",
+          "min": 0.0,
+          "name": "repainting_start",
+          "title": "Region Start",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1.0,
+          "description": "End time in seconds of the region to generate. Use -1 for until the end.",
+          "min": -1.0,
+          "name": "repainting_end",
+          "title": "Region End",
+          "type": {
+            "type": "float"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/Ace-Step1.5",
+          "name": "ACE-Step/Ace-Step1.5",
+          "repo_id": "ACE-Step/Ace-Step1.5",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/acestep-v15-base",
+          "name": "ACE-Step/acestep-v15-base",
+          "repo_id": "ACE-Step/acestep-v15-base",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/acestep-v15-sft",
+          "name": "ACE-Step/acestep-v15-sft",
+          "repo_id": "ACE-Step/acestep-v15-sft",
+          "type": "hf.text_to_audio"
+        }
+      ],
+      "title": "ACE-Step Lego"
+    },
+    {
+      "basic_fields": [
+        "src_audio",
+        "complete_track_classes",
+        "prompt"
+      ],
+      "input_fields": [
+        "prompt",
+        "src_audio"
+      ],
+      "description": "Completes input audio with additional tracks using ACE-Step 1.5.\n    audio, music, complete, arrangement, accompaniment, ace-step\n\n    Use cases:\n    - Flesh out a sparse demo with extra instrument tracks\n    - Add accompaniment around a lead vocal or melody\n    - Turn a single stem into a fuller arrangement",
+      "namespace": "huggingface.text_to_audio",
+      "node_type": "huggingface.text_to_audio.AceStepComplete",
+      "body": "content_card",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": "turbo",
+          "description": "DiT checkpoint to use. 'turbo' is guidance-distilled (8 steps, CFG ignored); 'base' and 'sft' use classifier-free guidance and benefit from more steps (30-60) for higher quality.",
+          "name": "variant",
+          "title": "Variant",
+          "type": {
+            "type": "enum",
+            "type_name": "nodetool.nodes.huggingface.text_to_audio.AceStepVariant",
+            "values": [
+              "turbo",
+              "base",
+              "sft"
+            ]
+          }
+        },
+        {
+          "default": "A beautiful piano piece with soft melodies and gentle rhythm",
+          "description": "Describe the music style, instruments, mood, and tempo (e.g., 'upbeat pop song with electric guitar and drums').",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Lyrics for the song. Structure with tags like [verse], [chorus], [bridge]. Leave empty for instrumental music.",
+          "name": "lyrics",
+          "title": "Lyrics",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "en",
+          "description": "Language code for the lyrics (e.g., 'en', 'zh', 'ja', 'ko', 'fr', 'de', 'es').",
+          "name": "vocal_language",
+          "title": "Vocal Language",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Denoising steps. Turbo is tuned for 8; use 30-60 on base/sft for higher quality.",
+          "max": 200.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 7.0,
+          "description": "Classifier-free guidance scale for base/sft. Ignored for the turbo variant.",
+          "max": 15.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 3.0,
+          "description": "Shift parameter for the flow-matching timestep schedule (1.0, 2.0, or 3.0).",
+          "max": 3.0,
+          "min": 1.0,
+          "name": "shift",
+          "title": "Shift",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "Audio (stereo, 48 kHz) to complete with additional tracks.",
+          "name": "src_audio",
+          "title": "Source Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": [],
+          "description": "Track classes to add (e.g. ['drums', 'bass', 'guitar']). Empty lets the model decide.",
+          "name": "complete_track_classes",
+          "title": "Track Classes",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "str"
+              }
+            ]
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/Ace-Step1.5",
+          "name": "ACE-Step/Ace-Step1.5",
+          "repo_id": "ACE-Step/Ace-Step1.5",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/acestep-v15-base",
+          "name": "ACE-Step/acestep-v15-base",
+          "repo_id": "ACE-Step/acestep-v15-base",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/acestep-v15-sft",
+          "name": "ACE-Step/acestep-v15-sft",
+          "repo_id": "ACE-Step/acestep-v15-sft",
+          "type": "hf.text_to_audio"
+        }
+      ],
+      "title": "ACE-Step Complete"
     },
     {
       "basic_fields": [
