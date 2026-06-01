@@ -13334,6 +13334,166 @@
     },
     {
       "basic_fields": [
+        "variant",
+        "prompt",
+        "lyrics",
+        "audio_duration"
+      ],
+      "input_fields": [
+        "prompt"
+      ],
+      "description": "Generates commercial-grade stereo music with lyrics using ACE-Step 1.5.\n    audio, music, generation, text-to-music, lyrics, stereo, ace-step, song\n\n    Use cases:\n    - Generate full songs with vocals from a style prompt and structured lyrics\n    - Produce 48 kHz stereo music in 50+ languages\n    - Create instrumental tracks, background music, and soundtracks\n    - Fast 8-step generation with the guidance-distilled turbo checkpoint",
+      "namespace": "huggingface.text_to_audio",
+      "node_type": "huggingface.text_to_audio.AceStep",
+      "body": "content_card",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": "turbo",
+          "description": "DiT checkpoint to use. 'turbo' is guidance-distilled (8 steps, CFG ignored); 'base' and 'sft' use classifier-free guidance and benefit from more steps (30-60) for higher quality.",
+          "name": "variant",
+          "title": "Variant",
+          "type": {
+            "type": "enum",
+            "type_name": "nodetool.nodes.huggingface.text_to_audio.AceStepVariant",
+            "values": [
+              "turbo",
+              "base",
+              "sft"
+            ]
+          }
+        },
+        {
+          "default": "A beautiful piano piece with soft melodies and gentle rhythm",
+          "description": "Describe the music style, instruments, mood, and tempo (e.g., 'upbeat pop song with electric guitar and drums').",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "[verse]\nSoft notes in the morning light\nDancing through the air so bright\n[chorus]\nMusic fills the air tonight\nEvery note feels just right",
+          "description": "Lyrics for the song. Structure with tags like [verse], [chorus], [bridge]. Leave empty for instrumental music.",
+          "name": "lyrics",
+          "title": "Lyrics",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 60.0,
+          "description": "Duration of the generated music in seconds (10 to 600).",
+          "max": 600.0,
+          "min": 10.0,
+          "name": "audio_duration",
+          "title": "Audio Duration",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": "en",
+          "description": "Language code for the lyrics (e.g., 'en', 'zh', 'ja', 'ko', 'fr', 'de', 'es').",
+          "name": "vocal_language",
+          "title": "Vocal Language",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Denoising steps. Turbo is tuned for 8; use 30-60 on base/sft for higher quality.",
+          "max": 200.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 7.0,
+          "description": "Classifier-free guidance scale for base/sft. Ignored for the turbo variant.",
+          "max": 15.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 3.0,
+          "description": "Shift parameter for the flow-matching timestep schedule (1.0, 2.0, or 3.0).",
+          "max": 3.0,
+          "min": 1.0,
+          "name": "shift",
+          "title": "Shift",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/Ace-Step1.5",
+          "name": "ACE-Step/Ace-Step1.5",
+          "repo_id": "ACE-Step/Ace-Step1.5",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/acestep-v15-base",
+          "name": "ACE-Step/acestep-v15-base",
+          "repo_id": "ACE-Step/acestep-v15-base",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "ACE-Step/acestep-v15-sft",
+          "name": "ACE-Step/acestep-v15-sft",
+          "repo_id": "ACE-Step/acestep-v15-sft",
+          "type": "hf.text_to_audio"
+        }
+      ],
+      "title": "ACE-Step 1.5"
+    },
+    {
+      "basic_fields": [
         "prompt",
         "height",
         "width",

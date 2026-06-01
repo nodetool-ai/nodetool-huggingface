@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -11,7 +12,10 @@ from nodetool.metadata.types import (
     HFTextToAudio,
     HuggingFaceModel,
 )
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.huggingface_pipeline import (
+    HuggingFacePipelineNode,
+    select_inference_dtype,
+)
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.memory_utils import run_gc
 from nodetool.workflows.types import NodeProgress
@@ -26,6 +30,7 @@ if TYPE_CHECKING:
     from diffusers.pipelines.stable_audio.pipeline_stable_audio import (
         StableAudioPipeline,
     )
+    from diffusers.pipelines.ace_step.pipeline_ace_step import AceStepPipeline
     from transformers import AutoProcessor, MusicgenForConditionalGeneration
     from transformers import AutoTokenizer
     from transformers import AutoFeatureExtractor, set_seed
@@ -614,6 +619,180 @@ class StableAudioNode(HuggingFacePipelineNode):
         run_gc("After StableAudio inference", log_before_after=False)
         audio = await context.audio_from_numpy(output, sampling_rate)
         return audio
+
+
+class AceStepVariant(Enum):
+    TURBO = "turbo"
+    BASE = "base"
+    SFT = "sft"
+
+
+# Maps each variant to its DiT checkpoint on the HuggingFace Hub.
+_ACE_STEP_REPOS: dict[AceStepVariant, str] = {
+    AceStepVariant.TURBO: "ACE-Step/Ace-Step1.5",
+    AceStepVariant.BASE: "ACE-Step/acestep-v15-base",
+    AceStepVariant.SFT: "ACE-Step/acestep-v15-sft",
+}
+
+
+class AceStep(HuggingFacePipelineNode):
+    """
+    Generates commercial-grade stereo music with lyrics using ACE-Step 1.5.
+    audio, music, generation, text-to-music, lyrics, stereo, ace-step, song
+
+    Use cases:
+    - Generate full songs with vocals from a style prompt and structured lyrics
+    - Produce 48 kHz stereo music in 50+ languages
+    - Create instrumental tracks, background music, and soundtracks
+    - Fast 8-step generation with the guidance-distilled turbo checkpoint
+    """
+
+    variant: AceStepVariant = Field(
+        default=AceStepVariant.TURBO,
+        title="Variant",
+        description=(
+            "DiT checkpoint to use. 'turbo' is guidance-distilled (8 steps, CFG "
+            "ignored); 'base' and 'sft' use classifier-free guidance and benefit "
+            "from more steps (30-60) for higher quality."
+        ),
+    )
+    prompt: str = Field(
+        default="A beautiful piano piece with soft melodies and gentle rhythm",
+        title="Prompt",
+        description=(
+            "Describe the music style, instruments, mood, and tempo "
+            "(e.g., 'upbeat pop song with electric guitar and drums')."
+        ),
+    )
+    lyrics: str = Field(
+        default="[verse]\nSoft notes in the morning light\nDancing through the air so bright\n[chorus]\nMusic fills the air tonight\nEvery note feels just right",
+        title="Lyrics",
+        description=(
+            "Lyrics for the song. Structure with tags like [verse], [chorus], "
+            "[bridge]. Leave empty for instrumental music."
+        ),
+    )
+    audio_duration: float = Field(
+        default=60.0,
+        title="Audio Duration",
+        description="Duration of the generated music in seconds (10 to 600).",
+        ge=10.0,
+        le=600.0,
+    )
+    vocal_language: str = Field(
+        default="en",
+        title="Vocal Language",
+        description="Language code for the lyrics (e.g., 'en', 'zh', 'ja', 'ko', 'fr', 'de', 'es').",
+    )
+    num_inference_steps: int = Field(
+        default=8,
+        title="Num Inference Steps",
+        description="Denoising steps. Turbo is tuned for 8; use 30-60 on base/sft for higher quality.",
+        ge=1,
+        le=200,
+    )
+    guidance_scale: float = Field(
+        default=7.0,
+        title="Guidance Scale",
+        description="Classifier-free guidance scale for base/sft. Ignored for the turbo variant.",
+        ge=1.0,
+        le=15.0,
+    )
+    shift: float = Field(
+        default=3.0,
+        title="Shift",
+        description="Shift parameter for the flow-matching timestep schedule (1.0, 2.0, or 3.0).",
+        ge=1.0,
+        le=3.0,
+    )
+    seed: int = Field(
+        default=-1,
+        title="Seed",
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "ACE-Step 1.5"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["variant", "prompt", "lyrics", "audio_duration"]
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFTextToAudio(
+                repo_id=repo_id,
+                allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
+            )
+            for repo_id in _ACE_STEP_REPOS.values()
+        ]
+
+    def get_model_id(self) -> str:
+        return _ACE_STEP_REPOS[self.variant]
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.ace_step.pipeline_ace_step import AceStepPipeline
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=AceStepPipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=select_inference_dtype(),
+            variant=None,
+        )
+
+    async def process(self, context: ProcessingContext) -> AudioRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        import torch
+
+        generator = torch.Generator(device="cpu")
+        if self.seed != -1:
+            generator = generator.manual_seed(self.seed)
+
+        # Turbo is guidance-distilled: CFG is baked into the weights, so a scale
+        # above 1.0 is ignored by the pipeline. Pass 1.0 to skip the warning.
+        guidance_scale = (
+            1.0 if self.variant == AceStepVariant.TURBO else self.guidance_scale
+        )
+
+        def progress_callback(
+            step: int, timestep: int, latents: "torch.FloatTensor"
+        ) -> None:
+            context.post_message(
+                NodeProgress(
+                    node_id=self.id,
+                    progress=step,
+                    total=self.num_inference_steps,
+                )
+            )
+
+        result = await self.run_pipeline_in_thread(
+            prompt=self.prompt,
+            lyrics=self.lyrics,
+            audio_duration=self.audio_duration,
+            vocal_language=self.vocal_language,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=guidance_scale,
+            shift=self.shift,
+            generator=generator,
+            callback=progress_callback,
+            callback_steps=1,
+        )
+
+        # audios[0] is a stereo tensor of shape [channels, samples]; transpose to
+        # [samples, channels] for audio_from_numpy.
+        audio = result.audios[0]
+        output = audio.T.float().cpu().numpy()
+        sampling_rate = self._pipeline.sample_rate
+        run_gc("After ACE-Step inference", log_before_after=False)
+        return await context.audio_from_numpy(output, sampling_rate)
 
 
 # class ParlerTTSNode(HuggingFacePipelineNode):
