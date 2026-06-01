@@ -11,7 +11,7 @@ authors = [{ name = "Matthias Georgi", email = "matti.georgi@gmail.com" }]
 requires-python = ">=3.11"
 
 dependencies = [
-    "nodetool-core==0.7.0-rc.8",
+    "nodetool-core>=0.7.0",
     "torch==2.9.0",
     "torchsde",
     "torchvision",
@@ -76,10 +76,6 @@ trellis2 = []
 # Convenience meta-groups (PyPI-installable extras only)
 all-3d-pypi = ["nodetool-huggingface[hunyuan3d,triposg]"]
 all-3d = ["nodetool-huggingface[hunyuan3d,triposg,sf3d,triposr,trellis2]"]
-
-[tool.uv.sources]
-nodetool-core = { path = "../nodetool-core", editable = true }
-
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nodetool", "src/RealESRGAN", "src/triposg"]
