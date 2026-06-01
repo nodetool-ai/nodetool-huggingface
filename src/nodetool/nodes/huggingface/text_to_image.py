@@ -1154,6 +1154,233 @@ class Chroma(HuggingFacePipelineNode):
         ]
 
 
+# Example structured JSON prompt for FIBO. FIBO is trained exclusively on
+# structured JSON captions and will not produce good results with freeform text.
+# Use the FIBO-VLM-prompt-to-JSON or FIBO-gemini-prompt-to-JSON helper models to
+# convert a freeform description into this structured format.
+_FIBO_DEFAULT_PROMPT = """{
+  "scene_description": "A close-up portrait of a golden retriever sitting in a sunlit meadow.",
+  "subjects": [
+    {
+      "type": "animal",
+      "description": "a happy golden retriever with a glossy coat, tongue out",
+      "position": "center"
+    }
+  ],
+  "lighting": {
+    "type": "natural",
+    "direction": "backlit",
+    "time_of_day": "golden hour",
+    "mood": "warm and soft"
+  },
+  "composition": {
+    "framing": "close-up",
+    "aspect_ratio": "1:1",
+    "focal_point": "the dog's face"
+  },
+  "color": {
+    "palette": "warm golden tones with soft green background",
+    "saturation": "medium-high"
+  },
+  "camera": {
+    "lens": "85mm",
+    "aperture": "f/1.8",
+    "depth_of_field": "shallow"
+  },
+  "style": "photorealistic, professional photography"
+}"""
+
+
+class BriaFibo(HuggingFacePipelineNode):
+    """
+    Generates images from structured JSON prompts using Bria's FIBO model for precise visual control.
+    image, generation, AI, text-to-image, bria, fibo, json, structured, control
+
+    FIBO is trained exclusively on structured JSON captions (up to 1,000+ words)
+    and is designed to understand and control visual parameters such as lighting,
+    composition, color, and camera settings, enabling precise and reproducible
+    outputs. With only 8 billion parameters it provides high image quality, strong
+    prompt adherence and professional control.
+
+    Note: FIBO will NOT work well with freeform text prompts. Provide a structured
+    JSON prompt. Use the FIBO-VLM-prompt-to-JSON or FIBO-gemini-prompt-to-JSON
+    helper models to convert a freeform description into structured JSON.
+
+    The model is gated: accept the license at
+    https://huggingface.co/briaai/FIBO and authenticate with your HF token.
+
+    Use cases:
+    - Generate images with precise, reproducible control over lighting and camera
+    - Build pipelines that programmatically construct structured JSON prompts
+    - Produce professional-quality images with fine-grained visual parameters
+    """
+
+    prompt: str = Field(
+        default=_FIBO_DEFAULT_PROMPT,
+        description=(
+            "Structured JSON prompt describing the image. FIBO is trained on "
+            "structured JSON captions and does not work well with freeform text."
+        ),
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Describe what to avoid in the image (e.g., 'blurry, low quality').",
+    )
+    guidance_scale: float = Field(
+        default=5.0,
+        description="Prompt adherence strength. ~5 is typical for FIBO.",
+        ge=0.0,
+        le=30.0,
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        description="Denoising steps. 30-50 is typical; more = better quality but slower.",
+        ge=1,
+        le=100,
+    )
+    height: int = Field(
+        default=1024,
+        description="Output image height in pixels. 1024 gives the best results.",
+        ge=256,
+        le=2048,
+    )
+    width: int = Field(
+        default=1024,
+        description="Output image width in pixels. 1024 gives the best results.",
+        ge=256,
+        le=2048,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    max_sequence_length: int = Field(
+        default=3000,
+        description="Maximum prompt length in tokens. FIBO supports long structured prompts.",
+        ge=1,
+        le=4096,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HFTextToImage]:
+        return [
+            HFTextToImage(
+                repo_id="briaai/FIBO",
+                allow_patterns=[
+                    "**/*.safetensors",
+                    "**/*.json",
+                    "**/*.txt",
+                    "**/*.py",
+                    "*.json",
+                ],
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Bria FIBO"
+
+    def get_model_id(self) -> str:
+        return "briaai/FIBO"
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers import BriaFiboPipeline  # type: ignore
+
+        torch_dtype = available_torch_dtype()
+        # FIBO requires trust_remote_code as it ships a custom pipeline.
+        self._pipeline = await self.load_model(
+            context=context,
+            model_id=self.get_model_id(),
+            model_class=BriaFiboPipeline,
+            torch_dtype=torch_dtype,
+            trust_remote_code=True,
+        )
+        _enable_pytorch2_attention(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
+
+    async def move_to_device(self, device: str):
+        if self._pipeline is None:
+            return
+
+        if self.enable_cpu_offload:
+            # When moving to CPU, disable offload by moving everything to CPU.
+            if device == "cpu":
+                try:
+                    self._pipeline.to(device)
+                except torch.OutOfMemoryError as e:
+                    raise ValueError(
+                        "VRAM out of memory while moving FIBO pipeline to device. "
+                        "Reduce image size/steps."
+                    ) from e
+            elif device in ["cuda", "mps"]:
+                self._pipeline.enable_model_cpu_offload()
+        else:
+            try:
+                self._pipeline.to(device)
+            except torch.OutOfMemoryError as e:
+                raise ValueError(
+                    "VRAM out of memory while moving FIBO pipeline to device. "
+                    "Try enabling 'CPU offload' in the advanced node properties, "
+                    "reduce image size, or lower steps."
+                ) from e
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        # Set up the generator for reproducibility
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        pipeline_kwargs = {
+            "prompt": self.prompt,
+            "guidance_scale": self.guidance_scale,
+            "num_inference_steps": self.num_inference_steps,
+            "height": self.height,
+            "width": self.width,
+            "generator": generator,
+            "max_sequence_length": self.max_sequence_length,
+            "callback_on_step_end": pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            ),
+            "callback_on_step_end_tensor_inputs": ["latents"],
+        }
+        # FIBO ignores negative prompts when guidance is disabled; only pass it
+        # when it is set to avoid unnecessary encoding.
+        if self.negative_prompt:
+            pipeline_kwargs["negative_prompt"] = self.negative_prompt
+
+        pipeline = self._pipeline
+        assert pipeline is not None
+
+        def _run_pipeline_sync():
+            with torch.inference_mode():
+                return pipeline(**pipeline_kwargs)
+
+        output = await asyncio.to_thread(_run_pipeline_sync)
+
+        image = output.images[0]
+
+        return await context.image_from_pil(image)
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return [
+            "prompt",
+            "height",
+            "width",
+            "seed",
+        ]
+
+
 class QwenQuantization(str, Enum):
     FP16 = "fp16"
     FP4 = "fp4"
