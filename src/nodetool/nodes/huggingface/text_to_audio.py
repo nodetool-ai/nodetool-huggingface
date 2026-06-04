@@ -12,6 +12,10 @@ from nodetool.metadata.types import (
     HuggingFaceModel,
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.stable_diffusion_base import (
+    is_mps_device,
+    maybe_enable_cpu_offload,
+)
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.memory_utils import run_gc
 from nodetool.workflows.types import NodeProgress
@@ -614,6 +618,295 @@ class StableAudioNode(HuggingFacePipelineNode):
         run_gc("After StableAudio inference", log_before_after=False)
         audio = await context.audio_from_numpy(output, sampling_rate)
         return audio
+
+
+class AceStep(HuggingFacePipelineNode):
+    """
+    Generates music with optional lyrics from text prompts using ACE-Step 1.5.
+    audio, music, generation, text-to-music, lyrics, song
+
+    Use cases:
+    - Generate commercial-grade stereo music from text descriptions
+    - Create songs with structured lyrics ([verse], [chorus], etc.)
+    - Produce backing tracks and instrumental pieces
+    - Build AI music generation applications
+    """
+
+    model: HFTextToAudio = Field(
+        default=HFTextToAudio(repo_id="ACE-Step/acestep-v15-xl-turbo-diffusers"),
+        description="The ACE-Step model to use for music generation.",
+    )
+    prompt: str = Field(
+        default="A beautiful piano piece with soft melodies and gentle rhythm",
+        description="Describe the music style, instruments, mood, and tempo.",
+    )
+    lyrics: str = Field(
+        default="[verse]\nSoft notes in the morning light\nDancing through the air so bright\n[chorus]\nMusic fills the air tonight\nEvery note feels just right",
+        description="Lyrics for the music. Use structure tags like [verse], [chorus], [bridge].",
+    )
+    audio_duration: float = Field(
+        default=30.0,
+        description="Duration of the generated music in seconds.",
+        ge=10.0,
+        le=600.0,
+    )
+    vocal_language: str = Field(
+        default="en",
+        description="Language code for the lyrics (e.g. 'en', 'zh', 'ja').",
+    )
+    num_inference_steps: int = Field(
+        default=8,
+        description="Denoising steps. The turbo model is designed for 8 steps.",
+        ge=1,
+        le=200,
+    )
+    guidance_scale: float = Field(
+        default=7.0,
+        description="Guidance scale for CFG. Ignored by guidance-distilled turbo checkpoints.",
+        ge=1.0,
+        le=15.0,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "ACE-Step"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "prompt", "lyrics", "audio_duration"]
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        allow = ["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"]
+        return [
+            # Turbo: guidance-distilled, 8 steps (CFG ignored).
+            HFTextToAudio(
+                repo_id="ACE-Step/acestep-v15-xl-turbo-diffusers",
+                allow_patterns=allow,
+            ),
+            # Base: CFG enabled, higher quality with more steps.
+            HFTextToAudio(
+                repo_id="ACE-Step/acestep-v15-base",
+                allow_patterns=allow,
+            ),
+            # SFT: supervised fine-tuned, CFG enabled.
+            HFTextToAudio(
+                repo_id="ACE-Step/acestep-v15-sft",
+                allow_patterns=allow,
+            ),
+        ]
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id or "ACE-Step/acestep-v15-xl-turbo-diffusers"
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.ace_step.pipeline_ace_step import AceStepPipeline
+        from nodetool.nodes.huggingface.stable_diffusion_base import (
+            available_torch_dtype,
+        )
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=AceStepPipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=available_torch_dtype(),
+            device="cpu",
+        )
+        maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
+
+    async def move_to_device(self, device: str):
+        # On MPS we skip offload and load fully onto the device, so move here.
+        if self._pipeline is not None and (
+            not self.enable_cpu_offload or is_mps_device()
+        ):
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> AudioRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        import torch
+
+        generator = torch.Generator(device="cpu")
+        if self.seed != -1:
+            generator = generator.manual_seed(self.seed)
+
+        def progress_callback(step: int, timestep: int, latents: Any) -> None:
+            context.post_message(
+                NodeProgress(
+                    node_id=self.id,
+                    progress=step,
+                    total=self.num_inference_steps,
+                )
+            )
+
+        output = await self.run_pipeline_in_thread(
+            prompt=self.prompt,
+            lyrics=self.lyrics,
+            audio_duration=self.audio_duration,
+            vocal_language=self.vocal_language,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            generator=generator,
+            callback=progress_callback,
+        )
+
+        # ACE-Step returns stereo tensors of shape [channels, samples] at pipe.sample_rate.
+        audio = output.audios[0]
+        waveform = audio.T.float().cpu().numpy()
+        sampling_rate = int(getattr(self._pipeline, "sample_rate", 48000))
+        run_gc("After ACE-Step inference", log_before_after=False)
+        return await context.audio_from_numpy(waveform, sampling_rate)
+
+
+class LongCatAudioDiT(HuggingFacePipelineNode):
+    """
+    Generates audio (ambience, sound effects) from text prompts using Meituan's LongCat-AudioDiT.
+    audio, generation, text-to-audio, sound-effects, ambience, longcat
+
+    Use cases:
+    - Generate ambient soundscapes from text descriptions
+    - Create sound effects for multimedia and games
+    - Produce background audio for videos
+    - Experiment with text-conditioned audio generation
+    """
+
+    model: HFTextToAudio = Field(
+        default=HFTextToAudio(repo_id="ruixiangma/LongCat-AudioDiT-1B-Diffusers"),
+        description="The LongCat-AudioDiT model to use for audio generation.",
+    )
+    prompt: str = Field(
+        default="A calm ocean wave ambience with soft wind in the background.",
+        description="Text description of the audio to generate.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Describe what to avoid in the generated audio.",
+    )
+    audio_duration: float = Field(
+        default=5.0,
+        description="Target duration of the generated audio in seconds.",
+        ge=1.0,
+        le=60.0,
+    )
+    num_inference_steps: int = Field(
+        default=16,
+        description="Denoising steps. 16-20 is typical.",
+        ge=1,
+        le=100,
+    )
+    guidance_scale: float = Field(
+        default=4.0,
+        description="How strongly to follow the prompt.",
+        ge=0.0,
+        le=15.0,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "LongCat-AudioDiT"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "prompt", "audio_duration", "num_inference_steps"]
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFTextToAudio(
+                repo_id="ruixiangma/LongCat-AudioDiT-1B-Diffusers",
+                allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
+            ),
+        ]
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id or "ruixiangma/LongCat-AudioDiT-1B-Diffusers"
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.longcat_audio_dit.pipeline_longcat_audio_dit import (
+            LongCatAudioDiTPipeline,
+        )
+        from nodetool.nodes.huggingface.stable_diffusion_base import (
+            available_torch_dtype,
+        )
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=LongCatAudioDiTPipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=available_torch_dtype(),
+            device="cpu",
+        )
+        maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
+
+    async def move_to_device(self, device: str):
+        # On MPS we skip offload and load fully onto the device, so move here.
+        if self._pipeline is not None and (
+            not self.enable_cpu_offload or is_mps_device()
+        ):
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> AudioRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        import torch
+
+        generator = torch.Generator(device="cpu")
+        if self.seed != -1:
+            generator = generator.manual_seed(self.seed)
+
+        def callback_on_step_end(
+            pipeline: Any, step: int, timestep: int, callback_kwargs: dict
+        ) -> dict:
+            context.post_message(
+                NodeProgress(
+                    node_id=self.id,
+                    progress=step,
+                    total=self.num_inference_steps,
+                )
+            )
+            return callback_kwargs
+
+        output = await self.run_pipeline_in_thread(
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt or None,
+            audio_duration_s=self.audio_duration,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            generator=generator,
+            callback_on_step_end=callback_on_step_end,
+            callback_on_step_end_tensor_inputs=["latents"],
+        )
+
+        # Output shape is (batch, channels, samples); take the first mono sample.
+        audio = output.audios[0, 0]
+        waveform = np.asarray(audio, dtype=np.float32)
+        sampling_rate = int(getattr(self._pipeline, "sample_rate", 24000))
+        run_gc("After LongCat-AudioDiT inference", log_before_after=False)
+        return await context.audio_from_numpy(waveform, sampling_rate)
 
 
 # class ParlerTTSNode(HuggingFacePipelineNode):

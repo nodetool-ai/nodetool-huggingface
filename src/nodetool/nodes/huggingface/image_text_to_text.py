@@ -33,6 +33,7 @@ from nodetool.media.video.video_utils import (
 from queue import Queue
 import threading
 
+
 def extract_video_frames(
     input_video: str | bytes,
     fps: int = 1,
@@ -77,7 +78,9 @@ def extract_video_frames(
     frames = []
 
     # Handle bytes - create a BytesIO for imageio
-    video_source = io.BytesIO(input_video) if isinstance(input_video, bytes) else input_video
+    video_source = (
+        io.BytesIO(input_video) if isinstance(input_video, bytes) else input_video
+    )
 
     try:
         reader = imageio.get_reader(video_source, format="ffmpeg")  # type: ignore[arg-type]
@@ -100,6 +103,7 @@ def extract_video_frames(
         return _legacy_read_video_frames(input_video, fps)
 
     return frames
+
 
 class LoadImageTextToTextModel(HuggingFacePipelineNode):
     """
@@ -249,6 +253,10 @@ class ImageTextToText(HuggingFacePipelineNode):
             HFImageTextToText(
                 repo_id="HuggingFaceM4/Idefics3-8B-Llama3",
             ),
+            # OCR / vision-language additions
+            HFImageTextToText(repo_id="deepseek-ai/DeepSeek-OCR-2"),
+            HFImageTextToText(repo_id="baidu/Qianfan-OCR"),
+            HFImageTextToText(repo_id="ibm-granite/granite-vision-4.1-4b"),
         ]
 
     @classmethod

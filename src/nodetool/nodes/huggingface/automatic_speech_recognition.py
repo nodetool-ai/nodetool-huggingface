@@ -203,6 +203,13 @@ class Whisper(HuggingFacePipelineNode):
                 repo_id="Systran/faster-whisper-large-v3",
                 allow_patterns=["model.bin", "*.json", "*.txt"],
             ),
+            # Granite Speech + VibeVoice ASR
+            HFAutomaticSpeechRecognition(
+                repo_id="ibm-granite/granite-speech-4.1-2b",
+            ),
+            HFAutomaticSpeechRecognition(
+                repo_id="microsoft/VibeVoice-ASR-HF",
+            ),
         ]
 
     class OutputType(TypedDict):
@@ -238,14 +245,22 @@ class Whisper(HuggingFacePipelineNode):
         if torch.cuda.is_available():
             torch.cuda.synchronize()
             mem_after_model = torch.cuda.memory_allocated() / 1024 / 1024
-            logger.info("[VRAM DEBUG] after load_model: %.1fMB (delta: %+.1fMB)", mem_after_model, mem_after_model - mem_before)
+            logger.info(
+                "[VRAM DEBUG] after load_model: %.1fMB (delta: %+.1fMB)",
+                mem_after_model,
+                mem_after_model - mem_before,
+            )
 
         processor = AutoProcessor.from_pretrained(self.model.repo_id)
 
         if torch.cuda.is_available():
             torch.cuda.synchronize()
             mem_after_proc = torch.cuda.memory_allocated() / 1024 / 1024
-            logger.info("[VRAM DEBUG] after AutoProcessor: %.1fMB (delta: %+.1fMB)", mem_after_proc, mem_after_proc - mem_after_model)
+            logger.info(
+                "[VRAM DEBUG] after AutoProcessor: %.1fMB (delta: %+.1fMB)",
+                mem_after_proc,
+                mem_after_proc - mem_after_model,
+            )
 
         if self.task == Task.TRANSCRIBE:
             pipeline_task = "automatic-speech-recognition"
@@ -268,8 +283,14 @@ class Whisper(HuggingFacePipelineNode):
         if torch.cuda.is_available():
             torch.cuda.synchronize()
             mem_after_pipe = torch.cuda.memory_allocated() / 1024 / 1024
-            logger.info("[VRAM DEBUG] after load_pipeline: %.1fMB (delta: %+.1fMB)", mem_after_pipe, mem_after_pipe - mem_after_proc)
-            logger.info("[VRAM DEBUG] preload_model TOTAL: %+.1fMB", mem_after_pipe - mem_before)
+            logger.info(
+                "[VRAM DEBUG] after load_pipeline: %.1fMB (delta: %+.1fMB)",
+                mem_after_pipe,
+                mem_after_pipe - mem_after_proc,
+            )
+            logger.info(
+                "[VRAM DEBUG] preload_model TOTAL: %+.1fMB", mem_after_pipe - mem_before
+            )
 
         logger.info("Whisper model initialized successfully.")
 

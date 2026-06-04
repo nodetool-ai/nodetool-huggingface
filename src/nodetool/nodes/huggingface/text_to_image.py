@@ -25,6 +25,8 @@ from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineN
 from nodetool.huggingface.local_provider_utils import pipeline_progress_callback
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     available_torch_dtype,
+    is_mps_device,
+    maybe_enable_cpu_offload,
     StableDiffusionBaseNode,
     StableDiffusionXLBase,
 )
@@ -801,6 +803,7 @@ class Flux(HuggingFacePipelineNode):
                     from nodetool.huggingface.memory_utils import (
                         apply_cpu_offload_if_needed,
                     )
+
                     apply_cpu_offload_if_needed(pipeline_ref, method="sequential")
             else:
                 pipeline_ref.to(device)
@@ -848,6 +851,7 @@ class Flux(HuggingFacePipelineNode):
 
         pipeline_ref = self._pipeline
         import time as _time
+
         step_timer = {"last": _time.perf_counter(), "started": False}
 
         def progress_callback(
@@ -870,9 +874,7 @@ class Flux(HuggingFacePipelineNode):
             step_timer["last"] = now
             tag = "warmup" if not step_timer["started"] else "step"
             step_timer["started"] = True
-            log.info(
-                f"Flux {tag} {step}/{num_inference_steps} took {dt:.2f}s"
-            )
+            log.info(f"Flux {tag} {step}/{num_inference_steps} took {dt:.2f}s")
             if step % 5 == 0:
                 log_memory(f"Flux inference step {step}/{num_inference_steps}")
             # Free the denoising loop's fragmented segments right before VAE
@@ -1786,4 +1788,629 @@ class FluxControl(HuggingFacePipelineNode):
         # Run GC after inference to clean up intermediate tensors
         run_gc("After FluxControl inference", log_before_after=True)
 
+        return await context.image_from_pil(image)
+
+
+# Broad allow-patterns for multi-folder diffusers repos (configs + weights).
+_DIFFUSERS_REPO_ALLOW_PATTERNS = [
+    "**/*.safetensors",
+    "**/*.json",
+    "**/*.txt",
+    "**/*.model",
+    "*.json",
+]
+
+
+class Flux2(HuggingFacePipelineNode):
+    """
+    Generates images from text prompts using Black Forest Labs' FLUX.2 model.
+    image, generation, AI, text-to-image, flux, flux2
+
+    Use cases:
+    - Generate high-fidelity images from detailed text prompts
+    - Produce photorealistic and artistic imagery with the FLUX.2 architecture
+    - Create assets for design, marketing, and creative work
+    - Build production text-to-image systems
+    """
+
+    model: HFTextToImage = Field(
+        default=HFTextToImage(repo_id="black-forest-labs/FLUX.2-dev"),
+        description="The FLUX.2 model to use for image generation.",
+    )
+    prompt: str = Field(
+        default="A cat holding a sign that says hello world",
+        description="Text description of the image to generate.",
+    )
+    width: int = Field(
+        default=1024, description="Output image width in pixels.", ge=256, le=2048
+    )
+    height: int = Field(
+        default=1024, description="Output image height in pixels.", ge=256, le=2048
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        description="Denoising steps. More steps = higher quality, slower generation.",
+        ge=1,
+        le=100,
+    )
+    guidance_scale: float = Field(
+        default=4.0,
+        description="How strongly to follow the prompt. 2.5-4.0 is typical.",
+        ge=0.0,
+        le=20.0,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFTextToImage(
+                repo_id="black-forest-labs/FLUX.2-dev",
+                allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "FLUX.2"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "prompt", "width", "height", "num_inference_steps"]
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id or "black-forest-labs/FLUX.2-dev"
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.flux2.pipeline_flux2 import Flux2Pipeline
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=Flux2Pipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=available_torch_dtype(),
+            device="cpu",
+        )
+        maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
+
+    async def move_to_device(self, device: str):
+        # On MPS we skip offload and load fully onto the device, so move here.
+        if self._pipeline is not None and (
+            not self.enable_cpu_offload or is_mps_device()
+        ):
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        output = await self.run_pipeline_in_thread(
+            prompt=self.prompt,
+            height=self.height,
+            width=self.width,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            generator=generator,
+            callback_on_step_end=pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            ),
+            callback_on_step_end_tensor_inputs=["latents"],
+        )
+        image = output.images[0]
+        run_gc("After FLUX.2 inference", log_before_after=False)
+        return await context.image_from_pil(image)
+
+
+class Flux2Klein(HuggingFacePipelineNode):
+    """
+    Generates images from text prompts using Black Forest Labs' FLUX.2 Klein model.
+    image, generation, AI, text-to-image, flux, flux2, klein
+
+    Use cases:
+    - Generate images with the open-weight FLUX.2 Klein variant
+    - Fast, interactive text-to-image generation
+    - Create artwork and design assets
+    - Prototype image generation workflows
+    """
+
+    model: HFTextToImage = Field(
+        default=HFTextToImage(repo_id="black-forest-labs/FLUX.2-klein-base-9B"),
+        description="The FLUX.2 Klein model to use for image generation.",
+    )
+    prompt: str = Field(
+        default="A cat holding a sign that says hello world",
+        description="Text description of the image to generate.",
+    )
+    width: int = Field(
+        default=1024, description="Output image width in pixels.", ge=256, le=2048
+    )
+    height: int = Field(
+        default=1024, description="Output image height in pixels.", ge=256, le=2048
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        description="Denoising steps. More steps = higher quality, slower generation.",
+        ge=1,
+        le=100,
+    )
+    guidance_scale: float = Field(
+        default=4.0,
+        description="How strongly to follow the prompt. Ignored for step-distilled variants.",
+        ge=0.0,
+        le=20.0,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFTextToImage(
+                repo_id="black-forest-labs/FLUX.2-klein-base-9B",
+                allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "FLUX.2 Klein"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "prompt", "width", "height", "num_inference_steps"]
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id or "black-forest-labs/FLUX.2-klein-base-9B"
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.flux2.pipeline_flux2_klein import Flux2KleinPipeline
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=Flux2KleinPipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=available_torch_dtype(),
+            device="cpu",
+        )
+        maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
+
+    async def move_to_device(self, device: str):
+        # On MPS we skip offload and load fully onto the device, so move here.
+        if self._pipeline is not None and (
+            not self.enable_cpu_offload or is_mps_device()
+        ):
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        output = await self.run_pipeline_in_thread(
+            prompt=self.prompt,
+            height=self.height,
+            width=self.width,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            generator=generator,
+            callback_on_step_end=pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            ),
+            callback_on_step_end_tensor_inputs=["latents"],
+        )
+        image = output.images[0]
+        run_gc("After FLUX.2 Klein inference", log_before_after=False)
+        return await context.image_from_pil(image)
+
+
+class GlmImage(HuggingFacePipelineNode):
+    """
+    Generates images from text prompts using Zhipu AI's GLM-Image model.
+    image, generation, AI, text-to-image, glm, text-rendering
+
+    Use cases:
+    - Generate knowledge-intensive images with accurate text rendering
+    - Produce magazine-style layouts and infographics
+    - Create high-detail imagery from descriptive prompts
+    - Build multilingual image generation systems
+    """
+
+    model: HFTextToImage = Field(
+        default=HFTextToImage(repo_id="zai-org/GLM-Image"),
+        description="The GLM-Image model to use for image generation.",
+    )
+    prompt: str = Field(
+        default="A photo of an astronaut riding a horse on mars",
+        description="Text description of the image to generate.",
+    )
+    width: int = Field(
+        default=1024,
+        description="Output image width in pixels. Should be a multiple of 32.",
+        ge=256,
+        le=2048,
+    )
+    height: int = Field(
+        default=1024,
+        description="Output image height in pixels. Should be a multiple of 32.",
+        ge=256,
+        le=2048,
+    )
+    num_inference_steps: int = Field(
+        default=30,
+        description="Denoising steps for the diffusion decoder. 30 is recommended.",
+        ge=1,
+        le=100,
+    )
+    guidance_scale: float = Field(
+        default=1.5,
+        description="How strongly to follow the prompt. 1.5 is recommended.",
+        ge=0.0,
+        le=20.0,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFTextToImage(
+                repo_id="zai-org/GLM-Image",
+                allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "GLM-Image"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "prompt", "width", "height", "num_inference_steps"]
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id or "zai-org/GLM-Image"
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.glm_image.pipeline_glm_image import GlmImagePipeline
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=GlmImagePipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=available_torch_dtype(),
+            device="cpu",
+        )
+        maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
+
+    async def move_to_device(self, device: str):
+        # On MPS we skip offload and load fully onto the device, so move here.
+        if self._pipeline is not None and (
+            not self.enable_cpu_offload or is_mps_device()
+        ):
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        output = await self.run_pipeline_in_thread(
+            prompt=self.prompt,
+            height=self.height,
+            width=self.width,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            generator=generator,
+            callback_on_step_end=pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            ),
+            callback_on_step_end_tensor_inputs=["latents"],
+        )
+        image = output.images[0]
+        run_gc("After GLM-Image inference", log_before_after=False)
+        return await context.image_from_pil(image)
+
+
+class QwenImageLayered(HuggingFacePipelineNode):
+    """
+    Generates layered images from text prompts using Qwen-Image-Layered.
+    image, generation, AI, text-to-image, qwen, layered, transparent
+
+    Use cases:
+    - Generate images decomposed into separate layers
+    - Produce assets with transparent foregrounds and backgrounds
+    - Create compositable graphics for design workflows
+    - Build layered content generation systems
+    """
+
+    model: HFTextToImage = Field(
+        default=HFTextToImage(repo_id="Qwen/Qwen-Image-Layered"),
+        description="The Qwen-Image-Layered model to use.",
+    )
+    prompt: str = Field(
+        default="A cat holding a sign that says hello world",
+        description="Text description of the image to generate.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Describe what to avoid in the image.",
+    )
+    layers: int = Field(
+        default=4,
+        description="Number of layers to decompose the image into.",
+        ge=1,
+        le=8,
+    )
+    resolution: int = Field(
+        default=640,
+        description="Working resolution for layer generation.",
+        ge=256,
+        le=1536,
+    )
+    true_cfg_scale: float = Field(
+        default=4.0,
+        description="True CFG scale for enhanced prompt following.",
+        ge=0.0,
+        le=10.0,
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        description="Denoising steps. 30-50 is typical.",
+        ge=1,
+        le=100,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFTextToImage(
+                repo_id="Qwen/Qwen-Image-Layered",
+                allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Qwen-Image-Layered"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "prompt", "layers", "resolution", "num_inference_steps"]
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id or "Qwen/Qwen-Image-Layered"
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.qwenimage.pipeline_qwenimage_layered import (
+            QwenImageLayeredPipeline,
+        )
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=QwenImageLayeredPipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=available_torch_dtype(),
+            device="cpu",
+        )
+        maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
+
+    async def move_to_device(self, device: str):
+        # On MPS we skip offload and load fully onto the device, so move here.
+        if self._pipeline is not None and (
+            not self.enable_cpu_offload or is_mps_device()
+        ):
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        output = await self.run_pipeline_in_thread(
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt,
+            layers=self.layers,
+            resolution=self.resolution,
+            true_cfg_scale=self.true_cfg_scale,
+            num_inference_steps=self.num_inference_steps,
+            generator=generator,
+            callback_on_step_end=pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            ),
+            callback_on_step_end_tensor_inputs=["latents"],
+        )
+        images = output.images[0]
+        # Layered pipelines may return a list of per-layer images; pick the first.
+        if isinstance(images, (list, tuple)):
+            images = images[0]
+        run_gc("After Qwen-Image-Layered inference", log_before_after=False)
+        return await context.image_from_pil(images)
+
+
+class Kandinsky5Image(HuggingFacePipelineNode):
+    """
+    Generates images from text prompts using Kandinsky 5.0 Image Lite.
+    image, generation, AI, text-to-image, kandinsky
+
+    Use cases:
+    - Generate high-quality images from text descriptions
+    - Produce artwork with strong bilingual (incl. Russian) understanding
+    - Create assets for creative and commercial projects
+    - Build lightweight image generation systems
+    """
+
+    model: HFTextToImage = Field(
+        default=HFTextToImage(
+            repo_id="kandinskylab/Kandinsky-5.0-T2I-Lite-sft-Diffusers"
+        ),
+        description="The Kandinsky 5.0 image model to use.",
+    )
+    prompt: str = Field(
+        default="A cat and a dog baking a cake together in a kitchen.",
+        description="Text description of the image to generate.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Describe what to avoid in the image.",
+    )
+    width: int = Field(
+        default=1024, description="Output image width in pixels.", ge=256, le=2048
+    )
+    height: int = Field(
+        default=1024, description="Output image height in pixels.", ge=256, le=2048
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        description="Denoising steps. 50 is typical; distilled checkpoints use fewer.",
+        ge=1,
+        le=100,
+    )
+    guidance_scale: float = Field(
+        default=3.5,
+        description="How strongly to follow the prompt. Use 1.0 for distilled checkpoints.",
+        ge=0.0,
+        le=20.0,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            # SFT: highest generation quality.
+            HFTextToImage(
+                repo_id="kandinskylab/Kandinsky-5.0-T2I-Lite-sft-Diffusers",
+                allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+            ),
+            # Pretrain: base model for research and fine-tuning.
+            HFTextToImage(
+                repo_id="kandinskylab/Kandinsky-5.0-T2I-Lite-pretrain-Diffusers",
+                allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Kandinsky 5.0 Image"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "prompt", "width", "height", "num_inference_steps"]
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id or "kandinskylab/Kandinsky-5.0-T2I-Lite-sft-Diffusers"
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.kandinsky5.pipeline_kandinsky_t2i import (
+            Kandinsky5T2IPipeline,
+        )
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=Kandinsky5T2IPipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=available_torch_dtype(),
+            device="cpu",
+        )
+        maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
+
+    async def move_to_device(self, device: str):
+        # On MPS we skip offload and load fully onto the device, so move here.
+        if self._pipeline is not None and (
+            not self.enable_cpu_offload or is_mps_device()
+        ):
+            self._pipeline.to(device)
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        output = await self.run_pipeline_in_thread(
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt,
+            height=self.height,
+            width=self.width,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            generator=generator,
+            callback_on_step_end=pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            ),
+            callback_on_step_end_tensor_inputs=["latents"],
+        )
+        # Kandinsky output exposes generated images under .images/.image/.frames.
+        images = (
+            getattr(output, "images", None)
+            or getattr(output, "image", None)
+            or getattr(output, "frames", None)
+        )
+        image = images[0]
+        if isinstance(image, (list, tuple)):
+            image = image[0]
+        run_gc("After Kandinsky 5.0 Image inference", log_before_after=False)
         return await context.image_from_pil(image)

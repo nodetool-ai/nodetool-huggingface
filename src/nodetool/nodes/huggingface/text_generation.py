@@ -166,9 +166,30 @@ class TextGeneration(HuggingFacePipelineNode):
             HFTextGeneration(repo_id="google/gemma-3-4b-it"),
             HFTextGeneration(repo_id="google/gemma-3-12b-it"),
             HFTextGeneration(repo_id="google/gemma-3-27b-it"),
+            # Gemma 4 native (Google) — multimodal (text/image/video/audio)
+            HFTextGeneration(repo_id="google/gemma-4-E2B-it"),
+            HFTextGeneration(repo_id="google/gemma-4-E4B-it"),
+            HFTextGeneration(repo_id="google/gemma-4-12B-it"),
+            HFTextGeneration(repo_id="google/gemma-4-26B-A4B-it"),
+            HFTextGeneration(repo_id="google/gemma-4-31B-it"),
+            # Unsloth Gemma 4 BitsandBytes 4-bit (lower VRAM)
+            HFTextGeneration(repo_id="unsloth/gemma-4-E2B-it-unsloth-bnb-4bit"),
+            HFTextGeneration(repo_id="unsloth/gemma-4-31B-it-unsloth-bnb-4bit"),
+            # Gemma 4 assistant variants (Google)
+            HFTextGeneration(repo_id="google/gemma-4-E2B-it-assistant"),
+            HFTextGeneration(repo_id="google/gemma-4-E4B-it-assistant"),
+            HFTextGeneration(repo_id="google/gemma-4-26B-A4B-it-assistant"),
+            HFTextGeneration(repo_id="google/gemma-4-31B-it-assistant"),
+            # Mellum (JetBrains) — code completion / generation
+            HFTextGeneration(repo_id="JetBrains/Mellum-4b-base"),
+            HFTextGeneration(repo_id="JetBrains/Mellum2-12B-A2.5B-Instruct"),
+            # HRM-Text (Hierarchical Reasoning Model)
+            HFTextGeneration(repo_id="sapientinc/HRM-Text-1B"),
             # Mistral Small 3.1
             HFTextGeneration(repo_id="mistralai/Mistral-Small-3.1-24B-Instruct-2503"),
-            HFTextGeneration(repo_id="unsloth/Mistral-Small-3.1-24B-Instruct-2503-bnb-4bit"),
+            HFTextGeneration(
+                repo_id="unsloth/Mistral-Small-3.1-24B-Instruct-2503-bnb-4bit"
+            ),
         ]
 
     def _provider_model_id(self) -> str:
