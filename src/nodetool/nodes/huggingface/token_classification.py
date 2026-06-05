@@ -54,8 +54,12 @@ class TokenClassification(HuggingFacePipelineNode):
                 repo_id="dbmdz/bert-large-cased-finetuned-conll03-english",
                 allow_patterns=["*.bin", "*.json", "**/*.json", "*.safetensors"],
             ),
-            # OpenAI privacy filter (PII token tagging)
-            HFTokenClassification(repo_id="openai/privacy-filter"),
+            # OpenAI privacy filter (PII token tagging). "original/" duplicates
+            # the root model weights, so skip it.
+            HFTokenClassification(
+                repo_id="openai/privacy-filter",
+                ignore_patterns=["original/*"],
+            ),
         ]
 
     async def preload_model(self, context: ProcessingContext):

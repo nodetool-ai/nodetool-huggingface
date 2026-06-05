@@ -43,7 +43,7 @@ class ImageToText(HuggingFacePipelineNode):
         return [
             HFImageToText(
                 repo_id="Salesforce/blip-image-captioning-base",
-                allow_patterns=["*.bin", "*.json", "*.txt    "],
+                allow_patterns=["*.bin", "*.json", "*.txt"],
             ),
             HFImageToText(
                 repo_id="Salesforce/blip-image-captioning-large",

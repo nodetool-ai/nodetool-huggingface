@@ -35,19 +35,19 @@ class SentenceSimilarity(HuggingFacePipelineNode):
         return [
             HFSentenceSimilarity(
                 repo_id="sentence-transformers/all-mpnet-base-v2",
-                allow_patterns=["*.safetensors", "*.txt", "*,json"],
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
             ),
             HFSentenceSimilarity(
                 repo_id="sentence-transformers/all-MiniLM-L6-v2",
-                allow_patterns=["*.safetensors", "*.txt", "*,json"],
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
             ),
             HFSentenceSimilarity(
                 repo_id="BAAI/bge-m3",
-                allow_patterns=["*.safetensors", "*.txt", "*,json"],
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
             ),
             HFSentenceSimilarity(
                 repo_id="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
-                allow_patterns=["*.safetensors", "*.txt", "*,json"],
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
             ),
         ]
 

@@ -12,6 +12,7 @@ from nodetool.metadata.types import (
     HuggingFaceModel,
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     is_mps_device,
     maybe_enable_cpu_offload,
@@ -716,12 +717,18 @@ class AceStep(HuggingFacePipelineNode):
             available_torch_dtype,
         )
 
+        if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
+            raise ValueError(
+                f"Model {self.get_model_id()} must be downloaded first from the recommended models"
+            )
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=AceStepPipeline,
             model_id=self.get_model_id(),
             torch_dtype=available_torch_dtype(),
             device="cpu",
+            local_files_only=True,
         )
         maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
 
@@ -852,12 +859,18 @@ class LongCatAudioDiT(HuggingFacePipelineNode):
             available_torch_dtype,
         )
 
+        if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
+            raise ValueError(
+                f"Model {self.get_model_id()} must be downloaded first from the recommended models"
+            )
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=LongCatAudioDiTPipeline,
             model_id=self.get_model_id(),
             torch_dtype=available_torch_dtype(),
             device="cpu",
+            local_files_only=True,
         )
         maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
 

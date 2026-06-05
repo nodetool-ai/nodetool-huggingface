@@ -320,6 +320,107 @@
     },
     {
       "basic_fields": [
+        "model",
+        "audio",
+        "prompt"
+      ],
+      "body": "content_card",
+      "description": "Understands and answers questions about speech, sound, and music using NVIDIA's Audio/Music Flamingo.\n    audio, music, understanding, question-answering, captioning, audio-text-to-text, flamingo\n\n    Use cases:\n    - Caption or describe music, environmental sounds, and speech\n    - Answer questions about an audio clip (genre, mood, instruments, events)\n    - Reason over up to 10 minutes of audio with text instructions\n    - Build audio analysis and tagging pipelines",
+      "input_fields": [
+        "audio",
+        "prompt"
+      ],
+      "namespace": "huggingface.audio_text_to_text",
+      "node_type": "huggingface.audio_text_to_text.AudioFlamingo",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "str"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "nvidia/audio-flamingo-3-hf",
+            "type": "hf.audio_text_to_text",
+            "variant": null
+          },
+          "description": "The Audio Flamingo model. audio-flamingo-3 handles speech/sound/music; music-flamingo specializes in music.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.audio_text_to_text"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "Audio clip to analyze (max ~10 minutes; longer audio is truncated).",
+          "name": "audio",
+          "title": "Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": "Describe this audio in detail.",
+          "description": "Instruction or question about the audio.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 512,
+          "description": "Maximum number of tokens to generate.",
+          "max": 4096.0,
+          "min": 1.0,
+          "name": "max_new_tokens",
+          "title": "Max New Tokens",
+          "type": {
+            "type": "int"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "id": "nvidia/audio-flamingo-3-hf",
+          "ignore_patterns": [
+            "model.safetensors",
+            "think/*"
+          ],
+          "name": "nvidia/audio-flamingo-3-hf",
+          "repo_id": "nvidia/audio-flamingo-3-hf",
+          "type": "hf.audio_text_to_text"
+        },
+        {
+          "id": "nvidia/music-flamingo-hf",
+          "name": "nvidia/music-flamingo-hf",
+          "repo_id": "nvidia/music-flamingo-hf",
+          "type": "hf.audio_text_to_text"
+        },
+        {
+          "id": "nvidia/music-flamingo-2601-hf",
+          "name": "nvidia/music-flamingo-2601-hf",
+          "repo_id": "nvidia/music-flamingo-2601-hf",
+          "type": "hf.audio_text_to_text"
+        }
+      ],
+      "title": "Audio Flamingo"
+    },
+    {
+      "basic_fields": [
         "chunks",
         "time_offset"
       ],
@@ -695,7 +796,7 @@
             "*.safetensors",
             "*.json",
             "**/*.json",
-            "txt"
+            "*.txt"
           ],
           "id": "Intel/dpt-large",
           "name": "Intel/dpt-large",
@@ -917,7 +1018,7 @@
           "allow_patterns": [
             "*.safetensors",
             "*.txt",
-            "*,json"
+            "*.json"
           ],
           "id": "mixedbread-ai/mxbai-embed-large-v1",
           "name": "mixedbread-ai/mxbai-embed-large-v1",
@@ -928,7 +1029,7 @@
           "allow_patterns": [
             "*.safetensors",
             "*.txt",
-            "*,json"
+            "*.json"
           ],
           "id": "BAAI/bge-base-en-v1.5",
           "name": "BAAI/bge-base-en-v1.5",
@@ -939,7 +1040,7 @@
           "allow_patterns": [
             "*.safetensors",
             "*.txt",
-            "*,json"
+            "*.json"
           ],
           "id": "BAAI/bge-large-en-v1.5",
           "name": "BAAI/bge-large-en-v1.5",
@@ -10514,7 +10615,7 @@
           "allow_patterns": [
             "*.bin",
             "*.json",
-            "*.txt    "
+            "*.txt"
           ],
           "id": "Salesforce/blip-image-captioning-base",
           "name": "Salesforce/blip-image-captioning-base",
@@ -10953,7 +11054,7 @@
             "*.bin",
             "*.json",
             "**/*.json",
-            "txt"
+            "*.txt"
           ],
           "id": "google/owlvit-base-patch32",
           "name": "google/owlvit-base-patch32",
@@ -10966,7 +11067,7 @@
             "*.bin",
             "*.json",
             "**/*.json",
-            "txt"
+            "*.txt"
           ],
           "id": "google/owlvit-large-patch14",
           "name": "google/owlvit-large-patch14",
@@ -10979,7 +11080,7 @@
             "*.bin",
             "*.json",
             "**/*.json",
-            "txt"
+            "*.txt"
           ],
           "id": "google/owlvit-base-patch16",
           "name": "google/owlvit-base-patch16",
@@ -10992,7 +11093,7 @@
             "*.bin",
             "*.json",
             "**/*.json",
-            "txt"
+            "*.txt"
           ],
           "id": "google/owlv2-base-patch16",
           "name": "google/owlv2-base-patch16",
@@ -11005,7 +11106,7 @@
             "*.bin",
             "*.json",
             "**/*.json",
-            "txt"
+            "*.txt"
           ],
           "id": "google/owlv2-base-patch16-ensemble",
           "name": "google/owlv2-base-patch16-ensemble",
@@ -11018,7 +11119,7 @@
             "*.bin",
             "*.json",
             "**/*.json",
-            "txt"
+            "*.txt"
           ],
           "id": "IDEA-Research/grounding-dino-tiny",
           "name": "IDEA-Research/grounding-dino-tiny",
@@ -11453,7 +11554,7 @@
           "allow_patterns": [
             "*.safetensors",
             "*.txt",
-            "*,json"
+            "*.json"
           ],
           "id": "sentence-transformers/all-mpnet-base-v2",
           "name": "sentence-transformers/all-mpnet-base-v2",
@@ -11464,7 +11565,7 @@
           "allow_patterns": [
             "*.safetensors",
             "*.txt",
-            "*,json"
+            "*.json"
           ],
           "id": "sentence-transformers/all-MiniLM-L6-v2",
           "name": "sentence-transformers/all-MiniLM-L6-v2",
@@ -11475,7 +11576,7 @@
           "allow_patterns": [
             "*.safetensors",
             "*.txt",
-            "*,json"
+            "*.json"
           ],
           "id": "BAAI/bge-m3",
           "name": "BAAI/bge-m3",
@@ -11486,7 +11587,7 @@
           "allow_patterns": [
             "*.safetensors",
             "*.txt",
-            "*,json"
+            "*.json"
           ],
           "id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
           "name": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
@@ -11763,6 +11864,73 @@
         }
       ],
       "title": "HF Summarization"
+    },
+    {
+      "basic_fields": [
+        "model",
+        "image"
+      ],
+      "body": "content_card",
+      "description": "Recognizes the HTML structure of a table in an image using PaddlePaddle's SLANet.\n    table, structure, recognition, ocr, document, slanet\n\n    Use cases:\n    - Reconstruct table layout (rows, columns, spans) from scanned documents\n    - Convert table images into HTML skeletons for downstream parsing\n    - Preprocess tables for cell-level OCR pipelines\n    - Digitize tabular data from screenshots and photographs",
+      "input_fields": [
+        "image"
+      ],
+      "namespace": "huggingface.table_structure_recognition",
+      "node_type": "huggingface.table_structure_recognition.TableStructureRecognition",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "str"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "PaddlePaddle/SLANet_plus_safetensors",
+            "type": "hf.table_structure_recognition",
+            "variant": null
+          },
+          "description": "The table structure recognition model (SLANet / SLANet_plus).",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.table_structure_recognition"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "image",
+            "uri": ""
+          },
+          "description": "Input image containing a single table.",
+          "name": "image",
+          "title": "Image",
+          "type": {
+            "type": "image"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json"
+          ],
+          "id": "PaddlePaddle/SLANet_plus_safetensors",
+          "name": "PaddlePaddle/SLANet_plus_safetensors",
+          "repo_id": "PaddlePaddle/SLANet_plus_safetensors",
+          "type": "hf.table_structure_recognition"
+        }
+      ],
+      "title": "Table Structure Recognition"
     },
     {
       "basic_fields": [
@@ -16236,6 +16404,98 @@
     {
       "basic_fields": [
         "model",
+        "prompt"
+      ],
+      "body": "content_card",
+      "description": "Generates expressive speech and audio from text using Boson AI's Higgs Audio v2.\n    tts, audio, speech, expressive, voice-cloning, huggingface, higgs\n\n    Use cases:\n    - Produce natural, expressive narration from plain text\n    - Generate multi-speaker dialogue with [SPEAKER0]/[SPEAKER1] tags\n    - Control delivery via a scene description (e.g. \"recorded in a quiet room\")\n    - Create high-quality 24 kHz voiceovers for videos and podcasts\n\n    **Note:** Higgs Audio v2 is a ~3B model; generation is text-conditioned and\n    selects a suitable voice automatically unless guided by the system prompt.",
+      "input_fields": [
+        "prompt",
+        "system_prompt"
+      ],
+      "namespace": "huggingface.text_to_speech",
+      "node_type": "huggingface.text_to_speech.HiggsAudio",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "bosonai/higgs-audio-v2-generation-3B-base",
+            "type": "hf.text_to_speech",
+            "variant": null
+          },
+          "description": "The Higgs Audio generation model.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_speech"
+          }
+        },
+        {
+          "default": "",
+          "description": "The text to convert to speech. Use [SPEAKER0]/[SPEAKER1] tags for multi-speaker dialogue.",
+          "name": "prompt",
+          "title": "Text Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "Generate audio following instruction.",
+          "description": "High-level instruction that steers voice and delivery.",
+          "name": "system_prompt",
+          "title": "System Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "Audio is recorded from a quiet room.",
+          "description": "Optional scene/acoustic description. Leave empty to omit.",
+          "name": "scene",
+          "title": "Scene",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 1024,
+          "description": "Maximum number of audio tokens to generate.",
+          "max": 4096.0,
+          "min": 1.0,
+          "name": "max_new_tokens",
+          "title": "Max New Tokens",
+          "type": {
+            "type": "int"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt"
+          ],
+          "id": "bosonai/higgs-audio-v2-generation-3B-base",
+          "name": "bosonai/higgs-audio-v2-generation-3B-base",
+          "repo_id": "bosonai/higgs-audio-v2-generation-3B-base",
+          "type": "hf.text_to_speech"
+        }
+      ],
+      "title": "Higgs Audio"
+    },
+    {
+      "basic_fields": [
+        "model",
         "text",
         "lang_code",
         "voice",
@@ -17402,6 +17662,95 @@
     {
       "basic_fields": [
         "model",
+        "context_values",
+        "horizon"
+      ],
+      "description": "Forecasts future values of a univariate time series using Google's TimesFM 2.5.\n    time-series, forecasting, prediction, timesfm, zero-shot\n\n    Use cases:\n    - Zero-shot forecasting of demand, traffic, or sensor readings\n    - Extend a historical series into the future without task-specific training\n    - Produce baseline forecasts for anomaly detection\n    - Capacity planning from past usage data",
+      "inline_fields": [
+        "model"
+      ],
+      "input_fields": [
+        "context_values"
+      ],
+      "namespace": "huggingface.time_series",
+      "node_type": "huggingface.time_series.TimesFMForecast",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "float"
+              }
+            ]
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "google/timesfm-2.5-200m-transformers",
+            "type": "hf.time_series_forecast",
+            "variant": null
+          },
+          "description": "The TimesFM forecasting model. 2.5-200m supports context up to 16,384 points.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.time_series_forecast"
+          }
+        },
+        {
+          "default": [],
+          "description": "Historical series values in chronological order (oldest first, most recent last).",
+          "json_schema_extra": {
+            "expose": "handle"
+          },
+          "name": "context_values",
+          "title": "Context Values",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "float"
+              }
+            ]
+          }
+        },
+        {
+          "default": 128,
+          "description": "Number of future steps to forecast. Capped at the model's horizon length (~128 per call).",
+          "max": 1024.0,
+          "min": 1.0,
+          "name": "horizon",
+          "title": "Forecast Horizon",
+          "type": {
+            "type": "int"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt"
+          ],
+          "id": "google/timesfm-2.5-200m-transformers",
+          "name": "google/timesfm-2.5-200m-transformers",
+          "repo_id": "google/timesfm-2.5-200m-transformers",
+          "type": "hf.time_series_forecast"
+        }
+      ],
+      "title": "TimesFM Forecast"
+    },
+    {
+      "basic_fields": [
+        "model",
         "inputs",
         "aggregation_strategy"
       ],
@@ -17485,6 +17834,9 @@
         },
         {
           "id": "openai/privacy-filter",
+          "ignore_patterns": [
+            "original/*"
+          ],
           "name": "openai/privacy-filter",
           "repo_id": "openai/privacy-filter",
           "type": "hf.token_classification"

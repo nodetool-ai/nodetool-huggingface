@@ -12,6 +12,7 @@ from nodetool.metadata.types import (
     VideoRef,
 )
 from .huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     available_torch_dtype,
     is_mps_device,
@@ -567,12 +568,18 @@ class LTX2(HuggingFacePipelineNode):
     async def preload_model(self, context: ProcessingContext):
         from diffusers.pipelines.ltx2.pipeline_ltx2 import LTX2Pipeline
 
+        if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
+            raise ValueError(
+                f"Model {self.get_model_id()} must be downloaded first from the recommended models"
+            )
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=LTX2Pipeline,
             model_id=self.get_model_id(),
             torch_dtype=available_torch_dtype(),
             device="cpu",
+            local_files_only=True,
         )
         maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
 
@@ -741,12 +748,18 @@ class Kandinsky5Video(HuggingFacePipelineNode):
             Kandinsky5T2VPipeline,
         )
 
+        if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
+            raise ValueError(
+                f"Model {self.get_model_id()} must be downloaded first from the recommended models"
+            )
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=Kandinsky5T2VPipeline,
             model_id=self.get_model_id(),
             torch_dtype=available_torch_dtype(),
             device="cpu",
+            local_files_only=True,
         )
         maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
 

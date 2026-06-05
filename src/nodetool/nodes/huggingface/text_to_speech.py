@@ -675,3 +675,146 @@ class TextToSpeech(HuggingFacePipelineNode):
 #         )
 
 #         return await context.audio_from_numpy(speech.numpy(), sample_rate=16000)
+
+
+class HiggsAudio(HuggingFacePipelineNode):
+    """
+    Generates expressive speech and audio from text using Boson AI's Higgs Audio v2.
+    tts, audio, speech, expressive, voice-cloning, huggingface, higgs
+
+    Use cases:
+    - Produce natural, expressive narration from plain text
+    - Generate multi-speaker dialogue with [SPEAKER0]/[SPEAKER1] tags
+    - Control delivery via a scene description (e.g. "recorded in a quiet room")
+    - Create high-quality 24 kHz voiceovers for videos and podcasts
+
+    **Note:** Higgs Audio v2 is a ~3B model; generation is text-conditioned and
+    selects a suitable voice automatically unless guided by the system prompt.
+    """
+
+    model: HFTextToSpeech = Field(
+        default=HFTextToSpeech(
+            repo_id="bosonai/higgs-audio-v2-generation-3B-base",
+        ),
+        title="Model",
+        description="The Higgs Audio generation model.",
+    )
+    prompt: str = Field(
+        default="",
+        title="Text Prompt",
+        description="The text to convert to speech. Use [SPEAKER0]/[SPEAKER1] tags for multi-speaker dialogue.",
+    )
+    system_prompt: str = Field(
+        default="Generate audio following instruction.",
+        title="System Prompt",
+        description="High-level instruction that steers voice and delivery.",
+    )
+    scene: str = Field(
+        default="Audio is recorded from a quiet room.",
+        title="Scene",
+        description="Optional scene/acoustic description. Leave empty to omit.",
+    )
+    max_new_tokens: int = Field(
+        default=1024,
+        ge=1,
+        le=4096,
+        title="Max New Tokens",
+        description="Maximum number of audio tokens to generate.",
+    )
+
+    _pipeline: Any = None
+    _processor: Any = None
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Higgs Audio"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "prompt"]
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFTextToSpeech(
+                repo_id="bosonai/higgs-audio-v2-generation-3B-base",
+                allow_patterns=["*.safetensors", "*.json", "*.txt"],
+            ),
+        ]
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id
+
+    async def preload_model(self, context: ProcessingContext):
+        from transformers import AutoProcessor, HiggsAudioV2ForConditionalGeneration
+        from nodetool.nodes.huggingface.huggingface_pipeline import (
+            select_inference_dtype,
+        )
+
+        if not self.model.repo_id:
+            raise ValueError("Model ID is required")
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=HiggsAudioV2ForConditionalGeneration,
+            model_id=self.get_model_id(),
+            torch_dtype=select_inference_dtype(),
+        )
+        self._processor = await self.load_model(
+            context=context,
+            model_class=AutoProcessor,
+            model_id=self.get_model_id(),
+        )
+
+    async def process(self, context: ProcessingContext) -> AudioRef:
+        import os
+        import tempfile
+
+        import torch
+
+        assert self._pipeline is not None, "Model not initialized"
+        assert self._processor is not None, "Processor not initialized"
+
+        conversation: list[dict] = [
+            {"role": "system", "content": [{"type": "text", "text": self.system_prompt}]},
+        ]
+        if self.scene.strip():
+            conversation.append(
+                {"role": "scene", "content": [{"type": "text", "text": self.scene}]}
+            )
+        conversation.append(
+            {"role": "user", "content": [{"type": "text", "text": self.prompt}]}
+        )
+
+        inputs = self._processor.apply_chat_template(
+            conversation,
+            add_generation_prompt=True,
+            tokenize=True,
+            return_dict=True,
+            sampling_rate=24000,
+            return_tensors="pt",
+        ).to(self._pipeline.device)
+
+        def _generate():
+            with torch.inference_mode():
+                return self._pipeline.generate(
+                    **inputs,
+                    max_new_tokens=self.max_new_tokens,
+                    do_sample=False,
+                )
+
+        outputs = await asyncio.to_thread(_generate)
+        decoded = self._processor.batch_decode(outputs)
+
+        # save_audio is the officially supported way to materialize the decoded
+        # waveform; round-trip through a temp WAV to build the AudioRef.
+        tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+        tmp.close()
+        try:
+            await asyncio.to_thread(self._processor.save_audio, decoded, tmp.name)
+            with open(tmp.name, "rb") as f:
+                data = f.read()
+        finally:
+            os.unlink(tmp.name)
+
+        return await context.audio_from_bytes(data)

@@ -1874,12 +1874,18 @@ class Flux2(HuggingFacePipelineNode):
     async def preload_model(self, context: ProcessingContext):
         from diffusers.pipelines.flux2.pipeline_flux2 import Flux2Pipeline
 
+        if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
+            raise ValueError(
+                f"Model {self.get_model_id()} must be downloaded first from the recommended models"
+            )
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=Flux2Pipeline,
             model_id=self.get_model_id(),
             torch_dtype=available_torch_dtype(),
             device="cpu",
+            local_files_only=True,
         )
         maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
 
@@ -1988,12 +1994,18 @@ class Flux2Klein(HuggingFacePipelineNode):
     async def preload_model(self, context: ProcessingContext):
         from diffusers.pipelines.flux2.pipeline_flux2_klein import Flux2KleinPipeline
 
+        if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
+            raise ValueError(
+                f"Model {self.get_model_id()} must be downloaded first from the recommended models"
+            )
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=Flux2KleinPipeline,
             model_id=self.get_model_id(),
             torch_dtype=available_torch_dtype(),
             device="cpu",
+            local_files_only=True,
         )
         maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
 
@@ -2108,12 +2120,18 @@ class GlmImage(HuggingFacePipelineNode):
     async def preload_model(self, context: ProcessingContext):
         from diffusers.pipelines.glm_image.pipeline_glm_image import GlmImagePipeline
 
+        if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
+            raise ValueError(
+                f"Model {self.get_model_id()} must be downloaded first from the recommended models"
+            )
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=GlmImagePipeline,
             model_id=self.get_model_id(),
             torch_dtype=available_torch_dtype(),
             device="cpu",
+            local_files_only=True,
         )
         maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
 
@@ -2234,12 +2252,18 @@ class QwenImageLayered(HuggingFacePipelineNode):
             QwenImageLayeredPipeline,
         )
 
+        if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
+            raise ValueError(
+                f"Model {self.get_model_id()} must be downloaded first from the recommended models"
+            )
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=QwenImageLayeredPipeline,
             model_id=self.get_model_id(),
             torch_dtype=available_torch_dtype(),
             device="cpu",
+            local_files_only=True,
         )
         maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
 
@@ -2366,12 +2390,18 @@ class Kandinsky5Image(HuggingFacePipelineNode):
             Kandinsky5T2IPipeline,
         )
 
+        if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
+            raise ValueError(
+                f"Model {self.get_model_id()} must be downloaded first from the recommended models"
+            )
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=Kandinsky5T2IPipeline,
             model_id=self.get_model_id(),
             torch_dtype=available_torch_dtype(),
             device="cpu",
+            local_files_only=True,
         )
         maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
 
