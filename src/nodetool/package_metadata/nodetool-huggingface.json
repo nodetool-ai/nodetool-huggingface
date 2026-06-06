@@ -13257,6 +13257,923 @@
     {
       "basic_fields": [
         "model",
+        "src_audio",
+        "reference_audio",
+        "audio_cover_strength"
+      ],
+      "body": "content_card",
+      "description": "Re-records source audio in a new timbre using ACE-Step 1.5 cover mode.\n    audio, music, cover, timbre-transfer, voice-conversion, ace-step\n\n    Use cases:\n    - Re-sing an existing song with a different voice or instrument timbre\n    - Transfer the style of a reference recording onto source audio\n    - Create covers that keep the melody but change the sound",
+      "input_fields": [
+        "prompt",
+        "src_audio",
+        "reference_audio"
+      ],
+      "namespace": "huggingface.text_to_audio",
+      "node_type": "huggingface.text_to_audio.AceStepCover",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+            "type": "hf.text_to_audio",
+            "variant": null
+          },
+          "description": "The ACE-Step model to use for generation.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_audio"
+          }
+        },
+        {
+          "default": "A beautiful piano piece with soft melodies and gentle rhythm",
+          "description": "Describe the music style, instruments, mood, and tempo.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Lyrics for the music. Use structure tags like [verse], [chorus], [bridge]. Leave empty for instrumental.",
+          "name": "lyrics",
+          "title": "Lyrics",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "en",
+          "description": "Language code for the lyrics (e.g. 'en', 'zh', 'ja').",
+          "name": "vocal_language",
+          "title": "Vocal Language",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Denoising steps. The turbo model is designed for 8 steps.",
+          "max": 200.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 7.0,
+          "description": "Guidance scale for CFG. Ignored by guidance-distilled turbo checkpoints.",
+          "max": 15.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "Source audio (stereo, 48 kHz) providing the musical content to cover.",
+          "name": "src_audio",
+          "title": "Source Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "Reference audio whose timbre/style is transferred onto the source.",
+          "name": "reference_audio",
+          "title": "Reference Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "Strength of the cover blending (0.0 keeps the source, 1.0 fully re-records).",
+          "max": 1.0,
+          "min": 0.0,
+          "name": "audio_cover_strength",
+          "title": "Cover Strength",
+          "type": {
+            "type": "float"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "name": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "repo_id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-base",
+          "name": "ACE-Step/acestep-v15-base",
+          "repo_id": "ACE-Step/acestep-v15-base",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-sft",
+          "name": "ACE-Step/acestep-v15-sft",
+          "repo_id": "ACE-Step/acestep-v15-sft",
+          "type": "hf.text_to_audio"
+        }
+      ],
+      "title": "ACE-Step Cover"
+    },
+    {
+      "basic_fields": [
+        "model",
+        "src_audio",
+        "repainting_start",
+        "repainting_end"
+      ],
+      "body": "content_card",
+      "description": "Regenerates a section of existing audio while keeping the rest with ACE-Step 1.5.\n    audio, music, repaint, inpainting, edit, ace-step\n\n    Use cases:\n    - Replace a verse or chorus while preserving the surrounding song\n    - Fix or rework a specific time range of a track\n    - Generate variations of one section without re-rendering the whole piece",
+      "input_fields": [
+        "prompt",
+        "src_audio"
+      ],
+      "namespace": "huggingface.text_to_audio",
+      "node_type": "huggingface.text_to_audio.AceStepRepaint",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+            "type": "hf.text_to_audio",
+            "variant": null
+          },
+          "description": "The ACE-Step model to use for generation.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_audio"
+          }
+        },
+        {
+          "default": "A beautiful piano piece with soft melodies and gentle rhythm",
+          "description": "Describe the music style, instruments, mood, and tempo.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Lyrics for the music. Use structure tags like [verse], [chorus], [bridge]. Leave empty for instrumental.",
+          "name": "lyrics",
+          "title": "Lyrics",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "en",
+          "description": "Language code for the lyrics (e.g. 'en', 'zh', 'ja').",
+          "name": "vocal_language",
+          "title": "Vocal Language",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Denoising steps. The turbo model is designed for 8 steps.",
+          "max": 200.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 7.0,
+          "description": "Guidance scale for CFG. Ignored by guidance-distilled turbo checkpoints.",
+          "max": 15.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "Audio (stereo, 48 kHz) to repaint. The region outside the range is kept.",
+          "name": "src_audio",
+          "title": "Source Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": 0.0,
+          "description": "Start time in seconds of the region to regenerate.",
+          "min": 0.0,
+          "name": "repainting_start",
+          "title": "Repaint Start",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1.0,
+          "description": "End time in seconds of the region to regenerate. Use -1 for until the end.",
+          "min": -1.0,
+          "name": "repainting_end",
+          "title": "Repaint End",
+          "type": {
+            "type": "float"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "name": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "repo_id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-base",
+          "name": "ACE-Step/acestep-v15-base",
+          "repo_id": "ACE-Step/acestep-v15-base",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-sft",
+          "name": "ACE-Step/acestep-v15-sft",
+          "repo_id": "ACE-Step/acestep-v15-sft",
+          "type": "hf.text_to_audio"
+        }
+      ],
+      "title": "ACE-Step Repaint"
+    },
+    {
+      "basic_fields": [
+        "model",
+        "src_audio",
+        "track_name"
+      ],
+      "body": "content_card",
+      "description": "Extracts a single track (e.g. vocals, drums) from audio with ACE-Step 1.5.\n    audio, music, extract, stem-separation, vocals, drums, ace-step\n\n    Use cases:\n    - Isolate vocals, drums, bass, or other stems from a mix\n    - Build acapellas or instrumentals from a full track\n    - Prepare stems for remixing and sampling",
+      "input_fields": [
+        "prompt",
+        "src_audio"
+      ],
+      "namespace": "huggingface.text_to_audio",
+      "node_type": "huggingface.text_to_audio.AceStepExtract",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+            "type": "hf.text_to_audio",
+            "variant": null
+          },
+          "description": "The ACE-Step model to use for generation.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_audio"
+          }
+        },
+        {
+          "default": "A beautiful piano piece with soft melodies and gentle rhythm",
+          "description": "Describe the music style, instruments, mood, and tempo.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Lyrics for the music. Use structure tags like [verse], [chorus], [bridge]. Leave empty for instrumental.",
+          "name": "lyrics",
+          "title": "Lyrics",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "en",
+          "description": "Language code for the lyrics (e.g. 'en', 'zh', 'ja').",
+          "name": "vocal_language",
+          "title": "Vocal Language",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Denoising steps. The turbo model is designed for 8 steps.",
+          "max": 200.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 7.0,
+          "description": "Guidance scale for CFG. Ignored by guidance-distilled turbo checkpoints.",
+          "max": 15.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "Audio (stereo, 48 kHz) to extract a track from.",
+          "name": "src_audio",
+          "title": "Source Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": "vocals",
+          "description": "Track to extract (e.g. 'vocals', 'drums', 'bass', 'guitar', 'piano').",
+          "name": "track_name",
+          "title": "Track Name",
+          "type": {
+            "type": "str"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "name": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "repo_id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-base",
+          "name": "ACE-Step/acestep-v15-base",
+          "repo_id": "ACE-Step/acestep-v15-base",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-sft",
+          "name": "ACE-Step/acestep-v15-sft",
+          "repo_id": "ACE-Step/acestep-v15-sft",
+          "type": "hf.text_to_audio"
+        }
+      ],
+      "title": "ACE-Step Extract"
+    },
+    {
+      "basic_fields": [
+        "model",
+        "src_audio",
+        "track_name",
+        "repainting_start"
+      ],
+      "body": "content_card",
+      "description": "Generates a specific track conditioned on existing audio with ACE-Step 1.5 lego mode.\n    audio, music, lego, accompaniment, stem-generation, ace-step\n\n    Use cases:\n    - Add a new instrument track that fits an existing arrangement\n    - Generate a drum or bass line for a given musical context\n    - Regenerate a single track within a chosen time range",
+      "input_fields": [
+        "prompt",
+        "src_audio"
+      ],
+      "namespace": "huggingface.text_to_audio",
+      "node_type": "huggingface.text_to_audio.AceStepLego",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+            "type": "hf.text_to_audio",
+            "variant": null
+          },
+          "description": "The ACE-Step model to use for generation.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_audio"
+          }
+        },
+        {
+          "default": "A beautiful piano piece with soft melodies and gentle rhythm",
+          "description": "Describe the music style, instruments, mood, and tempo.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Lyrics for the music. Use structure tags like [verse], [chorus], [bridge]. Leave empty for instrumental.",
+          "name": "lyrics",
+          "title": "Lyrics",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "en",
+          "description": "Language code for the lyrics (e.g. 'en', 'zh', 'ja').",
+          "name": "vocal_language",
+          "title": "Vocal Language",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Denoising steps. The turbo model is designed for 8 steps.",
+          "max": 200.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 7.0,
+          "description": "Guidance scale for CFG. Ignored by guidance-distilled turbo checkpoints.",
+          "max": 15.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "Audio (stereo, 48 kHz) providing the musical context.",
+          "name": "src_audio",
+          "title": "Source Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": "drums",
+          "description": "Track to generate (e.g. 'vocals', 'drums', 'bass', 'guitar', 'piano').",
+          "name": "track_name",
+          "title": "Track Name",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 0.0,
+          "description": "Start time in seconds of the region to generate.",
+          "min": 0.0,
+          "name": "repainting_start",
+          "title": "Region Start",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1.0,
+          "description": "End time in seconds of the region to generate. Use -1 for until the end.",
+          "min": -1.0,
+          "name": "repainting_end",
+          "title": "Region End",
+          "type": {
+            "type": "float"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "name": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "repo_id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-base",
+          "name": "ACE-Step/acestep-v15-base",
+          "repo_id": "ACE-Step/acestep-v15-base",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-sft",
+          "name": "ACE-Step/acestep-v15-sft",
+          "repo_id": "ACE-Step/acestep-v15-sft",
+          "type": "hf.text_to_audio"
+        }
+      ],
+      "title": "ACE-Step Lego"
+    },
+    {
+      "basic_fields": [
+        "model",
+        "src_audio",
+        "complete_track_classes"
+      ],
+      "body": "content_card",
+      "description": "Completes input audio with additional tracks using ACE-Step 1.5.\n    audio, music, complete, arrangement, accompaniment, ace-step\n\n    Use cases:\n    - Flesh out a sparse demo with extra instrument tracks\n    - Add accompaniment around a lead vocal or melody\n    - Turn a single stem into a fuller arrangement",
+      "input_fields": [
+        "prompt",
+        "src_audio"
+      ],
+      "namespace": "huggingface.text_to_audio",
+      "node_type": "huggingface.text_to_audio.AceStepComplete",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+            "type": "hf.text_to_audio",
+            "variant": null
+          },
+          "description": "The ACE-Step model to use for generation.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_audio"
+          }
+        },
+        {
+          "default": "A beautiful piano piece with soft melodies and gentle rhythm",
+          "description": "Describe the music style, instruments, mood, and tempo.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Lyrics for the music. Use structure tags like [verse], [chorus], [bridge]. Leave empty for instrumental.",
+          "name": "lyrics",
+          "title": "Lyrics",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "en",
+          "description": "Language code for the lyrics (e.g. 'en', 'zh', 'ja').",
+          "name": "vocal_language",
+          "title": "Vocal Language",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Denoising steps. The turbo model is designed for 8 steps.",
+          "max": 200.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 7.0,
+          "description": "Guidance scale for CFG. Ignored by guidance-distilled turbo checkpoints.",
+          "max": 15.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "Audio (stereo, 48 kHz) to complete with additional tracks.",
+          "name": "src_audio",
+          "title": "Source Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": [],
+          "description": "Track classes to add (e.g. ['drums', 'bass', 'guitar']). Empty lets the model decide.",
+          "name": "complete_track_classes",
+          "title": "Track Classes",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "str"
+              }
+            ]
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "name": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "repo_id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-base",
+          "name": "ACE-Step/acestep-v15-base",
+          "repo_id": "ACE-Step/acestep-v15-base",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-sft",
+          "name": "ACE-Step/acestep-v15-sft",
+          "repo_id": "ACE-Step/acestep-v15-sft",
+          "type": "hf.text_to_audio"
+        }
+      ],
+      "title": "ACE-Step Complete"
+    },
+    {
+      "basic_fields": [
+        "model",
         "prompt"
       ],
       "body": "content_card",
