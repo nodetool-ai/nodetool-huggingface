@@ -1291,7 +1291,7 @@ class BriaFibo(HuggingFacePipelineNode):
         return "briaai/FIBO"
 
     async def preload_model(self, context: ProcessingContext):
-        from diffusers import BriaFiboPipeline  # type: ignore
+        from diffusers import BriaFiboPipeline
 
         torch_dtype = available_torch_dtype()
         # FIBO requires trust_remote_code as it ships a custom pipeline.
@@ -2666,6 +2666,8 @@ class Kandinsky5Image(HuggingFacePipelineNode):
             or getattr(output, "image", None)
             or getattr(output, "frames", None)
         )
+        if not images:
+            raise ValueError("Kandinsky 5.0 pipeline returned no images")
         image = images[0]
         if isinstance(image, (list, tuple)):
             image = image[0]
