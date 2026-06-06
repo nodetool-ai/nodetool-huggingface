@@ -745,6 +745,9 @@ class AceStepBaseNode(HuggingFacePipelineNode):
     ) -> "torch.Tensor":
         """Decode an AudioRef into a stereo ``[channels, samples]`` tensor at the
         pipeline sample rate (48 kHz for the released checkpoints)."""
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
         import torch
 
         sample_rate = self._pipeline.sample_rate
