@@ -53,6 +53,55 @@ from nodetool.ml.core.model_manager import ModelManager
 from nodetool.workflows.processing_context import ProcessingContext
 
 
+# diffusers `_class_name` (from a repo's model_index.json) -> (module, class) for
+# full-repo text-to-image pipelines we load explicitly. AutoPipelineForText2Image
+# does not cover all of these (e.g. Kandinsky5T2I, QwenImageLayered).
+_EXPLICIT_T2I_PIPELINES: dict[str, tuple[str, str]] = {
+    "Flux2Pipeline": ("diffusers.pipelines.flux2.pipeline_flux2", "Flux2Pipeline"),
+    "Flux2KleinPipeline": (
+        "diffusers.pipelines.flux2.pipeline_flux2_klein",
+        "Flux2KleinPipeline",
+    ),
+    "GlmImagePipeline": (
+        "diffusers.pipelines.glm_image.pipeline_glm_image",
+        "GlmImagePipeline",
+    ),
+    "Kandinsky5T2IPipeline": (
+        "diffusers.pipelines.kandinsky5.pipeline_kandinsky_t2i",
+        "Kandinsky5T2IPipeline",
+    ),
+    "QwenImageLayeredPipeline": (
+        "diffusers.pipelines.qwenimage.pipeline_qwenimage_layered",
+        "QwenImageLayeredPipeline",
+    ),
+}
+
+
+async def _resolve_full_repo_pipeline_class(model_id: str):
+    """Resolve an explicit diffusers pipeline class for a cached full-repo model.
+
+    Reads the repo's ``model_index.json`` ``_class_name`` and maps it to a known
+    pipeline class. Returns ``None`` to fall back to ``AutoPipelineForText2Image``.
+    """
+    import importlib
+    import json as _json
+
+    try:
+        path = await HF_FAST_CACHE.resolve(model_id, "model_index.json")
+        if not isinstance(path, str):
+            return None
+        with open(path) as f:
+            class_name = _json.load(f).get("_class_name")
+    except Exception:
+        return None
+
+    entry = _EXPLICIT_T2I_PIPELINES.get(class_name or "")
+    if entry is None:
+        return None
+    module_name, cls_name = entry
+    return getattr(importlib.import_module(module_name), cls_name)
+
+
 async def load_text_to_image_pipeline(
     *,
     context: ProcessingContext,
@@ -264,14 +313,24 @@ async def load_text_to_image_pipeline(
                     f"Unsupported single-file model type: {model_info.pipeline_tag}"
                 )
     else:
-        from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
-
         torch = _get_torch()
-        pipeline = AutoPipelineForText2Image.from_pretrained(
-            model_id,
-            torch_dtype=torch.float16 if _is_cuda_available() else torch.float32,
-            variant=await _detect_cached_variant(model_id),
-        )
+        # Newer DiT pipelines (Flux.2, GLM-Image, Kandinsky 5, Qwen-Image-Layered)
+        # aren't all covered by AutoPipelineForText2Image. Route them explicitly by
+        # the diffusers `_class_name` recorded in the repo's model_index.json.
+        explicit_cls = await _resolve_full_repo_pipeline_class(model_id)
+        if explicit_cls is not None:
+            pipeline = explicit_cls.from_pretrained(
+                model_id,
+                torch_dtype=torch.bfloat16 if _is_cuda_available() else torch.float32,
+            )
+        else:
+            from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
+
+            pipeline = AutoPipelineForText2Image.from_pretrained(
+                model_id,
+                torch_dtype=torch.float16 if _is_cuda_available() else torch.float32,
+                variant=await _detect_cached_variant(model_id),
+            )
 
     if not use_cpu_offload:
         target_device = _resolve_hf_device(context, device or context.device)

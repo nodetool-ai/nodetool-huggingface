@@ -4,23 +4,23 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nodetool-huggingface"
-version = "0.7.0"
+version = "0.7.1"
 description = "HuggingFace nodes for Nodetool"
 readme = "README.md"
 authors = [{ name = "Matthias Georgi", email = "matti.georgi@gmail.com" }]
 requires-python = ">=3.11"
 
 dependencies = [
-    "nodetool-core==0.7.0-rc.8",
+    "nodetool-core>=0.7.1",
     "torch==2.9.0",
     "torchsde",
     "torchvision",
     "torchaudio",
     "hf_xet",
     "kokoro>=0.9.4",
-    "diffusers[torch]>=0.35.1,<1",
+    "diffusers[torch]>=0.38.0,<1",
     "llama-index-embeddings-huggingface>=0.6.1",
-    "transformers>=5.6.0,<6",
+    "transformers>=5.10.1,<6",
     "mistral-common[image]>=1.10.0,<2",
     "huggingface_hub>=1.11.0,<2",
     "accelerate>=1.13.0,<2",
@@ -76,10 +76,6 @@ trellis2 = []
 # Convenience meta-groups (PyPI-installable extras only)
 all-3d-pypi = ["nodetool-huggingface[hunyuan3d,triposg]"]
 all-3d = ["nodetool-huggingface[hunyuan3d,triposg,sf3d,triposr,trellis2]"]
-
-[tool.uv.sources]
-nodetool-core = { path = "../nodetool-core", editable = true }
-
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nodetool", "src/RealESRGAN", "src/triposg"]

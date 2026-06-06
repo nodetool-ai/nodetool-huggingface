@@ -37,6 +37,8 @@ from nodetool.providers.types import ImageBytes, TextToImageParams, ImageToImage
 from nodetool.integrations.huggingface.huggingface_models import (
     get_image_to_image_models_from_hf_cache,
     get_text_to_image_models_from_hf_cache,
+    get_text_to_video_models_from_hf_cache,
+    get_text_to_audio_models_from_hf_cache,
     get_hf_language_models_from_hf_cache,
 )
 from nodetool.huggingface.image_to_image_pipelines import (
@@ -56,6 +58,8 @@ from nodetool.huggingface.video_utils import video_from_frames
 from nodetool.types.model import UnifiedModel
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.metadata.types import (
+    AudioModel,
+    AudioRef,
     ImageModel,
     Provider,
     TTSModel,
@@ -65,6 +69,7 @@ from nodetool.metadata.types import (
     MessageImageContent,
     HFTextToSpeech,
     LanguageModel,
+    VideoModel,
     VideoRef,
 )
 from nodetool.workflows.types import Chunk, JobUpdate, NodeProgress
@@ -146,21 +151,31 @@ class HuggingFaceLocalProvider(BaseProvider):
         # Progress callback
         num_steps = params.num_inference_steps or 50
 
-        # Generate the image off the event loop
+        # Generate the image off the event loop. Filter kwargs to those the
+        # specific pipeline accepts: newer DiT pipelines (Flux.2, GLM-Image, ...)
+        # don't take `negative_prompt`, so passing it unconditionally would error.
         def _run_pipeline_sync():
-            return pipeline(
-                prompt=params.prompt,
-                negative_prompt=params.negative_prompt or "",
-                num_inference_steps=num_steps,
-                guidance_scale=params.guidance_scale or 7.5,
-                width=params.width or 512,
-                height=params.height or 512,
-                generator=generator,
-                callback_on_step_end=pipeline_progress_callback(
+            import inspect
+
+            candidate = {
+                "prompt": params.prompt,
+                "negative_prompt": params.negative_prompt or "",
+                "num_inference_steps": num_steps,
+                "guidance_scale": params.guidance_scale or 7.5,
+                "width": params.width or 512,
+                "height": params.height or 512,
+                "generator": generator,
+                "callback_on_step_end": pipeline_progress_callback(
                     node_id=node_id, total_steps=num_steps, context=context
                 ),
-                callback_on_step_end_tensor_inputs=["latents"],
-            )
+                "callback_on_step_end_tensor_inputs": ["latents"],
+            }
+            try:
+                accepted = set(inspect.signature(pipeline.__call__).parameters)
+                call_kwargs = {k: v for k, v in candidate.items() if k in accepted}
+            except (TypeError, ValueError):
+                call_kwargs = candidate
+            return pipeline(**call_kwargs)
 
         output = await asyncio.to_thread(_run_pipeline_sync)
 
@@ -367,6 +382,72 @@ class HuggingFaceLocalProvider(BaseProvider):
                 chunk = audio_array[i : i + chunk_size]
                 yield chunk
 
+    async def text_to_audio(
+        self,
+        prompt: str,
+        model: str,
+        lyrics: str = "",
+        audio_duration: float = 30.0,
+        guidance_scale: float = 7.0,
+        num_inference_steps: int = 8,
+        seed: int | None = None,
+        timeout_s: int | None = None,
+        context: Any = None,
+        node_id: str | None = None,
+        **kwargs: Any,
+    ) -> AudioRef:
+        """Generate music/audio from a text prompt using local HF models.
+
+        Supports ACE-Step music generation (ACE-Step/acestep-* repos), reusing the
+        AceStep node. Returns an AudioRef (the worker dispatch converts it to bytes).
+
+        Args:
+            prompt: Description of the music (style, instruments, mood, tempo)
+            model: Model repository ID (e.g. "ACE-Step/acestep-v15-xl-turbo-diffusers")
+            lyrics: Optional structured lyrics with [verse]/[chorus] tags
+            audio_duration: Duration of the generated audio in seconds
+            guidance_scale: Classifier-free guidance scale (ignored by turbo checkpoints)
+            num_inference_steps: Number of denoising steps
+            seed: Optional random seed
+            context: Processing context (required)
+            node_id: Optional node id for progress reporting
+            **kwargs: Additional arguments
+
+        Returns:
+            bytes: Encoded WAV audio.
+        """
+        from nodetool.metadata.types import HFTextToAudio
+        from nodetool.nodes.huggingface.text_to_audio import AceStep, LongCatAudioDiT
+
+        if context is None:
+            raise ValueError(
+                "ProcessingContext is required for HuggingFace text-to-audio generation"
+            )
+
+        node_seed = seed if seed is not None else -1
+        class_name = await self._read_model_index_class_name(model)
+        if class_name == "LongCatAudioDiTPipeline":
+            node: Any = LongCatAudioDiT(
+                model=HFTextToAudio(repo_id=model),
+                prompt=prompt,
+                audio_duration=audio_duration,
+                guidance_scale=guidance_scale,
+                num_inference_steps=num_inference_steps,
+                seed=node_seed,
+            )
+        else:
+            node = AceStep(
+                model=HFTextToAudio(repo_id=model),
+                prompt=prompt,
+                lyrics=lyrics,
+                audio_duration=audio_duration,
+                guidance_scale=guidance_scale,
+                num_inference_steps=num_inference_steps,
+                seed=node_seed,
+            )
+        await node.preload_model(context)
+        return await node.process(context)
+
     async def automatic_speech_recognition(
         self,
         audio: bytes,
@@ -461,7 +542,9 @@ class HuggingFaceLocalProvider(BaseProvider):
         samples = samples / (2**15)
 
         # Build pipeline kwargs
-        return_ts = "word" if word_timestamps else kwargs.get("return_timestamps", False)
+        return_ts = (
+            "word" if word_timestamps else kwargs.get("return_timestamps", False)
+        )
         pipeline_kwargs: dict[str, Any] = {
             "return_timestamps": return_ts,
             "chunk_length_s": kwargs.get("chunk_length_s", 30.0),
@@ -502,10 +585,12 @@ class HuggingFaceLocalProvider(BaseProvider):
         if isinstance(result, dict):
             for chunk in result.get("chunks", []):
                 ts = chunk.get("timestamp", (0, 0))
-                chunks.append({
-                    "timestamp": [ts[0] or 0, ts[1] or 0],
-                    "text": chunk.get("text", ""),
-                })
+                chunks.append(
+                    {
+                        "timestamp": [ts[0] or 0, ts[1] or 0],
+                        "text": chunk.get("text", ""),
+                    }
+                )
 
         return {"text": text, "chunks": chunks}
 
@@ -570,6 +655,25 @@ class HuggingFaceLocalProvider(BaseProvider):
             raise ValueError(
                 "ProcessingContext is required for HuggingFace text-to-video generation"
             )
+
+        # Newer text-to-video pipelines (LTX-2, Kandinsky 5) have dedicated nodes;
+        # reuse them so the provider matches node behavior (MPS handling, progress,
+        # output conversion). The Wan path below stays the default for everything else.
+        node_video = await self._maybe_text_to_video_via_node(
+            model=model,
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            num_frames=num_frames,
+            guidance_scale=guidance_scale,
+            num_inference_steps=num_inference_steps,
+            height=height,
+            width=width,
+            fps=fps,
+            seed=seed,
+            context=context,
+        )
+        if node_video is not None:
+            return node_video
 
         # Get or load the pipeline
         pipeline = ModelManager.get_model(model)
@@ -666,6 +770,65 @@ class HuggingFaceLocalProvider(BaseProvider):
 
         return video_ref
 
+    async def _read_model_index_class_name(self, model: str) -> str | None:
+        """Read the diffusers ``_class_name`` from a cached repo's model_index.json."""
+        from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
+
+        try:
+            path = await HF_FAST_CACHE.resolve(model, "model_index.json")
+            if not isinstance(path, str):
+                return None
+            with open(path) as f:
+                return json.load(f).get("_class_name")
+        except Exception:
+            return None
+
+    async def _maybe_text_to_video_via_node(
+        self,
+        *,
+        model: str,
+        prompt: str,
+        negative_prompt: str | None,
+        num_frames: int,
+        guidance_scale: float,
+        num_inference_steps: int,
+        height: int,
+        width: int,
+        fps: int,
+        seed: int | None,
+        context: ProcessingContext,
+    ) -> VideoRef | None:
+        """Generate via the LTX-2 / Kandinsky 5 video nodes when the model matches.
+
+        Returns a VideoRef, or None when the model is not one of these (so the
+        caller falls back to the default Wan path).
+        """
+        class_name = await self._read_model_index_class_name(model)
+        if class_name not in ("LTX2Pipeline", "Kandinsky5T2VPipeline"):
+            return None
+
+        from nodetool.metadata.types import HFTextToVideo
+        from nodetool.nodes.huggingface.text_to_video import LTX2, Kandinsky5Video
+
+        common: dict[str, Any] = dict(
+            model=HFTextToVideo(repo_id=model),
+            prompt=prompt,
+            negative_prompt=negative_prompt or "",
+            num_frames=num_frames,
+            guidance_scale=guidance_scale,
+            num_inference_steps=num_inference_steps,
+            height=height,
+            width=width,
+            seed=seed if seed is not None else -1,
+        )
+        if class_name == "LTX2Pipeline":
+            node: Any = LTX2(frame_rate=float(fps), **common)
+        else:
+            node = Kandinsky5Video(fps=fps, **common)
+
+        await node.preload_model(context)
+        return await node.process(context)
+
     async def get_available_language_models(self) -> List[LanguageModel]:
         """Get available HuggingFace language models.
 
@@ -690,6 +853,20 @@ class HuggingFaceLocalProvider(BaseProvider):
 
         # Get single-file models
         return text_to_image_models + image_to_image_models
+
+    async def get_available_video_models(self) -> List[VideoModel]:
+        """Get available HuggingFace text-to-video models from the local cache.
+
+        Surfaces Wan, LTX-2, CogVideoX, Kandinsky 5 and similar repos.
+        """
+        return await get_text_to_video_models_from_hf_cache()
+
+    async def get_available_audio_models(self) -> List[AudioModel]:
+        """Get available HuggingFace text-to-audio (music) models from the local cache.
+
+        Surfaces ACE-Step and other audio-generation repos.
+        """
+        return await get_text_to_audio_models_from_hf_cache()
 
     async def get_available_tts_models(self) -> List[TTSModel]:
         """Get available HuggingFace TTS models from recommended models.

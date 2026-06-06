@@ -261,27 +261,27 @@ class ZeroShotObjectDetection(HuggingFacePipelineNode):
         return [
             HFZeroShotObjectDetection(
                 repo_id="google/owlvit-base-patch32",
-                allow_patterns=["README.md", "*.bin", "*.json", "**/*.json", "txt"],
+                allow_patterns=["README.md", "*.bin", "*.json", "**/*.json", "*.txt"],
             ),
             HFZeroShotObjectDetection(
                 repo_id="google/owlvit-large-patch14",
-                allow_patterns=["README.md", "*.bin", "*.json", "**/*.json", "txt"],
+                allow_patterns=["README.md", "*.bin", "*.json", "**/*.json", "*.txt"],
             ),
             HFZeroShotObjectDetection(
                 repo_id="google/owlvit-base-patch16",
-                allow_patterns=["README.md", "*.bin", "*.json", "**/*.json", "txt"],
+                allow_patterns=["README.md", "*.bin", "*.json", "**/*.json", "*.txt"],
             ),
             HFZeroShotObjectDetection(
                 repo_id="google/owlv2-base-patch16",
-                allow_patterns=["README.md", "*.bin", "*.json", "**/*.json", "txt"],
+                allow_patterns=["README.md", "*.bin", "*.json", "**/*.json", "*.txt"],
             ),
             HFZeroShotObjectDetection(
                 repo_id="google/owlv2-base-patch16-ensemble",
-                allow_patterns=["README.md", "*.bin", "*.json", "**/*.json", "txt"],
+                allow_patterns=["README.md", "*.bin", "*.json", "**/*.json", "*.txt"],
             ),
             HFZeroShotObjectDetection(
                 repo_id="IDEA-Research/grounding-dino-tiny",
-                allow_patterns=["README.md", "*.bin", "*.json", "**/*.json", "txt"],
+                allow_patterns=["README.md", "*.bin", "*.json", "**/*.json", "*.txt"],
             ),
         ]
 

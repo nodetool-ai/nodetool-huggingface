@@ -529,6 +529,34 @@ def available_torch_dtype() -> "torch.dtype":
     return torch.float32
 
 
+def is_mps_device() -> bool:
+    """Return True when the Apple Metal (MPS) backend is available."""
+    import torch
+
+    return bool(
+        getattr(torch.backends, "mps", None) and torch.backends.mps.is_available()
+    )
+
+
+def maybe_enable_cpu_offload(pipeline: "Any", enabled: bool) -> bool:
+    """Apply diffusers model CPU offload, except on MPS.
+
+    On Apple Silicon the offloaded weights share the same unified memory pool as
+    the MPS device, so offloading frees nothing and only adds transfer overhead.
+    There we skip it and let the pipeline load fully onto MPS via
+    ``move_to_device`` instead.
+
+    Returns True only if offload was actually applied, so callers know whether
+    they still need to move the pipeline onto the device themselves.
+    """
+    if pipeline is None or not enabled:
+        return False
+    if is_mps_device():
+        return False
+    pipeline.enable_model_cpu_offload()
+    return True
+
+
 class StableDiffusionBaseNode(HuggingFacePipelineNode):
     def get_torch_dtype(self) -> "torch.dtype":
         return available_torch_dtype()

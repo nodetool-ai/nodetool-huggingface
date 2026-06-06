@@ -47,6 +47,21 @@ class TokenClassification(HuggingFacePipelineNode):
         description="How to combine token predictions into entities: 'simple' merges adjacent tokens; 'first'/'average'/'max' control subword handling.",
     )
 
+    @classmethod
+    def get_recommended_models(cls) -> list[HFTokenClassification]:
+        return [
+            HFTokenClassification(
+                repo_id="dbmdz/bert-large-cased-finetuned-conll03-english",
+                allow_patterns=["*.bin", "*.json", "**/*.json", "*.safetensors"],
+            ),
+            # OpenAI privacy filter (PII token tagging). "original/" duplicates
+            # the root model weights, so skip it.
+            HFTokenClassification(
+                repo_id="openai/privacy-filter",
+                ignore_patterns=["original/*"],
+            ),
+        ]
+
     async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context, "token-classification", self.model.repo_id

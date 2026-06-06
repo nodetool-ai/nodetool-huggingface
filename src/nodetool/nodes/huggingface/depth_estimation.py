@@ -47,7 +47,7 @@ class DepthEstimation(HuggingFacePipelineNode):
                     "*.safetensors",
                     "*.json",
                     "**/*.json",
-                    "txt",
+                    "*.txt",
                 ],
             ),
             HFDepthEstimation(

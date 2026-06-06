@@ -37,15 +37,25 @@ class FeatureExtraction(HuggingFacePipelineNode):
         return [
             HFFeatureExtraction(
                 repo_id="mixedbread-ai/mxbai-embed-large-v1",
-                allow_patterns=["*.safetensors", "*.txt", "*,json"],
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
             ),
             HFFeatureExtraction(
                 repo_id="BAAI/bge-base-en-v1.5",
-                allow_patterns=["*.safetensors", "*.txt", "*,json"],
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
             ),
             HFFeatureExtraction(
                 repo_id="BAAI/bge-large-en-v1.5",
-                allow_patterns=["*.safetensors", "*.txt", "*,json"],
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
+            ),
+            # Nomic BERT + EuroBERT embedding backbones
+            HFFeatureExtraction(
+                repo_id="nomic-ai/nomic-bert-2048",
+            ),
+            HFFeatureExtraction(
+                repo_id="EuroBERT/EuroBERT-210m",
+            ),
+            HFFeatureExtraction(
+                repo_id="EuroBERT/EuroBERT-610m",
             ),
         ]
 
