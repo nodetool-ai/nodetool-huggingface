@@ -2439,6 +2439,8 @@ class Kandinsky5Image(HuggingFacePipelineNode):
             or getattr(output, "image", None)
             or getattr(output, "frames", None)
         )
+        if images is None:
+            raise ValueError("Kandinsky pipeline returned no images")
         image = images[0]
         if isinstance(image, (list, tuple)):
             image = image[0]
