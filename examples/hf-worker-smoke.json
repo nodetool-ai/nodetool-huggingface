@@ -1,0 +1,169 @@
+{
+  "id": "hf_worker_smoke",
+  "access": "public",
+  "name": "HF Worker Smoke",
+  "description": "Minimal HuggingFace remote-worker validation: embed two sentences with SentenceSimilarity (all-MiniLM-L6-v2) and preview the embeddings. Load into a running TS server (UI import or run API) with NODETOOL_WORKER_URL set so the HF node runs on the remote worker container.",
+  "tags": [
+    "huggingface",
+    "smoke",
+    "embeddings"
+  ],
+  "thumbnail": "",
+  "thumbnail_url": "",
+  "graph": {
+    "nodes": [
+      {
+        "id": "1",
+        "parent_id": null,
+        "type": "huggingface.sentence_similarity.SentenceSimilarity",
+        "data": {
+          "model": {
+            "type": "hf.sentence_similarity",
+            "repo_id": "sentence-transformers/all-MiniLM-L6-v2"
+          },
+          "inputs": "The cat sits on the mat."
+        },
+        "ui_properties": {
+          "selected": false,
+          "position": {
+            "x": 310,
+            "y": 50
+          },
+          "zIndex": 0,
+          "width": 240,
+          "title": "Sentence A",
+          "selectable": true
+        }
+      },
+      {
+        "id": "2",
+        "parent_id": null,
+        "type": "huggingface.sentence_similarity.SentenceSimilarity",
+        "data": {
+          "model": {
+            "type": "hf.sentence_similarity",
+            "repo_id": "sentence-transformers/all-MiniLM-L6-v2"
+          },
+          "inputs": "A feline rests on the rug."
+        },
+        "ui_properties": {
+          "selected": false,
+          "position": {
+            "x": 310,
+            "y": 320
+          },
+          "zIndex": 0,
+          "width": 240,
+          "title": "Sentence B",
+          "selectable": true
+        }
+      },
+      {
+        "id": "3",
+        "parent_id": null,
+        "type": "nodetool.workflows.base_node.Preview",
+        "data": {
+          "name": "embedding_a"
+        },
+        "ui_properties": {
+          "selected": false,
+          "position": {
+            "x": 620,
+            "y": 50
+          },
+          "zIndex": 0,
+          "width": 240,
+          "height": 262,
+          "selectable": true
+        }
+      },
+      {
+        "id": "4",
+        "parent_id": null,
+        "type": "nodetool.workflows.base_node.Preview",
+        "data": {
+          "name": "embedding_b"
+        },
+        "ui_properties": {
+          "selected": false,
+          "position": {
+            "x": 620,
+            "y": 320
+          },
+          "zIndex": 0,
+          "width": 240,
+          "height": 262,
+          "selectable": true
+        }
+      },
+      {
+        "id": "5",
+        "parent_id": null,
+        "type": "nodetool.workflows.base_node.Comment",
+        "data": {
+          "comment": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "text": "HuggingFace remote-worker smoke test."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "text": "Start the TS server with NODETOOL_WORKER_URL=ws://localhost:8787 (and NODETOOL_WORKER_TOKEN if set), then run this workflow."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "text": "Each SentenceSimilarity node embeds one sentence on the HF worker container; the Preview nodes show the np_array embeddings. First run downloads all-MiniLM-L6-v2 (~80 MB) into the hf-cache volume."
+                }
+              ]
+            }
+          ]
+        },
+        "ui_properties": {
+          "selected": false,
+          "position": {
+            "x": 310,
+            "y": -180
+          },
+          "zIndex": 0,
+          "width": 540,
+          "height": 140,
+          "selectable": true
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "1",
+        "sourceHandle": "output",
+        "target": "3",
+        "targetHandle": "value",
+        "ui_properties": {
+          "className": "np_array"
+        }
+      },
+      {
+        "id": "e2",
+        "source": "2",
+        "sourceHandle": "output",
+        "target": "4",
+        "targetHandle": "value",
+        "ui_properties": {
+          "className": "np_array"
+        }
+      }
+    ]
+  },
+  "input_schema": null,
+  "output_schema": null
+}
