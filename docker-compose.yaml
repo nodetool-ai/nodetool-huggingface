@@ -1,0 +1,87 @@
+# HuggingFace Python worker — local run.
+#
+# The TS dev server owns host port 7777, so this container publishes on 8787.
+# Point the server at it with: NODETOOL_WORKER_URL=ws://localhost:8787
+#
+# Build args:
+#   CORE_IMAGE  base image to layer on (locally-built nodetool-core:local, or a
+#               published ghcr.io/nodetool-ai/nodetool:<tag>).
+#   HF_VERSION  pinned nodetool-huggingface PyPI release.
+#
+# CPU is the default (macOS Docker is CPU-only): a bare `docker compose up`
+# starts only `hf-worker`. Opt into NVIDIA GPU by naming the gpu service:
+#   docker compose --profile gpu up hf-worker-gpu
+# Always name `hf-worker-gpu` — a bare `docker compose --profile gpu up` would
+# also start the profile-less `hf-worker`, and both publish host port 8787, so
+# they collide. Run one or the other, never both.
+services:
+  hf-worker:
+    build:
+      context: .
+      args:
+        CORE_IMAGE: nodetool-core:local
+        HF_VERSION: "0.7.1"
+    restart: unless-stopped
+    ports:
+      # host:container — the TS server owns host 7777, so publish on 8787.
+      - "8787:7777"
+    volumes:
+      - hf-cache:/app/huggingface
+    environment:
+      HF_HOME: /app/huggingface
+      # Unset/empty => worker accepts all connections (local/dev). Set => the
+      # bridge must send "Authorization: Bearer <token>" on the WS handshake.
+      NODETOOL_WORKER_TOKEN: ${NODETOOL_WORKER_TOKEN:-}
+    healthcheck:
+      # The worker is a WebSocket server (no HTTP route) — probe with a real
+      # WebSocket handshake against the internal port so a rejected raw-TCP
+      # connect doesn't spam the log. Inherited from the core image; restated
+      # here for clarity and to allow a longer start period (model warm-up).
+      test:
+        - CMD
+        - python
+        - -c
+        - from websockets.sync.client import connect; connect('ws://127.0.0.1:7777', open_timeout=4).close()
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+
+  # GPU opt-in: same image, NVIDIA device reservation. Requires the host NVIDIA
+  # driver + container runtime. Not used on macOS. Enable with:
+  #   docker compose --profile gpu up hf-worker-gpu
+  hf-worker-gpu:
+    profiles: ["gpu"]
+    build:
+      context: .
+      args:
+        CORE_IMAGE: nodetool-core:local
+        HF_VERSION: "0.7.1"
+    restart: unless-stopped
+    ports:
+      - "8787:7777"
+    volumes:
+      - hf-cache:/app/huggingface
+    environment:
+      HF_HOME: /app/huggingface
+      NODETOOL_WORKER_TOKEN: ${NODETOOL_WORKER_TOKEN:-}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: ["gpu"]
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - from websockets.sync.client import connect; connect('ws://127.0.0.1:7777', open_timeout=4).close()
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+
+volumes:
+  hf-cache:
