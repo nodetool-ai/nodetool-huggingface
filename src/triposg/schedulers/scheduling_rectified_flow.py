@@ -195,6 +195,10 @@ class RectifiedFlowScheduler(SchedulerMixin, ConfigMixin):
             )  # different from the original code in SD3
             sigmas = timesteps / self.config.num_train_timesteps
 
+        # NOTE: local fix — caller-supplied `sigmas` may be a List[float]; coerce to ndarray
+        # so the arithmetic below and `torch.from_numpy` work.
+        sigmas = np.asarray(sigmas, dtype=np.float32)
+
         if self.config.use_dynamic_shifting:
             sigmas = self.time_shift_dynamic(mu, 1.0, sigmas)
         else:
