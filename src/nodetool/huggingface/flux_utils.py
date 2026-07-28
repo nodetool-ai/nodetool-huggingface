@@ -36,12 +36,21 @@ def flux_variant_to_base_model_id(variant: str) -> str:
 
 
 def is_nunchaku_transformer(repo_id: str, file_path: str | None) -> bool:
-    """Detect Nunchaku FLUX transformer files."""
+    """Detect Nunchaku SVDQ transformer files (FLUX or Qwen)."""
     if not file_path:
         return False
-    repo_lower = repo_id.lower()
-    return (
-        "nunchaku" in repo_lower
-        and "flux" in repo_lower
-        and "svdq" in file_path.lower()
-    )
+    return "nunchaku" in repo_id.lower() and "svdq" in file_path.lower()
+
+
+def is_nunchaku_qwen_transformer(repo_id: str, file_path: str | None) -> bool:
+    """Detect Nunchaku SVDQ transformer files for Qwen-Image models."""
+    if not is_nunchaku_transformer(repo_id, file_path):
+        return False
+    return "qwen" in repo_id.lower() or "qwen" in (file_path or "").lower()
+
+
+def is_nunchaku_flux_transformer(repo_id: str, file_path: str | None) -> bool:
+    """Detect Nunchaku SVDQ transformer files that belong to a FLUX pipeline."""
+    if not is_nunchaku_transformer(repo_id, file_path):
+        return False
+    return not is_nunchaku_qwen_transformer(repo_id, file_path)

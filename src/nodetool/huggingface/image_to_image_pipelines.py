@@ -33,9 +33,15 @@ using our internal knowledge base of node definitions.
 
 from __future__ import annotations
 
+import asyncio
+
 from typing import Any
 
-from nodetool.huggingface.flux_utils import is_nunchaku_transformer
+from nodetool.huggingface.flux_utils import (
+    is_nunchaku_flux_transformer,
+    is_nunchaku_qwen_transformer,
+    is_nunchaku_transformer,
+)
 from nodetool.huggingface.local_provider_utils import (
     _detect_cached_variant,
     _ensure_file_cached,
@@ -113,7 +119,8 @@ async def load_image_to_image_pipeline(
                 )
             else:
                 torch = _get_torch()
-                pipeline = FluxFillPipeline.from_single_file(
+                pipeline = await asyncio.to_thread(
+                    FluxFillPipeline.from_single_file,
                     str(cache_path),
                     torch_dtype=(
                         torch.bfloat16 if _is_cuda_available() else torch.float32
@@ -137,12 +144,28 @@ async def load_image_to_image_pipeline(
                 use_cpu_offload = True
             else:
                 torch = _get_torch()
-                pipeline = QwenImageEditPipeline.from_single_file(
+                pipeline = await asyncio.to_thread(
+                    QwenImageEditPipeline.from_single_file,
                     str(cache_path),
-                    torch_dtype=torch.float16,
+                    torch_dtype=torch.bfloat16,
                 )
                 use_cpu_offload = True
-        elif is_nunchaku_transformer(model_id, model_path):
+        elif is_nunchaku_qwen_transformer(model_id, model_path):
+            from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import (
+                QwenImageEditPipeline,
+            )
+
+            pipeline = await load_nunchaku_qwen_pipeline(
+                context=context,
+                repo_id=model_id,
+                transformer_path=model_path,
+                node_id=node_id,
+                pipeline_class=QwenImageEditPipeline,
+                base_model_id="Qwen/Qwen-Image-Edit",
+                torch_dtype=_get_torch().bfloat16,
+            )
+            use_cpu_offload = True
+        elif is_nunchaku_flux_transformer(model_id, model_path):
             pipeline = await load_nunchaku_flux_pipeline(
                 context=context,
                 repo_id=model_id,
@@ -161,7 +184,8 @@ async def load_image_to_image_pipeline(
                     StableDiffusionImg2ImgPipeline,
                 )
 
-                pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
+                pipeline = await asyncio.to_thread(
+                    StableDiffusionImg2ImgPipeline.from_single_file,
                     str(cache_path),
                     torch_dtype=(
                         _get_torch().float16
@@ -174,7 +198,8 @@ async def load_image_to_image_pipeline(
                     StableDiffusionXLImg2ImgPipeline,
                 )
 
-                pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
+                pipeline = await asyncio.to_thread(
+                    StableDiffusionXLImg2ImgPipeline.from_single_file,
                     str(cache_path),
                     torch_dtype=(
                         _get_torch().float16
@@ -187,7 +212,8 @@ async def load_image_to_image_pipeline(
                     StableDiffusion3Img2ImgPipeline,
                 )
 
-                pipeline = StableDiffusion3Img2ImgPipeline.from_single_file(
+                pipeline = await asyncio.to_thread(
+                    StableDiffusion3Img2ImgPipeline.from_single_file,
                     str(cache_path),
                     torch_dtype=(
                         _get_torch().float16
@@ -200,7 +226,8 @@ async def load_image_to_image_pipeline(
                     FluxImg2ImgPipeline,
                 )
 
-                pipeline = FluxImg2ImgPipeline.from_single_file(
+                pipeline = await asyncio.to_thread(
+                    FluxImg2ImgPipeline.from_single_file,
                     str(cache_path),
                     torch_dtype=(
                         _get_torch().bfloat16
@@ -225,7 +252,8 @@ async def load_image_to_image_pipeline(
                         StableDiffusionXLImg2ImgPipeline,
                     )
 
-                    pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
+                    pipeline = await asyncio.to_thread(
+                        StableDiffusionXLImg2ImgPipeline.from_single_file,
                         str(cache_path),
                         torch_dtype=(
                             _get_torch().float16
@@ -245,7 +273,8 @@ async def load_image_to_image_pipeline(
                         StableDiffusionImg2ImgPipeline,
                     )
 
-                    pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
+                    pipeline = await asyncio.to_thread(
+                        StableDiffusionImg2ImgPipeline.from_single_file,
                         str(cache_path),
                         torch_dtype=(
                             _get_torch().float16
@@ -259,7 +288,8 @@ async def load_image_to_image_pipeline(
                             StableDiffusionXLImg2ImgPipeline,
                         )
 
-                        pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
+                        pipeline = await asyncio.to_thread(
+                            StableDiffusionXLImg2ImgPipeline.from_single_file,
                             str(cache_path),
                             torch_dtype=(
                                 _get_torch().float16
@@ -272,7 +302,8 @@ async def load_image_to_image_pipeline(
                             StableDiffusionImg2ImgPipeline,
                         )
 
-                        pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
+                        pipeline = await asyncio.to_thread(
+                            StableDiffusionImg2ImgPipeline.from_single_file,
                             str(cache_path),
                             torch_dtype=(
                                 _get_torch().float16
@@ -288,7 +319,8 @@ async def load_image_to_image_pipeline(
         from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
 
         torch = _get_torch()
-        pipeline = AutoPipelineForImage2Image.from_pretrained(
+        pipeline = await asyncio.to_thread(
+            AutoPipelineForImage2Image.from_pretrained,
             model_id,
             torch_dtype=torch.float16 if _is_cuda_available() else torch.float32,
             variant=await _detect_cached_variant(model_id),

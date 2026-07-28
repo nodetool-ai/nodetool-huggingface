@@ -66,6 +66,7 @@ async def get_nunchaku_text_encoder(
     repo_id: str | None = None,
     path: str | None = None,
     allow_downloads: bool = True,
+    torch_dtype: Any = None,  # Defaults to torch.bfloat16 at runtime
 ) -> Any | None:
     """
     Get text encoder kwargs when using a nunchaku model.
@@ -78,6 +79,7 @@ async def get_nunchaku_text_encoder(
         node_id: The node ID
         repo_id: Optional repo_id override
         path: Optional path override
+        torch_dtype: The torch dtype to use (must match the pipeline dtype)
 
     Returns:
         dict: Pipeline kwargs with text_encoder_2 if nunchaku T5 encoder is found
@@ -107,7 +109,7 @@ async def get_nunchaku_text_encoder(
             repo_id,
             path,
         )
-        hf_hub_download(repo_id, path)
+        await asyncio.to_thread(hf_hub_download, repo_id, path)
         cache_path = await HF_FAST_CACHE.resolve(repo_id, path)
 
         if not cache_path:
@@ -116,13 +118,15 @@ async def get_nunchaku_text_encoder(
             )
 
     torch = _get_torch()
+    if torch_dtype is None:
+        torch_dtype = torch.bfloat16
     return await load_model(
         context=context,
         model_id=repo_id,
         path=path,
         model_class=NunchakuT5EncoderModel,
         node_id=node_id,
-        torch_dtype=torch.bfloat16,
+        torch_dtype=torch_dtype,
     )
 
 
@@ -263,11 +267,14 @@ async def load_nunchaku_flux_pipeline(
             node_id=node_key,
             repo_id=repo_id,
             path=transformer_path,
+            torch_dtype=torch_dtype,
         )
         transformer.set_attention_impl("nunchaku-fp16")
 
     with MemoryTracker("Loading Nunchaku text encoder", run_gc_after=False):
-        text_encoder = await get_nunchaku_text_encoder(context, node_key)
+        text_encoder = await get_nunchaku_text_encoder(
+            context, node_key, torch_dtype=torch_dtype
+        )
 
     pipeline_kwargs: dict[str, Any] = {
         "transformer": transformer,
@@ -297,7 +304,7 @@ async def load_nunchaku_flux_pipeline(
         ):
             pipeline = await asyncio.to_thread(_build_pipeline)
 
-        if cache_key and node_id:
+        if cache_key:
             ModelManager.set_model(node_id, cache_key, pipeline)
 
         log_memory("load_nunchaku_flux_pipeline - END")
@@ -367,17 +374,21 @@ async def load_nunchaku_qwen_pipeline(
                 device=context.device,
             )
 
-        with MemoryTracker("Building Qwen pipeline from pretrained", run_gc_after=True):
-            pipeline = pipeline_class.from_pretrained(
+        def _build_pipeline():
+            return pipeline_class.from_pretrained(
                 base_model_id,
                 transformer=transformer,
                 torch_dtype=torch_dtype,
                 token=hf_token,
             )
-            pipeline.enable_model_cpu_offload()
 
+        with MemoryTracker("Building Qwen pipeline from pretrained", run_gc_after=True):
+            pipeline = await asyncio.to_thread(_build_pipeline)
+
+        # Exactly one offload strategy must be applied to a pipeline.
         if get_gpu_memory() > 18:
             log.info("Enabling model CPU offload")
+            pipeline.enable_model_cpu_offload()
         else:
             log.info("Enabling model per-layer offloading")
             # use per-layer offloading for low VRAM. This only requires 3-4GB of VRAM.
@@ -387,7 +398,7 @@ async def load_nunchaku_qwen_pipeline(
             pipeline._exclude_from_cpu_offload.append("transformer")
             pipeline.enable_sequential_cpu_offload()
 
-        if cache_key and node_id:
+        if cache_key:
             ModelManager.set_model(node_id, cache_key, pipeline)
 
         log_memory("load_nunchaku_qwen_pipeline - END")

@@ -5,6 +5,7 @@ Shared helpers for the local HuggingFace provider and nodes.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 from pathlib import Path
 from typing import Any, TypeVar, TYPE_CHECKING
@@ -182,6 +183,26 @@ def _is_vram_error(exc: Exception) -> bool:
     return any(indicator in error_msg for indicator in vram_indicators)
 
 
+def _quantization_cache_suffix(kwargs: dict[str, Any]) -> str:
+    """Derive a cache-key suffix from any quantization config in the load kwargs.
+
+    Without it, a second load requesting a different quantization would hit the
+    entry cached by the first load and the request would be silently ignored.
+    """
+    config = kwargs.get("quantization_config")
+    if config is None:
+        model_kwargs = kwargs.get("model_kwargs")
+        if isinstance(model_kwargs, dict):
+            config = model_kwargs.get("quantization_config")
+    if config is None:
+        return ""
+    try:
+        marker = repr(config)
+    except Exception:
+        marker = config.__class__.__name__
+    return "_" + hashlib.sha1(marker.encode("utf-8")).hexdigest()[:8]
+
+
 def _normalize_pipeline_task(pipeline_task: str) -> str:
     """Map legacy/NodeTool task names to the task names supported by installed transformers."""
     task = pipeline_task.strip().lower()
@@ -208,12 +229,15 @@ async def load_pipeline(
     normalized_pipeline_task = _normalize_pipeline_task(pipeline_task)
 
     if cache_key is None:
-        cache_key = f"{model_id}_{normalized_pipeline_task}"
+        cache_key = (
+            f"{model_id}_{normalized_pipeline_task}{_quantization_cache_suffix(kwargs)}"
+        )
 
-    cached_model = ModelManager.get_model(cache_key)
-    if cached_model:
-        target_device = _resolve_hf_device(context, device or context.device)
-        return _ensure_model_on_device(cached_model, target_device)
+    if not skip_cache:
+        cached_model = ModelManager.get_model(cache_key)
+        if cached_model:
+            target_device = _resolve_hf_device(context, device or context.device)
+            return _ensure_model_on_device(cached_model, target_device)
 
     if (
         isinstance(model_id, str)
@@ -330,7 +354,10 @@ async def load_model(
     log.info("Loading model %s/%s from %s", model_id, path, target_device)
 
     if cache_key is None:
-        cache_key = f"{model_id}_{model_class.__name__}_{path}"
+        cache_key = (
+            f"{model_id}_{model_class.__name__}_{path}"
+            f"{_quantization_cache_suffix(kwargs)}"
+        )
 
     if not skip_cache:
         cached_model = ModelManager.get_model(cache_key)
