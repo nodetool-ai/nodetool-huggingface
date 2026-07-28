@@ -107,7 +107,7 @@ class Reranker(HuggingFacePipelineNode):
                 truncation=True,
                 return_tensors="pt",
                 max_length=512,
-            )
+            ).to(self._model.device)
             scores = (
                 self._model(**inputs, return_dict=True)
                 .logits.view(

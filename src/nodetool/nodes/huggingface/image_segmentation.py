@@ -128,6 +128,11 @@ class SAM2Segmentation(HuggingFacePipelineNode):
     - Enable precise object selection in creative tools
     """
 
+    model: HuggingFaceModel = Field(
+        default=HuggingFaceModel(repo_id="facebook/sam2-hiera-large"),
+        title="Model",
+        description="The SAM2 model to use. SAM2.1 variants offer the best quality; base-plus is faster.",
+    )
     image: ImageRef = Field(
         default=ImageRef(),
         title="Input Image",
@@ -160,6 +165,9 @@ class SAM2Segmentation(HuggingFacePipelineNode):
     def get_title(cls) -> str:
         return "SAM2 Segmentation"
 
+    def get_model_id(self) -> str:
+        return self.model.repo_id
+
     async def preload_model(self, context: ProcessingContext):
         import torch
         from sam2.sam2_image_predictor import SAM2ImagePredictor
@@ -167,7 +175,7 @@ class SAM2Segmentation(HuggingFacePipelineNode):
         torch_dtype = available_torch_dtype()
         self._pipeline = await self.load_model(
             context=context,
-            model_id="facebook/sam2-hiera-large",
+            model_id=self.get_model_id(),
             model_class=SAM2ImagePredictor,
             torch_dtype=torch_dtype,
             variant=None,
@@ -301,7 +309,9 @@ class MaskGeneration(HuggingFacePipelineNode):
         image = await context.image_to_pil(self.image)
         result = await self.run_pipeline_in_thread(
             image,
-            points_per_side=self.points_per_side,
+            # The mask-generation pipeline calls the per-side grid resolution
+            # "points_per_crop" and silently drops unknown kwargs.
+            points_per_crop=self.points_per_side,
             pred_iou_thresh=self.pred_iou_thresh,
         )
 

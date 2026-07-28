@@ -132,6 +132,11 @@ class ObjectDetection(HuggingFacePipelineNode):
         image = await context.image_to_pil(self.image)
         result = await self.run_pipeline_in_thread(image, threshold=self.threshold)
         if isinstance(result, list):
+            # The object-detection pipeline has no top_k parameter, so the
+            # limit is applied here on the score-sorted detections.
+            result = sorted(result, key=lambda item: item["score"], reverse=True)[
+                : self.top_k
+            ]
             return [
                 ObjectDetectionResult(
                     label=item["label"],
@@ -363,16 +368,17 @@ class ZeroShotObjectDetection(HuggingFacePipelineNode):
             image,
             candidate_labels=self.candidate_labels.split(","),
             threshold=self.threshold,
+            top_k=self.top_k,
         )
         return [
             ObjectDetectionResult(
-                label=item.label,
-                score=item.score,
+                label=item["label"],
+                score=item["score"],
                 box=BoundingBox(
-                    xmin=item.box.xmin,
-                    ymin=item.box.ymin,
-                    xmax=item.box.xmax,
-                    ymax=item.box.ymax,
+                    xmin=item["box"]["xmin"],
+                    ymin=item["box"]["ymin"],
+                    xmax=item["box"]["xmax"],
+                    ymax=item["box"]["ymax"],
                 ),
             )
             for item in result

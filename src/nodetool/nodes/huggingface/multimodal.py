@@ -62,6 +62,10 @@ class ImageToText(HuggingFacePipelineNode):
     def required_inputs(self):
         return ["image"]
 
+    @classmethod
+    def get_title(cls) -> str:
+        return "HF Image Captioning"
+
     async def preload_model(self, context: ProcessingContext):
         self._pipeline = await self.load_pipeline(
             context=context,
@@ -70,7 +74,8 @@ class ImageToText(HuggingFacePipelineNode):
         )
 
     async def move_to_device(self, device: str):
-        self._pipeline.model.to(device)
+        if self._pipeline is not None:
+            self._pipeline.model.to(device)
 
     async def process(self, context: ProcessingContext) -> str:
         assert self._pipeline is not None
@@ -128,7 +133,8 @@ class VisualQuestionAnswering(HuggingFacePipelineNode):
         )
 
     async def move_to_device(self, device: str):
-        self._pipeline.model.to(device)
+        if self._pipeline is not None:
+            self._pipeline.model.to(device)
 
     async def process(self, context: ProcessingContext) -> str:
         assert self._pipeline is not None
