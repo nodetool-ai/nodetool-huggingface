@@ -949,7 +949,11 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                 "callback_on_step_end": self.progress_callback(
                     context, 0, self.num_inference_steps
                 ),
-                "output_type": self.output_type.value,
+                "output_type": (
+                    "pil"
+                    if self.output_type == self.StableDiffusionOutputType.IMAGE
+                    else "latent"
+                ),
             }
 
             if ip_adapter_image is not None:
@@ -1103,7 +1107,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
     seed: int = Field(
         default=-1,
         ge=-1,
-        le=1000000,
+        le=2**32 - 1,
         description="Seed for the random number generator.",
     )
     num_inference_steps: int = Field(
@@ -1192,56 +1196,6 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         if len(self.loras) > 0:
             return True
         return False
-
-    async def _load_ip_adapter(self):
-        log.debug("Checking IP Adapter configuration (XL)")
-        log.debug(f"IP Adapter model repo_id: {self.ip_adapter_model.repo_id}")
-        log.debug(f"IP Adapter model path: {self.ip_adapter_model.path}")
-        log.debug(f"IP Adapter scale: {self.ip_adapter_scale}")
-
-        if self.ip_adapter_model.repo_id != "" and self.ip_adapter_model.path:
-            if self._pipeline is None:
-                log.error("Pipeline not initialized when loading IP Adapter (XL)")
-                raise ValueError(
-                    "Pipeline must be initialized before loading IP Adapter (XL)"
-                )
-
-            if not hasattr(self._pipeline, "load_ip_adapter"):
-                log.error("Current XL pipeline does not support IP Adapter loading")
-                raise ValueError(
-                    "The current XL pipeline does not support IP Adapter. "
-                    "Use a Stable Diffusion XL pipeline with IP Adapter support."
-                )
-
-            log.debug("IP Adapter model is configured, loading from cache (XL)")
-            cache_path = await HF_FAST_CACHE.resolve(
-                self.ip_adapter_model.repo_id, self.ip_adapter_model.path
-            )
-            if cache_path is None:
-                log.error(
-                    f"IP Adapter cache not found for {self.ip_adapter_model.repo_id}/{self.ip_adapter_model.path}"
-                )
-                raise ValueError(
-                    f"Install the {self.ip_adapter_model.repo_id}/{self.ip_adapter_model.path} "
-                    "IP Adapter model to use it (Recommended Models above)"
-                )
-            path_parts = self.ip_adapter_model.path.split("/")
-            subfolder = "/".join(path_parts[0:-1])
-            weight_name = path_parts[-1]
-            log.info(
-                f"Loading IP Adapter {self.ip_adapter_model.repo_id}/{self.ip_adapter_model.path}"
-            )
-            log.debug(f"IP Adapter cache path: {cache_path}")
-            log.debug(f"IP Adapter subfolder: {subfolder}")
-            log.debug(f"IP Adapter weight name: {weight_name}")
-            self._pipeline.load_ip_adapter(
-                self.ip_adapter_model.repo_id,
-                subfolder=subfolder,
-                weight_name=weight_name,
-            )
-            log.debug("IP Adapter loaded successfully (XL)")
-        else:
-            log.debug("No IP Adapter model configured (XL)")
 
     def _resolve_effective_quantization(self) -> StableDiffusionXLQuantization:
         quantization = self.quantization
@@ -1405,6 +1359,11 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         await self._load_ip_adapter()
 
     async def _load_ip_adapter(self):
+        log.debug("Checking IP Adapter configuration (XL)")
+        log.debug(f"IP Adapter model repo_id: {self.ip_adapter_model.repo_id}")
+        log.debug(f"IP Adapter model path: {self.ip_adapter_model.path}")
+        log.debug(f"IP Adapter scale: {self.ip_adapter_scale}")
+
         if self.ip_adapter_model.repo_id != "" and self.ip_adapter_model.path:
             if self._pipeline is None:
                 log.error("Pipeline not initialized when loading IP Adapter (XL)")
@@ -1581,7 +1540,11 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
                 "height": self.height,
                 "callback_on_step_end": self.progress_callback(context),
                 "generator": generator,
-                "output_type": self.output_type.value,
+                "output_type": (
+                    "pil"
+                    if self.output_type == self.StableDiffusionOutputType.IMAGE
+                    else "latent"
+                ),
             }
 
             if self._loaded_adapters:
@@ -1600,6 +1563,15 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
 
         if self.output_type == self.StableDiffusionOutputType.IMAGE:
             log.debug("Converting PIL image to ImageRef (XL)")
+            # Handle numpy array output from some pipelines
+            if isinstance(image, np.ndarray):
+                # Squeeze batch dimensions and ensure correct shape
+                while image.ndim > 3:
+                    image = image.squeeze(0)
+                # Convert float (0-1) to uint8 (0-255) if needed
+                if image.dtype in (np.float32, np.float64):
+                    image = (image * 255).clip(0, 255).astype(np.uint8)
+                image = Image.fromarray(image)
             result = await context.image_from_pil(image)
             log.debug("Pipeline execution completed successfully (XL)")
             return result
