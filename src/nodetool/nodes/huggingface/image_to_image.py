@@ -110,51 +110,6 @@ from nodetool.huggingface.local_provider_utils import (
 )
 
 
-class BaseImageToImage(HuggingFacePipelineNode):
-    """
-    Base class for image-to-image transformation tasks.
-    image, transformation, generation, huggingface
-    """
-
-    @classmethod
-    def is_visible(cls) -> bool:
-        return cls is not BaseImageToImage
-
-    image: ImageRef = Field(
-        default=ImageRef(),
-        title="Input Image",
-        description="The input image to transform",
-    )
-    prompt: str = Field(
-        default="",
-        title="Prompt",
-        description="The text prompt to guide the image transformation (if applicable)",
-    )
-
-    def required_inputs(self):
-        return ["image"]
-
-    def get_model_id(self):
-        raise NotImplementedError("Subclass must implement abstract method")
-
-    async def preload_model(self, context: ProcessingContext):
-        self._pipeline = await self.load_pipeline(
-            context, "image-to-image", self.get_model_id(), device=context.device
-        )
-        _enable_pytorch2_attention(self._pipeline)
-        _apply_vae_optimizations(self._pipeline)
-
-    async def move_to_device(self, device: str):
-        if self._pipeline is not None:
-            self._pipeline.model.to(device)
-
-    async def process(self, context: ProcessingContext) -> ImageRef:
-        assert self._pipeline is not None
-        image = await context.image_to_pil(self.image)
-        result = await self.run_pipeline_in_thread(image, prompt=self.prompt)
-        return await context.image_from_pil(result)
-
-
 class RealESRGANNode(HuggingFacePipelineNode):
     """
     Performs image super-resolution using the RealESRGAN model.
@@ -249,56 +204,6 @@ class RealESRGANNode(HuggingFacePipelineNode):
 
         sr_image = await asyncio.to_thread(_predict)
         return await context.image_from_pil(sr_image)
-
-
-class Swin2SR(BaseImageToImage):
-    """
-    Performs image super-resolution using the Swin2SR model.
-    image, super-resolution, enhancement, huggingface
-
-    Use cases:
-    - Enhance low-resolution images
-    - Improve image quality for printing or display
-    - Upscale images for better detail
-    """
-
-    model: HFImageToImage = Field(
-        default=HFImageToImage(),
-        title="Model ID on Huggingface",
-        description="The model ID to use for image super-resolution",
-    )
-
-    @classmethod
-    def get_recommended_models(cls) -> list[HFImageToImage]:
-        return [
-            HFImageToImage(
-                repo_id="caidas/swin2SR-classical-sr-x2-64",
-                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
-            ),
-            HFImageToImage(
-                repo_id="caidas/swin2SR-classical-sr-x4-64",
-                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
-            ),
-            HFImageToImage(
-                repo_id="caidas/swin2SR-lightweight-x2-64",
-                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
-            ),
-            HFImageToImage(
-                repo_id="caidas/swin2SR-compressed-sr-x4-48",
-                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
-            ),
-            HFImageToImage(
-                repo_id="caidas/swin2SR-realworld-sr-x4-64-bsrgan-psnr",
-                allow_patterns=["README.md", "*.bin", "*.json", "**/*.json"],
-            ),
-        ]
-
-    @classmethod
-    def get_title(cls) -> str:
-        return "Swin2SR"
-
-    def get_model_id(self):
-        return self.model.repo_id
 
 
 class LoadImageToImageModel(HuggingFacePipelineNode):

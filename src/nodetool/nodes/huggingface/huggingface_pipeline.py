@@ -45,6 +45,43 @@ def select_inference_dtype() -> "torch.dtype":
     return torch.float32
 
 
+def _chat_message_text(content: Any) -> str:
+    """Flatten a chat message ``content`` value into plain text."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(
+            part.get("text", "")
+            for part in content
+            if isinstance(part, dict) and part.get("type", "text") == "text"
+        )
+    return str(content)
+
+
+def extract_generated_text(result: Any) -> str:
+    """Pull the generated string out of an image-text-to-text pipeline result.
+
+    The pipeline returns one record per input, each carrying ``generated_text``.
+    That field is a plain string when the prompt was a string, but a list of chat
+    messages when the prompt was chat-formatted — in which case the answer lives
+    in the trailing (assistant) message.
+    """
+    if isinstance(result, list) and result:
+        result = result[0]
+    if isinstance(result, dict):
+        result = result.get("generated_text", "")
+    if isinstance(result, list):
+        if not result:
+            return ""
+        last = result[-1]
+        return _chat_message_text(
+            last.get("content", "") if isinstance(last, dict) else last
+        )
+    if isinstance(result, str):
+        return result
+    return str(result)
+
+
 class HuggingFacePipelineNode(BaseNode):
     # Field names commonly used across HF nodes to carry primary data into the node.
     # These get input handles even when their type is a primitive.

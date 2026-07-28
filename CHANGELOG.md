@@ -46,6 +46,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it now defaults to the Wan 2.1 720P checkpoint
 - `TextClassifier` recommended models now allow `*.safetensors`, so
   safetensors-only checkpoints download correctly
+- `ImageToText` nodes pass an empty prompt so the `image-text-to-text` pipeline
+  (which `image-to-text` now resolves to) accepts the image, and decode
+  `generated_text` whether it comes back as a string or as chat messages
+- `TextClassifier` passes `top_k=None` so its label to score mapping contains
+  every label instead of only the winning one
+- `Bark` reads the sampling rate reported by the pipeline instead of assuming
+  24 kHz
+
+### Removed
+
+- Nodes whose pipeline tasks were dropped in transformers 5 and that could no
+  longer load: `Summarization`, `Translation`, `Text2TextGeneration`,
+  `QuestionAnswering` (`TableQuestionAnswering` is unaffected),
+  `VisualQuestionAnswering` and `Swin2SR`
 
 ## [Unreleased] - 2025-12-20
 

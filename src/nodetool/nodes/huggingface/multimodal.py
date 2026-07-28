@@ -1,11 +1,12 @@
 from pydantic import Field
 from nodetool.metadata.types import (
     ImageRef,
-    HFVisualQuestionAnswering,
     HFImageToText,
-    OCRResult,
 )
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.huggingface_pipeline import (
+    HuggingFacePipelineNode,
+    extract_generated_text,
+)
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeUpdate
 
@@ -80,69 +81,13 @@ class ImageToText(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> str:
         assert self._pipeline is not None
         image = await context.image_to_pil(self.image)
+        # "image-to-text" is resolved to the image-text-to-text pipeline, which
+        # raises when handed an image without accompanying text. An empty prompt
+        # keeps the captioning behaviour while satisfying that requirement.
         result = await self.run_pipeline_in_thread(
-            image, max_new_tokens=self.max_new_tokens
+            images=image, text="", max_new_tokens=self.max_new_tokens
         )
-        assert isinstance(result, list)
-        assert len(result) == 1
-        return result[0]["generated_text"]
-
-
-class VisualQuestionAnswering(HuggingFacePipelineNode):
-    """
-    Answers natural language questions about image content using vision-language models.
-    image, text, question-answering, multimodal, VQA
-
-    Use cases:
-    - Query image content with natural language questions
-    - Extract specific information from photos and diagrams
-    - Build interactive image exploration interfaces
-    - Create accessibility tools for visual content understanding
-    """
-
-    model: HFVisualQuestionAnswering = Field(
-        default=HFVisualQuestionAnswering(),
-        title="Model",
-        description="The visual question answering model. BLIP-VQA provides good general performance.",
-    )
-    image: ImageRef = Field(
-        default=ImageRef(),
-        title="Image",
-        description="The image to ask questions about.",
-    )
-    question: str = Field(
-        default="",
-        title="Question",
-        description="Your question about the image content (e.g., 'What color is the car?').",
-    )
-
-    @classmethod
-    def get_recommended_models(cls):
-        return [
-            HFVisualQuestionAnswering(
-                repo_id="Salesforce/blip-vqa-base",
-                allow_patterns=["*.bin", "*.json", "*.txt"],
-            ),
-        ]
-
-    async def preload_model(self, context: ProcessingContext):
-        self._pipeline = await self.load_pipeline(
-            context=context,
-            pipeline_task="visual-question-answering",
-            model_id=self.model.repo_id,
-        )
-
-    async def move_to_device(self, device: str):
-        if self._pipeline is not None:
-            self._pipeline.model.to(device)
-
-    async def process(self, context: ProcessingContext) -> str:
-        assert self._pipeline is not None
-        image = await context.image_to_pil(self.image)
-        result = await self.run_pipeline_in_thread(image, question=self.question)
-        assert isinstance(result, list)
-        assert len(result) == 1
-        return result[0]["answer"]
+        return extract_generated_text(result)
 
 
 # class MiniCPM(HuggingFacePipelineNode):
