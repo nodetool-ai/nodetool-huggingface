@@ -192,15 +192,16 @@ class CogVideoX(HuggingFacePipelineNode):
             generator = torch.Generator(device="cpu").manual_seed(self.seed)
 
         def callback_on_step_end(
-            step: int, timestep: int, callback_kwargs: dict
-        ) -> None:
+            pipeline: Any, step_index: int, timesteps: int, callback_kwargs: dict
+        ) -> dict:
             context.post_message(
                 NodeProgress(
                     node_id=self.id,
-                    progress=step,
+                    progress=step_index,
                     total=self.num_inference_steps,
                 )
             )
+            return callback_kwargs
 
         # Generate the video
         output = await self.run_pipeline_in_thread(
@@ -220,7 +221,7 @@ class CogVideoX(HuggingFacePipelineNode):
         frames = output.frames[0]
 
         run_gc("After CogVideoX inference", log_before_after=False)
-        return await context.video_from_numpy(frames, fps=self.fps)
+        return await video_from_frames(context, frames, fps=self.fps)
 
 
 class Wan_T2V(HuggingFacePipelineNode):

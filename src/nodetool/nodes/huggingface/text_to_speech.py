@@ -615,17 +615,21 @@ class TextToSpeech(HuggingFacePipelineNode):
 
         result = await self.run_pipeline_in_thread(self.text)
 
+        sample_rate = None
+
         if isinstance(result, dict) and "audio" in result:
             audio_array = result["audio"]
+            sample_rate = result.get("sampling_rate")
         elif isinstance(result, tuple) and len(result) == 2:
             audio_array, sample_rate = result
         else:
             raise ValueError("Unexpected output format from the TTS pipeline")
 
         # Assuming a default sample rate of 16000 if not provided
-        sample_rate = getattr(self._pipeline, "sampling_rate", 16000)
+        if not sample_rate:
+            sample_rate = getattr(self._pipeline, "sampling_rate", None) or 16000
 
-        return await context.audio_from_numpy(audio_array, sample_rate)
+        return await context.audio_from_numpy(audio_array, int(sample_rate))
 
 
 # class LoadSpeakerEmbedding(BaseNode):
