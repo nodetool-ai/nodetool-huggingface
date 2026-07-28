@@ -26,7 +26,7 @@ def test_text2text_required_inputs():
 
 
 def test_text2text_title():
-    assert Text2TextGeneration.get_title() == "Text-to-Text Generation"
+    assert Text2TextGeneration.get_title() == "HF Text-to-Text Generation"
 
 
 def test_text2text_defaults():

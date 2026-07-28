@@ -31,4 +31,4 @@ def test_flux_kontext_resolve_int4():
     assert transformer_model.repo_id == "nunchaku-tech/nunchaku-flux.1-kontext-dev"
     assert "svdq-int4" in (transformer_model.path or "")
     assert text_encoder_model is not None
-    assert text_encoder_model.repo_id == "mit-han-lab/nunchaku-t5"
+    assert text_encoder_model.repo_id == "nunchaku-tech/nunchaku-t5"

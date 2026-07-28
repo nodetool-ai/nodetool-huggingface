@@ -5,10 +5,10 @@ if __package__ is None or __package__ == "":
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from nodetool.nodes.huggingface.text_to_image import (
-    StableDiffusionXL,
+from nodetool.nodes.huggingface.stable_diffusion_base import (
     StableDiffusionXLQuantization,
 )
+from nodetool.nodes.huggingface.text_to_image import StableDiffusionXL
 
 
 def test_sdxl_base_model_fp16_uses_full_repo():
