@@ -238,6 +238,8 @@ class LoadTextToImageModel(HuggingFacePipelineNode):
     )
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
+
         torch_dtype = available_torch_dtype()
         await self.load_model(
             context=context,
@@ -326,6 +328,8 @@ class Text2Image(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
+
         torch_dtype = available_torch_dtype()
         self._pipeline = await self.load_model(
             context=context,
@@ -704,11 +708,7 @@ class Flux(HuggingFacePipelineNode):
 
         transformer_model, text_encoder_model = self._resolve_model_config()
 
-        torch_dtype = (
-            torch.bfloat16
-            if self.variant in [FluxVariant.SCHNELL, FluxVariant.DEV]
-            else torch.float16
-        )
+        torch_dtype = available_torch_dtype()
 
         log.info(f"Using torch_dtype: {torch_dtype}")
 
@@ -1622,10 +1622,12 @@ class QwenImage(HuggingFacePipelineNode):
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
-        # Set up the generator for reproducibility
+        # Set up the generator for reproducibility.
+        # Use a CPU generator: it is valid for pipelines running on any device,
+        # while a CUDA generator fails when the pipeline is still on CPU.
         generator = None
         if self.seed != -1:
-            generator = torch.Generator(device=context.device).manual_seed(self.seed)
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
 
         # Generate the image
         pipeline_kwargs = {

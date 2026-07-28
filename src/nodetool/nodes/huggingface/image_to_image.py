@@ -409,6 +409,8 @@ class ImageToImage(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.auto_pipeline import AutoPipelineForImage2Image
+
         torch_dtype = available_torch_dtype()
         self._pipeline = await self.load_model(
             context=context,
@@ -805,6 +807,10 @@ class StableDiffusionInpaintNode(StableDiffusionBaseNode):
         latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import (
+            StableDiffusionInpaintPipeline,
+        )
+
         await super().preload_model(context)
         if self._pipeline is None:
             self._pipeline = await self.load_model(
@@ -893,6 +899,11 @@ class StableDiffusionControlNetImg2ImgNode(StableDiffusionBaseNode):
         latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.models.controlnets.controlnet import ControlNetModel
+        from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import (
+            StableDiffusionControlNetImg2ImgPipeline,
+        )
+
         await super().preload_model(context)
         if not context.is_huggingface_model_cached(self.controlnet.repo_id):
             raise ValueError(
@@ -1024,6 +1035,10 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
         ]
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_upscale import (
+            StableDiffusionUpscalePipeline,
+        )
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=StableDiffusionUpscalePipeline,
@@ -1067,6 +1082,7 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
                     image=input_image,
                     num_inference_steps=self.num_inference_steps,
                     guidance_scale=self.guidance_scale,
+                    generator=generator,
                     callback=progress_callback(
                         self.id, self.num_inference_steps, context
                     ),
@@ -1142,6 +1158,10 @@ class StableDiffusionLatentUpscaler(HuggingFacePipelineNode):
         return "Stable Diffusion Latent Upscaler"
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_latent_upscale import (
+            StableDiffusionLatentUpscalePipeline,
+        )
+
         self._pipeline = await self.load_model(
             context=context,
             model_class=StableDiffusionLatentUpscalePipeline,
@@ -1233,6 +1253,8 @@ class VAEEncode(HuggingFacePipelineNode):
         return "VAE Encode"
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
+
         dtype = torch.float32 if context.device == "mps" else torch.float16
         self._vae = await self.load_model(
             context=context,
@@ -1250,6 +1272,8 @@ class VAEEncode(HuggingFacePipelineNode):
             self._vae.to(device)
 
     async def process(self, context: ProcessingContext) -> TorchTensor:
+        from diffusers.models.modeling_outputs import AutoencoderKLOutput
+
         if self._vae is None:
             raise ValueError("VAE not initialized")
 
@@ -1312,6 +1336,8 @@ class VAEDecode(HuggingFacePipelineNode):
         return "VAE Decode"
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
+
         dtype = torch.float32 if context.device == "mps" else torch.float16
         self._vae = await self.load_model(
             context=context,
@@ -1329,6 +1355,8 @@ class VAEDecode(HuggingFacePipelineNode):
             self._vae.to(device)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
+        from diffusers.models.autoencoders.vae import DecoderOutput
+
         if self._vae is None:
             raise ValueError("VAE not initialized")
 
@@ -1391,6 +1419,10 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
+            StableDiffusionXLImg2ImgPipeline,
+        )
+
         torch_dtype = available_torch_dtype()
         base_model, pipeline_model_id, transformer_model = self._prepare_sdxl_models()
         await self._load_sdxl_pipeline(
@@ -1406,7 +1438,8 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         assert self._pipeline is not None
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
-        self._pipeline.enable_model_cpu_offload()
+        if self.enable_cpu_offload:
+            self._pipeline.enable_model_cpu_offload()
         self._set_scheduler(self.scheduler)
         await self._load_ip_adapter()
 
@@ -1465,6 +1498,10 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
         latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_inpaint import (
+            StableDiffusionXLInpaintPipeline,
+        )
+
         if self._pipeline is None:
             torch_dtype = available_torch_dtype()
             base_model, pipeline_model_id, transformer_model = (
@@ -1489,7 +1526,6 @@ class StableDiffusionXLInpainting(StableDiffusionXLBase):
     async def process(self, context: ProcessingContext) -> OutputType:
         input_image = await context.image_to_pil(self.image)
         mask_image = await context.image_to_pil(self.mask_image)
-        mask_image = mask_image.resize((self.width, self.height))
         result = await self.run_pipeline(
             context,
             image=input_image,
@@ -1563,6 +1599,11 @@ class StableDiffusionXLControlNet(StableDiffusionXLBase):
             self._pipeline.to(device)
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.models.controlnets.controlnet import ControlNetModel
+        from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl import (
+            StableDiffusionXLControlNetPipeline,
+        )
+
         await super().preload_model(context)
         controlnet_dtype = (
             torch.float32 if context.device == "mps" else available_torch_dtype()
@@ -1673,6 +1714,11 @@ class StableDiffusionXLControlNetImg2ImgNode(StableDiffusionXLImg2Img):
             self._pipeline.to(device)
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.models.controlnets.controlnet import ControlNetModel
+        from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl_img2img import (
+            StableDiffusionXLControlNetImg2ImgPipeline,
+        )
+
         controlnet_dtype = (
             torch.float32 if context.device == "mps" else available_torch_dtype()
         )
@@ -1822,6 +1868,8 @@ class OmniGenNode(HuggingFacePipelineNode):
         return "Shitao/OmniGen-v1-diffusers"
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.omnigen.pipeline_omnigen import OmniGenPipeline
+
         torch_dtype = available_torch_dtype()
         self._pipeline = await self.load_model(
             context=context,
@@ -2377,7 +2425,10 @@ class FluxFill(HuggingFacePipelineNode):
         return ["image", "mask_image"]
 
     def get_model_id(self) -> str:
-        return self._get_base_model(self.quantization)
+        return (
+            self._get_base_model(self.quantization).repo_id
+            or "black-forest-labs/FLUX.1-Fill-dev"
+        )
 
     def _get_base_model(self, quantization: FluxFillQuantization) -> HFFluxFill:
         if quantization == FluxFillQuantization.FP16:
