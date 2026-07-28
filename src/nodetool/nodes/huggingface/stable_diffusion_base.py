@@ -60,7 +60,10 @@ HF_STABLE_DIFFUSION_MODELS = [
         repo_id="Lykon/DreamShaper", path="DreamShaper_6.2_BakedVae_pruned.safetensors"
     ),
     # Anime & Stylized Art Models (SD1.5 only)
-    HFStableDiffusion(repo_id="andite/pastel-mix", path="pastelmix-fp16.safetensors"),
+    HFStableDiffusion(repo_id="Yntec/AnythingV7", path="AnythingV7.safetensors"),
+    HFStableDiffusion(
+        repo_id="Yntec/Cetus", path="cetusMix_v35_fp16_no_ema.safetensors"
+    ),
     HFStableDiffusion(repo_id="prompthero/openjourney-v4", path="openjourney-v4.ckpt"),
     HFStableDiffusion(
         repo_id="gsdf/Counterfeit-V3.0", path="Counterfeit-V3.0_fix_fp16.safetensors"

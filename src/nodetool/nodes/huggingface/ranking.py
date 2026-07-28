@@ -27,7 +27,7 @@ class Reranker(HuggingFacePipelineNode):
     model: HFReranker = Field(
         default=HFReranker(),
         title="Model",
-        description="The reranking model. BGE-reranker-v2-m3 is multilingual; base and large variants offer different speed/accuracy tradeoffs.",
+        description="The reranking model. BGE-reranker-v2-m3 is multilingual; gte-reranker-modernbert-base handles long context; ms-marco-MiniLM cross-encoders are the fastest.",
     )
     query: str = Field(
         default="",
@@ -56,6 +56,22 @@ class Reranker(HuggingFacePipelineNode):
             ),
             HFReranker(
                 repo_id="BAAI/bge-reranker-large",
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
+            ),
+            HFReranker(
+                repo_id="Alibaba-NLP/gte-reranker-modernbert-base",
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
+            ),
+            HFReranker(
+                repo_id="mixedbread-ai/mxbai-rerank-base-v1",
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
+            ),
+            HFReranker(
+                repo_id="cross-encoder/ms-marco-MiniLM-L6-v2",
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
+            ),
+            HFReranker(
+                repo_id="cross-encoder/ms-marco-MiniLM-L12-v2",
                 allow_patterns=["*.safetensors", "*.txt", "*.json"],
             ),
         ]

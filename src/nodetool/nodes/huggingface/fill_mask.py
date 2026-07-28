@@ -25,7 +25,7 @@ class FillMask(HuggingFacePipelineNode):
     model: HFFillMask = Field(
         default=HFFillMask(),
         title="Model",
-        description="The masked language model to use. BERT, RoBERTa, and DistilBERT variants are supported.",
+        description="The masked language model to use. ModernBERT and mmBERT are the current generation; BERT, RoBERTa, XLM-R and DistilBERT variants are also supported.",
     )
     inputs: str = Field(
         default="The capital of France is [MASK].",
@@ -41,6 +41,24 @@ class FillMask(HuggingFacePipelineNode):
     @classmethod
     def get_recommended_models(cls) -> list[HFFillMask]:
         return [
+            # Current-generation encoders
+            HFFillMask(
+                repo_id="answerdotai/ModernBERT-base",
+                allow_patterns=["*.json", "*.txt", "*.safetensors"],
+            ),
+            HFFillMask(
+                repo_id="answerdotai/ModernBERT-large",
+                allow_patterns=["*.json", "*.txt", "*.safetensors"],
+            ),
+            HFFillMask(
+                repo_id="jhu-clsp/mmBERT-base",
+                allow_patterns=["*.json", "*.txt", "*.safetensors"],
+            ),
+            HFFillMask(
+                repo_id="FacebookAI/xlm-roberta-base",
+                allow_patterns=["*.json", "*.txt", "*.safetensors"],
+            ),
+            # Established baselines
             HFFillMask(
                 repo_id="bert-base-uncased",
                 allow_patterns=["*.json", "*.txt", "*.safetensors"],

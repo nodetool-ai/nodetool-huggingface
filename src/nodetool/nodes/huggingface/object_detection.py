@@ -56,6 +56,24 @@ class ObjectDetection(HuggingFacePipelineNode):
     @classmethod
     def get_recommended_models(cls) -> list[HFObjectDetection]:
         return [
+            # Current-generation real-time detectors
+            HFObjectDetection(
+                repo_id="PekingU/rtdetr_v2_r18vd",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
+            ),
+            HFObjectDetection(
+                repo_id="PekingU/rtdetr_v2_r50vd",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
+            ),
+            HFObjectDetection(
+                repo_id="ustc-community/dfine-medium-coco",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
+            ),
+            HFObjectDetection(
+                repo_id="ustc-community/dfine-xlarge-coco",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
+            ),
+            # Established baselines
             HFObjectDetection(
                 repo_id="facebook/detr-resnet-50",
                 allow_patterns=["README.md", "*.bin", "*.json", "**/*.json"],
@@ -282,6 +300,36 @@ class ZeroShotObjectDetection(HuggingFacePipelineNode):
             HFZeroShotObjectDetection(
                 repo_id="IDEA-Research/grounding-dino-tiny",
                 allow_patterns=["README.md", "*.bin", "*.json", "**/*.json", "*.txt"],
+            ),
+            HFZeroShotObjectDetection(
+                repo_id="IDEA-Research/grounding-dino-base",
+                allow_patterns=[
+                    "README.md",
+                    "*.safetensors",
+                    "*.json",
+                    "**/*.json",
+                    "*.txt",
+                ],
+            ),
+            HFZeroShotObjectDetection(
+                repo_id="openmmlab-community/mm_grounding_dino_large_all",
+                allow_patterns=[
+                    "README.md",
+                    "*.safetensors",
+                    "*.json",
+                    "**/*.json",
+                    "*.txt",
+                ],
+            ),
+            HFZeroShotObjectDetection(
+                repo_id="iSEE-Laboratory/llmdet_base",
+                allow_patterns=[
+                    "README.md",
+                    "*.safetensors",
+                    "*.json",
+                    "**/*.json",
+                    "*.txt",
+                ],
             ),
         ]
 

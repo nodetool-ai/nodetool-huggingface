@@ -333,10 +333,6 @@ class Wan_T2V(HuggingFacePipelineNode):
                 allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
             ),
             HFTextToVideo(
-                repo_id="Wan-AI/Wan2.2-T2V-14B-Diffusers",
-                allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
-            ),
-            HFTextToVideo(
                 repo_id="Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
                 allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
             ),

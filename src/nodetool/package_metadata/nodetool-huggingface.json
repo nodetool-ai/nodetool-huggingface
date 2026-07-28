@@ -225,6 +225,48 @@
           "name": "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition",
           "repo_id": "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition",
           "type": "hf.audio_classification"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "pytorch_model.bin",
+            "*.json"
+          ],
+          "id": "superb/hubert-large-superb-er",
+          "name": "superb/hubert-large-superb-er",
+          "repo_id": "superb/hubert-large-superb-er",
+          "type": "hf.audio_classification"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json"
+          ],
+          "id": "MIT/ast-finetuned-speech-commands-v2",
+          "name": "MIT/ast-finetuned-speech-commands-v2",
+          "repo_id": "MIT/ast-finetuned-speech-commands-v2",
+          "type": "hf.audio_classification"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "pytorch_model.bin",
+            "*.json"
+          ],
+          "id": "facebook/mms-lid-126",
+          "name": "facebook/mms-lid-126",
+          "repo_id": "facebook/mms-lid-126",
+          "type": "hf.audio_classification"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json"
+          ],
+          "id": "prithivMLmods/Common-Voice-Gender-Detection",
+          "name": "prithivMLmods/Common-Voice-Gender-Detection",
+          "repo_id": "prithivMLmods/Common-Voice-Gender-Detection",
+          "type": "hf.audio_classification"
         }
       ],
       "title": "HF Audio Classifier"
@@ -313,6 +355,28 @@
           "id": "laion/clap-htsat-unfused",
           "name": "laion/clap-htsat-unfused",
           "repo_id": "laion/clap-htsat-unfused",
+          "type": "hf.zero_shot_audio_classification"
+        },
+        {
+          "allow_patterns": [
+            "model.safetensors",
+            "*.json",
+            "*.txt"
+          ],
+          "id": "laion/larger_clap_general",
+          "name": "laion/larger_clap_general",
+          "repo_id": "laion/larger_clap_general",
+          "type": "hf.zero_shot_audio_classification"
+        },
+        {
+          "allow_patterns": [
+            "model.safetensors",
+            "*.json",
+            "*.txt"
+          ],
+          "id": "laion/clap-htsat-fused",
+          "name": "laion/clap-htsat-fused",
+          "repo_id": "laion/clap-htsat-fused",
           "type": "hf.zero_shot_audio_classification"
         }
       ],
@@ -704,6 +768,17 @@
           "type": "hf.automatic_speech_recognition"
         },
         {
+          "allow_patterns": [
+            "model.safetensors",
+            "*.json",
+            "*.txt"
+          ],
+          "id": "distil-whisper/distil-large-v3.5",
+          "name": "distil-whisper/distil-large-v3.5",
+          "repo_id": "distil-whisper/distil-large-v3.5",
+          "type": "hf.automatic_speech_recognition"
+        },
+        {
           "id": "ibm-granite/granite-speech-4.1-2b",
           "name": "ibm-granite/granite-speech-4.1-2b",
           "repo_id": "ibm-granite/granite-speech-4.1-2b",
@@ -819,6 +894,24 @@
           "id": "depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf",
           "name": "depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf",
           "repo_id": "depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf",
+          "type": "hf.depth_estimation"
+        },
+        {
+          "id": "depth-anything/Depth-Anything-V2-Metric-Indoor-Large-hf",
+          "name": "depth-anything/Depth-Anything-V2-Metric-Indoor-Large-hf",
+          "repo_id": "depth-anything/Depth-Anything-V2-Metric-Indoor-Large-hf",
+          "type": "hf.depth_estimation"
+        },
+        {
+          "id": "depth-anything/Depth-Anything-V2-Metric-Outdoor-Large-hf",
+          "name": "depth-anything/Depth-Anything-V2-Metric-Outdoor-Large-hf",
+          "repo_id": "depth-anything/Depth-Anything-V2-Metric-Outdoor-Large-hf",
+          "type": "hf.depth_estimation"
+        },
+        {
+          "id": "xingyang1/Distill-Any-Depth-Large-hf",
+          "name": "xingyang1/Distill-Any-Depth-Large-hf",
+          "repo_id": "xingyang1/Distill-Any-Depth-Large-hf",
           "type": "hf.depth_estimation"
         }
       ],
@@ -952,13 +1045,25 @@
         {
           "allow_patterns": [
             "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "rubentito/layoutlmv3-base-mpdocvqa",
+          "name": "rubentito/layoutlmv3-base-mpdocvqa",
+          "repo_id": "rubentito/layoutlmv3-base-mpdocvqa",
+          "type": "hf.model"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
             "*.bin",
             "*.json",
             "**/*.json"
           ],
-          "id": "cloudqi/cqi_visual_question_answering_pt_v0",
-          "name": "cloudqi/cqi_visual_question_answering_pt_v0",
-          "repo_id": "cloudqi/cqi_visual_question_answering_pt_v0",
+          "id": "tiennvcs/layoutlmv2-base-uncased-finetuned-docvqa",
+          "name": "tiennvcs/layoutlmv2-base-uncased-finetuned-docvqa",
+          "repo_id": "tiennvcs/layoutlmv2-base-uncased-finetuned-docvqa",
           "type": "hf.model"
         }
       ],
@@ -1014,6 +1119,61 @@
         }
       ],
       "recommended_models": [
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "Qwen/Qwen3-Embedding-0.6B",
+          "name": "Qwen/Qwen3-Embedding-0.6B",
+          "repo_id": "Qwen/Qwen3-Embedding-0.6B",
+          "type": "hf.feature_extraction"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "Qwen/Qwen3-Embedding-4B",
+          "name": "Qwen/Qwen3-Embedding-4B",
+          "repo_id": "Qwen/Qwen3-Embedding-4B",
+          "type": "hf.feature_extraction"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "ibm-granite/granite-embedding-small-english-r2",
+          "name": "ibm-granite/granite-embedding-small-english-r2",
+          "repo_id": "ibm-granite/granite-embedding-small-english-r2",
+          "type": "hf.feature_extraction"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "ibm-granite/granite-embedding-97m-multilingual-r2",
+          "name": "ibm-granite/granite-embedding-97m-multilingual-r2",
+          "repo_id": "ibm-granite/granite-embedding-97m-multilingual-r2",
+          "type": "hf.feature_extraction"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "Alibaba-NLP/gte-modernbert-base",
+          "name": "Alibaba-NLP/gte-modernbert-base",
+          "repo_id": "Alibaba-NLP/gte-modernbert-base",
+          "type": "hf.feature_extraction"
+        },
         {
           "allow_patterns": [
             "*.safetensors",
@@ -1136,6 +1296,50 @@
         }
       ],
       "recommended_models": [
+        {
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ],
+          "id": "answerdotai/ModernBERT-base",
+          "name": "answerdotai/ModernBERT-base",
+          "repo_id": "answerdotai/ModernBERT-base",
+          "type": "hf.fill_mask"
+        },
+        {
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ],
+          "id": "answerdotai/ModernBERT-large",
+          "name": "answerdotai/ModernBERT-large",
+          "repo_id": "answerdotai/ModernBERT-large",
+          "type": "hf.fill_mask"
+        },
+        {
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ],
+          "id": "jhu-clsp/mmBERT-base",
+          "name": "jhu-clsp/mmBERT-base",
+          "repo_id": "jhu-clsp/mmBERT-base",
+          "type": "hf.fill_mask"
+        },
+        {
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ],
+          "id": "FacebookAI/xlm-roberta-base",
+          "name": "FacebookAI/xlm-roberta-base",
+          "repo_id": "FacebookAI/xlm-roberta-base",
+          "type": "hf.fill_mask"
+        },
         {
           "allow_patterns": [
             "*.json",
@@ -1342,6 +1546,42 @@
           "name": "rizvandwiki/gender-classification-2",
           "repo_id": "rizvandwiki/gender-classification-2",
           "type": "hf.image_classification"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "facebook/convnextv2-base-22k-224",
+          "name": "facebook/convnextv2-base-22k-224",
+          "repo_id": "facebook/convnextv2-base-22k-224",
+          "type": "hf.image_classification"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "Freepik/nsfw_image_detector",
+          "name": "Freepik/nsfw_image_detector",
+          "repo_id": "Freepik/nsfw_image_detector",
+          "type": "hf.image_classification"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "prithivMLmods/siglip2-x256-explicit-content",
+          "name": "prithivMLmods/siglip2-x256-explicit-content",
+          "repo_id": "prithivMLmods/siglip2-x256-explicit-content",
+          "type": "hf.image_classification"
         }
       ],
       "title": "HF Image Classifier"
@@ -1455,6 +1695,30 @@
           "id": "laion/CLIP-ViT-g-14-laion2B-s12B-b42K",
           "name": "laion/CLIP-ViT-g-14-laion2B-s12B-b42K",
           "repo_id": "laion/CLIP-ViT-g-14-laion2B-s12B-b42K",
+          "type": "hf.zero_shot_image_classification"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "*.model"
+          ],
+          "id": "google/siglip2-base-patch16-224",
+          "name": "google/siglip2-base-patch16-224",
+          "repo_id": "google/siglip2-base-patch16-224",
+          "type": "hf.zero_shot_image_classification"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "*.model"
+          ],
+          "id": "google/siglip2-so400m-patch14-384",
+          "name": "google/siglip2-so400m-patch14-384",
+          "repo_id": "google/siglip2-so400m-patch14-384",
           "type": "hf.zero_shot_image_classification"
         }
       ],
@@ -1785,6 +2049,54 @@
           "name": "mattmdjaga/segformer_b2_clothes",
           "repo_id": "mattmdjaga/segformer_b2_clothes",
           "type": "hf.image_segmentation"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "nvidia/segformer-b5-finetuned-ade-640-640",
+          "name": "nvidia/segformer-b5-finetuned-ade-640-640",
+          "repo_id": "nvidia/segformer-b5-finetuned-ade-640-640",
+          "type": "hf.image_segmentation"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "tue-mps/coco_panoptic_eomt_large_640",
+          "name": "tue-mps/coco_panoptic_eomt_large_640",
+          "repo_id": "tue-mps/coco_panoptic_eomt_large_640",
+          "type": "hf.image_segmentation"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "facebook/mask2former-swin-large-coco-panoptic",
+          "name": "facebook/mask2former-swin-large-coco-panoptic",
+          "repo_id": "facebook/mask2former-swin-large-coco-panoptic",
+          "type": "hf.image_segmentation"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "shi-labs/oneformer_coco_swin_large",
+          "name": "shi-labs/oneformer_coco_swin_large",
+          "repo_id": "shi-labs/oneformer_coco_swin_large",
+          "type": "hf.image_segmentation"
         }
       ],
       "title": "HF Image Segmentation"
@@ -2030,21 +2342,57 @@
       ],
       "recommended_models": [
         {
+          "id": "Qwen/Qwen3.6-27B",
+          "name": "Qwen/Qwen3.6-27B",
+          "repo_id": "Qwen/Qwen3.6-27B",
+          "type": "hf.image_text_to_text"
+        },
+        {
+          "id": "Qwen/Qwen3.5-4B",
+          "name": "Qwen/Qwen3.5-4B",
+          "repo_id": "Qwen/Qwen3.5-4B",
+          "type": "hf.image_text_to_text"
+        },
+        {
+          "id": "Qwen/Qwen3.5-9B",
+          "name": "Qwen/Qwen3.5-9B",
+          "repo_id": "Qwen/Qwen3.5-9B",
+          "type": "hf.image_text_to_text"
+        },
+        {
+          "id": "Qwen/Qwen3-VL-8B-Instruct",
+          "name": "Qwen/Qwen3-VL-8B-Instruct",
+          "repo_id": "Qwen/Qwen3-VL-8B-Instruct",
+          "type": "hf.image_text_to_text"
+        },
+        {
+          "id": "google/gemma-4-31B-it",
+          "name": "google/gemma-4-31B-it",
+          "repo_id": "google/gemma-4-31B-it",
+          "type": "hf.image_text_to_text"
+        },
+        {
+          "id": "google/gemma-4-26B-A4B-it",
+          "name": "google/gemma-4-26B-A4B-it",
+          "repo_id": "google/gemma-4-26B-A4B-it",
+          "type": "hf.image_text_to_text"
+        },
+        {
           "id": "HuggingFaceTB/SmolVLM-Instruct",
           "name": "HuggingFaceTB/SmolVLM-Instruct",
           "repo_id": "HuggingFaceTB/SmolVLM-Instruct",
           "type": "hf.image_text_to_text"
         },
         {
-          "id": "llava-hf/llava-v1.5-13b",
-          "name": "llava-hf/llava-v1.5-13b",
-          "repo_id": "llava-hf/llava-v1.5-13b",
+          "id": "llava-hf/llava-1.5-13b-hf",
+          "name": "llava-hf/llava-1.5-13b-hf",
+          "repo_id": "llava-hf/llava-1.5-13b-hf",
           "type": "hf.image_text_to_text"
         },
         {
-          "id": "llava-hf/llava-v1.5-7b",
-          "name": "llava-hf/llava-v1.5-7b",
-          "repo_id": "llava-hf/llava-v1.5-7b",
+          "id": "llava-hf/llava-1.5-7b-hf",
+          "name": "llava-hf/llava-1.5-7b-hf",
+          "repo_id": "llava-hf/llava-1.5-7b-hf",
           "type": "hf.image_text_to_text"
         },
         {
@@ -2556,12 +2904,6 @@
           "type": "hf.qwen3_vl"
         },
         {
-          "id": "Qwen/Qwen3-VL-7B-Instruct",
-          "name": "Qwen/Qwen3-VL-7B-Instruct",
-          "repo_id": "Qwen/Qwen3-VL-7B-Instruct",
-          "type": "hf.qwen3_vl"
-        },
-        {
           "id": "Qwen/Qwen3-VL-8B-Instruct",
           "name": "Qwen/Qwen3-VL-8B-Instruct",
           "repo_id": "Qwen/Qwen3-VL-8B-Instruct",
@@ -2607,12 +2949,6 @@
           "id": "Qwen/Qwen3-VL-235B-A22B-Thinking",
           "name": "Qwen/Qwen3-VL-235B-A22B-Thinking",
           "repo_id": "Qwen/Qwen3-VL-235B-A22B-Thinking",
-          "type": "hf.qwen3_vl"
-        },
-        {
-          "id": "Qwen/Qwen3-VL-Demo",
-          "name": "Qwen/Qwen3-VL-Demo",
-          "repo_id": "Qwen/Qwen3-VL-Demo",
           "type": "hf.qwen3_vl"
         },
         {
@@ -4737,10 +5073,17 @@
           "type": "hf.stable_diffusion"
         },
         {
-          "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
-          "name": "andite/pastel-mix",
-          "path": "pastelmix-fp16.safetensors",
-          "repo_id": "andite/pastel-mix",
+          "id": "Yntec/AnythingV7:AnythingV7.safetensors",
+          "name": "Yntec/AnythingV7",
+          "path": "AnythingV7.safetensors",
+          "repo_id": "Yntec/AnythingV7",
+          "type": "hf.stable_diffusion"
+        },
+        {
+          "id": "Yntec/Cetus:cetusMix_v35_fp16_no_ema.safetensors",
+          "name": "Yntec/Cetus",
+          "path": "cetusMix_v35_fp16_no_ema.safetensors",
+          "repo_id": "Yntec/Cetus",
           "type": "hf.stable_diffusion"
         },
         {
@@ -5207,10 +5550,17 @@
           "type": "hf.stable_diffusion"
         },
         {
-          "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
-          "name": "andite/pastel-mix",
-          "path": "pastelmix-fp16.safetensors",
-          "repo_id": "andite/pastel-mix",
+          "id": "Yntec/AnythingV7:AnythingV7.safetensors",
+          "name": "Yntec/AnythingV7",
+          "path": "AnythingV7.safetensors",
+          "repo_id": "Yntec/AnythingV7",
+          "type": "hf.stable_diffusion"
+        },
+        {
+          "id": "Yntec/Cetus:cetusMix_v35_fp16_no_ema.safetensors",
+          "name": "Yntec/Cetus",
+          "path": "cetusMix_v35_fp16_no_ema.safetensors",
+          "repo_id": "Yntec/Cetus",
           "type": "hf.stable_diffusion"
         },
         {
@@ -5628,10 +5978,17 @@
           "type": "hf.stable_diffusion"
         },
         {
-          "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
-          "name": "andite/pastel-mix",
-          "path": "pastelmix-fp16.safetensors",
-          "repo_id": "andite/pastel-mix",
+          "id": "Yntec/AnythingV7:AnythingV7.safetensors",
+          "name": "Yntec/AnythingV7",
+          "path": "AnythingV7.safetensors",
+          "repo_id": "Yntec/AnythingV7",
+          "type": "hf.stable_diffusion"
+        },
+        {
+          "id": "Yntec/Cetus:cetusMix_v35_fp16_no_ema.safetensors",
+          "name": "Yntec/Cetus",
+          "path": "cetusMix_v35_fp16_no_ema.safetensors",
+          "repo_id": "Yntec/Cetus",
           "type": "hf.stable_diffusion"
         },
         {
@@ -6002,10 +6359,17 @@
           "type": "hf.stable_diffusion"
         },
         {
-          "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
-          "name": "andite/pastel-mix",
-          "path": "pastelmix-fp16.safetensors",
-          "repo_id": "andite/pastel-mix",
+          "id": "Yntec/AnythingV7:AnythingV7.safetensors",
+          "name": "Yntec/AnythingV7",
+          "path": "AnythingV7.safetensors",
+          "repo_id": "Yntec/AnythingV7",
+          "type": "hf.stable_diffusion"
+        },
+        {
+          "id": "Yntec/Cetus:cetusMix_v35_fp16_no_ema.safetensors",
+          "name": "Yntec/Cetus",
+          "path": "cetusMix_v35_fp16_no_ema.safetensors",
+          "repo_id": "Yntec/Cetus",
           "type": "hf.stable_diffusion"
         },
         {
@@ -6393,10 +6757,17 @@
           "type": "hf.stable_diffusion"
         },
         {
-          "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
-          "name": "andite/pastel-mix",
-          "path": "pastelmix-fp16.safetensors",
-          "repo_id": "andite/pastel-mix",
+          "id": "Yntec/AnythingV7:AnythingV7.safetensors",
+          "name": "Yntec/AnythingV7",
+          "path": "AnythingV7.safetensors",
+          "repo_id": "Yntec/AnythingV7",
+          "type": "hf.stable_diffusion"
+        },
+        {
+          "id": "Yntec/Cetus:cetusMix_v35_fp16_no_ema.safetensors",
+          "name": "Yntec/Cetus",
+          "path": "cetusMix_v35_fp16_no_ema.safetensors",
+          "repo_id": "Yntec/Cetus",
           "type": "hf.stable_diffusion"
         },
         {
@@ -9544,18 +9915,6 @@
             "**/*.txt",
             "*.json"
           ],
-          "id": "Wan-AI/Wan2.2-FLF2V-14B-720P-Diffusers",
-          "name": "Wan-AI/Wan2.2-FLF2V-14B-720P-Diffusers",
-          "repo_id": "Wan-AI/Wan2.2-FLF2V-14B-720P-Diffusers",
-          "type": "hf.text_to_video"
-        },
-        {
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ],
           "id": "Wan-AI/Wan2.1-FLF2V-14B-720P-diffusers",
           "name": "Wan-AI/Wan2.1-FLF2V-14B-720P-diffusers",
           "repo_id": "Wan-AI/Wan2.1-FLF2V-14B-720P-diffusers",
@@ -10819,6 +11178,54 @@
         {
           "allow_patterns": [
             "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "PekingU/rtdetr_v2_r18vd",
+          "name": "PekingU/rtdetr_v2_r18vd",
+          "repo_id": "PekingU/rtdetr_v2_r18vd",
+          "type": "hf.object_detection"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "PekingU/rtdetr_v2_r50vd",
+          "name": "PekingU/rtdetr_v2_r50vd",
+          "repo_id": "PekingU/rtdetr_v2_r50vd",
+          "type": "hf.object_detection"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "ustc-community/dfine-medium-coco",
+          "name": "ustc-community/dfine-medium-coco",
+          "repo_id": "ustc-community/dfine-medium-coco",
+          "type": "hf.object_detection"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "ustc-community/dfine-xlarge-coco",
+          "name": "ustc-community/dfine-xlarge-coco",
+          "repo_id": "ustc-community/dfine-xlarge-coco",
+          "type": "hf.object_detection"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
             "*.bin",
             "*.json",
             "**/*.json"
@@ -11124,6 +11531,45 @@
           "id": "IDEA-Research/grounding-dino-tiny",
           "name": "IDEA-Research/grounding-dino-tiny",
           "repo_id": "IDEA-Research/grounding-dino-tiny",
+          "type": "hf.zero_shot_object_detection"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json",
+            "*.txt"
+          ],
+          "id": "IDEA-Research/grounding-dino-base",
+          "name": "IDEA-Research/grounding-dino-base",
+          "repo_id": "IDEA-Research/grounding-dino-base",
+          "type": "hf.zero_shot_object_detection"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json",
+            "*.txt"
+          ],
+          "id": "openmmlab-community/mm_grounding_dino_large_all",
+          "name": "openmmlab-community/mm_grounding_dino_large_all",
+          "repo_id": "openmmlab-community/mm_grounding_dino_large_all",
+          "type": "hf.zero_shot_object_detection"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json",
+            "*.txt"
+          ],
+          "id": "iSEE-Laboratory/llmdet_base",
+          "name": "iSEE-Laboratory/llmdet_base",
+          "repo_id": "iSEE-Laboratory/llmdet_base",
           "type": "hf.zero_shot_object_detection"
         }
       ],
@@ -11496,6 +11942,50 @@
           "name": "BAAI/bge-reranker-large",
           "repo_id": "BAAI/bge-reranker-large",
           "type": "hf.reranker"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "Alibaba-NLP/gte-reranker-modernbert-base",
+          "name": "Alibaba-NLP/gte-reranker-modernbert-base",
+          "repo_id": "Alibaba-NLP/gte-reranker-modernbert-base",
+          "type": "hf.reranker"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "mixedbread-ai/mxbai-rerank-base-v1",
+          "name": "mixedbread-ai/mxbai-rerank-base-v1",
+          "repo_id": "mixedbread-ai/mxbai-rerank-base-v1",
+          "type": "hf.reranker"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "cross-encoder/ms-marco-MiniLM-L6-v2",
+          "name": "cross-encoder/ms-marco-MiniLM-L6-v2",
+          "repo_id": "cross-encoder/ms-marco-MiniLM-L6-v2",
+          "type": "hf.reranker"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "cross-encoder/ms-marco-MiniLM-L12-v2",
+          "name": "cross-encoder/ms-marco-MiniLM-L12-v2",
+          "repo_id": "cross-encoder/ms-marco-MiniLM-L12-v2",
+          "type": "hf.reranker"
         }
       ],
       "title": "HF Reranker"
@@ -11550,6 +12040,61 @@
         }
       ],
       "recommended_models": [
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "Qwen/Qwen3-Embedding-0.6B",
+          "name": "Qwen/Qwen3-Embedding-0.6B",
+          "repo_id": "Qwen/Qwen3-Embedding-0.6B",
+          "type": "hf.sentence_similarity"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "ibm-granite/granite-embedding-small-english-r2",
+          "name": "ibm-granite/granite-embedding-small-english-r2",
+          "repo_id": "ibm-granite/granite-embedding-small-english-r2",
+          "type": "hf.sentence_similarity"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "ibm-granite/granite-embedding-97m-multilingual-r2",
+          "name": "ibm-granite/granite-embedding-97m-multilingual-r2",
+          "repo_id": "ibm-granite/granite-embedding-97m-multilingual-r2",
+          "type": "hf.sentence_similarity"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "Alibaba-NLP/gte-modernbert-base",
+          "name": "Alibaba-NLP/gte-modernbert-base",
+          "repo_id": "Alibaba-NLP/gte-modernbert-base",
+          "type": "hf.sentence_similarity"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "intfloat/multilingual-e5-base",
+          "name": "intfloat/multilingual-e5-base",
+          "repo_id": "intfloat/multilingual-e5-base",
+          "type": "hf.sentence_similarity"
+        },
         {
           "allow_patterns": [
             "*.safetensors",
@@ -12211,7 +12756,8 @@
           "allow_patterns": [
             "*.json",
             "*.txt",
-            "*.bin"
+            "*.bin",
+            "*.safetensors"
           ],
           "id": "cardiffnlp/twitter-roberta-base-sentiment-latest",
           "name": "cardiffnlp/twitter-roberta-base-sentiment-latest",
@@ -12222,11 +12768,60 @@
           "allow_patterns": [
             "*.json",
             "*.txt",
-            "*.bin"
+            "*.bin",
+            "*.safetensors"
           ],
           "id": "michellejieli/emotion_text_classifier",
           "name": "michellejieli/emotion_text_classifier",
           "repo_id": "michellejieli/emotion_text_classifier",
+          "type": "hf.text_classification"
+        },
+        {
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.bin",
+            "*.safetensors"
+          ],
+          "id": "SamLowe/roberta-base-go_emotions",
+          "name": "SamLowe/roberta-base-go_emotions",
+          "repo_id": "SamLowe/roberta-base-go_emotions",
+          "type": "hf.text_classification"
+        },
+        {
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.bin",
+            "*.safetensors"
+          ],
+          "id": "tabularisai/multilingual-sentiment-analysis",
+          "name": "tabularisai/multilingual-sentiment-analysis",
+          "repo_id": "tabularisai/multilingual-sentiment-analysis",
+          "type": "hf.text_classification"
+        },
+        {
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.bin",
+            "*.safetensors"
+          ],
+          "id": "tabularisai/multilingual-emotion-classification",
+          "name": "tabularisai/multilingual-emotion-classification",
+          "repo_id": "tabularisai/multilingual-emotion-classification",
+          "type": "hf.text_classification"
+        },
+        {
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.bin",
+            "*.safetensors"
+          ],
+          "id": "clapAI/modernBERT-base-multilingual-sentiment",
+          "name": "clapAI/modernBERT-base-multilingual-sentiment",
+          "repo_id": "clapAI/modernBERT-base-multilingual-sentiment",
           "type": "hf.text_classification"
         }
       ],
@@ -12353,6 +12948,39 @@
           "id": "tasksource/ModernBERT-base-nli",
           "name": "tasksource/ModernBERT-base-nli",
           "repo_id": "tasksource/ModernBERT-base-nli",
+          "type": "hf.zero_shot_classification"
+        },
+        {
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ],
+          "id": "tasksource/ModernBERT-large-nli",
+          "name": "tasksource/ModernBERT-large-nli",
+          "repo_id": "tasksource/ModernBERT-large-nli",
+          "type": "hf.zero_shot_classification"
+        },
+        {
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ],
+          "id": "MoritzLaurer/deberta-v3-large-zeroshot-v2.0",
+          "name": "MoritzLaurer/deberta-v3-large-zeroshot-v2.0",
+          "repo_id": "MoritzLaurer/deberta-v3-large-zeroshot-v2.0",
+          "type": "hf.zero_shot_classification"
+        },
+        {
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.safetensors"
+          ],
+          "id": "MoritzLaurer/ModernBERT-large-zeroshot-v2.0",
+          "name": "MoritzLaurer/ModernBERT-large-zeroshot-v2.0",
+          "repo_id": "MoritzLaurer/ModernBERT-large-zeroshot-v2.0",
           "type": "hf.zero_shot_classification"
         },
         {
@@ -12520,6 +13148,54 @@
           "id": "open-thoughts/OpenThinker-Agent-v1",
           "name": "open-thoughts/OpenThinker-Agent-v1",
           "repo_id": "open-thoughts/OpenThinker-Agent-v1",
+          "type": "hf.text_generation"
+        },
+        {
+          "id": "Qwen/Qwen3.6-27B",
+          "name": "Qwen/Qwen3.6-27B",
+          "repo_id": "Qwen/Qwen3.6-27B",
+          "type": "hf.text_generation"
+        },
+        {
+          "id": "Qwen/Qwen3.6-35B-A3B",
+          "name": "Qwen/Qwen3.6-35B-A3B",
+          "repo_id": "Qwen/Qwen3.6-35B-A3B",
+          "type": "hf.text_generation"
+        },
+        {
+          "id": "Qwen/Qwen3.5-0.8B",
+          "name": "Qwen/Qwen3.5-0.8B",
+          "repo_id": "Qwen/Qwen3.5-0.8B",
+          "type": "hf.text_generation"
+        },
+        {
+          "id": "Qwen/Qwen3.5-2B",
+          "name": "Qwen/Qwen3.5-2B",
+          "repo_id": "Qwen/Qwen3.5-2B",
+          "type": "hf.text_generation"
+        },
+        {
+          "id": "Qwen/Qwen3.5-4B",
+          "name": "Qwen/Qwen3.5-4B",
+          "repo_id": "Qwen/Qwen3.5-4B",
+          "type": "hf.text_generation"
+        },
+        {
+          "id": "Qwen/Qwen3.5-9B",
+          "name": "Qwen/Qwen3.5-9B",
+          "repo_id": "Qwen/Qwen3.5-9B",
+          "type": "hf.text_generation"
+        },
+        {
+          "id": "Qwen/Qwen3.5-27B",
+          "name": "Qwen/Qwen3.5-27B",
+          "repo_id": "Qwen/Qwen3.5-27B",
+          "type": "hf.text_generation"
+        },
+        {
+          "id": "Qwen/Qwen3.5-35B-A3B",
+          "name": "Qwen/Qwen3.5-35B-A3B",
+          "repo_id": "Qwen/Qwen3.5-35B-A3B",
           "type": "hf.text_generation"
         },
         {
@@ -16686,10 +17362,17 @@
           "type": "hf.stable_diffusion"
         },
         {
-          "id": "andite/pastel-mix:pastelmix-fp16.safetensors",
-          "name": "andite/pastel-mix",
-          "path": "pastelmix-fp16.safetensors",
-          "repo_id": "andite/pastel-mix",
+          "id": "Yntec/AnythingV7:AnythingV7.safetensors",
+          "name": "Yntec/AnythingV7",
+          "path": "AnythingV7.safetensors",
+          "repo_id": "Yntec/AnythingV7",
+          "type": "hf.stable_diffusion"
+        },
+        {
+          "id": "Yntec/Cetus:cetusMix_v35_fp16_no_ema.safetensors",
+          "name": "Yntec/Cetus",
+          "path": "cetusMix_v35_fp16_no_ema.safetensors",
+          "repo_id": "Yntec/Cetus",
           "type": "hf.stable_diffusion"
         },
         {
@@ -17674,9 +18357,9 @@
             "*.json",
             "*.txt"
           ],
-          "id": "facebook/mms-tts-jpn",
-          "name": "facebook/mms-tts-jpn",
-          "repo_id": "facebook/mms-tts-jpn",
+          "id": "facebook/mms-tts-spa",
+          "name": "facebook/mms-tts-spa",
+          "repo_id": "facebook/mms-tts-spa",
           "type": "hf.text_to_speech"
         },
         {
@@ -17685,9 +18368,42 @@
             "*.json",
             "*.txt"
           ],
-          "id": "facebook/mms-tts-zho",
-          "name": "facebook/mms-tts-zho",
-          "repo_id": "facebook/mms-tts-zho",
+          "id": "facebook/mms-tts-por",
+          "name": "facebook/mms-tts-por",
+          "repo_id": "facebook/mms-tts-por",
+          "type": "hf.text_to_speech"
+        },
+        {
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "*.txt"
+          ],
+          "id": "facebook/mms-tts-rus",
+          "name": "facebook/mms-tts-rus",
+          "repo_id": "facebook/mms-tts-rus",
+          "type": "hf.text_to_speech"
+        },
+        {
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "*.txt"
+          ],
+          "id": "facebook/mms-tts-ara",
+          "name": "facebook/mms-tts-ara",
+          "repo_id": "facebook/mms-tts-ara",
+          "type": "hf.text_to_speech"
+        },
+        {
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "*.txt"
+          ],
+          "id": "facebook/mms-tts-hin",
+          "name": "facebook/mms-tts-hin",
+          "repo_id": "facebook/mms-tts-hin",
           "type": "hf.text_to_speech"
         },
         {
@@ -18556,18 +19272,6 @@
             "**/*.txt",
             "*.json"
           ],
-          "id": "Wan-AI/Wan2.2-T2V-14B-Diffusers",
-          "name": "Wan-AI/Wan2.2-T2V-14B-Diffusers",
-          "repo_id": "Wan-AI/Wan2.2-T2V-14B-Diffusers",
-          "type": "hf.text_to_video"
-        },
-        {
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ],
           "id": "Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
           "name": "Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
           "repo_id": "Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
@@ -18750,12 +19454,48 @@
           "type": "hf.token_classification"
         },
         {
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "**/*.json",
+            "*.safetensors"
+          ],
+          "id": "dslim/bert-base-NER",
+          "name": "dslim/bert-base-NER",
+          "repo_id": "dslim/bert-base-NER",
+          "type": "hf.token_classification"
+        },
+        {
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "**/*.json",
+            "*.safetensors"
+          ],
+          "id": "Jean-Baptiste/roberta-large-ner-english",
+          "name": "Jean-Baptiste/roberta-large-ner-english",
+          "repo_id": "Jean-Baptiste/roberta-large-ner-english",
+          "type": "hf.token_classification"
+        },
+        {
           "id": "openai/privacy-filter",
           "ignore_patterns": [
             "original/*"
           ],
           "name": "openai/privacy-filter",
           "repo_id": "openai/privacy-filter",
+          "type": "hf.token_classification"
+        },
+        {
+          "allow_patterns": [
+            "*.bin",
+            "*.json",
+            "**/*.json",
+            "*.safetensors"
+          ],
+          "id": "gravitee-io/bert-small-pii-detection",
+          "name": "gravitee-io/bert-small-pii-detection",
+          "repo_id": "gravitee-io/bert-small-pii-detection",
           "type": "hf.token_classification"
         }
       ],
@@ -18943,6 +19683,30 @@
           "name": "google-t5/t5-small",
           "repo_id": "google-t5/t5-small",
           "type": "hf.translation"
+        },
+        {
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.model",
+            "*.safetensors"
+          ],
+          "id": "facebook/m2m100_418M",
+          "name": "facebook/m2m100_418M",
+          "repo_id": "facebook/m2m100_418M",
+          "type": "hf.translation"
+        },
+        {
+          "allow_patterns": [
+            "*.json",
+            "*.txt",
+            "*.model",
+            "*.safetensors"
+          ],
+          "id": "facebook/m2m100_1.2B",
+          "name": "facebook/m2m100_1.2B",
+          "repo_id": "facebook/m2m100_1.2B",
+          "type": "hf.translation"
         }
       ],
       "title": "HF Translation"
@@ -19092,9 +19856,21 @@
             "*.json",
             "**/*.json"
           ],
-          "id": "sayakpaul/videomae-base-finetuned-ucf101-subset",
-          "name": "sayakpaul/videomae-base-finetuned-ucf101-subset",
-          "repo_id": "sayakpaul/videomae-base-finetuned-ucf101-subset",
+          "id": "facebook/vjepa2-vitl-fpc16-256-ssv2",
+          "name": "facebook/vjepa2-vitl-fpc16-256-ssv2",
+          "repo_id": "facebook/vjepa2-vitl-fpc16-256-ssv2",
+          "type": "hf.model"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "facebook/vjepa2-vitl-fpc32-256-diving48",
+          "name": "facebook/vjepa2-vitl-fpc32-256-diving48",
+          "repo_id": "facebook/vjepa2-vitl-fpc32-256-diving48",
           "type": "hf.model"
         }
       ],
