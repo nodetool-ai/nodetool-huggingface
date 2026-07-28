@@ -150,8 +150,11 @@ class MusicGen(HuggingFacePipelineNode):
         sampling_rate = self._model.config.audio_encoder.sampling_rate
 
         run_gc("After MusicGen inference", log_before_after=False)
+        # MusicGen returns planar [channels, samples]; interleave for pydub.
+        waveform = audio_values[0].cpu().numpy().T
+        num_channels = waveform.shape[1] if waveform.ndim > 1 else 1
         return await context.audio_from_numpy(
-            audio_values[0].cpu().numpy(), sampling_rate
+            waveform, sampling_rate, num_channels=num_channels
         )
 
 
@@ -508,7 +511,12 @@ class DanceDiffusion(HuggingFacePipelineNode):
         audio = audio.audios[0]
 
         run_gc("After DanceDiffusion inference", log_before_after=False)
-        return await context.audio_from_numpy(audio, 16000)
+        # DanceDiffusion returns planar [channels, samples]; interleave for pydub.
+        waveform = audio.T
+        num_channels = waveform.shape[1] if waveform.ndim > 1 else 1
+        return await context.audio_from_numpy(
+            waveform, 16000, num_channels=num_channels
+        )
 
 
 class StableAudioNode(HuggingFacePipelineNode):
@@ -615,9 +623,12 @@ class StableAudioNode(HuggingFacePipelineNode):
         audio = audio.audios[0]
 
         output = audio.T.float().cpu().numpy()
+        num_channels = output.shape[1] if output.ndim > 1 else 1
         sampling_rate = self._pipeline.vae.sampling_rate
         run_gc("After StableAudio inference", log_before_after=False)
-        audio = await context.audio_from_numpy(output, sampling_rate)
+        audio = await context.audio_from_numpy(
+            output, sampling_rate, num_channels=num_channels
+        )
         return audio
 
 
@@ -772,9 +783,12 @@ class AceStep(HuggingFacePipelineNode):
         # ACE-Step returns stereo tensors of shape [channels, samples] at pipe.sample_rate.
         audio = output.audios[0]
         waveform = audio.T.float().cpu().numpy()
+        num_channels = waveform.shape[1] if waveform.ndim > 1 else 1
         sampling_rate = int(getattr(self._pipeline, "sample_rate", 48000))
         run_gc("After ACE-Step inference", log_before_after=False)
-        return await context.audio_from_numpy(waveform, sampling_rate)
+        return await context.audio_from_numpy(
+            waveform, sampling_rate, num_channels=num_channels
+        )
 
 
 class AceStepTaskBaseNode(HuggingFacePipelineNode):
@@ -934,6 +948,9 @@ class AceStepTaskBaseNode(HuggingFacePipelineNode):
             num_inference_steps=self.num_inference_steps,
             guidance_scale=self.guidance_scale,
             task_type=task_type,
+            # 0 makes the pipeline derive the duration from src_audio instead of
+            # falling back to its 60 second default.
+            audio_duration=0.0,
             generator=generator,
             callback=progress_callback,
             **task_kwargs,
@@ -942,9 +959,12 @@ class AceStepTaskBaseNode(HuggingFacePipelineNode):
         # ACE-Step returns stereo tensors of shape [channels, samples] at pipe.sample_rate.
         audio = output.audios[0]
         waveform = audio.T.float().cpu().numpy()
+        num_channels = waveform.shape[1] if waveform.ndim > 1 else 1
         sampling_rate = int(getattr(self._pipeline, "sample_rate", 48000))
         run_gc(f"After ACE-Step {task_type} inference", log_before_after=False)
-        return await context.audio_from_numpy(waveform, sampling_rate)
+        return await context.audio_from_numpy(
+            waveform, sampling_rate, num_channels=num_channels
+        )
 
 
 class AceStepCover(AceStepTaskBaseNode):

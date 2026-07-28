@@ -172,9 +172,12 @@ class TableQuestionAnswering(HuggingFacePipelineNode):
 
         result = await self.run_pipeline_in_thread(inputs)
         assert result is not None
+        # Only TAPAS models emit coordinates/cells, and only aggregating TAPAS
+        # heads emit an aggregator. Seq2seq models (e.g. TAPEX) return the
+        # answer alone, so the extra keys are optional.
         return {
             "answer": result["answer"],
-            "coordinates": result["coordinates"],
-            "cells": result["cells"],
-            "aggregator": result["aggregator"],
+            "coordinates": result.get("coordinates", []),
+            "cells": result.get("cells", []),
+            "aggregator": result.get("aggregator", ""),
         }

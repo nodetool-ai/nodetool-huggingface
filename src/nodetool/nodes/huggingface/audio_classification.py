@@ -98,7 +98,14 @@ class AudioClassifier(HuggingFacePipelineNode):
         self._pipeline.model.to(device)
 
     async def process(self, context: ProcessingContext) -> dict[str, float]:
-        samples, _, _ = await context.audio_to_numpy(self.audio)
+        assert self._pipeline is not None, "Pipeline not initialized"
+        # A bare ndarray is assumed to already be at the model's expected rate.
+        sample_rate = (
+            getattr(self._pipeline.feature_extractor, "sampling_rate", None) or 16_000
+        )
+        samples, _, _ = await context.audio_to_numpy(
+            self.audio, sample_rate=int(sample_rate)
+        )
         result = await self.run_pipeline_in_thread(
             samples,
             top_k=self.top_k,
@@ -178,7 +185,13 @@ class ZeroShotAudioClassifier(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> dict[str, float]:
         assert self._pipeline is not None, "Pipeline not initialized"
-        samples, _, _ = await context.audio_to_numpy(self.audio)
+        # A bare ndarray is assumed to already be at the model's expected rate.
+        sample_rate = (
+            getattr(self._pipeline.feature_extractor, "sampling_rate", None) or 48_000
+        )
+        samples, _, _ = await context.audio_to_numpy(
+            self.audio, sample_rate=int(sample_rate)
+        )
         result = await self.run_pipeline_in_thread(
             samples, candidate_labels=self.candidate_labels.split(",")
         )

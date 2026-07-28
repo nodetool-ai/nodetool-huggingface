@@ -31,8 +31,14 @@ using our internal knowledge base of node definitions.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
-from nodetool.huggingface.flux_utils import is_nunchaku_transformer
+
+from nodetool.huggingface.flux_utils import (
+    is_nunchaku_flux_transformer,
+    is_nunchaku_qwen_transformer,
+    is_nunchaku_transformer,
+)
 from nodetool.huggingface.local_provider_utils import (
     _detect_cached_variant,
     _ensure_file_cached,
@@ -51,7 +57,6 @@ from nodetool.integrations.huggingface.huggingface_models import (
 )
 from nodetool.ml.core.model_manager import ModelManager
 from nodetool.workflows.processing_context import ProcessingContext
-
 
 # diffusers `_class_name` (from a repo's model_index.json) -> (module, class) for
 # full-repo text-to-image pipelines we load explicitly. AutoPipelineForText2Image
@@ -165,7 +170,8 @@ async def load_text_to_image_pipeline(
                 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 
                 torch = _get_torch()
-                pipeline = FluxPipeline.from_single_file(
+                pipeline = await asyncio.to_thread(
+                    FluxPipeline.from_single_file,
                     str(cache_path),
                     torch_dtype=(
                         torch.bfloat16 if _is_cuda_available() else torch.float32
@@ -189,17 +195,33 @@ async def load_text_to_image_pipeline(
                 use_cpu_offload = True
             else:
                 torch = _get_torch()
-                pipeline = QwenImagePipeline.from_single_file(
+                pipeline = await asyncio.to_thread(
+                    QwenImagePipeline.from_single_file,
                     str(cache_path),
                     torch_dtype=torch.bfloat16,
                 )
                 use_cpu_offload = True
         else:
             torch = _get_torch()
-            # Check for Nunchaku Flux transformers before tag-based routing
-            # Nunchaku models may not be in Flux node's recommended list, but they
-            # still need to be loaded with the special Nunchaku pipeline
-            if is_nunchaku_transformer(model_id, model_path):
+            # Check for Nunchaku transformers before tag-based routing
+            # Nunchaku models may not be in the Flux/QwenImage node's recommended
+            # list, but they still need the special Nunchaku pipeline
+            if is_nunchaku_qwen_transformer(model_id, model_path):
+                from diffusers.pipelines.qwenimage.pipeline_qwenimage import (
+                    QwenImagePipeline,
+                )
+
+                pipeline = await load_nunchaku_qwen_pipeline(
+                    context=context,
+                    repo_id=model_id,
+                    transformer_path=model_path,
+                    node_id=node_id,
+                    pipeline_class=QwenImagePipeline,
+                    base_model_id="Qwen/Qwen-Image",
+                    torch_dtype=torch.bfloat16,
+                )
+                use_cpu_offload = True
+            elif is_nunchaku_flux_transformer(model_id, model_path):
                 pipeline = await load_nunchaku_flux_pipeline(
                     context=context,
                     repo_id=model_id,
@@ -211,7 +233,8 @@ async def load_text_to_image_pipeline(
                     StableDiffusionXLPipeline,
                 )
 
-                pipeline = StableDiffusionXLPipeline.from_single_file(
+                pipeline = await asyncio.to_thread(
+                    StableDiffusionXLPipeline.from_single_file,
                     str(cache_path),
                     torch_dtype=(
                         torch.float16 if _is_cuda_available() else torch.float32
@@ -222,7 +245,8 @@ async def load_text_to_image_pipeline(
                     StableDiffusionPipeline,
                 )
 
-                pipeline = StableDiffusionPipeline.from_single_file(
+                pipeline = await asyncio.to_thread(
+                    StableDiffusionPipeline.from_single_file,
                     str(cache_path),
                     torch_dtype=(
                         torch.float16 if _is_cuda_available() else torch.float32
@@ -233,7 +257,8 @@ async def load_text_to_image_pipeline(
                     StableDiffusion3Pipeline,
                 )
 
-                pipeline = StableDiffusion3Pipeline.from_single_file(
+                pipeline = await asyncio.to_thread(
+                    StableDiffusion3Pipeline.from_single_file,
                     str(cache_path),
                     torch_dtype=(
                         torch.float16 if _is_cuda_available() else torch.float32
@@ -242,7 +267,8 @@ async def load_text_to_image_pipeline(
             elif "flux" in model_info.tags:
                 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 
-                pipeline = FluxPipeline.from_single_file(
+                pipeline = await asyncio.to_thread(
+                    FluxPipeline.from_single_file,
                     str(cache_path),
                     torch_dtype=(
                         torch.bfloat16 if _is_cuda_available() else torch.float32
@@ -264,7 +290,8 @@ async def load_text_to_image_pipeline(
                         StableDiffusionXLPipeline,
                     )
 
-                    pipeline = StableDiffusionXLPipeline.from_single_file(
+                    pipeline = await asyncio.to_thread(
+                        StableDiffusionXLPipeline.from_single_file,
                         str(cache_path),
                         torch_dtype=(
                             torch.float16 if _is_cuda_available() else torch.float32
@@ -277,7 +304,8 @@ async def load_text_to_image_pipeline(
                         StableDiffusionPipeline,
                     )
 
-                    pipeline = StableDiffusionPipeline.from_single_file(
+                    pipeline = await asyncio.to_thread(
+                        StableDiffusionPipeline.from_single_file,
                         str(cache_path),
                         torch_dtype=(
                             torch.float16 if _is_cuda_available() else torch.float32
@@ -290,7 +318,8 @@ async def load_text_to_image_pipeline(
                             StableDiffusionXLPipeline,
                         )
 
-                        pipeline = StableDiffusionXLPipeline.from_single_file(
+                        pipeline = await asyncio.to_thread(
+                            StableDiffusionXLPipeline.from_single_file,
                             str(cache_path),
                             torch_dtype=(
                                 torch.float16 if _is_cuda_available() else torch.float32
@@ -302,7 +331,8 @@ async def load_text_to_image_pipeline(
                             StableDiffusionPipeline,
                         )
 
-                        pipeline = StableDiffusionPipeline.from_single_file(
+                        pipeline = await asyncio.to_thread(
+                            StableDiffusionPipeline.from_single_file,
                             str(cache_path),
                             torch_dtype=(
                                 torch.float16 if _is_cuda_available() else torch.float32
@@ -319,14 +349,16 @@ async def load_text_to_image_pipeline(
         # the diffusers `_class_name` recorded in the repo's model_index.json.
         explicit_cls = await _resolve_full_repo_pipeline_class(model_id)
         if explicit_cls is not None:
-            pipeline = explicit_cls.from_pretrained(
+            pipeline = await asyncio.to_thread(
+                explicit_cls.from_pretrained,
                 model_id,
                 torch_dtype=torch.bfloat16 if _is_cuda_available() else torch.float32,
             )
         else:
             from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
 
-            pipeline = AutoPipelineForText2Image.from_pretrained(
+            pipeline = await asyncio.to_thread(
+                AutoPipelineForText2Image.from_pretrained,
                 model_id,
                 torch_dtype=torch.float16 if _is_cuda_available() else torch.float32,
                 variant=await _detect_cached_variant(model_id),

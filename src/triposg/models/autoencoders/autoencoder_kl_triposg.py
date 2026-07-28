@@ -424,6 +424,17 @@ class TripoSGVAEModel(ModelMixin, ConfigMixin):
 
         # fps sampling
         sampling_ratio = 1.0 / 4
+        # NOTE: local fix — torch_cluster is not a declared dependency; fail with a clear
+        # ImportError instead of NameError (upstream has the import commented out at top).
+        try:
+            from torch_cluster import fps
+        except ImportError as e:
+            raise ImportError(
+                "TripoSGVAEModel.encode() requires the optional `torch_cluster` package "
+                "for farthest-point sampling, which is not installed. Install a build "
+                "matching your torch/CUDA version (see https://github.com/rusty1s/pytorch_cluster). "
+                "The image-to-3D decode path does not need it."
+            ) from e
         sampled_indices = fps(
             flattened_points[:, :3],
             batch_indices,

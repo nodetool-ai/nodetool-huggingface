@@ -26,7 +26,7 @@ def test_summarization_required_inputs():
 
 
 def test_summarization_title():
-    assert Summarization.get_title() == "Summarization"
+    assert Summarization.get_title() == "HF Summarization"
 
 
 def test_summarization_defaults():

@@ -104,20 +104,20 @@ class VideoClassifier(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> dict[str, float]:
         assert self._pipeline is not None
 
-        from nodetool.nodes.huggingface.image_text_to_text import extract_video_frames
+        import os
+        import tempfile
 
+        # The video-classification pipeline decodes the video itself and only
+        # accepts a local path or an http(s) URL, so materialize the asset.
         video_bytes = await context.asset_to_bytes(self.video)
-        frames = await context.run_worker(
-            extract_video_frames, video_bytes, fps=1
-        )
+        tmp = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+        try:
+            tmp.write(video_bytes)
+            tmp.close()
+            result = await self.run_pipeline_in_thread(
+                tmp.name, num_frames=self.num_frames
+            )
+        finally:
+            os.unlink(tmp.name)
 
-        # Uniformly sample num_frames from extracted frames
-        if len(frames) > self.num_frames:
-            indices = [
-                int(i * (len(frames) - 1) / (self.num_frames - 1))
-                for i in range(self.num_frames)
-            ]
-            frames = [frames[i] for i in indices]
-
-        result = await self.run_pipeline_in_thread(frames)
         return {str(item["label"]): float(item["score"]) for item in result}

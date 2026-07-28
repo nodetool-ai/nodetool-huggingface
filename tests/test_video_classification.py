@@ -26,4 +26,4 @@ def test_video_classifier_required_inputs():
 
 
 def test_video_classifier_title():
-    assert VideoClassifier.get_title() == "Video Classifier"
+    assert VideoClassifier.get_title() == "HF Video Classifier"

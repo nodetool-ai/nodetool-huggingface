@@ -98,7 +98,8 @@ def find_candidates_band(occupancy_grid: torch.Tensor, band_threshold: float, n_
     return core_mesh_coords 
 
 def expand_edge_region_fast(edge_coords, grid_size):
-    expanded_tensor = torch.zeros(grid_size, grid_size, grid_size, device='cuda', dtype=torch.float16, requires_grad=False)
+    # NOTE: local fix — derive device from input instead of hardcoding 'cuda' (breaks CPU/MPS runs)
+    expanded_tensor = torch.zeros(grid_size, grid_size, grid_size, device=edge_coords.device, dtype=torch.float16, requires_grad=False)
     expanded_tensor[edge_coords[:, 0], edge_coords[:, 1], edge_coords[:, 2]] = 1
     if grid_size < 512:
         kernel_size = 5
@@ -194,9 +195,10 @@ def hierarchical_extract_geometry(geometric_func: Callable,
         vertices = vertices / (2**hierarchical_octree_depth) * bbox_size.cpu().numpy() + bbox_min.cpu().numpy()
         mesh_v_f = (vertices.astype(np.float32), np.ascontiguousarray(faces))
     except Exception as e:
-        print(e)
+        # NOTE: local fix — re-raise instead of returning a (None, None) sentinel that the
+        # pipelines then hit as "'NoneType' object has no attribute 'astype'".
         torch.cuda.empty_cache()
-        mesh_v_f = (None, None)
+        raise RuntimeError(f"Marching cubes geometry extraction failed: {e}") from e
 
     return [mesh_v_f]
 
@@ -472,8 +474,9 @@ def flash_extract_geometry(
         vertices = vertices / (2 ** octree_depth) * bbox_size + bbox_min
         mesh_v_f = (vertices.astype(np.float32), np.ascontiguousarray(faces))
     except Exception as e:
-        print(e)
+        # NOTE: local fix — re-raise instead of returning a (None, None) sentinel that the
+        # pipelines then hit as "'NoneType' object has no attribute 'astype'".
         torch.cuda.empty_cache()
-        mesh_v_f = (None, None)
+        raise RuntimeError(f"Flash (DiffDMC) geometry extraction failed: {e}") from e
 
     return [mesh_v_f]

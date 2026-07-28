@@ -1,6 +1,7 @@
 import pytest
 from nodetool.nodes.huggingface.text_to_image import QwenImage, QwenQuantization
 
+@pytest.mark.asyncio
 async def test_qwen_image_quantization():
     qwen = QwenImage()
     qwen.quantization = QwenQuantization.INT4
@@ -8,12 +9,12 @@ async def test_qwen_image_quantization():
     # Verify that the model ID and path are resolved correctly
     model_config = qwen._resolve_model_config()
     assert model_config.repo_id == "nunchaku-tech/nunchaku-qwen-image"
-    assert "int4" in model_config.path
+    assert "int4" in (model_config.path or "")
 
     qwen.quantization = QwenQuantization.FP4
     model_config = qwen._resolve_model_config()
     assert model_config.repo_id == "nunchaku-tech/nunchaku-qwen-image"
-    assert "fp4" in model_config.path
+    assert "fp4" in (model_config.path or "")
 
     qwen.quantization = QwenQuantization.FP16
     model_config = qwen._resolve_model_config()

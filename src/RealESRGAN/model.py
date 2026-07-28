@@ -57,6 +57,9 @@ class RealESRGAN:
     ):
         scale = self.scale
         device = self.device
+        # NOTE: local fix — normalize PIL input to RGB so L/RGBA images don't crash pad_reflect/model
+        if isinstance(lr_image, Image.Image) and lr_image.mode != "RGB":
+            lr_image = lr_image.convert("RGB")
         lr_image = np.array(lr_image)
         lr_image = pad_reflect(lr_image, pad_size)
 

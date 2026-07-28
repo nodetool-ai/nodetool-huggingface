@@ -115,14 +115,22 @@ nodetool = [
 ]
 
 [tool.ruff]
-# Exclude auto-generated files, notebooks, scripts, and third-party code
+# Exclude auto-generated files and notebooks.
+# NOTE: vendored third-party trees (src/triposg/, src/RealESRGAN/), scripts/ and
+# test_qwen.py are no longer fully excluded — they are linted for F821 (undefined
+# name) only, via the per-file-ignores block below. Fully excluding them let a real
+# NameError bug ship in vendored code.
 exclude = [
     "notebooks/",
-    "scripts/",
-    "src/RealESRGAN/",
-    "src/triposg/",
-    "test_qwen.py",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Every pycodestyle/Pyflakes code except F821, so undefined names are caught
+# everywhere without producing a wall of unrelated style violations.
+"scripts/**" = ["E", "W", "F4", "F5", "F6", "F7", "F81", "F822", "F823", "F84", "F9"]
+"src/RealESRGAN/**" = ["E", "W", "F4", "F5", "F6", "F7", "F81", "F822", "F823", "F84", "F9"]
+"src/triposg/**" = ["E", "W", "F4", "F5", "F6", "F7", "F81", "F822", "F823", "F84", "F9"]
+"test_qwen.py" = ["E", "W", "F4", "F5", "F6", "F7", "F81", "F822", "F823", "F84", "F9"]
 
 [tool.ruff.lint]
 # Enable a minimal set of rules initially

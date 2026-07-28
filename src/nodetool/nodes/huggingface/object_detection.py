@@ -1,3 +1,5 @@
+from typing import Any
+
 from nodetool.metadata.types import (
     BoundingBox,
     HFObjectDetection,
@@ -132,6 +134,10 @@ class ObjectDetection(HuggingFacePipelineNode):
         image = await context.image_to_pil(self.image)
         result = await self.run_pipeline_in_thread(image, threshold=self.threshold)
         if isinstance(result, list):
+            # The object-detection pipeline has no top_k parameter, so the
+            # limit is applied here on the score-sorted detections.
+            detections: list[dict[str, Any]] = list(result)
+            detections.sort(key=lambda item: item["score"], reverse=True)
             return [
                 ObjectDetectionResult(
                     label=item["label"],
@@ -143,7 +149,7 @@ class ObjectDetection(HuggingFacePipelineNode):
                         ymax=item["box"]["ymax"],
                     ),
                 )
-                for item in result
+                for item in detections[: self.top_k]
             ]
         else:
             raise ValueError(f"Invalid result type: {type(result)}")
@@ -363,16 +369,17 @@ class ZeroShotObjectDetection(HuggingFacePipelineNode):
             image,
             candidate_labels=self.candidate_labels.split(","),
             threshold=self.threshold,
+            top_k=self.top_k,
         )
         return [
             ObjectDetectionResult(
-                label=item.label,
-                score=item.score,
+                label=item["label"],
+                score=item["score"],
                 box=BoundingBox(
-                    xmin=item.box.xmin,
-                    ymin=item.box.ymin,
-                    xmax=item.box.xmax,
-                    ymax=item.box.ymax,
+                    xmin=item["box"]["xmin"],
+                    ymin=item["box"]["ymin"],
+                    xmax=item["box"]["xmax"],
+                    ymax=item["box"]["ymax"],
                 ),
             )
             for item in result

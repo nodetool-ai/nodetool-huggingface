@@ -267,12 +267,9 @@ class Whisper(HuggingFacePipelineNode):
                 mem_after_proc - mem_after_model,
             )
 
-        if self.task == Task.TRANSCRIBE:
-            pipeline_task = "automatic-speech-recognition"
-        elif self.task == Task.TRANSLATE:
-            pipeline_task = "translation"
-        else:
-            pipeline_task = "automatic-speech-recognition"
+        # Whisper handles both transcription and translation through the ASR
+        # pipeline; translation is selected via generate_kwargs["task"].
+        pipeline_task = "automatic-speech-recognition"
 
         self._pipeline = await self.load_pipeline(
             context=context,
@@ -320,16 +317,18 @@ class Whisper(HuggingFacePipelineNode):
         else:
             return_timestamps = None
 
+        generate_kwargs: dict[str, Any] = {
+            "language": (
+                None if self.language.value == "auto_detect" else self.language.value
+            ),
+        }
+        if self.task == Task.TRANSLATE:
+            generate_kwargs["task"] = "translate"
+
         return {
             "return_timestamps": return_timestamps,
             "chunk_length_s": 30.0,
-            "generate_kwargs": {
-                "language": (
-                    None
-                    if self.language.value == "auto_detect"
-                    else self.language.value
-                ),
-            },
+            "generate_kwargs": generate_kwargs,
         }
 
     async def process(self, context: ProcessingContext) -> OutputType:

@@ -1587,11 +1587,11 @@ class TripoSG(HuggingFacePipelineNode):
         padding_ratio = 0.1
         img = np.array(img_pil)
 
-        if img.shape[2] == 4:
-            alpha = img[:, :, 3]
-            rgb_image = img[:, :, :3]
-        else:
-            rgb_image = img
+        rgb_image = img[:, :, :3]
+        alpha = img[:, :, 3] if img.shape[2] == 4 else None
+        # A fully opaque alpha channel carries no foreground information (every
+        # image is opened as RGBA), so fall back to RMBG background removal.
+        if alpha is not None and int(alpha.min()) >= 250:
             alpha = None
 
         height, width = rgb_image.shape[:2]

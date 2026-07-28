@@ -217,7 +217,7 @@ def _check_runtime_availability(
         try:
             import torch
 
-            total_bytes = torch.cuda.get_device_properties(0).total_mem
+            total_bytes = torch.cuda.get_device_properties(0).total_memory
             total_gb = total_bytes / (1 << 30)
             vram_ok = total_gb >= min_vram_gb
             if not vram_ok:
@@ -384,7 +384,7 @@ def _warn_vram(min_vram_gb: int, node_name: str) -> None:
     if not torch.cuda.is_available():
         return
     try:
-        total_bytes = torch.cuda.get_device_properties(0).total_mem
+        total_bytes = torch.cuda.get_device_properties(0).total_memory
         total_gb = total_bytes / (1 << 30)
         if total_gb < min_vram_gb:
             log.warning(

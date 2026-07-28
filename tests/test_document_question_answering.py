@@ -26,4 +26,4 @@ def test_document_qa_required_inputs():
 
 
 def test_document_qa_title():
-    assert DocumentQuestionAnswering.get_title() == "Document Question Answering"
+    assert DocumentQuestionAnswering.get_title() == "HF Document Question Answering"

@@ -26,6 +26,7 @@ from typing import (
     AsyncIterator,
     TYPE_CHECKING,
 )
+from collections.abc import Mapping
 from io import BytesIO
 
 import numpy as np
@@ -161,7 +162,9 @@ class HuggingFaceLocalProvider(BaseProvider):
                 "prompt": params.prompt,
                 "negative_prompt": params.negative_prompt or "",
                 "num_inference_steps": num_steps,
-                "guidance_scale": params.guidance_scale or 7.5,
+                "guidance_scale": (
+                    7.5 if params.guidance_scale is None else params.guidance_scale
+                ),
                 "width": params.width or 512,
                 "height": params.height or 512,
                 "generator": generator,
@@ -247,21 +250,34 @@ class HuggingFaceLocalProvider(BaseProvider):
         # Progress callback
         num_steps = params.num_inference_steps or 25
 
-        # Generate the image off the event loop
+        # Generate the image off the event loop. Filter kwargs to those the
+        # specific pipeline accepts: newer DiT pipelines (QwenImageEdit, FluxFill,
+        # ...) don't take `strength`/`negative_prompt`, so passing them
+        # unconditionally would error.
         def _run_pipeline_sync():
-            return pipeline(
-                prompt=params.prompt,
-                image=pil_image,
-                negative_prompt=params.negative_prompt or "",
-                strength=params.strength or 0.8,
-                num_inference_steps=num_steps,
-                guidance_scale=params.guidance_scale or 7.5,
-                generator=generator,
-                callback_on_step_end=pipeline_progress_callback(
+            import inspect
+
+            candidate = {
+                "prompt": params.prompt,
+                "image": pil_image,
+                "negative_prompt": params.negative_prompt or "",
+                "strength": 0.8 if params.strength is None else params.strength,
+                "num_inference_steps": num_steps,
+                "guidance_scale": (
+                    7.5 if params.guidance_scale is None else params.guidance_scale
+                ),
+                "generator": generator,
+                "callback_on_step_end": pipeline_progress_callback(
                     node_id=node_id, total_steps=num_steps, context=context
                 ),
-                callback_on_step_end_tensor_inputs=["latents"],
-            )
+                "callback_on_step_end_tensor_inputs": ["latents"],
+            }
+            try:
+                accepted = set(inspect.signature(pipeline.__call__).parameters)
+                call_kwargs = {k: v for k, v in candidate.items() if k in accepted}
+            except (TypeError, ValueError):
+                call_kwargs = candidate
+            return pipeline(**call_kwargs)
 
         output = await asyncio.to_thread(_run_pipeline_sync)
 
@@ -466,7 +482,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             audio: Input audio as bytes (various formats supported)
             model: Model repository ID (e.g., "openai/whisper-large-v3")
             language: Optional ISO-639-1 language code to improve accuracy
-            prompt: Optional text to guide the model's style (initial_prompt)
+            prompt: Optional text to guide the model's style (Whisper prompt_ids)
             temperature: Sampling temperature between 0 and 1 (default 0)
             timeout_s: Optional timeout in seconds
             context: Processing context (required)
@@ -514,7 +530,7 @@ class HuggingFaceLocalProvider(BaseProvider):
 
             # Load processor (suppress verbose logging)
             logging.getLogger("transformers").setLevel(logging.WARNING)
-            processor = AutoProcessor.from_pretrained(model)
+            processor = await asyncio.to_thread(AutoProcessor.from_pretrained, model)
             logging.getLogger("transformers").setLevel(logging.INFO)
 
             # Create pipeline
@@ -555,9 +571,23 @@ class HuggingFaceLocalProvider(BaseProvider):
         if language:
             pipeline_kwargs["generate_kwargs"]["language"] = language
 
-        # Add prompt if specified (Whisper uses initial_prompt)
+        # Add prompt if specified. Whisper conditions on tokenized `prompt_ids`;
+        # there is no `initial_prompt` generate kwarg in transformers.
         if prompt:
-            pipeline_kwargs["generate_kwargs"]["initial_prompt"] = prompt
+            get_prompt_ids = getattr(
+                getattr(asr_pipeline, "tokenizer", None), "get_prompt_ids", None
+            )
+            if callable(get_prompt_ids):
+                prompt_ids = get_prompt_ids(prompt, return_tensors="pt")
+                device = getattr(asr_pipeline, "device", None)
+                if device is not None:
+                    prompt_ids = prompt_ids.to(device)
+                pipeline_kwargs["generate_kwargs"]["prompt_ids"] = prompt_ids
+            else:
+                log.warning(
+                    "Model %s does not support prompt conditioning; ignoring prompt",
+                    model,
+                )
 
         # Add temperature if non-zero
         if temperature != 0.0:
@@ -701,11 +731,10 @@ class HuggingFaceLocalProvider(BaseProvider):
                 vae=vae,
             )
 
-            # Apply memory optimization settings
+            # Apply memory optimization settings. Exactly one offload strategy may
+            # be installed on a pipeline.
             if enable_cpu_offload and hasattr(pipeline, "enable_model_cpu_offload"):
                 pipeline.enable_model_cpu_offload()
-                if hasattr(pipeline, "enable_sequential_cpu_offload"):
-                    pipeline.enable_sequential_cpu_offload()
 
             if hasattr(pipeline, "enable_attention_slicing"):
                 try:
@@ -1124,7 +1153,10 @@ class HuggingFaceLocalProvider(BaseProvider):
         import torch
         from transformers import BitsAndBytesConfig, TextStreamer
 
-        cached_pipeline = ModelManager.get_model(repo_id)
+        # The quantization is part of the identity of the loaded model, otherwise a
+        # second call with a different quantization returns the first-loaded model.
+        pipeline_cache_key = f"{repo_id}_{quantization}"
+        cached_pipeline = ModelManager.get_model(pipeline_cache_key)
 
         if not cached_pipeline:
             log.info(f"Loading HuggingFace pipeline model {repo_id}")
@@ -1154,7 +1186,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 model_id=repo_id,
                 **load_kwargs,
             )
-            ModelManager.set_model(node_id, repo_id, cached_pipeline)
+            ModelManager.set_model(node_id, pipeline_cache_key, cached_pipeline)
 
         tokenizer = cached_pipeline.tokenizer
         if tokenizer is None:
@@ -1177,30 +1209,21 @@ class HuggingFaceLocalProvider(BaseProvider):
                 super().__init__(tokenizer, skip_prompt, **decode_kwargs)
                 self.token_queue = token_queue
 
-            def put(self, value):
-                if len(value.shape) > 1 and value.shape[0] > 1:
-                    raise ValueError("TextStreamer only supports batch size 1")
-                elif len(value.shape) > 1:
-                    value = value[0]
-
-                if self.skip_prompt and self.next_tokens_are_prompt:
-                    self.next_tokens_are_prompt = False
-                    return
-
-                text = self.tokenizer.decode(
-                    value, skip_special_tokens=True
-                )  # pyright: ignore[reportAttributeAccessIssue]
+            # Let the base class buffer tokens so multi-byte (CJK/emoji) text is
+            # decoded across token boundaries instead of per token.
+            def on_finalized_text(self, text: str, stream_end: bool = False):
                 if text:
                     self.token_queue.put(text)
-
-            def end(self):
-                self.token_queue.put(None)
+                if stream_end:
+                    self.token_queue.put(None)
 
         streamer = AsyncTextStreamer(
             tokenizer,
             skip_prompt=True,
             skip_special_tokens=True,
         )
+
+        generation_error: list[BaseException] = []
 
         def generate():
             generation_kwargs = {
@@ -1211,28 +1234,34 @@ class HuggingFaceLocalProvider(BaseProvider):
                 "streamer": streamer,
                 "return_full_text": False,
             }
-            cached_pipeline(prompt, **generation_kwargs)
+            try:
+                cached_pipeline(prompt, **generation_kwargs)
+            except BaseException as exc:  # re-raised in the consuming coroutine
+                generation_error.append(exc)
+                # The streamer never finished, so queue the sentinel ourselves.
+                streamer.on_finalized_text("", stream_end=True)
 
         thread = threading.Thread(target=generate)
         thread.start()
 
         try:
-            while True:
+            done = False
+            while not done:
                 await asyncio.sleep(0.01)
+                thread_finished = not thread.is_alive()
                 while not token_queue.empty():
                     token = token_queue.get_nowait()
                     if token is None:
-                        return
+                        done = True
+                        break
                     yield Chunk(content=token, done=False, content_type="text")
-                if not thread.is_alive():
-                    while not token_queue.empty():
-                        token = token_queue.get_nowait()
-                        if token is None:
-                            return
-                        yield Chunk(content=token, done=False, content_type="text")
-                    break
+                if thread_finished and token_queue.empty():
+                    done = True
         finally:
             thread.join(timeout=1.0)
+
+        if generation_error:
+            raise generation_error[0]
 
     @staticmethod
     def _extract_text_from_output(outputs: Any) -> str:
@@ -1351,22 +1380,13 @@ class HuggingFaceLocalProvider(BaseProvider):
                 super().__init__(tokenizer, skip_prompt, **decode_kwargs)
                 self.token_queue = token_queue
 
-            def put(self, value):
-                if len(value.shape) > 1 and value.shape[0] > 1:
-                    raise ValueError("TextStreamer only supports batch size 1")
-                elif len(value.shape) > 1:
-                    value = value[0]
-
-                if self.skip_prompt and self.next_tokens_are_prompt:
-                    self.next_tokens_are_prompt = False
-                    return
-
-                text = self.tokenizer.decode(value, skip_special_tokens=True)
+            # Let the base class buffer tokens so multi-byte (CJK/emoji) text is
+            # decoded across token boundaries instead of per token.
+            def on_finalized_text(self, text: str, stream_end: bool = False):
                 if text:
                     self.token_queue.put(text)
-
-            def end(self):
-                self.token_queue.put(None)
+                if stream_end:
+                    self.token_queue.put(None)
 
         streamer = AsyncTextStreamer(
             processor.tokenizer,  # Processor should have tokenizer
@@ -1374,35 +1394,46 @@ class HuggingFaceLocalProvider(BaseProvider):
             skip_special_tokens=True,
         )
 
+        generation_error: list[BaseException] = []
+
         def generate():
-            model.generate(
-                **(
-                    inputs if isinstance(inputs, dict) else {"input_ids": inputs}
-                ),  # apply_chat_template returns tensor or dict
-                max_new_tokens=max_tokens,
-                streamer=streamer,
+            # apply_chat_template returns a tensor or a mapping (BatchFeature,
+            # which subclasses UserDict rather than dict).
+            generate_inputs = (
+                dict(inputs) if isinstance(inputs, Mapping) else {"input_ids": inputs}
             )
+            try:
+                model.generate(
+                    **generate_inputs,
+                    max_new_tokens=max_tokens,
+                    streamer=streamer,
+                )
+            except BaseException as exc:  # re-raised in the consuming coroutine
+                generation_error.append(exc)
+                # The streamer never finished, so queue the sentinel ourselves.
+                streamer.on_finalized_text("", stream_end=True)
 
         thread = threading.Thread(target=generate)
         thread.start()
 
         try:
-            while True:
+            done = False
+            while not done:
                 await asyncio.sleep(0.01)
+                thread_finished = not thread.is_alive()
                 while not token_queue.empty():
                     token = token_queue.get_nowait()
                     if token is None:
-                        return
+                        done = True
+                        break
                     yield Chunk(content=token, done=False, content_type="text")
-                if not thread.is_alive():
-                    while not token_queue.empty():
-                        token = token_queue.get_nowait()
-                        if token is None:
-                            return
-                        yield Chunk(content=token, done=False, content_type="text")
-                    break
+                if thread_finished and token_queue.empty():
+                    done = True
         finally:
             thread.join(timeout=1.0)
+
+        if generation_error:
+            raise generation_error[0]
 
     async def generate_message(
         self,
@@ -1519,6 +1550,15 @@ class HuggingFaceLocalProvider(BaseProvider):
             return
 
         repo_id, filename = self._parse_model_spec(model)
+        if filename:
+            # The transformers text-generation pipeline loads a repo, not a single
+            # weight file; silently dropping the filename would load a different
+            # model than the one that was requested.
+            raise ValueError(
+                f"Model spec '{model}' selects the single file '{filename}', which is "
+                "not supported by the local text-generation pipeline. Use the plain "
+                "repo id instead."
+            )
 
         async for chunk in self._stream_pipeline_generation(
             repo_id=repo_id,

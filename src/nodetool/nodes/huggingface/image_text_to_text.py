@@ -179,7 +179,7 @@ class ImageTextToText(HuggingFacePipelineNode):
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
-        return ["model", "quantization", "image", "prompt"]
+        return ["model", "image", "prompt"]
 
     @classmethod
     def get_recommended_models(cls):
@@ -374,7 +374,7 @@ class BaseQwenVL(HuggingFacePipelineNode):
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
-        return ["model", "quantization", "image", "prompt"]
+        return ["model", "image", "prompt"]
 
     def required_inputs(self):
         return []
@@ -389,6 +389,15 @@ class BaseQwenVL(HuggingFacePipelineNode):
             raise AssertionError("Processor is not loaded")
         logger.debug("Processor is available")
         return self._processor
+
+    def _processor_pixel_kwargs(self) -> dict[str, int]:
+        """Pixel constraints for the processor, omitted when set to automatic (0)."""
+        kwargs: dict[str, int] = {}
+        if self.min_pixels > 0:
+            kwargs["min_pixels"] = self.min_pixels
+        if self.max_pixels > 0:
+            kwargs["max_pixels"] = self.max_pixels
+        return kwargs
 
     def _ensure_pipeline(self):
         if self._pipeline is None:
@@ -525,12 +534,20 @@ class BaseQwenVL(HuggingFacePipelineNode):
         full_text = ""
         token_count = 0
 
+        generation_error: list[BaseException] = []
+
         def generate():
-            pipeline.generate(
-                **inputs,
-                max_new_tokens=self.max_new_tokens,
-                streamer=streamer,
-            )
+            try:
+                pipeline.generate(
+                    **inputs,
+                    max_new_tokens=self.max_new_tokens,
+                    streamer=streamer,
+                )
+            except BaseException as e:  # noqa: BLE001
+                logger.exception("Generation thread failed")
+                generation_error.append(e)
+                # Unblock the consumer, which re-raises the captured error.
+                token_queue.put(None)
 
         logger.debug("Starting generation in background thread")
         thread = threading.Thread(target=generate)
@@ -543,6 +560,8 @@ class BaseQwenVL(HuggingFacePipelineNode):
                 while not token_queue.empty():
                     token = token_queue.get_nowait()
                     if token is None:
+                        if generation_error:
+                            raise generation_error[0]
                         logger.debug(
                             f"Generation completed, total tokens streamed: {token_count}, final text length: {len(full_text)}"
                         )
@@ -589,6 +608,8 @@ class BaseQwenVL(HuggingFacePipelineNode):
                                 done=False,
                             ),
                         }
+                    if generation_error:
+                        raise generation_error[0]
                     break
         finally:
             thread.join(timeout=1.0)
@@ -675,8 +696,7 @@ class Qwen2_5_VL(BaseQwenVL):
             context,
             AutoProcessor,
             self.model.repo_id,
-            min_pixels=self.min_pixels,
-            max_pixels=self.max_pixels,
+            **self._processor_pixel_kwargs(),
         )
         logger.debug("Processor loaded successfully")
 
@@ -773,7 +793,6 @@ class Qwen3_VL(BaseQwenVL):
             context,
             AutoProcessor,
             self.model.repo_id,
-            min_pixels=self.min_pixels,
-            max_pixels=self.max_pixels,
+            **self._processor_pixel_kwargs(),
         )
         logger.debug("Processor loaded successfully")

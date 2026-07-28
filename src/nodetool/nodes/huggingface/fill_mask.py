@@ -6,9 +6,6 @@ from nodetool.workflows.processing_context import ProcessingContext
 from pydantic import Field
 
 
-from typing import Any
-
-
 class FillMask(HuggingFacePipelineNode):
     """
     Predicts the most likely words to fill masked positions in text using language models.
@@ -30,12 +27,12 @@ class FillMask(HuggingFacePipelineNode):
     inputs: str = Field(
         default="The capital of France is [MASK].",
         title="Input Text",
-        description="Text containing [MASK] token(s) to be predicted. Different models may use different mask tokens (e.g., BERT uses [MASK], RoBERTa uses <mask>).",
+        description="Text containing exactly one [MASK] token to be predicted. Different models may use different mask tokens (e.g., BERT uses [MASK], RoBERTa uses <mask>).",
     )
     top_k: int = Field(
         default=5,
         title="Top K",
-        description="Number of most likely predictions to return for each masked position.",
+        description="Number of most likely predictions to return for the masked position.",
     )
 
     @classmethod
@@ -85,10 +82,18 @@ class FillMask(HuggingFacePipelineNode):
     async def move_to_device(self, device: str):
         self._pipeline.model.to(device)
 
-    async def process(self, context: ProcessingContext) -> dict[str, Any]:
+    async def process(self, context: ProcessingContext) -> DataframeRef:
         assert self._pipeline is not None
         result = await self.run_pipeline_in_thread(self.inputs, top_k=self.top_k)
         assert result is not None
+        # With more than one mask token the pipeline returns one list of
+        # predictions per masked position, which does not fit the flat
+        # token/score dataframe this node produces.
+        if len(result) > 0 and isinstance(result[0], list):
+            raise ValueError(
+                "Input text contains more than one mask token. "
+                "FillMask supports exactly one masked position."
+            )
         data = [[item["token_str"], item["score"]] for item in result]
         columns = [
             ColumnDef(name="token", data_type="string"),

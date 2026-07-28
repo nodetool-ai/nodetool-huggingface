@@ -28,7 +28,7 @@ def test_load_pipeline_uses_custom_cache_key():
         ctx = MagicMock()
         ctx.device = "cpu"
 
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             load_pipeline(
                 node_id="test_node",
                 context=ctx,
@@ -58,7 +58,7 @@ def test_load_pipeline_default_cache_key():
         ctx = MagicMock()
         ctx.device = "cpu"
 
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             load_pipeline(
                 node_id="test_node",
                 context=ctx,

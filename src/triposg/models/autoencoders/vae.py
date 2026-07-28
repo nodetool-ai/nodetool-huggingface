@@ -39,10 +39,13 @@ class DiagonalGaussianDistribution(object):
         if self.deterministic:
             return torch.Tensor([0.0])
         else:
+            # NOTE: local fix — reduce over all non-batch dims; this VAE's params are 3-D (B, N, C),
+            # so the hardcoded dim=[1, 2, 3] raised IndexError.
+            reduce_dims = list(range(1, self.mean.ndim))
             if other is None:
                 return 0.5 * torch.sum(
                     torch.pow(self.mean, 2) + self.var - 1.0 - self.logvar,
-                    dim=[1, 2, 3],
+                    dim=reduce_dims,
                 )
             else:
                 return 0.5 * torch.sum(
@@ -51,7 +54,7 @@ class DiagonalGaussianDistribution(object):
                     - 1.0
                     - self.logvar
                     + other.logvar,
-                    dim=[1, 2, 3],
+                    dim=reduce_dims,
                 )
 
     def nll(
