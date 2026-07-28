@@ -132,28 +132,12 @@ This package provides a rich set of HuggingFace nodes for integration with Nodet
   - Use cases: Text completion, grammar correction
 
 #### Question Answering
-- **Question Answering** - Extract answers from context
-  - Recommended models:
-    - `distilbert-base-cased-distilled-squad`
-    - `bert-large-uncased-whole-word-masking-finetuned-squad`
-  - Returns answer with confidence score and position
-  - Use cases: Document Q&A, customer support, information retrieval
-
 - **Table Question Answering** - Query tabular data with natural language
   - Works with DataFrames
   - Recommended models:
     - `google/tapas-base-finetuned-wtq`
     - `microsoft/tapex-large-finetuned-tabfact`
   - Use cases: Database queries, spreadsheet analysis
-
-#### Text Transformation
-- **Translation** - Translate text between languages
-  - Multiple language pairs
-  - Use cases: Localization, multilingual content
-
-- **Summarization** - Generate concise summaries of long text
-  - Extractive and abstractive summarization
-  - Use cases: Document summarization, news digests
 
 ### 🖼️ Image Analysis
 

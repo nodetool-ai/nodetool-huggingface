@@ -1,6 +1,5 @@
 from nodetool.metadata.types import (
     DataframeRef,
-    HFQuestionAnswering,
     HFTableQuestionAnswering,
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import (
@@ -12,91 +11,7 @@ from nodetool.workflows.processing_context import ProcessingContext
 from pydantic import Field
 
 
-from typing import Any, TypedDict
-
-
-class QuestionAnswering(HuggingFacePipelineNode):
-    """
-    Extracts answers to questions from a given text context using extractive QA models.
-    text, question-answering, NLP, reading-comprehension
-
-    Use cases:
-    - Build automated FAQ and customer support systems
-    - Extract specific information from documents and articles
-    - Create reading comprehension and study tools
-    - Enable natural language queries over text databases
-    - Analyze contracts and legal documents for key details
-    """
-
-    model: HFQuestionAnswering = Field(
-        default=HFQuestionAnswering(),
-        title="Model",
-        description="The extractive QA model. DistilBERT is fast; BERT-large and RoBERTa offer higher accuracy.",
-    )
-    context: str = Field(
-        default="",
-        title="Context",
-        description="The text passage containing the information to answer questions from.",
-    )
-    question: str = Field(
-        default="",
-        title="Question",
-        description="The question to answer based on the provided context.",
-    )
-
-    @classmethod
-    def get_recommended_models(cls) -> list[HFQuestionAnswering]:
-        return [
-            HFQuestionAnswering(
-                repo_id="distilbert-base-cased-distilled-squad",
-                allow_patterns=["*.json", "*.txt", "*.safetensors"],
-            ),
-            HFQuestionAnswering(
-                repo_id="bert-large-uncased-whole-word-masking-finetuned-squad",
-                allow_patterns=["*.json", "*.txt", "*.safetensors"],
-            ),
-            HFQuestionAnswering(
-                repo_id="deepset/roberta-base-squad2",
-                allow_patterns=["*.json", "*.txt", "*.safetensors"],
-            ),
-            HFQuestionAnswering(
-                repo_id="distilbert-base-uncased-distilled-squad",
-                allow_patterns=["*.json", "*.txt", "*.safetensors"],
-            ),
-        ]
-
-    async def preload_model(self, context: ProcessingContext):
-        self._pipeline = await self.load_pipeline(
-            context,
-            "question-answering",
-            self.model.repo_id,
-            torch_dtype=select_inference_dtype(),
-        )
-
-    async def move_to_device(self, device: str):
-        self._pipeline.model.to(device)
-
-    class OutputType(TypedDict):
-        answer: str
-        score: float
-        start: int
-        end: int
-
-    async def process(self, context: ProcessingContext) -> OutputType:
-        assert self._pipeline is not None
-        inputs = {
-            "question": self.question,
-            "context": self.context,
-        }
-
-        result = await self.run_pipeline_in_thread(inputs)
-        assert result is not None
-        return {
-            "answer": result["answer"],
-            "score": result["score"],
-            "start": result["start"],
-            "end": result["end"],
-        }
+from typing import TypedDict
 
 
 class TableQuestionAnswering(HuggingFacePipelineNode):
