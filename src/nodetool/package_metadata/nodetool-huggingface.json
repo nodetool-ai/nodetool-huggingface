@@ -1,11 +1,6 @@
 {
   "assets": [
     {
-      "name": ".DS_Store",
-      "package_name": "nodetool-huggingface",
-      "path": ""
-    },
-    {
       "name": "Add Subtitles To Video.jpg",
       "package_name": "nodetool-huggingface",
       "path": ""
@@ -574,7 +569,7 @@
             "type": "hf.automatic_speech_recognition",
             "variant": null
           },
-          "description": "The Whisper model variant to use. Larger models (large-v3) offer better accuracy; smaller models (small, tiny) are faster. Turbo variants balance speed and quality.",
+          "description": "The Whisper model variant to use. Larger models (large-v3) offer better accuracy; smaller models (small, tiny) are faster. Turbo and Distil-Whisper variants balance speed and quality.",
           "name": "model",
           "title": "Model",
           "type": {
@@ -819,11 +814,11 @@
             "allow_patterns": null,
             "ignore_patterns": null,
             "path": null,
-            "repo_id": "LiheYoung/depth-anything-base-hf",
+            "repo_id": "depth-anything/Depth-Anything-V2-Base-hf",
             "type": "hf.depth_estimation",
             "variant": null
           },
-          "description": "The depth estimation model to use. Depth-Anything V2 models offer state-of-the-art accuracy; DPT-large is a reliable alternative.",
+          "description": "The depth estimation model to use. Depth-Anything V2 gives the best relative depth; the Metric variants output real-world scale; DepthPro and Distill-Any-Depth are strong alternatives; DPT-large is the classic baseline.",
           "name": "model",
           "title": "Model",
           "type": {
@@ -1101,7 +1096,7 @@
             "type": "hf.feature_extraction",
             "variant": null
           },
-          "description": "The embedding model to use. mxbai-embed-large-v1 and BGE models offer excellent quality; smaller models trade accuracy for speed.",
+          "description": "The embedding model to use. Qwen3-Embedding and Granite Embedding R2 are the current quality leaders; mxbai-embed-large-v1 and BGE remain strong all-rounders; smaller models trade accuracy for speed.",
           "name": "model",
           "title": "Model",
           "type": {
@@ -1247,15 +1242,7 @@
         {
           "name": "output",
           "type": {
-            "type": "dict",
-            "type_args": [
-              {
-                "type": "str"
-              },
-              {
-                "type": "any"
-              }
-            ]
+            "type": "dataframe"
           }
         }
       ],
@@ -1269,7 +1256,7 @@
             "type": "hf.fill_mask",
             "variant": null
           },
-          "description": "The masked language model to use. BERT, RoBERTa, and DistilBERT variants are supported.",
+          "description": "The masked language model to use. ModernBERT and mmBERT are the current generation; BERT, RoBERTa, XLM-R and DistilBERT variants are also supported.",
           "name": "model",
           "title": "Model",
           "type": {
@@ -1278,7 +1265,7 @@
         },
         {
           "default": "The capital of France is [MASK].",
-          "description": "Text containing [MASK] token(s) to be predicted. Different models may use different mask tokens (e.g., BERT uses [MASK], RoBERTa uses <mask>).",
+          "description": "Text containing exactly one [MASK] token to be predicted. Different models may use different mask tokens (e.g., BERT uses [MASK], RoBERTa uses <mask>).",
           "name": "inputs",
           "title": "Input Text",
           "type": {
@@ -1287,7 +1274,7 @@
         },
         {
           "default": 5,
-          "description": "Number of most likely predictions to return for each masked position.",
+          "description": "Number of most likely predictions to return for the masked position.",
           "name": "top_k",
           "title": "Top K",
           "type": {
@@ -1427,7 +1414,7 @@
             "type": "hf.image_classification",
             "variant": null
           },
-          "description": "The image classification model. ViT and ResNet models offer general classification; specialized models exist for NSFW detection, age estimation, etc.",
+          "description": "The image classification model. ViT, ConvNeXt V2 and ResNet models offer general classification; specialized models exist for NSFW detection, age estimation, etc.",
           "name": "model",
           "title": "Model",
           "type": {
@@ -1628,7 +1615,7 @@
             "type": "hf.zero_shot_image_classification",
             "variant": null
           },
-          "description": "The zero-shot classification model. CLIP-based models (OpenAI, LAION) enable flexible label matching using vision-language understanding.",
+          "description": "The zero-shot classification model. SigLIP 2 is the most accurate; CLIP-based models (OpenAI, LAION) are the classic option. All enable flexible label matching using vision-language understanding.",
           "name": "model",
           "title": "Model",
           "type": {
@@ -1899,9 +1886,13 @@
     },
     {
       "basic_fields": [
+        "model",
         "image"
       ],
       "description": "Performs automatic instance segmentation using Meta's Segment Anything Model 2 (SAM2).\n    image, segmentation, object-detection, scene-parsing, mask, SAM2\n\n    Use cases:\n    - Automatically segment all distinct objects in an image\n    - Generate high-quality masks without manual prompts\n    - Extract individual objects for image editing workflows\n    - Build interactive segmentation applications\n    - Enable precise object selection in creative tools",
+      "inline_fields": [
+        "model"
+      ],
       "input_fields": [
         "image"
       ],
@@ -1921,6 +1912,22 @@
         }
       ],
       "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "facebook/sam2-hiera-large",
+            "type": "hf.model",
+            "variant": null
+          },
+          "description": "The SAM2 model to use. SAM2.1 variants offer the best quality; base-plus is faster.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.model"
+          }
+        },
         {
           "default": {
             "asset_id": null,
@@ -2002,7 +2009,7 @@
             "type": "hf.image_segmentation",
             "variant": null
           },
-          "description": "The segmentation model. SegFormer-ADE for general scenes, specialized models for clothing or body parts.",
+          "description": "The segmentation model. SegFormer-ADE for general scenes, EoMT/Mask2Former/OneFormer for panoptic segmentation, specialized models for clothing or body parts.",
           "name": "model",
           "title": "Model",
           "type": {
@@ -2157,7 +2164,6 @@
     {
       "basic_fields": [
         "model",
-        "quantization",
         "image",
         "prompt"
       ],
@@ -2261,7 +2267,6 @@
     {
       "basic_fields": [
         "model",
-        "quantization",
         "image",
         "prompt"
       ],
@@ -2298,7 +2303,7 @@
             "type": "hf.image_text_to_text",
             "variant": null
           },
-          "description": "The vision-language model to use. SmolVLM is lightweight; LLaVA variants offer different capability levels.",
+          "description": "The vision-language model to use. Qwen3.5/3.6 and Gemma 4 are the strongest general-purpose options; SmolVLM is lightweight; LLaVA variants offer different capability levels.",
           "name": "model",
           "title": "Model",
           "type": {
@@ -2569,7 +2574,6 @@
     {
       "basic_fields": [
         "model",
-        "quantization",
         "image",
         "prompt"
       ],
@@ -2763,7 +2767,6 @@
     {
       "basic_fields": [
         "model",
-        "quantization",
         "image",
         "prompt"
       ],
@@ -7190,7 +7193,7 @@
         {
           "default": -1,
           "description": "Seed for the random number generator.",
-          "max": 1000000.0,
+          "max": 4294967295.0,
           "min": -1.0,
           "name": "seed",
           "title": "Seed",
@@ -7878,7 +7881,7 @@
         {
           "default": -1,
           "description": "Seed for the random number generator.",
-          "max": 1000000.0,
+          "max": 4294967295.0,
           "min": -1.0,
           "name": "seed",
           "title": "Seed",
@@ -8588,7 +8591,7 @@
         {
           "default": -1,
           "description": "Seed for the random number generator.",
-          "max": 1000000.0,
+          "max": 4294967295.0,
           "min": -1.0,
           "name": "seed",
           "title": "Seed",
@@ -8977,7 +8980,7 @@
         {
           "default": -1,
           "description": "Seed for the random number generator.",
-          "max": 1000000.0,
+          "max": 4294967295.0,
           "min": -1.0,
           "name": "seed",
           "title": "Seed",
@@ -9619,7 +9622,7 @@
             "type": "hf.image_to_text",
             "variant": null
           },
-          "description": "The image captioning model. BLIP models offer good quality; BLIP2 provides enhanced understanding; GIT is faster.",
+          "description": "The image captioning model. BLIP models offer good quality; BLIP2 provides enhanced understanding; GIT is faster; TrOCR transcribes printed or handwritten text rather than captioning.",
           "name": "model",
           "title": "Model",
           "type": {
@@ -9699,6 +9702,42 @@
           "name": "nlpconnect/vit-gpt2-image-captioning",
           "repo_id": "nlpconnect/vit-gpt2-image-captioning",
           "type": "hf.image_to_text"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "Salesforce/blip-image-captioning-large",
+          "name": "Salesforce/blip-image-captioning-large",
+          "repo_id": "Salesforce/blip-image-captioning-large",
+          "type": "hf.image_to_text"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "microsoft/trocr-base-printed",
+          "name": "microsoft/trocr-base-printed",
+          "repo_id": "microsoft/trocr-base-printed",
+          "type": "hf.image_to_text"
+        },
+        {
+          "allow_patterns": [
+            "*.safetensors",
+            "*.json",
+            "*.txt",
+            "*.model"
+          ],
+          "id": "microsoft/trocr-base-handwritten",
+          "name": "microsoft/trocr-base-handwritten",
+          "repo_id": "microsoft/trocr-base-handwritten",
+          "type": "hf.image_to_text"
         }
       ],
       "title": "HF Image To Text"
@@ -9760,15 +9799,14 @@
       ],
       "properties": [
         {
-          "default": "Wan-AI/Wan2.2-FLF2V-14B-720P-Diffusers",
-          "description": "The Wan FLF2V model variant. 2.2 is the latest; 2.1 is the previous generation.",
+          "default": "Wan-AI/Wan2.1-FLF2V-14B-720P-diffusers",
+          "description": "The Wan FLF2V model variant. Wan 2.1 FLF2V 14B 720P is the only first-last-frame checkpoint Wan publishes in diffusers format.",
           "name": "model_variant",
           "title": "Model Variant",
           "type": {
             "type": "enum",
             "type_name": "nodetool.nodes.huggingface.image_to_video.Wan_FLF2V.WanFLF2VModel",
             "values": [
-              "Wan-AI/Wan2.2-FLF2V-14B-720P-Diffusers",
               "Wan-AI/Wan2.1-FLF2V-14B-720P-diffusers"
             ]
           }
@@ -11015,7 +11053,7 @@
           "type": "hf.image_to_text"
         }
       ],
-      "title": "HF Image To Text"
+      "title": "HF Image Captioning"
     },
     {
       "basic_fields": [
@@ -11878,7 +11916,7 @@
             "type": "hf.reranker",
             "variant": null
           },
-          "description": "The reranking model. BGE-reranker-v2-m3 is multilingual; base and large variants offer different speed/accuracy tradeoffs.",
+          "description": "The reranking model. BGE-reranker-v2-m3 is multilingual; gte-reranker-modernbert-base handles long context; ms-marco-MiniLM cross-encoders are the fastest.",
           "name": "model",
           "title": "Model",
           "type": {
@@ -12022,7 +12060,7 @@
             "type": "hf.sentence_similarity",
             "variant": null
           },
-          "description": "The sentence embedding model. all-mpnet-base-v2 offers high quality; MiniLM variants are faster; BGE-m3 is multilingual.",
+          "description": "The sentence embedding model. Qwen3-Embedding and Granite Embedding R2 are the current quality leaders; all-mpnet-base-v2 is a solid baseline; MiniLM variants are faster; BGE-m3 and multilingual-e5 cover many languages.",
           "name": "model",
           "title": "Model",
           "type": {
@@ -12734,7 +12772,7 @@
             "type": "hf.text_classification",
             "variant": null
           },
-          "description": "The text classification model. Use sentiment models for opinion analysis; emotion models for feeling detection.",
+          "description": "The text classification model. Use sentiment models for opinion analysis; emotion models for feeling detection; tabularisai and clapAI models cover many languages.",
           "name": "model",
           "title": "Model",
           "type": {
@@ -12870,7 +12908,7 @@
             "type": "hf.zero_shot_classification",
             "variant": null
           },
-          "description": "The zero-shot classification model. BART-large-mnli is reliable; DeBERTa variants offer improved accuracy; mDeBERTa is multilingual.",
+          "description": "The zero-shot classification model. BART-large-mnli is reliable; the zeroshot-v2.0 and ModernBERT-NLI checkpoints are more accurate and faster; mDeBERTa is multilingual.",
           "name": "model",
           "title": "Model",
           "type": {
@@ -13934,6 +13972,184 @@
       "basic_fields": [
         "model",
         "src_audio",
+        "complete_track_classes"
+      ],
+      "body": "content_card",
+      "description": "Completes input audio with additional tracks using ACE-Step 1.5.\n    audio, music, complete, arrangement, accompaniment, ace-step\n\n    Use cases:\n    - Flesh out a sparse demo with extra instrument tracks\n    - Add accompaniment around a lead vocal or melody\n    - Turn a single stem into a fuller arrangement",
+      "input_fields": [
+        "prompt",
+        "src_audio"
+      ],
+      "namespace": "huggingface.text_to_audio",
+      "node_type": "huggingface.text_to_audio.AceStepComplete",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+            "type": "hf.text_to_audio",
+            "variant": null
+          },
+          "description": "The ACE-Step model to use for generation.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_audio"
+          }
+        },
+        {
+          "default": "A beautiful piano piece with soft melodies and gentle rhythm",
+          "description": "Describe the music style, instruments, mood, and tempo.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Lyrics for the music. Use structure tags like [verse], [chorus], [bridge]. Leave empty for instrumental.",
+          "name": "lyrics",
+          "title": "Lyrics",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "en",
+          "description": "Language code for the lyrics (e.g. 'en', 'zh', 'ja').",
+          "name": "vocal_language",
+          "title": "Vocal Language",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Denoising steps. The turbo model is designed for 8 steps.",
+          "max": 200.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 7.0,
+          "description": "Guidance scale for CFG. Ignored by guidance-distilled turbo checkpoints.",
+          "max": 15.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "Audio (stereo, 48 kHz) to complete with additional tracks.",
+          "name": "src_audio",
+          "title": "Source Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": null,
+          "description": "Track classes to add (e.g. ['drums', 'bass', 'guitar']). Empty lets the model decide.",
+          "name": "complete_track_classes",
+          "required": true,
+          "title": "Track Classes",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "str"
+              }
+            ]
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "name": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "repo_id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-base",
+          "name": "ACE-Step/acestep-v15-base",
+          "repo_id": "ACE-Step/acestep-v15-base",
+          "type": "hf.text_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "ACE-Step/acestep-v15-sft",
+          "name": "ACE-Step/acestep-v15-sft",
+          "repo_id": "ACE-Step/acestep-v15-sft",
+          "type": "hf.text_to_audio"
+        }
+      ],
+      "title": "ACE-Step Complete"
+    },
+    {
+      "basic_fields": [
+        "model",
+        "src_audio",
         "reference_audio",
         "audio_cover_strength"
       ],
@@ -14120,190 +14336,6 @@
         }
       ],
       "title": "ACE-Step Cover"
-    },
-    {
-      "basic_fields": [
-        "model",
-        "src_audio",
-        "repainting_start",
-        "repainting_end"
-      ],
-      "body": "content_card",
-      "description": "Regenerates a section of existing audio while keeping the rest with ACE-Step 1.5.\n    audio, music, repaint, inpainting, edit, ace-step\n\n    Use cases:\n    - Replace a verse or chorus while preserving the surrounding song\n    - Fix or rework a specific time range of a track\n    - Generate variations of one section without re-rendering the whole piece",
-      "input_fields": [
-        "prompt",
-        "src_audio"
-      ],
-      "namespace": "huggingface.text_to_audio",
-      "node_type": "huggingface.text_to_audio.AceStepRepaint",
-      "outputs": [
-        {
-          "name": "output",
-          "type": {
-            "type": "audio"
-          }
-        }
-      ],
-      "properties": [
-        {
-          "default": {
-            "allow_patterns": null,
-            "ignore_patterns": null,
-            "path": null,
-            "repo_id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
-            "type": "hf.text_to_audio",
-            "variant": null
-          },
-          "description": "The ACE-Step model to use for generation.",
-          "name": "model",
-          "title": "Model",
-          "type": {
-            "type": "hf.text_to_audio"
-          }
-        },
-        {
-          "default": "A beautiful piano piece with soft melodies and gentle rhythm",
-          "description": "Describe the music style, instruments, mood, and tempo.",
-          "name": "prompt",
-          "title": "Prompt",
-          "type": {
-            "type": "str"
-          }
-        },
-        {
-          "default": "",
-          "description": "Lyrics for the music. Use structure tags like [verse], [chorus], [bridge]. Leave empty for instrumental.",
-          "name": "lyrics",
-          "title": "Lyrics",
-          "type": {
-            "type": "str"
-          }
-        },
-        {
-          "default": "en",
-          "description": "Language code for the lyrics (e.g. 'en', 'zh', 'ja').",
-          "name": "vocal_language",
-          "title": "Vocal Language",
-          "type": {
-            "type": "str"
-          }
-        },
-        {
-          "default": 8,
-          "description": "Denoising steps. The turbo model is designed for 8 steps.",
-          "max": 200.0,
-          "min": 1.0,
-          "name": "num_inference_steps",
-          "title": "Num Inference Steps",
-          "type": {
-            "type": "int"
-          }
-        },
-        {
-          "default": 7.0,
-          "description": "Guidance scale for CFG. Ignored by guidance-distilled turbo checkpoints.",
-          "max": 15.0,
-          "min": 1.0,
-          "name": "guidance_scale",
-          "title": "Guidance Scale",
-          "type": {
-            "type": "float"
-          }
-        },
-        {
-          "default": -1,
-          "description": "Random seed for reproducible generation. Use -1 for random.",
-          "min": -1.0,
-          "name": "seed",
-          "title": "Seed",
-          "type": {
-            "type": "int"
-          }
-        },
-        {
-          "default": true,
-          "description": "Offload model components to CPU to reduce VRAM usage.",
-          "name": "enable_cpu_offload",
-          "title": "Enable Cpu Offload",
-          "type": {
-            "type": "bool"
-          }
-        },
-        {
-          "default": {
-            "asset_id": null,
-            "data": null,
-            "metadata": null,
-            "type": "audio",
-            "uri": ""
-          },
-          "description": "Audio (stereo, 48 kHz) to repaint. The region outside the range is kept.",
-          "name": "src_audio",
-          "title": "Source Audio",
-          "type": {
-            "type": "audio"
-          }
-        },
-        {
-          "default": 0.0,
-          "description": "Start time in seconds of the region to regenerate.",
-          "min": 0.0,
-          "name": "repainting_start",
-          "title": "Repaint Start",
-          "type": {
-            "type": "float"
-          }
-        },
-        {
-          "default": -1.0,
-          "description": "End time in seconds of the region to regenerate. Use -1 for until the end.",
-          "min": -1.0,
-          "name": "repainting_end",
-          "title": "Repaint End",
-          "type": {
-            "type": "float"
-          }
-        }
-      ],
-      "recommended_models": [
-        {
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ],
-          "id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
-          "name": "ACE-Step/acestep-v15-xl-turbo-diffusers",
-          "repo_id": "ACE-Step/acestep-v15-xl-turbo-diffusers",
-          "type": "hf.text_to_audio"
-        },
-        {
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ],
-          "id": "ACE-Step/acestep-v15-base",
-          "name": "ACE-Step/acestep-v15-base",
-          "repo_id": "ACE-Step/acestep-v15-base",
-          "type": "hf.text_to_audio"
-        },
-        {
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ],
-          "id": "ACE-Step/acestep-v15-sft",
-          "name": "ACE-Step/acestep-v15-sft",
-          "repo_id": "ACE-Step/acestep-v15-sft",
-          "type": "hf.text_to_audio"
-        }
-      ],
-      "title": "ACE-Step Repaint"
     },
     {
       "basic_fields": [
@@ -14674,16 +14706,17 @@
       "basic_fields": [
         "model",
         "src_audio",
-        "complete_track_classes"
+        "repainting_start",
+        "repainting_end"
       ],
       "body": "content_card",
-      "description": "Completes input audio with additional tracks using ACE-Step 1.5.\n    audio, music, complete, arrangement, accompaniment, ace-step\n\n    Use cases:\n    - Flesh out a sparse demo with extra instrument tracks\n    - Add accompaniment around a lead vocal or melody\n    - Turn a single stem into a fuller arrangement",
+      "description": "Regenerates a section of existing audio while keeping the rest with ACE-Step 1.5.\n    audio, music, repaint, inpainting, edit, ace-step\n\n    Use cases:\n    - Replace a verse or chorus while preserving the surrounding song\n    - Fix or rework a specific time range of a track\n    - Generate variations of one section without re-rendering the whole piece",
       "input_fields": [
         "prompt",
         "src_audio"
       ],
       "namespace": "huggingface.text_to_audio",
-      "node_type": "huggingface.text_to_audio.AceStepComplete",
+      "node_type": "huggingface.text_to_audio.AceStepRepaint",
       "outputs": [
         {
           "name": "output",
@@ -14785,7 +14818,7 @@
             "type": "audio",
             "uri": ""
           },
-          "description": "Audio (stereo, 48 kHz) to complete with additional tracks.",
+          "description": "Audio (stereo, 48 kHz) to repaint. The region outside the range is kept.",
           "name": "src_audio",
           "title": "Source Audio",
           "type": {
@@ -14793,17 +14826,23 @@
           }
         },
         {
-          "default": [],
-          "description": "Track classes to add (e.g. ['drums', 'bass', 'guitar']). Empty lets the model decide.",
-          "name": "complete_track_classes",
-          "title": "Track Classes",
+          "default": 0.0,
+          "description": "Start time in seconds of the region to regenerate.",
+          "min": 0.0,
+          "name": "repainting_start",
+          "title": "Repaint Start",
           "type": {
-            "type": "list",
-            "type_args": [
-              {
-                "type": "str"
-              }
-            ]
+            "type": "float"
+          }
+        },
+        {
+          "default": -1.0,
+          "description": "End time in seconds of the region to regenerate. Use -1 for until the end.",
+          "min": -1.0,
+          "name": "repainting_end",
+          "title": "Repaint End",
+          "type": {
+            "type": "float"
           }
         }
       ],
@@ -14845,7 +14884,7 @@
           "type": "hf.text_to_audio"
         }
       ],
-      "title": "ACE-Step Complete"
+      "title": "ACE-Step Repaint"
     },
     {
       "basic_fields": [
@@ -15510,6 +15549,140 @@
         }
       ],
       "title": "Stable Audio"
+    },
+    {
+      "basic_fields": [
+        "prompt",
+        "height",
+        "width",
+        "seed"
+      ],
+      "body": "content_card",
+      "description": "Generates images from structured JSON prompts using Bria's FIBO model for precise visual control.\n    image, generation, AI, text-to-image, bria, fibo, json, structured, control\n\n    FIBO is trained exclusively on structured JSON captions (up to 1,000+ words)\n    and is designed to understand and control visual parameters such as lighting,\n    composition, color, and camera settings, enabling precise and reproducible\n    outputs. With only 8 billion parameters it provides high image quality, strong\n    prompt adherence and professional control.\n\n    Note: FIBO will NOT work well with freeform text prompts. Provide a structured\n    JSON prompt. Use the FIBO-VLM-prompt-to-JSON or FIBO-gemini-prompt-to-JSON\n    helper models to convert a freeform description into structured JSON.\n\n    The model is gated: accept the license at\n    https://huggingface.co/briaai/FIBO and authenticate with your HF token.\n\n    Use cases:\n    - Generate images with precise, reproducible control over lighting and camera\n    - Build pipelines that programmatically construct structured JSON prompts\n    - Produce professional-quality images with fine-grained visual parameters",
+      "input_fields": [
+        "prompt",
+        "negative_prompt"
+      ],
+      "namespace": "huggingface.text_to_image",
+      "node_type": "huggingface.text_to_image.BriaFibo",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "image"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": "{\n  \"scene_description\": \"A close-up portrait of a golden retriever sitting in a sunlit meadow.\",\n  \"subjects\": [\n    {\n      \"type\": \"animal\",\n      \"description\": \"a happy golden retriever with a glossy coat, tongue out\",\n      \"position\": \"center\"\n    }\n  ],\n  \"lighting\": {\n    \"type\": \"natural\",\n    \"direction\": \"backlit\",\n    \"time_of_day\": \"golden hour\",\n    \"mood\": \"warm and soft\"\n  },\n  \"composition\": {\n    \"framing\": \"close-up\",\n    \"aspect_ratio\": \"1:1\",\n    \"focal_point\": \"the dog's face\"\n  },\n  \"color\": {\n    \"palette\": \"warm golden tones with soft green background\",\n    \"saturation\": \"medium-high\"\n  },\n  \"camera\": {\n    \"lens\": \"85mm\",\n    \"aperture\": \"f/1.8\",\n    \"depth_of_field\": \"shallow\"\n  },\n  \"style\": \"photorealistic, professional photography\"\n}",
+          "description": "Structured JSON prompt describing the image. FIBO is trained on structured JSON captions and does not work well with freeform text.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Describe what to avoid in the image (e.g., 'blurry, low quality').",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 5.0,
+          "description": "Prompt adherence strength. ~5 is typical for FIBO.",
+          "max": 30.0,
+          "min": 0.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 50,
+          "description": "Denoising steps. 30-50 is typical; more = better quality but slower.",
+          "max": 100.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 1024,
+          "description": "Output image height in pixels. 1024 gives the best results.",
+          "max": 2048.0,
+          "min": 256.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 1024,
+          "description": "Output image width in pixels. 1024 gives the best results.",
+          "max": 2048.0,
+          "min": 256.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 3000,
+          "description": "Maximum prompt length in tokens. FIBO supports long structured prompts.",
+          "max": 4096.0,
+          "min": 1.0,
+          "name": "max_sequence_length",
+          "title": "Max Sequence Length",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.py",
+            "*.json"
+          ],
+          "id": "briaai/FIBO",
+          "name": "briaai/FIBO",
+          "repo_id": "briaai/FIBO",
+          "type": "hf.text_to_image"
+        }
+      ],
+      "title": "Bria FIBO"
     },
     {
       "basic_fields": [
@@ -17554,7 +17727,7 @@
         {
           "default": -1,
           "description": "Seed for the random number generator.",
-          "max": 1000000.0,
+          "max": 4294967295.0,
           "min": -1.0,
           "name": "seed",
           "title": "Seed",
@@ -18289,7 +18462,7 @@
             "type": "hf.text_to_speech",
             "variant": null
           },
-          "description": "The TTS model to use. facebook/mms-tts-* models support many languages (eng=English, fra=French, deu=German, kor=Korean, etc.).",
+          "description": "The TTS model to use. facebook/mms-tts-* models support many languages (eng=English, fra=French, deu=German, spa=Spanish, por=Portuguese, rus=Russian, ara=Arabic, hin=Hindi, kor=Korean, etc.).",
           "name": "model",
           "title": "Model",
           "type": {
@@ -19407,7 +19580,7 @@
             "type": "hf.token_classification",
             "variant": null
           },
-          "description": "The token classification model. BERT-large-cased-finetuned-conll03 offers high-quality NER for English text.",
+          "description": "The token classification model. BERT-large-cased-finetuned-conll03 offers high-quality NER for English text; privacy-filter and bert-small-pii-detection tag PII instead of generic entities.",
           "name": "model",
           "title": "Model",
           "type": {
@@ -19537,7 +19710,7 @@
             "type": "hf.translation",
             "variant": null
           },
-          "description": "The translation model. T5 models support many language pairs; larger variants offer better quality.",
+          "description": "The translation model. M2M-100 translates directly between any of 100 languages; T5 only supports English as the source language. Larger variants offer better quality.",
           "name": "model",
           "title": "Model",
           "type": {
@@ -19717,7 +19890,7 @@
         "video",
         "num_frames"
       ],
-      "description": "Classifies video clips into action or scene categories using video transformer models.\n    video, classification, action-recognition, computer-vision, VideoMAE, TimeSformer\n\n    Use cases:\n    - Recognize human actions and activities in surveillance or sports footage\n    - Moderate video content by detecting inappropriate scenes\n    - Tag and organize video libraries by scene type or activity\n    - Enable smart search over large video collections\n    - Analyze movement patterns in sports, healthcare, or robotics",
+      "description": "Classifies video clips into action or scene categories using video transformer models.\n    video, classification, action-recognition, computer-vision, VideoMAE, TimeSformer, V-JEPA 2\n\n    Use cases:\n    - Recognize human actions and activities in surveillance or sports footage\n    - Moderate video content by detecting inappropriate scenes\n    - Tag and organize video libraries by scene type or activity\n    - Enable smart search over large video collections\n    - Analyze movement patterns in sports, healthcare, or robotics",
       "inline_fields": [
         "model"
       ],
@@ -19752,7 +19925,7 @@
             "type": "hf.model",
             "variant": null
           },
-          "description": "The video classification model. VideoMAE and TimeSformer are strong general-purpose models; task-specific fine-tuned variants are available for sports, cooking, etc.",
+          "description": "The video classification model. VideoMAE and TimeSformer are strong general-purpose Kinetics models; V-JEPA 2 checkpoints are newer and better at fine-grained motion (Something-Something v2, Diving48).",
           "name": "model",
           "title": "Model",
           "type": {
@@ -19878,5 +20051,5 @@
     }
   ],
   "repo_id": "",
-  "version": "0.7.0"
+  "version": "0.7.1"
 }
