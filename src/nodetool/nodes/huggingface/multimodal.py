@@ -5,7 +5,10 @@ from nodetool.metadata.types import (
     HFImageToText,
     OCRResult,
 )
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.huggingface_pipeline import (
+    HuggingFacePipelineNode,
+    extract_generated_text,
+)
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeUpdate
 
@@ -80,12 +83,13 @@ class ImageToText(HuggingFacePipelineNode):
     async def process(self, context: ProcessingContext) -> str:
         assert self._pipeline is not None
         image = await context.image_to_pil(self.image)
+        # "image-to-text" is resolved to the image-text-to-text pipeline, which
+        # raises when handed an image without accompanying text. An empty prompt
+        # keeps the captioning behaviour while satisfying that requirement.
         result = await self.run_pipeline_in_thread(
-            image, max_new_tokens=self.max_new_tokens
+            images=image, text="", max_new_tokens=self.max_new_tokens
         )
-        assert isinstance(result, list)
-        assert len(result) == 1
-        return result[0]["generated_text"]
+        return extract_generated_text(result)
 
 
 class VisualQuestionAnswering(HuggingFacePipelineNode):

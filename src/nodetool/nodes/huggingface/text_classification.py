@@ -62,7 +62,10 @@ class TextClassifier(HuggingFacePipelineNode):
 
     async def process(self, context: ProcessingContext) -> dict[str, float]:
         assert self._pipeline is not None
-        result = await self.run_pipeline_in_thread(self.prompt)
+        # Without an explicit top_k the pipeline falls back to its legacy mode and
+        # emits only the winning label, which does not fill out the label -> score
+        # mapping this node advertises. top_k=None returns every label.
+        result = await self.run_pipeline_in_thread(self.prompt, top_k=None)
         return {i["label"]: i["score"] for i in list(result)}
 
 

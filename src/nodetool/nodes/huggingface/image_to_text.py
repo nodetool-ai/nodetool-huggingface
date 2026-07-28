@@ -1,5 +1,8 @@
 from nodetool.metadata.types import HFImageToText, ImageRef
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.huggingface_pipeline import (
+    HuggingFacePipelineNode,
+    extract_generated_text,
+)
 from nodetool.workflows.processing_context import ProcessingContext
 
 from pydantic import Field
@@ -134,22 +137,12 @@ class ImageToText(HuggingFacePipelineNode):
         if self.max_new_tokens is not None:
             kwargs["max_new_tokens"] = self.max_new_tokens
 
-        pipeline_task = getattr(self._pipeline, "task", None)
-        if pipeline_task == "image-text-to-text":
-            result = await self.run_pipeline_in_thread(
-                images=image,
-                text="",
-                **kwargs,
-            )
-        else:
-            result = await self.run_pipeline_in_thread(image, **kwargs)
-
-        # Handle different output formats from different models
-        if isinstance(result, list) and len(result) > 0:
-            if isinstance(result[0], dict) and "generated_text" in result[0]:
-                return result[0]["generated_text"]
-            elif isinstance(result[0], str):
-                return result[0]
-
-        # Fallback for other formats
-        return str(result)
+        # "image-to-text" is resolved to the image-text-to-text pipeline, which
+        # rejects an image without accompanying text. An empty prompt keeps the
+        # captioning behaviour while satisfying that requirement.
+        result = await self.run_pipeline_in_thread(
+            images=image,
+            text="",
+            **kwargs,
+        )
+        return extract_generated_text(result)

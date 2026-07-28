@@ -83,7 +83,9 @@ class Bark(HuggingFacePipelineNode):
         result = await self.run_pipeline_in_thread(
             self.prompt, forward_params={"do_sample": True}
         )
-        audio = await context.audio_from_numpy(result["audio"], 24_000)
+        # The pipeline reports the model's own rate; Bark's 24kHz is the fallback.
+        sample_rate = int(result.get("sampling_rate") or 24_000)
+        audio = await context.audio_from_numpy(result["audio"], sample_rate)
         return audio
 
 
