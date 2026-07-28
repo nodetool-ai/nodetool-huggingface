@@ -1,3 +1,5 @@
+from typing import Any
+
 from nodetool.metadata.types import (
     BoundingBox,
     HFObjectDetection,
@@ -134,9 +136,8 @@ class ObjectDetection(HuggingFacePipelineNode):
         if isinstance(result, list):
             # The object-detection pipeline has no top_k parameter, so the
             # limit is applied here on the score-sorted detections.
-            result = sorted(result, key=lambda item: item["score"], reverse=True)[
-                : self.top_k
-            ]
+            detections: list[dict[str, Any]] = list(result)
+            detections.sort(key=lambda item: item["score"], reverse=True)
             return [
                 ObjectDetectionResult(
                     label=item["label"],
@@ -148,7 +149,7 @@ class ObjectDetection(HuggingFacePipelineNode):
                         ymax=item["box"]["ymax"],
                     ),
                 )
-                for item in result
+                for item in detections[: self.top_k]
             ]
         else:
             raise ValueError(f"Invalid result type: {type(result)}")
