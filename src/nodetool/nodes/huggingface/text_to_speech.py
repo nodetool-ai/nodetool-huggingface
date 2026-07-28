@@ -530,7 +530,7 @@ class TextToSpeech(HuggingFacePipelineNode):
     model: HFTextToSpeech = Field(
         default=HFTextToSpeech(),
         title="Model",
-        description="The TTS model to use. facebook/mms-tts-* models support many languages (eng=English, fra=French, deu=German, kor=Korean, etc.).",
+        description="The TTS model to use. facebook/mms-tts-* models support many languages (eng=English, fra=French, deu=German, spa=Spanish, por=Portuguese, rus=Russian, ara=Arabic, hin=Hindi, kor=Korean, etc.).",
     )
     text: str = Field(
         default="Hello, this is a test of the text-to-speech system.",
@@ -559,11 +559,23 @@ class TextToSpeech(HuggingFacePipelineNode):
                 allow_patterns=["*.bin", "*.json", "*.txt"],
             ),
             HFTextToSpeech(
-                repo_id="facebook/mms-tts-jpn",
+                repo_id="facebook/mms-tts-spa",
                 allow_patterns=["*.bin", "*.json", "*.txt"],
             ),
             HFTextToSpeech(
-                repo_id="facebook/mms-tts-zho",
+                repo_id="facebook/mms-tts-por",
+                allow_patterns=["*.bin", "*.json", "*.txt"],
+            ),
+            HFTextToSpeech(
+                repo_id="facebook/mms-tts-rus",
+                allow_patterns=["*.bin", "*.json", "*.txt"],
+            ),
+            HFTextToSpeech(
+                repo_id="facebook/mms-tts-ara",
+                allow_patterns=["*.bin", "*.json", "*.txt"],
+            ),
+            HFTextToSpeech(
+                repo_id="facebook/mms-tts-hin",
                 allow_patterns=["*.bin", "*.json", "*.txt"],
             ),
             HFTextToSpeech(

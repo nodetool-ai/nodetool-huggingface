@@ -24,7 +24,7 @@ class TextClassifier(HuggingFacePipelineNode):
     model: HFTextClassification = Field(
         default=HFTextClassification(),
         title="Model",
-        description="The text classification model. Use sentiment models for opinion analysis; emotion models for feeling detection.",
+        description="The text classification model. Use sentiment models for opinion analysis; emotion models for feeling detection; tabularisai and clapAI models cover many languages.",
     )
     prompt: str = Field(
         default="",
@@ -36,11 +36,16 @@ class TextClassifier(HuggingFacePipelineNode):
     def get_recommended_models(cls):
         return [
             HFTextClassification(
-                repo_id=model, allow_patterns=["*.json", "*.txt", "*.bin"]
+                repo_id=model,
+                allow_patterns=["*.json", "*.txt", "*.bin", "*.safetensors"],
             )
             for model in [
                 "cardiffnlp/twitter-roberta-base-sentiment-latest",
                 "michellejieli/emotion_text_classifier",
+                "SamLowe/roberta-base-go_emotions",
+                "tabularisai/multilingual-sentiment-analysis",
+                "tabularisai/multilingual-emotion-classification",
+                "clapAI/modernBERT-base-multilingual-sentiment",
             ]
         ]
 
@@ -94,6 +99,18 @@ class ZeroShotTextClassifier(HuggingFacePipelineNode):
                 allow_patterns=["*.json", "*.txt", "*.safetensors"],
             ),
             HFZeroShotClassification(
+                repo_id="tasksource/ModernBERT-large-nli",
+                allow_patterns=["*.json", "*.txt", "*.safetensors"],
+            ),
+            HFZeroShotClassification(
+                repo_id="MoritzLaurer/deberta-v3-large-zeroshot-v2.0",
+                allow_patterns=["*.json", "*.txt", "*.safetensors"],
+            ),
+            HFZeroShotClassification(
+                repo_id="MoritzLaurer/ModernBERT-large-zeroshot-v2.0",
+                allow_patterns=["*.json", "*.txt", "*.safetensors"],
+            ),
+            HFZeroShotClassification(
                 repo_id="cross-encoder/nli-deberta-v3-base",
                 allow_patterns=["*.json", "*.txt", "*.safetensors"],
             ),
@@ -110,7 +127,7 @@ class ZeroShotTextClassifier(HuggingFacePipelineNode):
     model: HFZeroShotClassification = Field(
         default=HFZeroShotClassification(),
         title="Model",
-        description="The zero-shot classification model. BART-large-mnli is reliable; DeBERTa variants offer improved accuracy; mDeBERTa is multilingual.",
+        description="The zero-shot classification model. BART-large-mnli is reliable; the zeroshot-v2.0 and ModernBERT-NLI checkpoints are more accurate and faster; mDeBERTa is multilingual.",
     )
     inputs: str = Field(
         default="",

@@ -15,7 +15,7 @@ from pydantic import Field
 class VideoClassifier(HuggingFacePipelineNode):
     """
     Classifies video clips into action or scene categories using video transformer models.
-    video, classification, action-recognition, computer-vision, VideoMAE, TimeSformer
+    video, classification, action-recognition, computer-vision, VideoMAE, TimeSformer, V-JEPA 2
 
     Use cases:
     - Recognize human actions and activities in surveillance or sports footage
@@ -28,7 +28,7 @@ class VideoClassifier(HuggingFacePipelineNode):
     model: HuggingFaceModel = Field(
         default=HuggingFaceModel(repo_id="MCG-NJU/videomae-base-finetuned-kinetics"),
         title="Model",
-        description="The video classification model. VideoMAE and TimeSformer are strong general-purpose models; task-specific fine-tuned variants are available for sports, cooking, etc.",
+        description="The video classification model. VideoMAE and TimeSformer are strong general-purpose Kinetics models; V-JEPA 2 checkpoints are newer and better at fine-grained motion (Something-Something v2, Diving48).",
     )
     video: VideoRef = Field(
         default=VideoRef(),
@@ -69,7 +69,11 @@ class VideoClassifier(HuggingFacePipelineNode):
                 allow_patterns=["README.md", "*.bin", "*.json", "**/*.json"],
             ),
             HuggingFaceModel(
-                repo_id="sayakpaul/videomae-base-finetuned-ucf101-subset",
+                repo_id="facebook/vjepa2-vitl-fpc16-256-ssv2",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
+            ),
+            HuggingFaceModel(
+                repo_id="facebook/vjepa2-vitl-fpc32-256-diving48",
                 allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
             ),
         ]

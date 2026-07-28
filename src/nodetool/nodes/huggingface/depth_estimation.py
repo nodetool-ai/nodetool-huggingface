@@ -18,9 +18,9 @@ class DepthEstimation(HuggingFacePipelineNode):
     """
 
     model: HFDepthEstimation = Field(
-        default=HFDepthEstimation(repo_id="LiheYoung/depth-anything-base-hf"),
+        default=HFDepthEstimation(repo_id="depth-anything/Depth-Anything-V2-Base-hf"),
         title="Model",
-        description="The depth estimation model to use. Depth-Anything V2 models offer state-of-the-art accuracy; DPT-large is a reliable alternative.",
+        description="The depth estimation model to use. Depth-Anything V2 gives the best relative depth; the Metric variants output real-world scale; DepthPro and Distill-Any-Depth are strong alternatives; DPT-large is the classic baseline.",
     )
     image: ImageRef = Field(
         default=ImageRef(),
@@ -58,6 +58,15 @@ class DepthEstimation(HuggingFacePipelineNode):
             ),
             HFDepthEstimation(
                 repo_id="depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf",
+            ),
+            HFDepthEstimation(
+                repo_id="depth-anything/Depth-Anything-V2-Metric-Indoor-Large-hf",
+            ),
+            HFDepthEstimation(
+                repo_id="depth-anything/Depth-Anything-V2-Metric-Outdoor-Large-hf",
+            ),
+            HFDepthEstimation(
+                repo_id="xingyang1/Distill-Any-Depth-Large-hf",
             ),
         ]
 

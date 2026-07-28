@@ -41,7 +41,7 @@ class Segmentation(HuggingFacePipelineNode):
             repo_id="nvidia/segformer-b3-finetuned-ade-512-512"
         ),
         title="Model",
-        description="The segmentation model. SegFormer-ADE for general scenes, specialized models for clothing or body parts.",
+        description="The segmentation model. SegFormer-ADE for general scenes, EoMT/Mask2Former/OneFormer for panoptic segmentation, specialized models for clothing or body parts.",
     )
     image: ImageRef = Field(
         default=ImageRef(),
@@ -61,6 +61,23 @@ class Segmentation(HuggingFacePipelineNode):
             HFImageSegmentation(
                 repo_id="mattmdjaga/segformer_b2_clothes",
                 allow_patterns=["README.md", "*.bin", "*.json", "**/*.json"],
+            ),
+            HFImageSegmentation(
+                repo_id="nvidia/segformer-b5-finetuned-ade-640-640",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
+            ),
+            # Universal (semantic + instance + panoptic) segmentation
+            HFImageSegmentation(
+                repo_id="tue-mps/coco_panoptic_eomt_large_640",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
+            ),
+            HFImageSegmentation(
+                repo_id="facebook/mask2former-swin-large-coco-panoptic",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
+            ),
+            HFImageSegmentation(
+                repo_id="shi-labs/oneformer_coco_swin_large",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
             ),
         ]
 

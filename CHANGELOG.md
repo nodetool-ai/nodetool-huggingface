@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-07-28
+
+### Added
+
+- Current-generation embedding models for feature extraction and sentence
+  similarity (Qwen3-Embedding, Granite Embedding R2, gte-modernbert, multilingual-e5)
+- ModernBERT and mmBERT for fill-mask
+- gte-reranker-modernbert, mxbai-rerank and ms-marco cross-encoders for reranking
+- zeroshot-v2.0 and ModernBERT-NLI models for zero-shot text classification;
+  multilingual sentiment/emotion models for text classification
+- NER and PII models for token classification (bert-base-NER,
+  roberta-large-ner-english, bert-small-pii-detection)
+- RT-DETRv2 and D-FINE for object detection; Grounding DINO base, MM Grounding
+  DINO and LLMDet for zero-shot object detection
+- SigLIP 2 for zero-shot image classification; ConvNeXt V2 and updated NSFW
+  detectors for image classification
+- Panoptic segmentation models (EoMT, Mask2Former, OneFormer) and SegFormer-B5
+- Depth-Anything V2 Metric Large variants and Distill-Any-Depth
+- V-JEPA 2 checkpoints for video classification
+- Distil-Whisper large-v3.5 for speech recognition; speech emotion, keyword,
+  language-ID and gender models for audio classification; more CLAP variants
+- TrOCR (printed/handwritten) and BLIP-large for image-to-text
+- M2M-100 for translation, which covers all 100 languages the node exposes
+  rather than T5's English-source-only pairs
+- Qwen3.5/Qwen3.6 for text generation, and Qwen3.5/3.6 plus Gemma 4 for
+  image-text-to-text
+- `scripts/sync_recommended_models.py` to regenerate `recommended_models` in the
+  package metadata without a full `nodetool package scan`
+
+### Fixed
+
+- Replaced Hugging Face repositories that no longer exist and would fail at
+  download time: `llava-hf/llava-v1.5-{7b,13b}` (now `llava-hf/llava-1.5-{7b,13b}-hf`),
+  `Qwen/Qwen3-VL-7B-Instruct`, `Qwen/Qwen3-VL-Demo`, `Wan-AI/Wan2.2-T2V-14B-Diffusers`,
+  `Wan-AI/Wan2.2-FLF2V-14B-720P-Diffusers`, `andite/pastel-mix`,
+  `cloudqi/cqi_visual_question_answering_pt_v0`, `facebook/mms-tts-{jpn,zho}`
+  and `sayakpaul/videomae-base-finetuned-ucf101-subset`
+- `Wan_FLF2V` defaulted to a Wan 2.2 FLF2V checkpoint that was never published;
+  it now defaults to the Wan 2.1 720P checkpoint
+- `TextClassifier` recommended models now allow `*.safetensors`, so
+  safetensors-only checkpoints download correctly
+
 ## [Unreleased] - 2025-12-20
 
 ### Added

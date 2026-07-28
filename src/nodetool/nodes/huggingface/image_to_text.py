@@ -55,7 +55,7 @@ class ImageToText(HuggingFacePipelineNode):
             allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
         ),
         title="Model",
-        description="The image captioning model. BLIP models offer good quality; BLIP2 provides enhanced understanding; GIT is faster.",
+        description="The image captioning model. BLIP models offer good quality; BLIP2 provides enhanced understanding; GIT is faster; TrOCR transcribes printed or handwritten text rather than captioning.",
     )
     image: ImageRef = Field(
         default=ImageRef(),
@@ -89,6 +89,19 @@ class ImageToText(HuggingFacePipelineNode):
             ),
             HFImageToText(
                 repo_id="nlpconnect/vit-gpt2-image-captioning",
+                allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
+            ),
+            HFImageToText(
+                repo_id="Salesforce/blip-image-captioning-large",
+                allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
+            ),
+            # TrOCR: transcribe text in an image instead of captioning it
+            HFImageToText(
+                repo_id="microsoft/trocr-base-printed",
+                allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
+            ),
+            HFImageToText(
+                repo_id="microsoft/trocr-base-handwritten",
                 allow_patterns=["*.safetensors", "*.json", "*.txt", "*.model"],
             ),
         ]

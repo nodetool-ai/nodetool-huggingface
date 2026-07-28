@@ -79,7 +79,7 @@ class Translation(HuggingFacePipelineNode):
             allow_patterns=["*.json", "*.txt", "*.safetensors"],
         ),
         title="Model",
-        description="The translation model. T5 models support many language pairs; larger variants offer better quality.",
+        description="The translation model. M2M-100 translates directly between any of 100 languages; T5 only supports English as the source language. Larger variants offer better quality.",
     )
     inputs: str = Field(
         default="",
@@ -113,6 +113,17 @@ class Translation(HuggingFacePipelineNode):
             HFTranslation(
                 repo_id="google-t5/t5-small",
                 allow_patterns=["*.json", "*.txt", "*.safetensors"],
+            ),
+            # M2M-100 is many-to-many across 100 languages and takes the same
+            # two-letter src_lang/tgt_lang codes this node already passes,
+            # unlike T5 which only covers a handful of English source pairs.
+            HFTranslation(
+                repo_id="facebook/m2m100_418M",
+                allow_patterns=["*.json", "*.txt", "*.model", "*.safetensors"],
+            ),
+            HFTranslation(
+                repo_id="facebook/m2m100_1.2B",
+                allow_patterns=["*.json", "*.txt", "*.model", "*.safetensors"],
             ),
         ]
 

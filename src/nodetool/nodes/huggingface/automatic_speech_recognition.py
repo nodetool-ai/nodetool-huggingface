@@ -142,7 +142,7 @@ class Whisper(HuggingFacePipelineNode):
     model: HFAutomaticSpeechRecognition = Field(
         default=HFAutomaticSpeechRecognition(),
         title="Model",
-        description="The Whisper model variant to use. Larger models (large-v3) offer better accuracy; smaller models (small, tiny) are faster. Turbo variants balance speed and quality.",
+        description="The Whisper model variant to use. Larger models (large-v3) offer better accuracy; smaller models (small, tiny) are faster. Turbo and Distil-Whisper variants balance speed and quality.",
     )
     audio: AudioRef = Field(
         default=AudioRef(),
@@ -202,6 +202,11 @@ class Whisper(HuggingFacePipelineNode):
             HFAutomaticSpeechRecognition(
                 repo_id="Systran/faster-whisper-large-v3",
                 allow_patterns=["model.bin", "*.json", "*.txt"],
+            ),
+            # Distil-Whisper: ~6x faster than large-v3 at comparable WER
+            HFAutomaticSpeechRecognition(
+                repo_id="distil-whisper/distil-large-v3.5",
+                allow_patterns=["model.safetensors", "*.json", "*.txt"],
             ),
             # Granite Speech + VibeVoice ASR
             HFAutomaticSpeechRecognition(

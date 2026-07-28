@@ -22,7 +22,7 @@ class SentenceSimilarity(HuggingFacePipelineNode):
     model: HFSentenceSimilarity = Field(
         default=HFSentenceSimilarity(),
         title="Model",
-        description="The sentence embedding model. all-mpnet-base-v2 offers high quality; MiniLM variants are faster; BGE-m3 is multilingual.",
+        description="The sentence embedding model. Qwen3-Embedding and Granite Embedding R2 are the current quality leaders; all-mpnet-base-v2 is a solid baseline; MiniLM variants are faster; BGE-m3 and multilingual-e5 cover many languages.",
     )
     inputs: str = Field(
         default="",
@@ -33,6 +33,28 @@ class SentenceSimilarity(HuggingFacePipelineNode):
     @classmethod
     def get_recommended_models(cls):
         return [
+            # Current-generation embedding models
+            HFSentenceSimilarity(
+                repo_id="Qwen/Qwen3-Embedding-0.6B",
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
+            ),
+            HFSentenceSimilarity(
+                repo_id="ibm-granite/granite-embedding-small-english-r2",
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
+            ),
+            HFSentenceSimilarity(
+                repo_id="ibm-granite/granite-embedding-97m-multilingual-r2",
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
+            ),
+            HFSentenceSimilarity(
+                repo_id="Alibaba-NLP/gte-modernbert-base",
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
+            ),
+            HFSentenceSimilarity(
+                repo_id="intfloat/multilingual-e5-base",
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
+            ),
+            # Established baselines
             HFSentenceSimilarity(
                 repo_id="sentence-transformers/all-mpnet-base-v2",
                 allow_patterns=["*.safetensors", "*.txt", "*.json"],

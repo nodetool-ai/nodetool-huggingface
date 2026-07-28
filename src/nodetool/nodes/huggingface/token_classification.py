@@ -34,7 +34,7 @@ class TokenClassification(HuggingFacePipelineNode):
             allow_patterns=["*.bin", "*.json", "**/*.json", "*.safetensors"],
         ),
         title="Model",
-        description="The token classification model. BERT-large-cased-finetuned-conll03 offers high-quality NER for English text.",
+        description="The token classification model. BERT-large-cased-finetuned-conll03 offers high-quality NER for English text; privacy-filter and bert-small-pii-detection tag PII instead of generic entities.",
     )
     inputs: str = Field(
         default="",
@@ -54,11 +54,23 @@ class TokenClassification(HuggingFacePipelineNode):
                 repo_id="dbmdz/bert-large-cased-finetuned-conll03-english",
                 allow_patterns=["*.bin", "*.json", "**/*.json", "*.safetensors"],
             ),
+            HFTokenClassification(
+                repo_id="dslim/bert-base-NER",
+                allow_patterns=["*.bin", "*.json", "**/*.json", "*.safetensors"],
+            ),
+            HFTokenClassification(
+                repo_id="Jean-Baptiste/roberta-large-ner-english",
+                allow_patterns=["*.bin", "*.json", "**/*.json", "*.safetensors"],
+            ),
             # OpenAI privacy filter (PII token tagging). "original/" duplicates
             # the root model weights, so skip it.
             HFTokenClassification(
                 repo_id="openai/privacy-filter",
                 ignore_patterns=["original/*"],
+            ),
+            HFTokenClassification(
+                repo_id="gravitee-io/bert-small-pii-detection",
+                allow_patterns=["*.bin", "*.json", "**/*.json", "*.safetensors"],
             ),
         ]
 

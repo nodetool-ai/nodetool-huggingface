@@ -296,12 +296,11 @@ class Wan_FLF2V(HuggingFacePipelineNode):
     """
 
     class WanFLF2VModel(str, Enum):
-        WAN_2_2_FLF2V_14B_720P = "Wan-AI/Wan2.2-FLF2V-14B-720P-Diffusers"
         WAN_2_1_FLF2V_14B_720P = "Wan-AI/Wan2.1-FLF2V-14B-720P-diffusers"
 
     model_variant: WanFLF2VModel = Field(
-        default=WanFLF2VModel.WAN_2_2_FLF2V_14B_720P,
-        description="The Wan FLF2V model variant. 2.2 is the latest; 2.1 is the previous generation.",
+        default=WanFLF2VModel.WAN_2_1_FLF2V_14B_720P,
+        description="The Wan FLF2V model variant. Wan 2.1 FLF2V 14B 720P is the only first-last-frame checkpoint Wan publishes in diffusers format.",
     )
     first_image: ImageRef = Field(
         default=ImageRef(),
@@ -370,10 +369,6 @@ class Wan_FLF2V(HuggingFacePipelineNode):
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
         return [
-            HFTextToVideo(
-                repo_id="Wan-AI/Wan2.2-FLF2V-14B-720P-Diffusers",
-                allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],
-            ),
             HFTextToVideo(
                 repo_id="Wan-AI/Wan2.1-FLF2V-14B-720P-diffusers",
                 allow_patterns=["**/*.safetensors", "**/*.json", "**/*.txt", "*.json"],

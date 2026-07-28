@@ -64,6 +64,22 @@ class AudioClassifier(HuggingFacePipelineNode):
                 repo_id="ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition",
                 allow_patterns=["pytorch_model.bin", "*.json"],
             ),
+            HFAudioClassification(
+                repo_id="superb/hubert-large-superb-er",
+                allow_patterns=["*.safetensors", "pytorch_model.bin", "*.json"],
+            ),
+            HFAudioClassification(
+                repo_id="MIT/ast-finetuned-speech-commands-v2",
+                allow_patterns=["*.safetensors", "*.json"],
+            ),
+            HFAudioClassification(
+                repo_id="facebook/mms-lid-126",
+                allow_patterns=["*.safetensors", "pytorch_model.bin", "*.json"],
+            ),
+            HFAudioClassification(
+                repo_id="prithivMLmods/Common-Voice-Gender-Detection",
+                allow_patterns=["*.safetensors", "*.json"],
+            ),
         ]
 
     def required_inputs(self):
@@ -125,6 +141,14 @@ class ZeroShotAudioClassifier(HuggingFacePipelineNode):
         return [
             HFZeroShotAudioClassification(
                 repo_id="laion/clap-htsat-unfused",
+                allow_patterns=["model.safetensors", "*.json", "*.txt"],
+            ),
+            HFZeroShotAudioClassification(
+                repo_id="laion/larger_clap_general",
+                allow_patterns=["model.safetensors", "*.json", "*.txt"],
+            ),
+            HFZeroShotAudioClassification(
+                repo_id="laion/clap-htsat-fused",
                 allow_patterns=["model.safetensors", "*.json", "*.txt"],
             ),
         ]

@@ -67,7 +67,11 @@ class DocumentQuestionAnswering(HuggingFacePipelineNode):
                 allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
             ),
             HuggingFaceModel(
-                repo_id="cloudqi/cqi_visual_question_answering_pt_v0",
+                repo_id="rubentito/layoutlmv3-base-mpdocvqa",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
+            ),
+            HuggingFaceModel(
+                repo_id="tiennvcs/layoutlmv2-base-uncased-finetuned-docvqa",
                 allow_patterns=["README.md", "*.bin", "*.json", "**/*.json"],
             ),
         ]

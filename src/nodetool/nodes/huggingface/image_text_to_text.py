@@ -154,7 +154,7 @@ class ImageTextToText(HuggingFacePipelineNode):
             repo_id="HuggingFaceTB/SmolVLM-Instruct",
         ),
         title="Model",
-        description="The vision-language model to use. SmolVLM is lightweight; LLaVA variants offer different capability levels.",
+        description="The vision-language model to use. Qwen3.5/3.6 and Gemma 4 are the strongest general-purpose options; SmolVLM is lightweight; LLaVA variants offer different capability levels.",
     )
     image: ImageRef = Field(
         default=ImageRef(),
@@ -184,14 +184,33 @@ class ImageTextToText(HuggingFacePipelineNode):
     @classmethod
     def get_recommended_models(cls):
         return [
+            # Current-generation general-purpose VLMs
+            HFImageTextToText(
+                repo_id="Qwen/Qwen3.6-27B",
+            ),
+            HFImageTextToText(
+                repo_id="Qwen/Qwen3.5-4B",
+            ),
+            HFImageTextToText(
+                repo_id="Qwen/Qwen3.5-9B",
+            ),
+            HFImageTextToText(
+                repo_id="Qwen/Qwen3-VL-8B-Instruct",
+            ),
+            HFImageTextToText(
+                repo_id="google/gemma-4-31B-it",
+            ),
+            HFImageTextToText(
+                repo_id="google/gemma-4-26B-A4B-it",
+            ),
             HFImageTextToText(
                 repo_id="HuggingFaceTB/SmolVLM-Instruct",
             ),
             HFImageTextToText(
-                repo_id="llava-hf/llava-v1.5-13b",
+                repo_id="llava-hf/llava-1.5-13b-hf",
             ),
             HFImageTextToText(
-                repo_id="llava-hf/llava-v1.5-7b",
+                repo_id="llava-hf/llava-1.5-7b-hf",
             ),
             HFImageTextToText(
                 repo_id="llava-hf/bakLlava-v1-hf",
@@ -704,7 +723,6 @@ class Qwen3_VL(BaseQwenVL):
             HFQwen3_VL(repo_id="Qwen/Qwen3-VL-2B-Thinking"),
             HFQwen3_VL(repo_id="Qwen/Qwen3-VL-4B-Instruct"),
             HFQwen3_VL(repo_id="Qwen/Qwen3-VL-4B-Thinking"),
-            HFQwen3_VL(repo_id="Qwen/Qwen3-VL-7B-Instruct"),
             HFQwen3_VL(repo_id="Qwen/Qwen3-VL-8B-Instruct"),
             HFQwen3_VL(repo_id="Qwen/Qwen3-VL-8B-Thinking"),
             HFQwen3_VL(repo_id="Qwen/Qwen3-VL-30B-A3B-Instruct"),
@@ -713,8 +731,6 @@ class Qwen3_VL(BaseQwenVL):
             HFQwen3_VL(repo_id="Qwen/Qwen3-VL-32B-Thinking"),
             HFQwen3_VL(repo_id="Qwen/Qwen3-VL-235B-A22B-Instruct"),
             HFQwen3_VL(repo_id="Qwen/Qwen3-VL-235B-A22B-Thinking"),
-            # Demo space
-            HFQwen3_VL(repo_id="Qwen/Qwen3-VL-Demo"),
             # Unsloth Bitsandbytes (bnb) Qwen3-VL instruct/thinking models - common 2B/4B/8B/32B (bnb-4bit, unsloth-bnb-4bit, etc.)
             HFQwen3_VL(repo_id="unsloth/Qwen3-VL-2B-Instruct-bnb-4bit"),
             HFQwen3_VL(repo_id="unsloth/Qwen3-VL-2B-Thinking-bnb-4bit"),

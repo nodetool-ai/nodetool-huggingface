@@ -35,7 +35,7 @@ class ImageClassifier(HuggingFacePipelineNode):
     model: HFImageClassification = Field(
         default=HFImageClassification(),
         title="Model",
-        description="The image classification model. ViT and ResNet models offer general classification; specialized models exist for NSFW detection, age estimation, etc.",
+        description="The image classification model. ViT, ConvNeXt V2 and ResNet models offer general classification; specialized models exist for NSFW detection, age estimation, etc.",
     )
     image: ImageRef = Field(
         default=ImageRef(),
@@ -77,6 +77,18 @@ class ImageClassifier(HuggingFacePipelineNode):
             ),
             HFImageClassification(
                 repo_id="rizvandwiki/gender-classification-2",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
+            ),
+            HFImageClassification(
+                repo_id="facebook/convnextv2-base-22k-224",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
+            ),
+            HFImageClassification(
+                repo_id="Freepik/nsfw_image_detector",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
+            ),
+            HFImageClassification(
+                repo_id="prithivMLmods/siglip2-x256-explicit-content",
                 allow_patterns=["README.md", "*.safetensors", "*.json", "**/*.json"],
             ),
         ]
@@ -126,7 +138,7 @@ class ZeroShotImageClassifier(HuggingFacePipelineNode):
     model: HFZeroShotImageClassification = Field(
         default=HFZeroShotImageClassification(),
         title="Model",
-        description="The zero-shot classification model. CLIP-based models (OpenAI, LAION) enable flexible label matching using vision-language understanding.",
+        description="The zero-shot classification model. SigLIP 2 is the most accurate; CLIP-based models (OpenAI, LAION) are the classic option. All enable flexible label matching using vision-language understanding.",
     )
     image: ImageRef = Field(
         default=ImageRef(),
@@ -153,6 +165,15 @@ class ZeroShotImageClassifier(HuggingFacePipelineNode):
             HFZeroShotImageClassification(
                 repo_id="laion/CLIP-ViT-g-14-laion2B-s12B-b42K",
                 allow_patterns=["README.md", "pytorch_model.bin", "*.json", "*.txt"],
+            ),
+            # SigLIP 2 outperforms CLIP on zero-shot classification and retrieval
+            HFZeroShotImageClassification(
+                repo_id="google/siglip2-base-patch16-224",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "*.model"],
+            ),
+            HFZeroShotImageClassification(
+                repo_id="google/siglip2-so400m-patch14-384",
+                allow_patterns=["README.md", "*.safetensors", "*.json", "*.model"],
             ),
         ]
 

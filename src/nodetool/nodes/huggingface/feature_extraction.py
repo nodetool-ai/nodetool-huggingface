@@ -24,7 +24,7 @@ class FeatureExtraction(HuggingFacePipelineNode):
     model: HFFeatureExtraction = Field(
         default=HFFeatureExtraction(),
         title="Model",
-        description="The embedding model to use. mxbai-embed-large-v1 and BGE models offer excellent quality; smaller models trade accuracy for speed.",
+        description="The embedding model to use. Qwen3-Embedding and Granite Embedding R2 are the current quality leaders; mxbai-embed-large-v1 and BGE remain strong all-rounders; smaller models trade accuracy for speed.",
     )
     inputs: str = Field(
         default="",
@@ -35,6 +35,28 @@ class FeatureExtraction(HuggingFacePipelineNode):
     @classmethod
     def get_recommended_models(cls):
         return [
+            # Current-generation embedding models
+            HFFeatureExtraction(
+                repo_id="Qwen/Qwen3-Embedding-0.6B",
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
+            ),
+            HFFeatureExtraction(
+                repo_id="Qwen/Qwen3-Embedding-4B",
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
+            ),
+            HFFeatureExtraction(
+                repo_id="ibm-granite/granite-embedding-small-english-r2",
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
+            ),
+            HFFeatureExtraction(
+                repo_id="ibm-granite/granite-embedding-97m-multilingual-r2",
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
+            ),
+            HFFeatureExtraction(
+                repo_id="Alibaba-NLP/gte-modernbert-base",
+                allow_patterns=["*.safetensors", "*.txt", "*.json"],
+            ),
+            # Established baselines
             HFFeatureExtraction(
                 repo_id="mixedbread-ai/mxbai-embed-large-v1",
                 allow_patterns=["*.safetensors", "*.txt", "*.json"],
