@@ -1,3 +1,5 @@
+"""Manual Qwen Image/Nunchaku GPU example; not an automated test."""
+
 import torch
 from diffusers import QwenImagePipeline
 from nunchaku.models.transformers.transformer_qwenimage import (
