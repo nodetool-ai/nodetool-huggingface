@@ -18486,6 +18486,316 @@
     {
       "basic_fields": [
         "prompt",
+        "image",
+        "num_frames"
+      ],
+      "body": "content_card",
+      "description": "Generates a video and its soundtrack together from a text prompt and optional keyframes using MiniMax-H3.\n    video, audio, generation, AI, text-to-video, keyframe, soundtrack, minimax\n\n    Use cases:\n    - Create short clips that come with their own synchronized audio\n    - Animate a still image into a video that starts from it\n    - Generate a transition that ends on a given frame\n    - Produce sounded video content for social media and storytelling\n\n    **Note:** MiniMax-H3 is guidance-distilled, so there is no negative prompt and\n    no guidance scale. It generates 5 to 15 seconds at 24 fps. Leave both keyframes\n    empty for text-to-video-and-audio.",
+      "input_fields": [
+        "prompt",
+        "image",
+        "last_image"
+      ],
+      "namespace": "huggingface.text_to_video",
+      "node_type": "huggingface.text_to_video.MiniMaxH3",
+      "outputs": [
+        {
+          "name": "video",
+          "type": {
+            "type": "video"
+          }
+        },
+        {
+          "name": "audio",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": "A red fox trotting through a snowy pine forest, snow crunching underfoot",
+          "description": "Text description of the video and its soundtrack.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 124,
+          "description": "Frames to generate at the fixed 24 fps. Snapped up to the next 17n+5 the video VAE can decode; the result must stay between 5 and 15 seconds.",
+          "max": 345.0,
+          "min": 120.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 0,
+          "description": "Output height in pixels, a multiple of 32. Use 0 for the model's own canvas.",
+          "max": 1344.0,
+          "min": 0.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 0,
+          "description": "Output width in pixels, a multiple of 32. Use 0 for the model's own canvas.",
+          "max": 1344.0,
+          "min": 0.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 50,
+          "description": "Denoising steps. Counts sigma grid points, so it runs one model evaluation less.",
+          "max": 100.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Move components on and off the accelerator as the blocks reach them. The transformer alone is 61.7GB, so this is required on a single GPU.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "image",
+            "uri": ""
+          },
+          "description": "Optional keyframe the video starts from. It also sets the canvas aspect ratio.",
+          "name": "image",
+          "title": "Image",
+          "type": {
+            "type": "image"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "image",
+            "uri": ""
+          },
+          "description": "Optional keyframe the video ends on. Can be used on its own to generate up to a frame.",
+          "name": "last_image",
+          "title": "Last Image",
+          "type": {
+            "type": "image"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "*.json"
+          ],
+          "id": "MiniMaxAI/MiniMax-H3",
+          "name": "MiniMaxAI/MiniMax-H3",
+          "repo_id": "MiniMaxAI/MiniMax-H3",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "MiniMax-H3"
+    },
+    {
+      "basic_fields": [
+        "prompt",
+        "image_references",
+        "num_frames"
+      ],
+      "body": "content_card",
+      "description": "Generates a video and its soundtrack conditioned on image, video and audio references using MiniMax-H3.\n    video, audio, generation, AI, reference, omni-reference, soundtrack, minimax\n\n    Use cases:\n    - Keep a subject, style or scene consistent across generated clips\n    - Transfer the motion and camera work of a reference video\n    - Drive lip movement and delivery from a reference voice recording\n    - Continue a previous generation with the same character and soundtrack\n\n    **Note:** References are read in order \u2014 images, then videos, then audio clips \u2014\n    and the order is part of the request. At most 9 images, 3 videos and 3 audio\n    clips, 12 in total; audio references cannot be used on their own. References do\n    not bind the canvas, which defaults to 16:9.",
+      "input_fields": [
+        "prompt"
+      ],
+      "namespace": "huggingface.text_to_video",
+      "node_type": "huggingface.text_to_video.MiniMaxH3Reference",
+      "outputs": [
+        {
+          "name": "video",
+          "type": {
+            "type": "video"
+          }
+        },
+        {
+          "name": "audio",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": "A red fox trotting through a snowy pine forest, snow crunching underfoot",
+          "description": "Text description of the video and its soundtrack.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 124,
+          "description": "Frames to generate at the fixed 24 fps. Snapped up to the next 17n+5 the video VAE can decode; the result must stay between 5 and 15 seconds.",
+          "max": 345.0,
+          "min": 120.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 0,
+          "description": "Output height in pixels, a multiple of 32. Use 0 for the model's own canvas.",
+          "max": 1344.0,
+          "min": 0.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 0,
+          "description": "Output width in pixels, a multiple of 32. Use 0 for the model's own canvas.",
+          "max": 1344.0,
+          "min": 0.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 50,
+          "description": "Denoising steps. Counts sigma grid points, so it runs one model evaluation less.",
+          "max": 100.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Move components on and off the accelerator as the blocks reach them. The transformer alone is 61.7GB, so this is required on a single GPU.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": [],
+          "description": "Subject, style or scene references. At most 9.",
+          "name": "image_references",
+          "title": "Image References",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "image"
+              }
+            ]
+          }
+        },
+        {
+          "default": [],
+          "description": "Motion and camera references, conditioned on with their own soundtrack. At most 3.",
+          "name": "video_references",
+          "title": "Video References",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "video"
+              }
+            ]
+          }
+        },
+        {
+          "default": [],
+          "description": "Voice or music references. At most 3, and never without an image or video reference.",
+          "name": "audio_references",
+          "title": "Audio References",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "audio"
+              }
+            ]
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "*.json"
+          ],
+          "id": "MiniMaxAI/MiniMax-H3",
+          "name": "MiniMaxAI/MiniMax-H3",
+          "repo_id": "MiniMaxAI/MiniMax-H3",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "MiniMax-H3 Reference"
+    },
+    {
+      "basic_fields": [
+        "prompt",
         "num_frames",
         "height",
         "width",
