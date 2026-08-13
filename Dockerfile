@@ -16,7 +16,7 @@
 ARG CORE_IMAGE=nodetool-core:local
 FROM ${CORE_IMAGE}
 
-ARG HF_VERSION=0.7.1
+ARG HF_VERSION=0.7.2
 USER root
 
 # Install the released HuggingFace node package from PyPI on top of core.

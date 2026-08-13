@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nodetool-huggingface"
-version = "0.7.1"
+version = "0.7.2"
 description = "HuggingFace nodes for Nodetool"
 readme = "README.md"
 authors = [{ name = "Matthias Georgi", email = "matti.georgi@gmail.com" }]
@@ -82,6 +82,9 @@ trellis2 = []
 # Convenience meta-groups (PyPI-installable extras only)
 all-3d-pypi = ["nodetool-huggingface[hunyuan3d,triposg]"]
 all-3d = ["nodetool-huggingface[hunyuan3d,triposg,sf3d,triposr,trellis2]"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nodetool", "src/RealESRGAN", "src/triposg"]
