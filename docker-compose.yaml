@@ -20,7 +20,7 @@ services:
       context: .
       args:
         CORE_IMAGE: nodetool-core:local
-        HF_VERSION: "0.7.2"
+        HF_VERSION: "0.7.3"
     restart: unless-stopped
     ports:
       # host:container — the TS server owns host 7777, so publish on 8787.
@@ -56,7 +56,7 @@ services:
       context: .
       args:
         CORE_IMAGE: nodetool-core:local
-        HF_VERSION: "0.7.2"
+        HF_VERSION: "0.7.3"
     restart: unless-stopped
     ports:
       - "8787:7777"
