@@ -18,12 +18,12 @@ dependencies = [
     "torchaudio",
     "hf_xet",
     "kokoro>=0.9.4",
-    # transformers and diffusers track their upstream main branches: MiniMax-H3
-    # (modular pipeline, transformer and VAEs) and its Qwen3-VL conditioner path
-    # are only available there, not in a release.
-    "diffusers[torch] @ git+https://github.com/huggingface/diffusers.git@main",
+    # MiniMax-H3 is not included in Diffusers 0.39.0 yet. Keep released package
+    # dependencies publishable; use requirements/hf-latest.txt for local
+    # MiniMax-H3 testing until the integration reaches a Diffusers release.
+    "diffusers[torch]>=0.39.0,<1",
     "llama-index-embeddings-huggingface>=0.6.1",
-    "transformers @ git+https://github.com/huggingface/transformers.git@main",
+    "transformers>=5.15.0,<6",
     "mistral-common[image]>=1.10.0,<2",
     "huggingface_hub>=1.11.0,<2",
     "accelerate>=1.13.0,<2",
@@ -82,9 +82,6 @@ trellis2 = []
 # Convenience meta-groups (PyPI-installable extras only)
 all-3d-pypi = ["nodetool-huggingface[hunyuan3d,triposg]"]
 all-3d = ["nodetool-huggingface[hunyuan3d,triposg,sf3d,triposr,trellis2]"]
-
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nodetool", "src/RealESRGAN", "src/triposg"]
