@@ -471,6 +471,7 @@ _DIFFUSERS_REPO_ALLOW_PATTERNS = [
     "**/*.json",
     "**/*.txt",
     "**/*.model",
+    "**/*.jinja",
     "*.json",
 ]
 
@@ -632,6 +633,106 @@ class LTX2(HuggingFacePipelineNode):
         frames = output.frames[0] if hasattr(output, "frames") else output[0]
         run_gc("After LTX-2 inference", log_before_after=False)
         return await video_from_frames(context, frames, fps=int(self.frame_rate))
+
+
+class LTX25(LTX2):
+    """
+    Generates synchronized video and audio using Lightricks' LTX-2.5 Diffusers checkpoint.
+    video, audio, generation, AI, text-to-video, ltx, ltx-2.5, cinematic
+
+    LTX-2.5 runs through Diffusers 0.39's LTX2Pipeline and produces video and
+    audio together in one denoising process. The model is gated, so its license
+    must be accepted on Hugging Face before it can be downloaded.
+
+    Use cases:
+    - Generate cinematic clips with synchronized dialogue, ambience, or effects
+    - Produce audiovisual storyboards directly from detailed prompts
+    - Create short marketing and social clips with matching soundtracks
+    - Build local text-to-audio-video generation workflows
+    """
+
+    model: HFTextToVideo = Field(
+        default=HFTextToVideo(repo_id="Lightricks/LTX-2.5-Diffusers"),
+        description="The gated LTX-2.5 Diffusers checkpoint.",
+    )
+
+    class OutputType(TypedDict):
+        video: VideoRef
+        audio: AudioRef
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFTextToVideo(
+                repo_id="Lightricks/LTX-2.5-Diffusers",
+                allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "LTX-2.5"
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id or "Lightricks/LTX-2.5-Diffusers"
+
+    async def process(self, context: ProcessingContext) -> OutputType:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        import torch
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        def callback_on_step_end(
+            pipeline: Any, step: int, timestep: int, callback_kwargs: dict
+        ) -> dict:
+            context.post_message(
+                NodeProgress(
+                    node_id=self.id,
+                    progress=step,
+                    total=self.num_inference_steps,
+                )
+            )
+            return callback_kwargs
+
+        output = await self.run_pipeline_in_thread(
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt,
+            height=self.height,
+            width=self.width,
+            num_frames=self.num_frames,
+            frame_rate=self.frame_rate,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            generator=generator,
+            output_type="np",
+            callback_on_step_end=callback_on_step_end,
+            callback_on_step_end_tensor_inputs=["latents"],
+        )
+
+        frames = output.frames[0]
+        waveform = output.audio[0].float().cpu()
+        sample_rate = int(self._pipeline.vocoder.config.output_sampling_rate)
+        fps = int(self.frame_rate)
+
+        video = await video_from_frames_with_audio(
+            context,
+            frames,
+            audio=waveform,
+            audio_sample_rate=sample_rate,
+            fps=fps,
+        )
+        samples = waveform.numpy().T
+        audio = await context.audio_from_numpy(
+            samples,
+            sample_rate,
+            num_channels=samples.shape[1] if samples.ndim > 1 else 1,
+        )
+        run_gc("After LTX-2.5 inference", log_before_after=False)
+        return {"video": video, "audio": audio}
 
 
 class LTXVideo(HuggingFacePipelineNode):
