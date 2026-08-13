@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -9,10 +10,13 @@ if __package__ is None or __package__ == "":
 
 from nodetool.metadata.types import AudioRef, ImageRef, VideoRef
 from nodetool.nodes.huggingface.text_to_video import (
+    MINIMAX_H3_MODULE,
     MiniMaxH3,
     MiniMaxH3Reference,
     _MiniMaxH3Base,
+    _load_minimax_h3_runtime,
 )
+from nodetool.nodes.huggingface import text_to_video
 
 
 def test_minimax_h3_titles():
@@ -115,3 +119,41 @@ def test_a_valid_reference_mix_passes():
         video_references=[VideoRef()] * 3,
     )
     node._validate_references()
+
+
+def test_h3_runtime_is_loaded_dynamically(monkeypatch):
+    integration = object()
+    components_manager = object()
+    modular_pipeline = object()
+    diffusers = SimpleNamespace(
+        __version__="0.40.0",
+        ComponentsManager=components_manager,
+        ModularPipeline=modular_pipeline,
+    )
+
+    def import_module(name):
+        return integration if name == MINIMAX_H3_MODULE else diffusers
+
+    monkeypatch.setattr(text_to_video.importlib, "import_module", import_module)
+
+    assert _load_minimax_h3_runtime() == (
+        integration,
+        components_manager,
+        modular_pipeline,
+    )
+
+
+def test_diffusers_039_keeps_nodes_importable_and_reports_h3_unavailable(monkeypatch):
+    def import_module(name):
+        if name == MINIMAX_H3_MODULE:
+            raise ModuleNotFoundError(name=MINIMAX_H3_MODULE)
+        return SimpleNamespace(__version__="0.39.0")
+
+    monkeypatch.setattr(text_to_video.importlib, "import_module", import_module)
+
+    # Class construction and metadata do not import the H3 integration.
+    assert MiniMaxH3.get_title() == "MiniMax-H3"
+    assert MiniMaxH3Reference.get_title() == "MiniMax-H3 Reference"
+
+    with pytest.raises(ImportError, match=r"Diffusers 0\.39.*does not include"):
+        _load_minimax_h3_runtime()

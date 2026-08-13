@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 from typing import Any, TypedDict, TYPE_CHECKING
 from enum import Enum
 from pydantic import Field
@@ -819,6 +820,27 @@ MINIMAX_H3_REPO_ID = "MiniMaxAI/MiniMax-H3"
 MINIMAX_H3_FPS = 24
 MINIMAX_H3_MIN_FRAMES = 120
 MINIMAX_H3_MAX_FRAMES = 345
+MINIMAX_H3_MODULE = "diffusers.modular_pipelines.minimax_h3"
+
+
+def _load_minimax_h3_runtime() -> tuple[Any, Any, Any]:
+    """Load the unreleased Diffusers H3 integration only when an H3 node runs."""
+    diffusers = None
+    try:
+        diffusers = importlib.import_module("diffusers")
+        integration = importlib.import_module(MINIMAX_H3_MODULE)
+        components_manager = getattr(diffusers, "ComponentsManager")
+        modular_pipeline = getattr(diffusers, "ModularPipeline")
+    except (ImportError, AttributeError) as exc:
+        version = getattr(diffusers, "__version__", "not installed")
+        raise ImportError(
+            "MiniMax-H3 is not available in the installed Diffusers version "
+            f"({version}). Diffusers 0.39 does not include the H3 integration; "
+            "install a newer Diffusers release once H3 is published. Other "
+            "Hugging Face nodes remain available with Diffusers 0.39."
+        ) from exc
+
+    return integration, components_manager, modular_pipeline
 
 
 def _minimax_h3_recommended_models() -> list[HuggingFaceModel]:
@@ -913,8 +935,9 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
         import asyncio
 
         import torch
-        from diffusers import ComponentsManager, ModularPipeline
         from nodetool.ml.core.model_manager import ModelManager
+
+        _, components_manager_class, modular_pipeline_class = _load_minimax_h3_runtime()
 
         offload = self.enable_cpu_offload and torch.cuda.is_available()
         cache_key = (
@@ -929,8 +952,8 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
         dtype = select_inference_dtype()
 
         def _load() -> Any:
-            manager = ComponentsManager() if offload else None
-            pipeline = ModularPipeline.from_pretrained(
+            manager = components_manager_class() if offload else None
+            pipeline = modular_pipeline_class.from_pretrained(
                 MINIMAX_H3_REPO_ID,
                 workflow=self._workflow,
                 components_manager=manager,
@@ -1114,14 +1137,13 @@ class MiniMaxH3Reference(_MiniMaxH3Base):
         import os
         import tempfile
 
-        from diffusers.modular_pipelines.minimax_h3 import (
-            MiniMaxH3AudioReference,
-            MiniMaxH3ImageReference,
-            MiniMaxH3VideoReference,
-        )
+        integration, _, _ = _load_minimax_h3_runtime()
+        audio_reference_class = integration.MiniMaxH3AudioReference
+        image_reference_class = integration.MiniMaxH3ImageReference
+        video_reference_class = integration.MiniMaxH3VideoReference
 
         references: list[Any] = [
-            MiniMaxH3ImageReference(image=await context.image_to_pil(image))
+            image_reference_class(image=await context.image_to_pil(image))
             for image in self.image_references
         ]
 
@@ -1139,9 +1161,9 @@ class MiniMaxH3Reference(_MiniMaxH3Base):
                 os.unlink(path)
 
         for video in self.video_references:
-            references.append(await _from_file(MiniMaxH3VideoReference, video, ".mp4"))
+            references.append(await _from_file(video_reference_class, video, ".mp4"))
         for audio in self.audio_references:
-            references.append(await _from_file(MiniMaxH3AudioReference, audio, ".wav"))
+            references.append(await _from_file(audio_reference_class, audio, ".wav"))
 
         return references
 
