@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `MiniMaxH3` and `MiniMaxH3Reference` nodes for MiniMax-H3, which generates a
+  video and its soundtrack together in one denoising loop. `MiniMaxH3` covers
+  the `t2va` (text only) and `fl2va` (first and/or last keyframe) workflows,
+  `MiniMaxH3Reference` the `ref2va` omni-reference workflow (up to 9 image,
+  3 video and 3 audio references). Both output the muxed video and the
+  soundtrack as separate outputs
+- `video_from_frames_with_audio` for muxing generated frames and a generated
+  soundtrack into one MP4
 - Current-generation embedding models for feature extraction and sentence
   similarity (Qwen3-Embedding, Granite Embedding R2, gte-modernbert, multilingual-e5)
 - ModernBERT and mmBERT for fill-mask
@@ -33,6 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   image-text-to-text
 - `scripts/sync_recommended_models.py` to regenerate `recommended_models` in the
   package metadata without a full `nodetool package scan`
+
+### Changed
+
+- `transformers` and `diffusers` are installed from their upstream `main`
+  branches instead of released versions, which is where the MiniMax-H3
+  integration lives; `av` (PyAV) is now a direct dependency
 
 ### Fixed
 

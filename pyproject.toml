@@ -18,9 +18,12 @@ dependencies = [
     "torchaudio",
     "hf_xet",
     "kokoro>=0.9.4",
-    "diffusers[torch]>=0.38.0,<1",
+    # transformers and diffusers track their upstream main branches: MiniMax-H3
+    # (modular pipeline, transformer and VAEs) and its Qwen3-VL conditioner path
+    # are only available there, not in a release.
+    "diffusers[torch] @ git+https://github.com/huggingface/diffusers.git@main",
     "llama-index-embeddings-huggingface>=0.6.1",
-    "transformers>=5.10.1,<6",
+    "transformers @ git+https://github.com/huggingface/transformers.git@main",
     "mistral-common[image]>=1.10.0,<2",
     "huggingface_hub>=1.11.0,<2",
     "accelerate>=1.13.0,<2",
@@ -28,6 +31,9 @@ dependencies = [
     "tokenizers>=0.22.2,<1",
     "peft>=0.19.1,<1",
     "sentencepiece",
+    # PyAV: muxing generated video with its generated soundtrack, and decoding
+    # MiniMax-H3 reference media at the rates the container reports.
+    "av",
     "pydub>=0.25.1",
     "sam2",
     "accelerate",

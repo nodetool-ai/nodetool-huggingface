@@ -182,6 +182,11 @@ This package provides a rich set of HuggingFace nodes for integration with Nodet
   - Longer video sequences
   - Use cases: Video content creation, animated storytelling, marketing videos, cinematic content
 
+- **MiniMax-H3** - Generate a video and its soundtrack together
+  - Joint video + audio denoising, 5 to 15 seconds at 24 fps
+  - Optional first/last keyframes, or image, video and audio references
+  - Use cases: Sounded clips, keyframe transitions, character and voice consistency
+
 - **Image-to-Video** - Convert static images into video sequences
   - Animate still images
   - Add motion to photographs

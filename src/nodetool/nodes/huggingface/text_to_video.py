@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import Any, TypedDict, TYPE_CHECKING
 from enum import Enum
 from pydantic import Field
 from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.metadata.types import (
+    AudioRef,
     HuggingFaceModel,
     HFTextToVideo,
     ImageRef,
     VideoRef,
 )
-from .huggingface_pipeline import HuggingFacePipelineNode
+from .huggingface_pipeline import HuggingFacePipelineNode, select_inference_dtype
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     available_torch_dtype,
@@ -20,7 +21,10 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
 )
 from nodetool.workflows.memory_utils import run_gc
 from nodetool.workflows.types import NodeProgress
-from nodetool.huggingface.video_utils import video_from_frames
+from nodetool.huggingface.video_utils import (
+    video_from_frames,
+    video_from_frames_with_audio,
+)
 
 if TYPE_CHECKING:
     import torch
@@ -805,3 +809,343 @@ class Kandinsky5Video(HuggingFacePipelineNode):
         frames = output.frames[0] if hasattr(output, "frames") else output[0]
         run_gc("After Kandinsky 5.0 Video inference", log_before_after=False)
         return await video_from_frames(context, frames, fps=self.fps)
+
+
+# MiniMax-H3 generates at a fixed 24 fps and its video VAE only decodes frame
+# counts of the form ``17 * n + 5``. The pipeline snaps a request up to the next
+# such count, and the resulting duration has to stay between 5 and 15 seconds —
+# so 124 (5.17s) is the shortest usable request and 345 (14.375s) the longest.
+MINIMAX_H3_REPO_ID = "MiniMaxAI/MiniMax-H3"
+MINIMAX_H3_FPS = 24
+MINIMAX_H3_MIN_FRAMES = 120
+MINIMAX_H3_MAX_FRAMES = 345
+
+
+def _minimax_h3_recommended_models() -> list[HuggingFaceModel]:
+    return [
+        HFTextToVideo(
+            repo_id=MINIMAX_H3_REPO_ID,
+            allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+        ),
+    ]
+
+
+class _MiniMaxH3Base(HuggingFacePipelineNode):
+    """Shared loading and output handling for the MiniMax-H3 workflows.
+
+    MiniMax-H3 is a Modular Diffusers integration: one repository holds two
+    transformer partitions and three workflows (`t2va`, `fl2va`, `ref2va`), and
+    selecting a workflow loads only the partition that workflow needs. The
+    checkpoint is guidance-distilled, so there is no negative prompt and no
+    guidance scale.
+    """
+
+    # Set by the concrete nodes: "fl2va" (text and keyframes, `transformer/`) or
+    # "ref2va" (omni-references, `transformer_ref/`).
+    _workflow: str = "fl2va"
+
+    prompt: str = Field(
+        default="A red fox trotting through a snowy pine forest, snow crunching underfoot",
+        description="Text description of the video and its soundtrack.",
+    )
+    num_frames: int = Field(
+        default=124,
+        description=(
+            "Frames to generate at the fixed 24 fps. Snapped up to the next 17n+5 "
+            "the video VAE can decode; the result must stay between 5 and 15 seconds."
+        ),
+        ge=MINIMAX_H3_MIN_FRAMES,
+        le=MINIMAX_H3_MAX_FRAMES,
+    )
+    height: int = Field(
+        default=0,
+        description="Output height in pixels, a multiple of 32. Use 0 for the model's own canvas.",
+        ge=0,
+        le=1344,
+    )
+    width: int = Field(
+        default=0,
+        description="Output width in pixels, a multiple of 32. Use 0 for the model's own canvas.",
+        ge=0,
+        le=1344,
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        description="Denoising steps. Counts sigma grid points, so it runs one model evaluation less.",
+        ge=1,
+        le=100,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description=(
+            "Move components on and off the accelerator as the blocks reach them. "
+            "The transformer alone is 61.7GB, so this is required on a single GPU."
+        ),
+    )
+
+    _pipeline: Any = None
+
+    class OutputType(TypedDict):
+        video: VideoRef
+        audio: AudioRef
+
+    @classmethod
+    def is_visible(cls) -> bool:
+        return cls is not _MiniMaxH3Base
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return _minimax_h3_recommended_models()
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["prompt", "num_frames", "height", "width"]
+
+    def get_model_id(self) -> str:
+        return MINIMAX_H3_REPO_ID
+
+    async def preload_model(self, context: ProcessingContext):
+        import asyncio
+
+        import torch
+        from diffusers import ComponentsManager, ModularPipeline
+        from nodetool.ml.core.model_manager import ModelManager
+
+        offload = self.enable_cpu_offload and torch.cuda.is_available()
+        cache_key = (
+            f"{MINIMAX_H3_REPO_ID}_ModularPipeline_{self._workflow}_offload{offload}"
+        )
+
+        cached = ModelManager.get_model(cache_key)
+        if cached is not None:
+            self._pipeline = cached
+            return
+
+        dtype = select_inference_dtype()
+
+        def _load() -> Any:
+            manager = ComponentsManager() if offload else None
+            pipeline = ModularPipeline.from_pretrained(
+                MINIMAX_H3_REPO_ID,
+                workflow=self._workflow,
+                components_manager=manager,
+            )
+            pipeline.load_components(dtype=dtype)
+            if manager is not None:
+                manager.enable_auto_cpu_offload(device="cuda")
+            return pipeline
+
+        self._pipeline = await asyncio.to_thread(_load)
+        ModelManager.set_model(self.id, cache_key, self._pipeline)
+
+    async def move_to_device(self, device: str):
+        # With auto offload the components manager owns placement; without it the
+        # whole pipeline lives on the device.
+        if self._pipeline is None or self.enable_cpu_offload:
+            return
+        if hasattr(self._pipeline, "to"):
+            self._pipeline.to(device)
+
+    def _canvas_kwargs(self) -> dict[str, int]:
+        """Only pass height/width when both are set, so the model resolves its own canvas."""
+        if self.height > 0 and self.width > 0:
+            return {"height": self.height, "width": self.width}
+        return {}
+
+    async def _generate(
+        self, context: ProcessingContext, **workflow_kwargs: Any
+    ) -> OutputType:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        import torch
+
+        generator = torch.Generator(device="cpu")
+        if self.seed != -1:
+            generator = generator.manual_seed(self.seed)
+
+        results = await self.run_pipeline_in_thread(
+            prompt=self.prompt,
+            num_frames=self.num_frames,
+            num_inference_steps=self.num_inference_steps,
+            generator=generator,
+            output=["videos", "audio", "sampling_rate"],
+            **self._canvas_kwargs(),
+            **workflow_kwargs,
+        )
+
+        frames = results["videos"][0]
+        # `audio` is a `(1, 2, num_samples)` batch; take the request's own waveform.
+        waveform = results["audio"][0]
+        sampling_rate = int(results["sampling_rate"])
+
+        run_gc("After MiniMax-H3 inference", log_before_after=False)
+
+        video = await video_from_frames_with_audio(
+            context,
+            frames,
+            audio=waveform,
+            audio_sample_rate=sampling_rate,
+            fps=MINIMAX_H3_FPS,
+        )
+        # AudioSegment reads interleaved samples, so the channel axis goes last.
+        samples = waveform.float().cpu().numpy().T
+        audio = await context.audio_from_numpy(
+            samples,
+            sampling_rate,
+            num_channels=samples.shape[1] if samples.ndim > 1 else 1,
+        )
+        return {"video": video, "audio": audio}
+
+
+class MiniMaxH3(_MiniMaxH3Base):
+    """
+    Generates a video and its soundtrack together from a text prompt and optional keyframes using MiniMax-H3.
+    video, audio, generation, AI, text-to-video, keyframe, soundtrack, minimax
+
+    Use cases:
+    - Create short clips that come with their own synchronized audio
+    - Animate a still image into a video that starts from it
+    - Generate a transition that ends on a given frame
+    - Produce sounded video content for social media and storytelling
+
+    **Note:** MiniMax-H3 is guidance-distilled, so there is no negative prompt and
+    no guidance scale. It generates 5 to 15 seconds at 24 fps. Leave both keyframes
+    empty for text-to-video-and-audio.
+    """
+
+    _workflow: str = "fl2va"
+
+    image: ImageRef = Field(
+        default=ImageRef(),
+        description="Optional keyframe the video starts from. It also sets the canvas aspect ratio.",
+    )
+    last_image: ImageRef = Field(
+        default=ImageRef(),
+        description="Optional keyframe the video ends on. Can be used on its own to generate up to a frame.",
+    )
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "MiniMax-H3"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["prompt", "image", "num_frames"]
+
+    async def process(self, context: ProcessingContext) -> _MiniMaxH3Base.OutputType:
+        keyframes: dict[str, Any] = {}
+        if not self.image.is_empty():
+            keyframes["image"] = await context.image_to_pil(self.image)
+        if not self.last_image.is_empty():
+            keyframes["last_image"] = await context.image_to_pil(self.last_image)
+
+        return await self._generate(context, **keyframes)
+
+
+class MiniMaxH3Reference(_MiniMaxH3Base):
+    """
+    Generates a video and its soundtrack conditioned on image, video and audio references using MiniMax-H3.
+    video, audio, generation, AI, reference, omni-reference, soundtrack, minimax
+
+    Use cases:
+    - Keep a subject, style or scene consistent across generated clips
+    - Transfer the motion and camera work of a reference video
+    - Drive lip movement and delivery from a reference voice recording
+    - Continue a previous generation with the same character and soundtrack
+
+    **Note:** References are read in order — images, then videos, then audio clips —
+    and the order is part of the request. At most 9 images, 3 videos and 3 audio
+    clips, 12 in total; audio references cannot be used on their own. References do
+    not bind the canvas, which defaults to 16:9.
+    """
+
+    _workflow: str = "ref2va"
+
+    image_references: list[ImageRef] = Field(
+        default=[],
+        description="Subject, style or scene references. At most 9.",
+    )
+    video_references: list[VideoRef] = Field(
+        default=[],
+        description="Motion and camera references, conditioned on with their own soundtrack. At most 3.",
+    )
+    audio_references: list[AudioRef] = Field(
+        default=[],
+        description="Voice or music references. At most 3, and never without an image or video reference.",
+    )
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "MiniMax-H3 Reference"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["prompt", "image_references", "num_frames"]
+
+    def _validate_references(self) -> None:
+        images = len(self.image_references)
+        videos = len(self.video_references)
+        audios = len(self.audio_references)
+
+        if images > 9:
+            raise ValueError(f"At most 9 image references are supported, got {images}")
+        if videos > 3:
+            raise ValueError(f"At most 3 video references are supported, got {videos}")
+        if audios > 3:
+            raise ValueError(f"At most 3 audio references are supported, got {audios}")
+        if images + videos + audios > 12:
+            raise ValueError(
+                f"At most 12 references are supported, got {images + videos + audios}"
+            )
+        if audios and not (images or videos):
+            raise ValueError(
+                "Audio references need at least one image or video reference"
+            )
+        if not (images or videos or audios):
+            raise ValueError("Provide at least one reference")
+
+    async def _build_references(self, context: ProcessingContext) -> list[Any]:
+        import os
+        import tempfile
+
+        from diffusers.modular_pipelines.minimax_h3 import (
+            MiniMaxH3AudioReference,
+            MiniMaxH3ImageReference,
+            MiniMaxH3VideoReference,
+        )
+
+        references: list[Any] = [
+            MiniMaxH3ImageReference(image=await context.image_to_pil(image))
+            for image in self.image_references
+        ]
+
+        # Videos and audio are decoded through `from_file`, which is what carries
+        # the frame rate and sample rate of the container onto the reference —
+        # a rate lost on the way in conditions the request at the wrong speed.
+        async def _from_file(reference_class: Any, asset: Any, suffix: str) -> Any:
+            data = await context.asset_to_bytes(asset)
+            handle, path = tempfile.mkstemp(suffix=suffix)
+            try:
+                with os.fdopen(handle, "wb") as media:
+                    media.write(data)
+                return reference_class.from_file(path)
+            finally:
+                os.unlink(path)
+
+        for video in self.video_references:
+            references.append(await _from_file(MiniMaxH3VideoReference, video, ".mp4"))
+        for audio in self.audio_references:
+            references.append(await _from_file(MiniMaxH3AudioReference, audio, ".wav"))
+
+        return references
+
+    async def process(self, context: ProcessingContext) -> _MiniMaxH3Base.OutputType:
+        self._validate_references()
+        references = await self._build_references(context)
+        return await self._generate(context, references=references)
