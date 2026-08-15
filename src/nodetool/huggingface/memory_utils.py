@@ -44,7 +44,42 @@ __all__ = [
     "MemoryTracker",
     "has_cpu_offload_enabled",
     "apply_cpu_offload_if_needed",
+    "preferred_offload_method",
 ]
+
+
+def preferred_offload_method(pipeline) -> str:
+    """Pick the cheapest CPU offload strategy that fits the available VRAM.
+
+    Model-level offload keeps one whole component on the GPU at a time, which
+    still OOMs when a single component (e.g. a 14B Wan or 23 GiB bf16 Flux
+    transformer) exceeds the free VRAM. In that case sequential (per-layer)
+    offload is required — slower, but it runs within a few GiB of VRAM.
+
+    Returns:
+        "model" when every component fits the budget, "sequential" otherwise.
+    """
+    from nodetool.huggingface.local_provider_utils import (
+        _VRAM_HEADROOM_GB,
+        _cuda_free_vram_gb,
+        _is_cuda_available,
+        _pipeline_component_sizes_gb,
+    )
+
+    if not _is_cuda_available():
+        return "model"
+
+    sizes = _pipeline_component_sizes_gb(pipeline)
+    budget = max(_cuda_free_vram_gb() - _VRAM_HEADROOM_GB, 0.0)
+    if sizes and max(sizes) > budget:
+        log.info(
+            "Largest pipeline component (%.1f GiB) exceeds the %.1f GiB VRAM "
+            "budget; preferring sequential CPU offload",
+            max(sizes),
+            budget,
+        )
+        return "sequential"
+    return "model"
 
 
 def has_cpu_offload_enabled(pipeline) -> bool:

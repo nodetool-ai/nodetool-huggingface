@@ -639,7 +639,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         max_sequence_length: int = 512,
         enable_cpu_offload: bool = True,
         enable_vae_slicing: bool = True,
-        enable_vae_tiling: bool = False,
+        enable_vae_tiling: bool = True,
         timeout_s: int | None = None,
         context: ProcessingContext | None = None,
         node_id: str | None = None,
@@ -729,9 +729,17 @@ class HuggingFaceLocalProvider(BaseProvider):
             )
 
             # Apply memory optimization settings. Exactly one offload strategy may
-            # be installed on a pipeline.
-            if enable_cpu_offload and hasattr(pipeline, "enable_model_cpu_offload"):
-                pipeline.enable_model_cpu_offload()
+            # be installed on a pipeline. The 14B Wan transformer (~28GB bf16)
+            # needs sequential offload on GPUs below 24GB VRAM.
+            if enable_cpu_offload:
+                from nodetool.huggingface.memory_utils import (
+                    apply_cpu_offload_if_needed,
+                    preferred_offload_method,
+                )
+
+                apply_cpu_offload_if_needed(
+                    pipeline, method=preferred_offload_method(pipeline)
+                )
 
             if hasattr(pipeline, "enable_attention_slicing"):
                 try:
@@ -750,14 +758,6 @@ class HuggingFaceLocalProvider(BaseProvider):
                     pipeline.vae.enable_tiling()
                 except Exception:
                     pass
-
-            try:
-                if hasattr(pipeline, "unet") and hasattr(
-                    pipeline.unet, "enable_xformers_memory_efficient_attention"
-                ):
-                    pipeline.unet.enable_xformers_memory_efficient_attention()
-            except Exception:
-                pass
 
             # Cache the pipeline
             ModelManager.set_model(node_id, model, pipeline)
@@ -1194,11 +1194,22 @@ class HuggingFaceLocalProvider(BaseProvider):
                         bnb_8bit_compute_dtype=torch.bfloat16,
                     )
                 }
+            # Half precision for the unquantized path — fp32 doubles the VRAM
+            # footprint of the weights (an 8B model would need ~32GB) for no
+            # inference benefit.
+            torch_dtype = None
+            if quantization not in ("nf4", "nf8"):
+                from nodetool.nodes.huggingface.huggingface_pipeline import (
+                    select_inference_dtype,
+                )
+
+                torch_dtype = select_inference_dtype()
             cached_pipeline = await load_pipeline(
                 node_id=node_id,
                 context=context,
                 pipeline_task="text-generation",
                 model_id=repo_id,
+                torch_dtype=torch_dtype,
                 **load_kwargs,
             )
             ModelManager.set_model(node_id, pipeline_cache_key, cached_pipeline)
@@ -1361,6 +1372,10 @@ class HuggingFaceLocalProvider(BaseProvider):
                 bnb_8bit_use_double_quant=True,
                 bnb_8bit_compute_dtype=torch.bfloat16,
             )
+        else:
+            # VLM checkpoints ship bf16/fp16 weights; without a dtype the model
+            # materializes in fp32 and a 7B VLM (~28GB) spills off a <24GB GPU.
+            load_kwargs["torch_dtype"] = "auto"
 
         # Load model using AutoModelForCausalLM as requested for VL models
         model = await load_model(

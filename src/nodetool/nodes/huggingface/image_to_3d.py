@@ -1531,20 +1531,27 @@ class TripoSG(HuggingFacePipelineNode):
                 repo_id="VAST-AI/TripoSG",
                 revision=_model_revision("VAST-AI/TripoSG"),
             )
-            pipeline = TripoSGPipeline.from_pretrained(triposg_path).to(
-                device, torch.float16
+            # Load directly in fp16 — loading fp32 and converting on-device
+            # briefly doubles the footprint on the GPU.
+            pipeline = TripoSGPipeline.from_pretrained(
+                triposg_path, torch_dtype=torch.float16
             )
 
-            # Enable CPU offloading if requested
+            # Enable CPU offloading if requested; with offload the pipeline
+            # must not be moved to the device wholesale.
+            offloaded = False
             if self.low_vram_mode and hasattr(pipeline, "enable_model_cpu_offload"):
                 try:
                     pipeline.enable_model_cpu_offload()
+                    offloaded = True
                 except Exception as exc:
                     log.warning(
                         "low_vram_mode: enable_model_cpu_offload failed (%s). "
                         "Continuing without offloading.",
                         exc,
                     )
+            if not offloaded:
+                pipeline.to(device)
 
             ModelManager.set_model(self.id, self.CACHE_KEY, pipeline)
             _log_cache_status(

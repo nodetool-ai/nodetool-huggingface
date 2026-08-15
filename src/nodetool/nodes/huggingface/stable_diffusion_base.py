@@ -608,7 +608,16 @@ def maybe_enable_cpu_offload(pipeline: "Any", enabled: bool) -> bool:
         return False
     if is_mps_device():
         return False
-    pipeline.enable_model_cpu_offload()
+
+    from nodetool.huggingface.memory_utils import (
+        apply_cpu_offload_if_needed,
+        preferred_offload_method,
+    )
+
+    # Model-level offload still needs the largest single component to fit in
+    # VRAM; fall back to sequential offload when it doesn't (e.g. 13B+ video
+    # transformers on GPUs with less than 24GB VRAM).
+    apply_cpu_offload_if_needed(pipeline, method=preferred_offload_method(pipeline))
     return True
 
 

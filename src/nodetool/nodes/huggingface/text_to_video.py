@@ -411,8 +411,9 @@ class Wan_T2V(HuggingFacePipelineNode):
         description="Process VAE in slices to reduce peak memory usage.",
     )
     enable_vae_tiling: bool = Field(
-        default=False,
-        description="Process VAE in tiles for large videos. May affect quality.",
+        default=True,
+        description="Process VAE in tiles for large videos. Keeps the fp32 Wan "
+        "VAE decode within budget on GPUs with less than 24GB VRAM.",
     )
 
     _pipeline: Any = None
@@ -482,13 +483,15 @@ class Wan_T2V(HuggingFacePipelineNode):
             if self.enable_cpu_offload:
                 from nodetool.huggingface.memory_utils import (
                     apply_cpu_offload_if_needed,
+                    preferred_offload_method,
                 )
 
-                # Use model CPU offload as primary, fall back to sequential
-                if hasattr(self._pipeline, "enable_model_cpu_offload"):
-                    apply_cpu_offload_if_needed(self._pipeline, method="model")
-                elif hasattr(self._pipeline, "enable_sequential_cpu_offload"):
-                    apply_cpu_offload_if_needed(self._pipeline, method="sequential")
+                # Model offload still needs the largest component (the 14B Wan
+                # transformer is ~28GB in bf16) to fit in VRAM; use sequential
+                # offload when it doesn't.
+                apply_cpu_offload_if_needed(
+                    self._pipeline, method=preferred_offload_method(self._pipeline)
+                )
 
             if hasattr(self._pipeline, "enable_attention_slicing"):
                 try:
@@ -507,15 +510,6 @@ class Wan_T2V(HuggingFacePipelineNode):
                     self._pipeline.vae.enable_tiling()
                 except Exception:
                     pass
-
-            # Attempt to enable xformers if it is available
-            try:
-                if hasattr(self._pipeline, "unet") and hasattr(
-                    self._pipeline.unet, "enable_xformers_memory_efficient_attention"
-                ):
-                    self._pipeline.unet.enable_xformers_memory_efficient_attention()
-            except Exception:
-                pass
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None and not self.enable_cpu_offload:
@@ -730,6 +724,14 @@ class LTX2(HuggingFacePipelineNode):
             local_files_only=True,
         )
         maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
+        # Keep the VAE decode of 100+ frame videos within the VRAM budget.
+        vae = getattr(self._pipeline, "vae", None)
+        if vae is not None:
+            try:
+                vae.enable_slicing()
+                vae.enable_tiling()
+            except Exception:
+                pass
 
     async def move_to_device(self, device: str):
         # On MPS we skip offload and load fully onto the device, so move here.
@@ -1217,10 +1219,20 @@ class LTX2Video(HuggingFacePipelineNode):
 
         if self._pipeline is not None:
             if self.enable_cpu_offload:
-                self._pipeline.enable_model_cpu_offload()
+                from nodetool.huggingface.memory_utils import (
+                    apply_cpu_offload_if_needed,
+                    preferred_offload_method,
+                )
+
+                # The LTX-2 transformer alone can exceed the free VRAM on
+                # GPUs below 24GB; sequential offload handles that case.
+                apply_cpu_offload_if_needed(
+                    self._pipeline, method=preferred_offload_method(self._pipeline)
+                )
             if self.enable_vae_slicing and hasattr(self._pipeline, "vae"):
                 try:
                     self._pipeline.vae.enable_slicing()
+                    self._pipeline.vae.enable_tiling()
                 except Exception:
                     pass
 
