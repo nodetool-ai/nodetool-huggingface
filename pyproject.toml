@@ -43,6 +43,10 @@ dependencies = [
     "trimesh>=4.0.0",
     "jaxtyping",
     "typeguard",
+    # Audio analysis: speaker diarization and source separation.  pyannote
+    # checkpoints are gated on the Hub (accept conditions + HF_TOKEN required).
+    "pyannote.audio>=3.3,<4",
+    "speechbrain>=1.0,<2",
 ]
 
 [project.optional-dependencies]
@@ -57,7 +61,6 @@ kokoro-ja = [
     "misaki[ja]",
     "pyopenjtalk",
 ]
-
 # Pure-Python / wheel deps — install everywhere, runtime gates CUDA
 hunyuan3d = [
     "hy3dgen>=2.0.2",
