@@ -5,6 +5,77 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.4] - 2026-08-15
+
+### Added
+
+- `SpeakerDiarization` node wrapping pyannote.audio
+  (`speaker-diarization-3.1`, `community-1`, `segmentation-3.0`). Outputs
+  Whisper-compatible `AudioChunk` segments plus a deduped speaker list,
+  supports num/min/max speaker hints, and resolves the gated-checkpoint HF
+  token from context secrets with an environment fallback
+- `SpeechSeparation` and `SpeechEnhancement` nodes on SpeechBrain's SepFormer:
+  separation returns one `AudioRef` per speaker (wsj02mix/wsj03mix/whamr16k),
+  enhancement denoises via the dns4/wham checkpoints. Sample rate comes from
+  the model hparams with a repo-id fallback table; outputs are peak-normalized
+- `PoseEstimation` and `VisualizePoseEstimation` nodes: an RT-DETR person
+  detector feeds ViTPose for COCO-17 keypoints per person, including MoE
+  (`vitpose-plus`) `dataset_index` handling, with PIL skeleton rendering
+- `BackgroundRemoval` node for RMBG-2.0 / BiRefNet / RMBG-1.4 matting,
+  returning both an RGBA cutout and the grayscale matte, with optional
+  compositing onto a hex background color
+
+### Changed
+
+- `pyannote.audio` and `speechbrain` are required dependencies rather than
+  optional extras, so diarization and source separation work out of the box
+- LTX-2.5 runs its distilled, unguided recipe — 8 distilled sigmas,
+  `guidance_scale=1.0`, STG/modality guidance zeroed by feature detection —
+  roughly 10x fewer model evaluations than the inherited 40-step CFG-4
+  schedule, which also degraded distilled output
+- Video geometry is snapped to each model's legal lattice (LTX: 8n+1 frames,
+  dimensions divisible by 32; MiniMax H3: 17n+5 frames) with warnings on
+  adjustment and clear errors when out of range, instead of failing deep
+  inside the pipeline
+- MiniMax H3 enforces a joint `width * height * num_frames` budget before any
+  model load, turning multi-minute OOMs into immediate, actionable errors
+
+### Fixed
+
+- Pipelines now fit the available VRAM on GPUs below 24GB instead of OOMing:
+  weight footprint is measured against free VRAM to pick full device
+  placement, model CPU offload, or sequential CPU offload. The text-to-image
+  and image-to-image loaders previously moved Flux/SD3-class pipelines to CUDA
+  unconditionally and discarded `use_cpu_offload` without installing any
+  offload; 13B+ video transformers (Wan T2V/I2V/FLF2V, LTX-2 T2V/I2V) now fall
+  back to sequential offload when model-level offload cannot fit them
+- `load_model` honors an explicit `device` argument — `device="cpu"` callers
+  (Wan, LTX-2, AceStep, LongCat, Flux) leaked the kwarg into `from_pretrained`
+  and force-moved the full model to CUDA before offload hooks were installed
+- LLMs/VLMs load in half precision; the text-generation and VLM streaming
+  paths plus the Qwen2.5-VL and Qwen3-VL nodes previously materialized fp32
+  weights (~2x VRAM)
+- VAE tiling is enabled by default for Wan video decode, and VAE
+  slicing + tiling was added to the LTX-2 and Wan FLF2V nodes
+- The CUDA caching allocator is flushed after `run_pipeline_in_thread` so the
+  next pipeline in a workflow sees the freed VRAM
+- TripoSG loads weights directly in fp16 and skips the full-device move under
+  CPU offload, removing a 2x load-time VRAM spike
+- The local provider imported `AutoencoderKLWan`/`WanPipeline` and
+  `pipeline_progress_callback` from `text_to_video`, where they exist only
+  under `TYPE_CHECKING` (or not at all) — the default Wan text-to-video path
+  crashed at runtime
+- LTX-2.5 repos requested through the provider path route to the `LTX25` node
+  so they use the distilled recipe rather than the guided LTX2 defaults
+- LoRA adapter names are derived by stripping only the final extension,
+  sanitizing to `[A-Za-z0-9_]` and appending a short sha256 suffix, so
+  versioned filenames no longer collide onto one adapter name
+- Previously bound LoRA weights are unloaded before loading the requested set,
+  so repeated runs no longer stack adapters; an empty selection unbinds all
+- LoRAs are loaded before `enable_model_cpu_offload()` in the SD/SDXL
+  `run_pipeline` — adapters injected under live offload hooks escaped device
+  accounting
+
 ## [Unreleased] - 2026-07-28
 
 ### Added
