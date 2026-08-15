@@ -11,6 +11,8 @@ if __package__ is None or __package__ == "":
 from nodetool.metadata.types import AudioRef, ImageRef, VideoRef
 from nodetool.nodes.huggingface.text_to_video import (
     MINIMAX_H3_MODULE,
+    PX_FRAMES_OOM,
+    PX_FRAMES_PROVEN,
     MiniMaxH3,
     MiniMaxH3Reference,
     _MiniMaxH3Base,
@@ -63,6 +65,66 @@ def test_canvas_is_left_to_the_model_unless_both_axes_are_set():
         "height": 544,
         "width": 960,
     }
+
+
+def test_off_lattice_requests_are_snapped_before_the_pipeline_sees_them():
+    # 130 frames is off the 17n+5 lattice and 1200x700 is off the 32px grid.
+    assert MiniMaxH3(num_frames=130, width=1200, height=700)._geometry() == (
+        1216,
+        704,
+        124,
+    )
+    assert MiniMaxH3(num_frames=130)._geometry() == (0, 0, 124)
+    assert MiniMaxH3(num_frames=130, width=1200, height=700)._canvas_kwargs() == {
+        "height": 704,
+        "width": 1216,
+    }
+
+
+def test_the_proven_pixel_frame_budget_is_the_measured_one():
+    # Measured on a 24GB RTX 4090: 1216x704x209 fits, 1216x704x226 OOMs.
+    assert 1216 * 704 * 209 <= PX_FRAMES_PROVEN
+    assert 1216 * 704 * 226 >= PX_FRAMES_OOM
+
+
+def test_a_request_over_the_joint_budget_is_refused_without_loading_anything():
+    node = MiniMaxH3(width=1216, height=704, num_frames=226)
+    with pytest.raises(ValueError, match="pixel-frames") as excinfo:
+        node._check_pixel_budget()
+
+    message = str(excinfo.value)
+    assert "179M" in message
+    assert "num_frames" in message
+    assert node._pipeline is None
+
+
+def test_a_request_inside_the_joint_budget_passes():
+    MiniMaxH3(width=1216, height=704, num_frames=209)._check_pixel_budget()
+    # Each axis on its own is legal here; only the product is not.
+    with pytest.raises(ValueError, match="pixel-frames"):
+        MiniMaxH3(width=1344, height=1344, num_frames=345)._check_pixel_budget()
+
+
+def test_the_budget_check_is_skipped_when_the_model_picks_the_canvas():
+    MiniMaxH3(num_frames=345)._check_pixel_budget()
+
+
+def test_the_budget_check_runs_before_the_pipeline_is_loaded(monkeypatch):
+    def fail(*_args, **_kwargs):
+        raise AssertionError("the H3 runtime must not be loaded for a refused request")
+
+    monkeypatch.setattr(text_to_video, "_load_minimax_h3_runtime", fail)
+
+    node = MiniMaxH3(width=1216, height=704, num_frames=226)
+    with pytest.raises(ValueError, match="pixel-frames"):
+        import asyncio
+
+        asyncio.run(node.preload_model(None))
+
+
+def test_reference_node_also_enforces_the_budget():
+    with pytest.raises(ValueError, match="pixel-frames"):
+        MiniMaxH3Reference(width=1216, height=704, num_frames=226)._check_pixel_budget()
 
 
 def test_no_guidance_fields_on_a_distilled_checkpoint():

@@ -675,11 +675,8 @@ class HuggingFaceLocalProvider(BaseProvider):
             ValueError: If required parameters are missing or context not provided
             RuntimeError: If generation fails
         """
-        from nodetool.nodes.huggingface.text_to_video import (
-            AutoencoderKLWan,
-            WanPipeline,
-        )
-        from nodetool.nodes.huggingface.text_to_video import pipeline_progress_callback
+        from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
+        from diffusers.pipelines.wan.pipeline_wan import WanPipeline
 
         if context is None:
             raise ValueError(
@@ -837,23 +834,41 @@ class HuggingFaceLocalProvider(BaseProvider):
             return None
 
         from nodetool.metadata.types import HFTextToVideo
-        from nodetool.nodes.huggingface.text_to_video import LTX2, Kandinsky5Video
+        from nodetool.nodes.huggingface.text_to_video import (
+            LTX2,
+            LTX25,
+            Kandinsky5Video,
+        )
 
         common: dict[str, Any] = dict(
             model=HFTextToVideo(repo_id=model),
             prompt=prompt,
             negative_prompt=negative_prompt or "",
             num_frames=num_frames,
-            guidance_scale=guidance_scale,
-            num_inference_steps=num_inference_steps,
             height=height,
             width=width,
             seed=seed if seed is not None else -1,
         )
         if class_name == "LTX2Pipeline":
-            node: Any = LTX2(frame_rate=float(fps), **common)
+            if "ltx-2.5" in model.lower():
+                # LTX-2.5 is distilled and unguided: the node pins its own
+                # sigma schedule and guidance, so the caller's values are
+                # intentionally not forwarded.
+                node: Any = LTX25(frame_rate=float(fps), **common)
+            else:
+                node = LTX2(
+                    frame_rate=float(fps),
+                    guidance_scale=guidance_scale,
+                    num_inference_steps=num_inference_steps,
+                    **common,
+                )
         else:
-            node = Kandinsky5Video(fps=fps, **common)
+            node = Kandinsky5Video(
+                fps=fps,
+                guidance_scale=guidance_scale,
+                num_inference_steps=num_inference_steps,
+                **common,
+            )
 
         await node.preload_model(context)
         return await node.process(context)

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import importlib
-from typing import Any, TypedDict, TYPE_CHECKING
+import inspect
+from typing import Any, NamedTuple, TypedDict, TYPE_CHECKING
 from enum import Enum
 from pydantic import Field
+from nodetool.config.logging_config import get_logger
 from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.metadata.types import (
@@ -38,6 +40,96 @@ if TYPE_CHECKING:
     from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
     from diffusers.pipelines.cogvideo.pipeline_cogvideox import CogVideoXPipeline
     from diffusers.pipelines.wan.pipeline_wan import WanPipeline
+
+
+log = get_logger(__name__)
+
+
+class VideoGeometry(NamedTuple):
+    """Legal video geometry for a model: a frame lattice and a dimension multiple.
+
+    Video models only accept frame counts of the form ``frame_step * n +
+    frame_base`` and dimensions that are multiples of ``dim_multiple``. Values
+    off that lattice either snap silently inside the pipeline or fail deep in
+    the VAE, so nodes snap them up front instead.
+    """
+
+    frame_step: int
+    frame_base: int
+    min_frames: int
+    max_frames: int
+    dim_multiple: int = 32
+    min_dim: int = 256
+    max_dim: int = 1280
+
+
+def snap_video_frames(num_frames: int, spec: VideoGeometry, model: str) -> int:
+    """Snap a frame count onto the model's frame lattice, warning when it changes."""
+    if num_frames < spec.min_frames or num_frames > spec.max_frames:
+        raise ValueError(
+            f"{model} supports {spec.min_frames} to {spec.max_frames} frames, "
+            f"got {num_frames}"
+        )
+
+    steps = max(0, round((num_frames - spec.frame_base) / spec.frame_step))
+    snapped = steps * spec.frame_step + spec.frame_base
+    while snapped < spec.min_frames:
+        snapped += spec.frame_step
+    while snapped > spec.max_frames:
+        snapped -= spec.frame_step
+
+    if snapped != num_frames:
+        log.warning(
+            "%s only generates %dn+%d frames: using %d frames instead of %d",
+            model,
+            spec.frame_step,
+            spec.frame_base,
+            snapped,
+            num_frames,
+        )
+    return snapped
+
+
+def snap_video_dimension(value: int, spec: VideoGeometry, model: str, axis: str) -> int:
+    """Snap a width or height onto the model's dimension multiple."""
+    if value < spec.min_dim or value > spec.max_dim:
+        raise ValueError(
+            f"{model} supports a {axis} between {spec.min_dim} and {spec.max_dim} "
+            f"pixels, got {value}"
+        )
+
+    snapped = max(1, round(value / spec.dim_multiple)) * spec.dim_multiple
+    while snapped < spec.min_dim:
+        snapped += spec.dim_multiple
+    while snapped > spec.max_dim:
+        snapped -= spec.dim_multiple
+
+    if snapped != value:
+        log.warning(
+            "%s requires a %s that is a multiple of %d: using %d instead of %d",
+            model,
+            axis,
+            spec.dim_multiple,
+            snapped,
+            value,
+        )
+    return snapped
+
+
+def snap_video_geometry(
+    width: int, height: int, num_frames: int, spec: VideoGeometry, model: str
+) -> tuple[int, int, int]:
+    """Snap ``(width, height, num_frames)`` onto the legal geometry for ``model``."""
+    return (
+        snap_video_dimension(width, spec, model, "width"),
+        snap_video_dimension(height, spec, model, "height"),
+        snap_video_frames(num_frames, spec, model),
+    )
+
+
+COGVIDEOX_GEOMETRY = VideoGeometry(
+    frame_step=8, frame_base=1, min_frames=49, max_frames=113, max_dim=1024
+)
 
 
 class CogVideoX(HuggingFacePipelineNode):
@@ -212,7 +304,9 @@ class CogVideoX(HuggingFacePipelineNode):
         output = await self.run_pipeline_in_thread(
             prompt=self.prompt,
             negative_prompt=self.negative_prompt,
-            num_frames=self.num_frames,
+            num_frames=snap_video_frames(
+                self.num_frames, COGVIDEOX_GEOMETRY, "CogVideoX"
+            ),
             guidance_scale=self.guidance_scale,
             num_inference_steps=self.num_inference_steps,
             height=self.height,
@@ -475,6 +569,57 @@ _DIFFUSERS_REPO_ALLOW_PATTERNS = [
     "*.json",
 ]
 
+# LTX-2 latents are 8x temporally and 32x spatially compressed.
+LTX2_GEOMETRY = VideoGeometry(
+    frame_step=8, frame_base=1, min_frames=9, max_frames=257, max_dim=1280
+)
+
+# LTX-2.5 is distilled and unguided: it denoises on a fixed 8-point sigma grid
+# instead of a step count, and any guidance above 1.0 degrades its output.
+LTX25_FALLBACK_SIGMAS = [
+    1.0,
+    0.99375,
+    0.9875,
+    0.98125,
+    0.975,
+    0.909375,
+    0.725,
+    0.421875,
+]
+LTX25_DISTILLED_STEPS = len(LTX25_FALLBACK_SIGMAS)
+
+# The 2.5-era ``__call__`` defaults STG and modality guidance to SFT values, so
+# the distilled path has to turn them off. 2.3-era pipelines do not take these
+# kwargs at all, where the same values are already the behavior.
+LTX25_UNGUIDED_KWARGS: dict[str, float] = {
+    "audio_guidance_scale": 1.0,
+    "stg_scale": 0.0,
+    "audio_stg_scale": 0.0,
+    "modality_scale": 1.0,
+    "audio_modality_scale": 1.0,
+}
+
+
+def ltx25_distilled_sigmas() -> list[float]:
+    """The distilled sigma grid, from diffusers when it ships one."""
+    try:
+        from diffusers.pipelines.ltx2.utils import DISTILLED_SIGMA_VALUES
+    except ImportError:
+        return list(LTX25_FALLBACK_SIGMAS)
+    return list(DISTILLED_SIGMA_VALUES)
+
+
+def supported_call_kwargs(pipeline: Any, candidates: dict[str, Any]) -> dict[str, Any]:
+    """Keep only the kwargs the pipeline's ``__call__`` actually names."""
+    call = getattr(type(pipeline), "__call__", None)
+    if call is None:
+        return {}
+    try:
+        parameters = inspect.signature(call).parameters
+    except (TypeError, ValueError):
+        return {}
+    return {name: value for name, value in candidates.items() if name in parameters}
+
 
 class LTX2(HuggingFacePipelineNode):
     """
@@ -593,40 +738,61 @@ class LTX2(HuggingFacePipelineNode):
         ):
             self._pipeline.to(device)
 
-    async def process(self, context: ProcessingContext) -> VideoRef:
-        if self._pipeline is None:
-            raise ValueError("Pipeline not initialized")
+    def _schedule_kwargs(self) -> dict[str, Any]:
+        """Denoising schedule and guidance. LTX-2.5 replaces this with sigmas."""
+        return {
+            "num_inference_steps": self.num_inference_steps,
+            "guidance_scale": self.guidance_scale,
+        }
 
-        import torch
+    def _build_pipeline_kwargs(
+        self, generator: Any, callback_on_step_end: Any
+    ) -> dict[str, Any]:
+        width, height, num_frames = snap_video_geometry(
+            self.width, self.height, self.num_frames, LTX2_GEOMETRY, self.get_title()
+        )
+        kwargs: dict[str, Any] = {
+            "prompt": self.prompt,
+            "negative_prompt": self.negative_prompt,
+            "height": height,
+            "width": width,
+            "num_frames": num_frames,
+            "frame_rate": self.frame_rate,
+            "generator": generator,
+            "callback_on_step_end": callback_on_step_end,
+            "callback_on_step_end_tensor_inputs": ["latents"],
+        }
+        kwargs.update(self._schedule_kwargs())
+        return kwargs
 
-        generator = None
-        if self.seed != -1:
-            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+    def _progress_callback(self, context: ProcessingContext) -> Any:
+        total = self.num_inference_steps
 
         def callback_on_step_end(
             pipeline: Any, step: int, timestep: int, callback_kwargs: dict
         ) -> dict:
             context.post_message(
-                NodeProgress(
-                    node_id=self.id,
-                    progress=step,
-                    total=self.num_inference_steps,
-                )
+                NodeProgress(node_id=self.id, progress=step, total=total)
             )
             return callback_kwargs
 
+        return callback_on_step_end
+
+    def _generator(self) -> Any:
+        import torch
+
+        if self.seed == -1:
+            return None
+        return torch.Generator(device="cpu").manual_seed(self.seed)
+
+    async def process(self, context: ProcessingContext) -> VideoRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
         output = await self.run_pipeline_in_thread(
-            prompt=self.prompt,
-            negative_prompt=self.negative_prompt,
-            height=self.height,
-            width=self.width,
-            num_frames=self.num_frames,
-            frame_rate=self.frame_rate,
-            num_inference_steps=self.num_inference_steps,
-            guidance_scale=self.guidance_scale,
-            generator=generator,
-            callback_on_step_end=callback_on_step_end,
-            callback_on_step_end_tensor_inputs=["latents"],
+            **self._build_pipeline_kwargs(
+                self._generator(), self._progress_callback(context)
+            )
         )
 
         # LTX-2 returns video frames under .frames (and may also produce audio).
@@ -655,6 +821,18 @@ class LTX25(LTX2):
         default=HFTextToVideo(repo_id="Lightricks/LTX-2.5-Diffusers"),
         description="The gated LTX-2.5 Diffusers checkpoint.",
     )
+    guidance_scale: float = Field(
+        default=1.0,
+        description="Fixed at 1.0: LTX-2.5 is distilled and guidance degrades it.",
+        ge=1.0,
+        le=1.0,
+    )
+    num_inference_steps: int = Field(
+        default=LTX25_DISTILLED_STEPS,
+        description="Fixed by the distilled sigma schedule LTX-2.5 denoises on.",
+        ge=LTX25_DISTILLED_STEPS,
+        le=LTX25_DISTILLED_STEPS,
+    )
 
     class OutputType(TypedDict):
         video: VideoRef
@@ -676,41 +854,29 @@ class LTX25(LTX2):
     def get_model_id(self) -> str:
         return self.model.repo_id or "Lightricks/LTX-2.5-Diffusers"
 
+    def _schedule_kwargs(self) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {
+            "sigmas": ltx25_distilled_sigmas(),
+            "guidance_scale": 1.0,
+        }
+        kwargs.update(supported_call_kwargs(self._pipeline, LTX25_UNGUIDED_KWARGS))
+        return kwargs
+
+    def _build_pipeline_kwargs(
+        self, generator: Any, callback_on_step_end: Any
+    ) -> dict[str, Any]:
+        kwargs = super()._build_pipeline_kwargs(generator, callback_on_step_end)
+        kwargs["output_type"] = "np"
+        return kwargs
+
     async def process(self, context: ProcessingContext) -> OutputType:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
-        import torch
-
-        generator = None
-        if self.seed != -1:
-            generator = torch.Generator(device="cpu").manual_seed(self.seed)
-
-        def callback_on_step_end(
-            pipeline: Any, step: int, timestep: int, callback_kwargs: dict
-        ) -> dict:
-            context.post_message(
-                NodeProgress(
-                    node_id=self.id,
-                    progress=step,
-                    total=self.num_inference_steps,
-                )
-            )
-            return callback_kwargs
-
         output = await self.run_pipeline_in_thread(
-            prompt=self.prompt,
-            negative_prompt=self.negative_prompt,
-            height=self.height,
-            width=self.width,
-            num_frames=self.num_frames,
-            frame_rate=self.frame_rate,
-            num_inference_steps=self.num_inference_steps,
-            guidance_scale=self.guidance_scale,
-            generator=generator,
-            output_type="np",
-            callback_on_step_end=callback_on_step_end,
-            callback_on_step_end_tensor_inputs=["latents"],
+            **self._build_pipeline_kwargs(
+                self._generator(), self._progress_callback(context)
+            )
         )
 
         frames = output.frames[0]
@@ -733,6 +899,11 @@ class LTX25(LTX2):
         )
         run_gc("After LTX-2.5 inference", log_before_after=False)
         return {"video": video, "audio": audio}
+
+
+LTX_VIDEO_GEOMETRY = VideoGeometry(
+    frame_step=8, frame_base=1, min_frames=9, max_frames=257, min_dim=64, max_dim=1280
+)
 
 
 class LTXVideo(HuggingFacePipelineNode):
@@ -912,7 +1083,9 @@ class LTXVideo(HuggingFacePipelineNode):
         output = await self.run_pipeline_in_thread(
             prompt=self.prompt,
             negative_prompt=self.negative_prompt,
-            num_frames=self.num_frames,
+            num_frames=snap_video_frames(
+                self.num_frames, LTX_VIDEO_GEOMETRY, "LTX-Video"
+            ),
             guidance_scale=self.guidance_scale,
             num_inference_steps=self.num_inference_steps,
             height=self.height,
@@ -1077,14 +1250,18 @@ class LTX2Video(HuggingFacePipelineNode):
             )
             return callback_kwargs
 
+        width, height, num_frames = snap_video_geometry(
+            self.width, self.height, self.num_frames, LTX_VIDEO_GEOMETRY, "LTX-2"
+        )
+
         output = await self.run_pipeline_in_thread(
             prompt=self.prompt,
             negative_prompt=self.negative_prompt,
-            num_frames=self.num_frames,
+            num_frames=num_frames,
             guidance_scale=self.guidance_scale,
             num_inference_steps=self.num_inference_steps,
-            height=self.height,
-            width=self.width,
+            height=height,
+            width=width,
             frame_rate=self.frame_rate,
             generator=generator,
             max_sequence_length=self.max_sequence_length,
@@ -1285,6 +1462,22 @@ MINIMAX_H3_FPS = 24
 MINIMAX_H3_MIN_FRAMES = 120
 MINIMAX_H3_MAX_FRAMES = 345
 MINIMAX_H3_MODULE = "diffusers.modular_pipelines.minimax_h3"
+MINIMAX_H3_GEOMETRY = VideoGeometry(
+    frame_step=17,
+    frame_base=5,
+    min_frames=MINIMAX_H3_MIN_FRAMES,
+    max_frames=MINIMAX_H3_MAX_FRAMES,
+    dim_multiple=32,
+    min_dim=256,
+    max_dim=1344,
+)
+
+# Calibration, not a constant: measured on a 24GB RTX 4090, where 1216x704x209
+# frames fits and 1216x704x226 frames runs out of memory. The joint product is
+# what walls, not the axes on their own, so requests are refused above the
+# proven fit rather than at the OOM point.
+PX_FRAMES_PROVEN = 179_000_000
+PX_FRAMES_OOM = 193_000_000
 
 
 def _load_minimax_h3_runtime() -> tuple[Any, Any, Any]:
@@ -1337,7 +1530,7 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
     num_frames: int = Field(
         default=124,
         description=(
-            "Frames to generate at the fixed 24 fps. Snapped up to the next 17n+5 "
+            "Frames to generate at the fixed 24 fps. Snapped to the nearest 17n+5 "
             "the video VAE can decode; the result must stay between 5 and 15 seconds."
         ),
         ge=MINIMAX_H3_MIN_FRAMES,
@@ -1401,6 +1594,9 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
         import torch
         from nodetool.ml.core.model_manager import ModelManager
 
+        # Refuse an impossible request before pulling 60+GB of weights.
+        self._check_pixel_budget()
+
         _, components_manager_class, modular_pipeline_class = _load_minimax_h3_runtime()
 
         offload = self.enable_cpu_offload and torch.cuda.is_available()
@@ -1438,10 +1634,57 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
         if hasattr(self._pipeline, "to"):
             self._pipeline.to(device)
 
+    def _geometry(self) -> tuple[int, int, int]:
+        """Snapped (width, height, num_frames); 0x0 leaves the canvas to the model."""
+        num_frames = snap_video_frames(
+            self.num_frames, MINIMAX_H3_GEOMETRY, "MiniMax-H3"
+        )
+        if self.height > 0 and self.width > 0:
+            width = snap_video_dimension(
+                self.width, MINIMAX_H3_GEOMETRY, "MiniMax-H3", "width"
+            )
+            height = snap_video_dimension(
+                self.height, MINIMAX_H3_GEOMETRY, "MiniMax-H3", "height"
+            )
+            return width, height, num_frames
+        return 0, 0, num_frames
+
+    def _check_pixel_budget(self) -> None:
+        """Refuse requests whose width x height x frames is past the proven fit."""
+        width, height, num_frames = self._geometry()
+        if width == 0 or height == 0:
+            # The model picks the canvas, so there is no product to bound yet.
+            return
+
+        requested = width * height * num_frames
+        if requested <= PX_FRAMES_PROVEN:
+            return
+
+        affordable_frames = snap_video_frames(
+            max(
+                MINIMAX_H3_GEOMETRY.min_frames,
+                min(
+                    MINIMAX_H3_GEOMETRY.max_frames,
+                    PX_FRAMES_PROVEN // (width * height),
+                ),
+            ),
+            MINIMAX_H3_GEOMETRY,
+            "MiniMax-H3",
+        )
+        raise ValueError(
+            f"MiniMax-H3 request of {width}x{height} for {num_frames} frames is "
+            f"{requested / 1_000_000:.0f}M pixel-frames, over the "
+            f"{PX_FRAMES_PROVEN / 1_000_000:.0f}M budget that is proven to fit in "
+            f"24GB of VRAM ({PX_FRAMES_OOM / 1_000_000:.0f}M is proven to run out "
+            "of memory). Lower num_frames (at this canvas about "
+            f"{affordable_frames} frames fit) or use a smaller width/height."
+        )
+
     def _canvas_kwargs(self) -> dict[str, int]:
         """Only pass height/width when both are set, so the model resolves its own canvas."""
-        if self.height > 0 and self.width > 0:
-            return {"height": self.height, "width": self.width}
+        width, height, _ = self._geometry()
+        if width > 0 and height > 0:
+            return {"height": height, "width": width}
         return {}
 
     async def _generate(
@@ -1452,13 +1695,15 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
 
         import torch
 
+        _, _, num_frames = self._geometry()
+
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
 
         results = await self.run_pipeline_in_thread(
             prompt=self.prompt,
-            num_frames=self.num_frames,
+            num_frames=num_frames,
             num_inference_steps=self.num_inference_steps,
             generator=generator,
             output=["videos", "audio", "sampling_rate"],
@@ -1526,6 +1771,8 @@ class MiniMaxH3(_MiniMaxH3Base):
         return ["prompt", "image", "num_frames"]
 
     async def process(self, context: ProcessingContext) -> _MiniMaxH3Base.OutputType:
+        self._check_pixel_budget()
+
         keyframes: dict[str, Any] = {}
         if not self.image.is_empty():
             keyframes["image"] = await context.image_to_pil(self.image)
@@ -1632,6 +1879,7 @@ class MiniMaxH3Reference(_MiniMaxH3Base):
         return references
 
     async def process(self, context: ProcessingContext) -> _MiniMaxH3Base.OutputType:
+        self._check_pixel_budget()
         self._validate_references()
         references = await self._build_references(context)
         return await self._generate(context, references=references)
