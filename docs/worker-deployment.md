@@ -60,13 +60,13 @@ make build-hf
 #   docker build -t nodetool-hf:local --build-arg CORE_IMAGE=nodetool-core:local .
 ```
 
-`HF_VERSION` (default `0.7.3`) pins the PyPI release. To build a different version,
+`HF_VERSION` (default `0.7.4`) pins the PyPI release. To build a different version,
 pass it through Docker directly:
 
 ```bash
 docker build -t nodetool-hf:local \
   --build-arg CORE_IMAGE=nodetool-core:local \
-  --build-arg HF_VERSION=0.7.3 .
+  --build-arg HF_VERSION=0.7.4 .
 ```
 
 Base HF dependencies only — optional extras (`ocr`, `hunyuan3d`, `triposg`, …) are not

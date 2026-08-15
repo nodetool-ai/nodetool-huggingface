@@ -480,6 +480,217 @@
     },
     {
       "basic_fields": [
+        "model",
+        "audio"
+      ],
+      "body": "content_card",
+      "description": "Removes background noise and reverberation from a single-speaker recording.\n    audio, enhancement, denoise, speech, cleanup, speechbrain, sepformer\n\n    Use cases:\n    - Clean up noisy voice memos and field recordings before transcription\n    - Reduce room reverberation in podcast or interview takes\n    - Improve intelligibility of call-center or conference audio\n    - Preprocess speech for downstream ASR or speaker-recognition models\n    - Denoise user-submitted voice notes in an automated pipeline\n\n    **Note:** Requires the optional `speechbrain` package. Uses the same SepFormer\n    inference path as Speech Separation and returns the first (cleaned) source.",
+      "input_fields": [
+        "audio"
+      ],
+      "namespace": "huggingface.audio_to_audio",
+      "node_type": "huggingface.audio_to_audio.SpeechEnhancement",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "speechbrain/sepformer-dns4-16k-enhancement",
+            "type": "hf.audio_to_audio",
+            "variant": null
+          },
+          "description": "The SpeechBrain SepFormer enhancement checkpoint. dns4-16k-enhancement targets general noise, wham16k-enhancement targets noisy speech mixtures.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.audio_to_audio"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "The noisy audio to clean up. Converted to mono and resampled automatically.",
+          "name": "audio",
+          "title": "Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": true,
+          "description": "Peak-normalize the enhanced track. The model output otherwise has arbitrary loudness.",
+          "name": "normalize",
+          "title": "Normalize",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "*.yaml",
+            "*.ckpt",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "speechbrain/sepformer-dns4-16k-enhancement",
+          "name": "speechbrain/sepformer-dns4-16k-enhancement",
+          "repo_id": "speechbrain/sepformer-dns4-16k-enhancement",
+          "type": "hf.audio_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.yaml",
+            "*.ckpt",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "speechbrain/sepformer-wham16k-enhancement",
+          "name": "speechbrain/sepformer-wham16k-enhancement",
+          "repo_id": "speechbrain/sepformer-wham16k-enhancement",
+          "type": "hf.audio_to_audio"
+        }
+      ],
+      "title": "Speech Enhancement"
+    },
+    {
+      "basic_fields": [
+        "model",
+        "audio"
+      ],
+      "description": "Separates overlapping speakers in a recording into one track per speaker.\n    audio, separation, speech, speaker, cocktail-party, speechbrain, sepformer\n\n    Use cases:\n    - Split a two-person interview recorded on a single microphone\n    - Isolate individual voices before transcribing a noisy meeting\n    - Clean up overlapping speech for diarization or captioning pipelines\n    - Extract a single speaker from a crowded, reverberant recording\n    - Prepare training data by de-mixing multi-speaker audio\n\n    **Note:** Requires the optional `speechbrain` package. Audio is resampled to\n    the checkpoint's native rate (8 kHz for the wsj0 models, 16 kHz for the\n    whamr16k/dns4 models) before separation.",
+      "inline_fields": [
+        "model"
+      ],
+      "input_fields": [
+        "audio"
+      ],
+      "namespace": "huggingface.audio_to_audio",
+      "node_type": "huggingface.audio_to_audio.SpeechSeparation",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "audio"
+              }
+            ]
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "speechbrain/sepformer-wsj02mix",
+            "type": "hf.audio_to_audio",
+            "variant": null
+          },
+          "description": "The SpeechBrain SepFormer checkpoint. wsj02mix separates 2 speakers, wsj03mix separates 3, whamr16k handles 2 speakers with noise and reverb.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.audio_to_audio"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "The mixed audio to separate. Converted to mono and resampled automatically.",
+          "name": "audio",
+          "title": "Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": true,
+          "description": "Peak-normalize each separated track. Separated sources otherwise have arbitrary loudness.",
+          "name": "normalize",
+          "title": "Normalize",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "*.yaml",
+            "*.ckpt",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "speechbrain/sepformer-wsj02mix",
+          "name": "speechbrain/sepformer-wsj02mix",
+          "repo_id": "speechbrain/sepformer-wsj02mix",
+          "type": "hf.audio_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.yaml",
+            "*.ckpt",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "speechbrain/sepformer-wsj03mix",
+          "name": "speechbrain/sepformer-wsj03mix",
+          "repo_id": "speechbrain/sepformer-wsj03mix",
+          "type": "hf.audio_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.yaml",
+            "*.ckpt",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "speechbrain/sepformer-whamr16k",
+          "name": "speechbrain/sepformer-whamr16k",
+          "repo_id": "speechbrain/sepformer-whamr16k",
+          "type": "hf.audio_to_audio"
+        },
+        {
+          "allow_patterns": [
+            "*.yaml",
+            "*.ckpt",
+            "*.txt",
+            "*.json"
+          ],
+          "id": "speechbrain/sepformer-dns4-16k-enhancement",
+          "name": "speechbrain/sepformer-dns4-16k-enhancement",
+          "repo_id": "speechbrain/sepformer-dns4-16k-enhancement",
+          "type": "hf.audio_to_audio"
+        }
+      ],
+      "title": "Speech Separation"
+    },
+    {
+      "basic_fields": [
         "chunks",
         "time_offset"
       ],
@@ -787,6 +998,133 @@
         }
       ],
       "title": "Whisper"
+    },
+    {
+      "basic_fields": [
+        "model",
+        "image",
+        "background_color"
+      ],
+      "body": "content_card",
+      "description": "Removes image backgrounds with RMBG / BiRefNet matting models, returning a transparent cutout and its alpha matte.\n    image, background-removal, matting, segmentation, alpha, cutout, rmbg, birefnet, huggingface\n\n    These checkpoints ship custom modeling code on the Hub, so they are loaded\n    with ``trust_remote_code=True`` \u2014 only use repositories you trust.\n\n    Use cases:\n    - Cut out products for e-commerce listings on a clean white background\n    - Isolate people or pets from photos for compositing and collages\n    - Produce transparent PNG assets for design, slides, and thumbnails\n    - Generate alpha mattes to drive downstream inpainting or relighting\n    - Batch-prepare reference images for image-to-3D or try-on pipelines",
+      "input_fields": [
+        "image"
+      ],
+      "namespace": "huggingface.background_removal",
+      "node_type": "huggingface.background_removal.BackgroundRemoval",
+      "outputs": [
+        {
+          "name": "image",
+          "type": {
+            "type": "image"
+          }
+        },
+        {
+          "name": "mask",
+          "type": {
+            "type": "image"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "briaai/RMBG-2.0",
+            "type": "hf.image_segmentation",
+            "variant": null
+          },
+          "description": "The matting model to use. RMBG-2.0 is the strongest general-purpose remover, BiRefNet gives very crisp edges (hair, fur), and RMBG-1.4 is the lightest/fastest option.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.image_segmentation"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "image",
+            "uri": ""
+          },
+          "description": "The input image whose background should be removed.",
+          "name": "image",
+          "title": "Image",
+          "type": {
+            "type": "image"
+          }
+        },
+        {
+          "default": "",
+          "description": "Hex color to composite the cutout onto (e.g. '#ffffff'). Leave empty to keep the background transparent.",
+          "name": "background_color",
+          "title": "Background Color",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 1024,
+          "description": "Square resolution the image is resized to before inference. 1024 matches how these models were trained; lower is faster, higher can sharpen edges on large images.",
+          "max": 2048.0,
+          "min": 256.0,
+          "name": "resolution",
+          "title": "Processing Resolution",
+          "type": {
+            "type": "int"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json",
+            "*.py",
+            "**/*.py"
+          ],
+          "id": "briaai/RMBG-2.0",
+          "name": "briaai/RMBG-2.0",
+          "repo_id": "briaai/RMBG-2.0",
+          "type": "hf.image_segmentation"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json",
+            "*.py",
+            "**/*.py"
+          ],
+          "id": "ZhengPeng7/BiRefNet",
+          "name": "ZhengPeng7/BiRefNet",
+          "repo_id": "ZhengPeng7/BiRefNet",
+          "type": "hf.image_segmentation"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.pth",
+            "*.json",
+            "**/*.json",
+            "*.py",
+            "**/*.py"
+          ],
+          "id": "briaai/RMBG-1.4",
+          "name": "briaai/RMBG-1.4",
+          "repo_id": "briaai/RMBG-1.4",
+          "type": "hf.image_segmentation"
+        }
+      ],
+      "title": "Background Removal"
     },
     {
       "basic_fields": [
@@ -9644,6 +9982,417 @@
     },
     {
       "basic_fields": [
+        "input_image",
+        "prompt",
+        "num_frames",
+        "height",
+        "width"
+      ],
+      "body": "content_card",
+      "description": "Animates a static image into a video using LTX-2, the newest Lightricks image-to-video model.\n    video, generation, AI, image-to-video, diffusion, LTX2, Lightricks, animation\n\n    Use cases:\n    - Animate images with the latest LTX-2 model for improved quality\n    - Create smooth video transitions from a single reference image\n    - Generate motion-driven video content with extended prompt support\n    - Produce high-fidelity animated clips for creative and commercial use\n    - Build next-generation image animation workflows\n\n    **Note:** LTX-2 uses a Gemma3 text encoder and requires more VRAM than LTX-Video.",
+      "input_fields": [
+        "input_image",
+        "prompt",
+        "negative_prompt"
+      ],
+      "namespace": "huggingface.image_to_video",
+      "node_type": "huggingface.image_to_video.LTX2VideoI2V",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "video"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "image",
+            "uri": ""
+          },
+          "description": "The source image to animate. Image content guides the video's appearance.",
+          "name": "input_image",
+          "title": "Input Image",
+          "type": {
+            "type": "image"
+          }
+        },
+        {
+          "default": "The scene comes to life with smooth, natural motion, cinematic quality",
+          "description": "Text description guiding how the image should animate and move.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
+          "description": "Describe what to avoid in the generated video.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 121,
+          "description": "Total frames in the output video. 121 is the default (about 5 seconds at 24fps).",
+          "max": 257.0,
+          "min": 9.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 4.0,
+          "description": "How strongly to follow the prompt. 4.0 is recommended for LTX-2.",
+          "max": 20.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 40,
+          "description": "Denoising steps. 40 is recommended; lower for faster generation.",
+          "max": 100.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 512,
+          "description": "Output video height in pixels.",
+          "max": 1024.0,
+          "min": 64.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 768,
+          "description": "Output video width in pixels.",
+          "max": 1280.0,
+          "min": 64.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 24.0,
+          "description": "Frame rate for the output video file.",
+          "max": 60.0,
+          "min": 1.0,
+          "name": "frame_rate",
+          "title": "Frame Rate",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 1024,
+          "description": "Maximum prompt encoding length. LTX-2 supports long prompts up to 1024 tokens.",
+          "max": 2048.0,
+          "min": 64.0,
+          "name": "max_sequence_length",
+          "title": "Max Sequence Length",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": true,
+          "description": "Process VAE in slices to reduce peak memory usage.",
+          "name": "enable_vae_slicing",
+          "title": "Enable Vae Slicing",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "Lightricks/LTX-2",
+          "name": "Lightricks/LTX-2",
+          "repo_id": "Lightricks/LTX-2",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "LTX-2 (Image-to-Video)"
+    },
+    {
+      "basic_fields": [
+        "input_image",
+        "prompt",
+        "model_variant",
+        "num_frames",
+        "height",
+        "width"
+      ],
+      "body": "content_card",
+      "description": "Animates a static image into a video using LTX-Video image-to-video diffusion models.\n    video, generation, AI, image-to-video, diffusion, LTX, Lightricks, animation\n\n    Use cases:\n    - Animate photographs or artwork into dynamic video clips\n    - Create motion-driven video from a single input image with text guidance\n    - Generate content for social media or creative projects from still images\n    - Bring product images or illustrations to life\n    - Produce smooth animated sequences with fine temporal control\n\n    **Note:** LTX-Video-0.9.5 is recommended for best quality.",
+      "input_fields": [
+        "input_image",
+        "prompt",
+        "negative_prompt"
+      ],
+      "namespace": "huggingface.image_to_video",
+      "node_type": "huggingface.image_to_video.LTXVideoI2V",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "video"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": "Lightricks/LTX-Video-0.9.5",
+          "description": "The LTX-Video model variant. 0.9.5 is the latest and recommended.",
+          "name": "model_variant",
+          "title": "Model Variant",
+          "type": {
+            "type": "enum",
+            "type_name": "nodetool.nodes.huggingface.image_to_video.LTXVideoI2V.LTXModel",
+            "values": [
+              "Lightricks/LTX-Video-0.9.5",
+              "Lightricks/LTX-Video-0.9.1",
+              "Lightricks/LTX-Video"
+            ]
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "image",
+            "uri": ""
+          },
+          "description": "The source image to animate. Image content guides the video's appearance.",
+          "name": "input_image",
+          "title": "Input Image",
+          "type": {
+            "type": "image"
+          }
+        },
+        {
+          "default": "The scene comes to life with smooth, natural motion, cinematic quality",
+          "description": "Text description guiding how the image should animate and move.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
+          "description": "Describe what to avoid in the generated video.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 161,
+          "description": "Total frames in the output video. Must be 8n+1 (e.g. 65, 97, 129, 161). More frames = longer video.",
+          "max": 257.0,
+          "min": 9.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 3.0,
+          "description": "How strongly to follow the prompt. 3.0 is typical for LTX-Video.",
+          "max": 20.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 50,
+          "description": "Denoising steps. 50 is recommended; lower for faster generation.",
+          "max": 100.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 480,
+          "description": "Output video height in pixels.",
+          "max": 1024.0,
+          "min": 64.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 704,
+          "description": "Output video width in pixels.",
+          "max": 1280.0,
+          "min": 64.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 25,
+          "description": "Frame rate for the output video file.",
+          "max": 60.0,
+          "min": 1.0,
+          "name": "frame_rate",
+          "title": "Frame Rate",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 128,
+          "description": "Maximum prompt encoding length. Higher allows longer prompts.",
+          "max": 512.0,
+          "min": 32.0,
+          "name": "max_sequence_length",
+          "title": "Max Sequence Length",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": true,
+          "description": "Process VAE in slices to reduce peak memory usage.",
+          "name": "enable_vae_slicing",
+          "title": "Enable Vae Slicing",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": false,
+          "description": "Process VAE in tiles for large videos. May affect quality.",
+          "name": "enable_vae_tiling",
+          "title": "Enable Vae Tiling",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "Lightricks/LTX-Video-0.9.5",
+          "name": "Lightricks/LTX-Video-0.9.5",
+          "repo_id": "Lightricks/LTX-Video-0.9.5",
+          "type": "hf.text_to_video"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "Lightricks/LTX-Video-0.9.1",
+          "name": "Lightricks/LTX-Video-0.9.1",
+          "repo_id": "Lightricks/LTX-Video-0.9.1",
+          "type": "hf.text_to_video"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "Lightricks/LTX-Video",
+          "name": "Lightricks/LTX-Video",
+          "repo_id": "Lightricks/LTX-Video",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "LTX-Video (Image-to-Video)"
+    },
+    {
+      "basic_fields": [
         "first_image",
         "last_image",
         "prompt",
@@ -10014,8 +10763,8 @@
           }
         },
         {
-          "default": false,
-          "description": "Process VAE in tiles for very large videos. May affect quality.",
+          "default": true,
+          "description": "Process VAE in tiles for large videos. Keeps the fp32 Wan VAE decode within budget on GPUs with less than 24GB VRAM.",
           "name": "enable_vae_tiling",
           "title": "Enable Vae Tiling",
           "type": {
@@ -11409,6 +12158,275 @@
     {
       "basic_fields": [
         "model",
+        "image"
+      ],
+      "description": "Detects human body keypoints in images using ViTPose top-down pose estimation.\n    image, pose-estimation, keypoints, skeleton, human, vitpose, huggingface, computer-vision\n\n    Use cases:\n    - Analyze athletic form and movement in sports footage\n    - Drive character animation and motion capture from ordinary photos\n    - Monitor ergonomics, physiotherapy exercises or fall detection\n    - Build gesture and action recognition on top of skeleton data\n    - Generate pose conditioning images for ControlNet workflows",
+      "inline_fields": [
+        "model"
+      ],
+      "input_fields": [
+        "image"
+      ],
+      "namespace": "huggingface.pose_estimation",
+      "node_type": "huggingface.pose_estimation.PoseEstimation",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "dict",
+                "type_args": [
+                  {
+                    "type": "str"
+                  },
+                  {
+                    "type": "any"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "usyd-community/vitpose-base-simple",
+            "type": "hf.computer_vision",
+            "variant": null
+          },
+          "description": "The ViTPose model used for keypoint estimation. The 'simple' variant is fast; the 'plus' variants are mixture-of-experts models with higher accuracy.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.computer_vision"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "image",
+            "uri": ""
+          },
+          "description": "The image to estimate human poses in. Supports common formats like JPEG, PNG.",
+          "name": "image",
+          "title": "Image",
+          "type": {
+            "type": "image"
+          }
+        },
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "PekingU/rtdetr_r50vd_coco_o365",
+            "type": "hf.object_detection",
+            "variant": null
+          },
+          "description": "ViTPose is a top-down model, so persons are located first with this object detection model.",
+          "name": "person_detector",
+          "title": "Person Detector",
+          "type": {
+            "type": "hf.object_detection"
+          }
+        },
+        {
+          "default": 0.3,
+          "description": "Minimum confidence score (0-1) for a person detection to be passed to the pose model.",
+          "name": "detection_threshold",
+          "title": "Detection Threshold",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 0.3,
+          "description": "Minimum confidence score (0-1) for an individual keypoint to be included in the output.",
+          "name": "keypoint_threshold",
+          "title": "Keypoint Threshold",
+          "type": {
+            "type": "float"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "usyd-community/vitpose-base-simple",
+          "name": "usyd-community/vitpose-base-simple",
+          "repo_id": "usyd-community/vitpose-base-simple",
+          "type": "hf.computer_vision"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "usyd-community/vitpose-plus-small",
+          "name": "usyd-community/vitpose-plus-small",
+          "repo_id": "usyd-community/vitpose-plus-small",
+          "type": "hf.computer_vision"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "usyd-community/vitpose-plus-base",
+          "name": "usyd-community/vitpose-plus-base",
+          "repo_id": "usyd-community/vitpose-plus-base",
+          "type": "hf.computer_vision"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "usyd-community/vitpose-plus-large",
+          "name": "usyd-community/vitpose-plus-large",
+          "repo_id": "usyd-community/vitpose-plus-large",
+          "type": "hf.computer_vision"
+        },
+        {
+          "allow_patterns": [
+            "README.md",
+            "*.safetensors",
+            "*.json",
+            "**/*.json"
+          ],
+          "id": "usyd-community/vitpose-plus-huge",
+          "name": "usyd-community/vitpose-plus-huge",
+          "repo_id": "usyd-community/vitpose-plus-huge",
+          "type": "hf.computer_vision"
+        }
+      ],
+      "title": "HF Pose Estimation"
+    },
+    {
+      "basic_fields": [
+        "image",
+        "poses"
+      ],
+      "description": "Renders estimated human poses as keypoints and skeleton lines on the original image.\n    image, pose-estimation, keypoints, skeleton, visualization, annotation\n\n    Use cases:\n    - Visually verify pose estimation output quality\n    - Produce annotated stills for documentation or presentations\n    - Debug keypoint confidence thresholds\n    - Create pose overlays for coaching and physiotherapy feedback",
+      "inline_fields": [
+        "keypoint_threshold",
+        "point_radius",
+        "line_width",
+        "draw_boxes"
+      ],
+      "input_fields": [
+        "image",
+        "poses"
+      ],
+      "namespace": "huggingface.pose_estimation",
+      "node_type": "huggingface.pose_estimation.VisualizePoseEstimation",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "image"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "image",
+            "uri": ""
+          },
+          "description": "The original image to draw the poses on.",
+          "name": "image",
+          "title": "Image",
+          "type": {
+            "type": "image"
+          }
+        },
+        {
+          "default": [],
+          "description": "List of poses from the Pose Estimation node.",
+          "name": "poses",
+          "title": "Poses",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "dict",
+                "type_args": [
+                  {
+                    "type": "str"
+                  },
+                  {
+                    "type": "any"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "default": 0.3,
+          "description": "Minimum keypoint confidence (0-1) required to draw a point or bone.",
+          "name": "keypoint_threshold",
+          "title": "Keypoint Threshold",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 4,
+          "description": "Radius in pixels of the drawn keypoint markers.",
+          "name": "point_radius",
+          "title": "Point Radius",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 3,
+          "description": "Width in pixels of the drawn skeleton bones.",
+          "name": "line_width",
+          "title": "Line Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": false,
+          "description": "Also draw the person bounding box that produced each pose.",
+          "name": "draw_boxes",
+          "title": "Draw Boxes",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "title": "Visualize Pose Estimation"
+    },
+    {
+      "basic_fields": [
+        "model",
         "dataframe",
         "question"
       ],
@@ -11921,6 +12939,130 @@
         }
       ],
       "title": "Split into Sentences"
+    },
+    {
+      "basic_fields": [
+        "model",
+        "audio",
+        "num_speakers"
+      ],
+      "description": "Detects who spoke when in an audio recording using pyannote.audio.\n    audio, diarization, speaker, segmentation, who-spoke-when, pyannote, huggingface\n\n    Use cases:\n    - Label meeting or interview recordings with per-speaker turns\n    - Combine with Whisper chunks to build speaker-attributed transcripts\n    - Split podcasts or calls into per-speaker segments for editing\n    - Measure talk-time balance across participants\n    - Pre-process training data that requires single-speaker audio\n\n    **Note:** pyannote models are GATED on the Hugging Face Hub. Before running this\n    node you must accept the conditions of `pyannote/speaker-diarization-3.1` and of\n    the models it depends on (`pyannote/segmentation-3.0`), then set `HF_TOKEN` in\n    Nodetool settings (or as an environment variable). Without a token the model\n    cannot be downloaded.\n\n    **Links:**\n    - https://github.com/pyannote/pyannote-audio\n    - https://huggingface.co/pyannote/speaker-diarization-3.1",
+      "inline_fields": [
+        "model"
+      ],
+      "input_fields": [
+        "audio"
+      ],
+      "namespace": "huggingface.speaker_diarization",
+      "node_type": "huggingface.speaker_diarization.SpeakerDiarization",
+      "outputs": [
+        {
+          "name": "segments",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "audio_chunk"
+              }
+            ]
+          }
+        },
+        {
+          "name": "speakers",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "str"
+              }
+            ]
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "pyannote/speaker-diarization-3.1",
+            "type": "hf.voice_activity_detection",
+            "variant": null
+          },
+          "description": "The pyannote.audio diarization pipeline to use. Gated on the Hugging Face Hub: accept the model conditions and set HF_TOKEN.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.voice_activity_detection"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "The audio file to diarize. Supports common formats like WAV, MP3, FLAC.",
+          "name": "audio",
+          "title": "Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": 0,
+          "description": "Exact number of speakers in the recording. Use 0 to let the model decide automatically.",
+          "min": 0.0,
+          "name": "num_speakers",
+          "title": "Number of Speakers",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 0,
+          "description": "Lower bound on the number of speakers. Use 0 to leave it unset. Ignored when 'Number of Speakers' is set.",
+          "min": 0.0,
+          "name": "min_speakers",
+          "title": "Minimum Speakers",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 0,
+          "description": "Upper bound on the number of speakers. Use 0 to leave it unset. Ignored when 'Number of Speakers' is set.",
+          "min": 0.0,
+          "name": "max_speakers",
+          "title": "Maximum Speakers",
+          "type": {
+            "type": "int"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "id": "pyannote/speaker-diarization-3.1",
+          "name": "pyannote/speaker-diarization-3.1",
+          "repo_id": "pyannote/speaker-diarization-3.1",
+          "type": "hf.voice_activity_detection"
+        },
+        {
+          "id": "pyannote/speaker-diarization-community-1",
+          "name": "pyannote/speaker-diarization-community-1",
+          "repo_id": "pyannote/speaker-diarization-community-1",
+          "type": "hf.voice_activity_detection"
+        },
+        {
+          "id": "pyannote/segmentation-3.0",
+          "name": "pyannote/segmentation-3.0",
+          "repo_id": "pyannote/segmentation-3.0",
+          "type": "hf.voice_activity_detection"
+        }
+      ],
+      "title": "Speaker Diarization"
     },
     {
       "basic_fields": [
@@ -14812,14 +15954,14 @@
         "width",
         "seed"
       ],
+      "body": "content_card",
+      "description": "Generates high-quality, commercial-ready images from text prompts using Bria 3.2.\n    image, generation, AI, text-to-image, bria, transformer, commercial, licensed\n\n    Use cases:\n    - Generate commercial-ready images trained entirely on licensed data\n    - Produce images with exceptional aesthetics and accurate text rendering\n    - Create professional images using an efficient 4B-parameter MMDiT model\n    - Build enterprise image generation applications with predictable licensing",
       "input_fields": [
         "prompt",
         "negative_prompt"
       ],
-      "description": "Generates high-quality, commercial-ready images from text prompts using Bria 3.2.\n    image, generation, AI, text-to-image, bria, transformer, commercial, licensed\n\n    Use cases:\n    - Generate commercial-ready images trained entirely on licensed data\n    - Produce images with exceptional aesthetics and accurate text rendering\n    - Create professional images using an efficient 4B-parameter MMDiT model\n    - Build enterprise image generation applications with predictable licensing",
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.Bria",
-      "body": "content_card",
       "outputs": [
         {
           "name": "output",
@@ -18350,6 +19492,7 @@
             "**/*.json",
             "**/*.txt",
             "**/*.model",
+            "**/*.jinja",
             "*.json"
           ],
           "id": "kandinskylab/Kandinsky-5.0-T2V-Pro-sft-5s-Diffusers",
@@ -18363,6 +19506,7 @@
             "**/*.json",
             "**/*.txt",
             "**/*.model",
+            "**/*.jinja",
             "*.json"
           ],
           "id": "kandinskylab/Kandinsky-5.0-T2V-Lite-sft-5s-Diffusers",
@@ -18376,6 +19520,7 @@
             "**/*.json",
             "**/*.txt",
             "**/*.model",
+            "**/*.jinja",
             "*.json"
           ],
           "id": "kandinskylab/Kandinsky-5.0-T2V-Lite-sft-10s-Diffusers",
@@ -18389,6 +19534,7 @@
             "**/*.json",
             "**/*.txt",
             "**/*.model",
+            "**/*.jinja",
             "*.json"
           ],
           "id": "kandinskylab/Kandinsky-5.0-T2V-Lite-nocfg-5s-Diffusers",
@@ -18402,6 +19548,7 @@
             "**/*.json",
             "**/*.txt",
             "**/*.model",
+            "**/*.jinja",
             "*.json"
           ],
           "id": "kandinskylab/Kandinsky-5.0-T2V-Lite-nocfg-10s-Diffusers",
@@ -18415,6 +19562,7 @@
             "**/*.json",
             "**/*.txt",
             "**/*.model",
+            "**/*.jinja",
             "*.json"
           ],
           "id": "kandinskylab/Kandinsky-5.0-T2V-Lite-distilled16steps-5s-Diffusers",
@@ -18428,6 +19576,7 @@
             "**/*.json",
             "**/*.txt",
             "**/*.model",
+            "**/*.jinja",
             "*.json"
           ],
           "id": "kandinskylab/Kandinsky-5.0-T2V-Lite-distilled16steps-10s-Diffusers",
@@ -18441,6 +19590,7 @@
             "**/*.json",
             "**/*.txt",
             "**/*.model",
+            "**/*.jinja",
             "*.json"
           ],
           "id": "kandinskylab/Kandinsky-5.0-T2V-Lite-pretrain-5s-Diffusers",
@@ -18454,6 +19604,7 @@
             "**/*.json",
             "**/*.txt",
             "**/*.model",
+            "**/*.jinja",
             "*.json"
           ],
           "id": "kandinskylab/Kandinsky-5.0-T2V-Lite-pretrain-10s-Diffusers",
@@ -18616,6 +19767,7 @@
             "**/*.json",
             "**/*.txt",
             "**/*.model",
+            "**/*.jinja",
             "*.json"
           ],
           "id": "Lightricks/LTX-2",
@@ -18625,6 +19777,552 @@
         }
       ],
       "title": "LTX-2"
+    },
+    {
+      "basic_fields": [
+        "model",
+        "prompt",
+        "num_frames",
+        "height",
+        "width"
+      ],
+      "body": "content_card",
+      "description": "Generates synchronized video and audio using Lightricks' LTX-2.5 Diffusers checkpoint.\n    video, audio, generation, AI, text-to-video, ltx, ltx-2.5, cinematic\n\n    LTX-2.5 runs through Diffusers 0.39's LTX2Pipeline and produces video and\n    audio together in one denoising process. The model is gated, so its license\n    must be accepted on Hugging Face before it can be downloaded.\n\n    Use cases:\n    - Generate cinematic clips with synchronized dialogue, ambience, or effects\n    - Produce audiovisual storyboards directly from detailed prompts\n    - Create short marketing and social clips with matching soundtracks\n    - Build local text-to-audio-video generation workflows",
+      "input_fields": [
+        "prompt",
+        "negative_prompt"
+      ],
+      "namespace": "huggingface.text_to_video",
+      "node_type": "huggingface.text_to_video.LTX25",
+      "outputs": [
+        {
+          "name": "video",
+          "type": {
+            "type": "video"
+          }
+        },
+        {
+          "name": "audio",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "Lightricks/LTX-2.5-Diffusers",
+            "type": "hf.text_to_video",
+            "variant": null
+          },
+          "description": "The gated LTX-2.5 Diffusers checkpoint.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_video"
+          }
+        },
+        {
+          "default": "A majestic eagle soaring over snow-capped mountains at sunrise, cinematic, highly detailed.",
+          "description": "Detailed text description of the video to generate.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
+          "description": "Describe what to avoid in the video.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 121,
+          "description": "Total frames in the output. More frames = longer video.",
+          "max": 257.0,
+          "min": 9.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 24.0,
+          "description": "Frame rate the model generates at (also used for the output file).",
+          "max": 60.0,
+          "min": 1.0,
+          "name": "frame_rate",
+          "title": "Frame Rate",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "Fixed at 1.0: LTX-2.5 is distilled and guidance degrades it.",
+          "max": 1.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Fixed by the distilled sigma schedule LTX-2.5 denoises on.",
+          "max": 8.0,
+          "min": 8.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 512,
+          "description": "Output video height in pixels.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 768,
+          "description": "Output video width in pixels.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "Lightricks/LTX-2.5-Diffusers",
+          "name": "Lightricks/LTX-2.5-Diffusers",
+          "repo_id": "Lightricks/LTX-2.5-Diffusers",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "LTX-2.5"
+    },
+    {
+      "basic_fields": [
+        "prompt",
+        "num_frames",
+        "height",
+        "width"
+      ],
+      "body": "content_card",
+      "description": "Generates videos from text prompts using LTX-2, the newest Lightricks video generation model.\n    video, generation, AI, text-to-video, diffusion, LTX2, Lightricks, cinematic\n\n    Use cases:\n    - Create high-quality videos with the latest LTX-2 architecture\n    - Generate videos with improved temporal consistency and visual fidelity\n    - Produce cinematic content with detailed motion and scene description\n    - Build next-generation AI video generation workflows\n    - Create visual content with support for audio output\n\n    **Note:** LTX-2 uses a Gemma3 text encoder and requires more VRAM than LTX-Video.",
+      "input_fields": [
+        "prompt",
+        "negative_prompt"
+      ],
+      "namespace": "huggingface.text_to_video",
+      "node_type": "huggingface.text_to_video.LTX2Video",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "video"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": "A woman with long brown hair smiles warmly in soft golden sunlight, cinematic close-up shot, high quality",
+          "description": "Detailed text description of the video to generate.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
+          "description": "Describe what to avoid in the video.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 121,
+          "description": "Total frames in the output video. 121 is the default (about 5 seconds at 24fps).",
+          "max": 257.0,
+          "min": 9.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 4.0,
+          "description": "How strongly to follow the prompt. 4.0 is recommended for LTX-2.",
+          "max": 20.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 40,
+          "description": "Denoising steps. 40 is recommended; lower for faster generation.",
+          "max": 100.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 512,
+          "description": "Output video height in pixels.",
+          "max": 1024.0,
+          "min": 64.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 768,
+          "description": "Output video width in pixels.",
+          "max": 1280.0,
+          "min": 64.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 24.0,
+          "description": "Frame rate for the output video file.",
+          "max": 60.0,
+          "min": 1.0,
+          "name": "frame_rate",
+          "title": "Frame Rate",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 1024,
+          "description": "Maximum prompt encoding length. LTX-2 supports long prompts up to 1024 tokens.",
+          "max": 2048.0,
+          "min": 64.0,
+          "name": "max_sequence_length",
+          "title": "Max Sequence Length",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": true,
+          "description": "Process VAE in slices to reduce peak memory usage.",
+          "name": "enable_vae_slicing",
+          "title": "Enable Vae Slicing",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "Lightricks/LTX-2",
+          "name": "Lightricks/LTX-2",
+          "repo_id": "Lightricks/LTX-2",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "LTX-2 (Text-to-Video)"
+    },
+    {
+      "basic_fields": [
+        "prompt",
+        "model_variant",
+        "num_frames",
+        "height",
+        "width"
+      ],
+      "body": "content_card",
+      "description": "Generates high-quality videos from text prompts using LTX-Video diffusion models.\n    video, generation, AI, text-to-video, diffusion, LTX, Lightricks, cinematic\n\n    Use cases:\n    - Create smooth, high-fidelity videos from detailed text descriptions\n    - Generate cinematic and artistic video content\n    - Produce short animated clips for social media and creative projects\n    - Build AI-driven video generation pipelines\n    - Create visual content with fine-grained temporal control\n\n    **Note:** LTX-Video-0.9.5 is recommended for best quality; older versions are also supported.",
+      "input_fields": [
+        "prompt",
+        "negative_prompt"
+      ],
+      "namespace": "huggingface.text_to_video",
+      "node_type": "huggingface.text_to_video.LTXVideo",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "video"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": "Lightricks/LTX-Video-0.9.5",
+          "description": "The LTX-Video model variant. 0.9.5 is the latest and recommended.",
+          "name": "model_variant",
+          "title": "Model Variant",
+          "type": {
+            "type": "enum",
+            "type_name": "nodetool.nodes.huggingface.text_to_video.LTXVideo.LTXModel",
+            "values": [
+              "Lightricks/LTX-Video-0.9.5",
+              "Lightricks/LTX-Video-0.9.1",
+              "Lightricks/LTX-Video"
+            ]
+          }
+        },
+        {
+          "default": "A serene mountain landscape at sunrise, misty valleys below, golden light on snow-capped peaks, cinematic quality",
+          "description": "Detailed text description of the video to generate.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
+          "description": "Describe what to avoid in the video.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 161,
+          "description": "Total frames in the output video. Must be 8n+1 (e.g. 65, 97, 129, 161). More frames = longer video.",
+          "max": 257.0,
+          "min": 9.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 3.0,
+          "description": "How strongly to follow the prompt. 3.0 is typical for LTX-Video.",
+          "max": 20.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 50,
+          "description": "Denoising steps. 50 is recommended; lower for faster generation.",
+          "max": 100.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 480,
+          "description": "Output video height in pixels. Best results at 480 or 512.",
+          "max": 1024.0,
+          "min": 64.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 704,
+          "description": "Output video width in pixels. Best results at 704 or 768.",
+          "max": 1280.0,
+          "min": 64.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 25,
+          "description": "Frame rate for the output video file.",
+          "max": 60.0,
+          "min": 1.0,
+          "name": "frame_rate",
+          "title": "Frame Rate",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 128,
+          "description": "Maximum prompt encoding length. Higher allows longer prompts.",
+          "max": 512.0,
+          "min": 32.0,
+          "name": "max_sequence_length",
+          "title": "Max Sequence Length",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": true,
+          "description": "Process VAE in slices to reduce peak memory usage.",
+          "name": "enable_vae_slicing",
+          "title": "Enable Vae Slicing",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": false,
+          "description": "Process VAE in tiles for large videos. May affect quality.",
+          "name": "enable_vae_tiling",
+          "title": "Enable Vae Tiling",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "Lightricks/LTX-Video-0.9.5",
+          "name": "Lightricks/LTX-Video-0.9.5",
+          "repo_id": "Lightricks/LTX-Video-0.9.5",
+          "type": "hf.text_to_video"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "Lightricks/LTX-Video-0.9.1",
+          "name": "Lightricks/LTX-Video-0.9.1",
+          "repo_id": "Lightricks/LTX-Video-0.9.1",
+          "type": "hf.text_to_video"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "*.json"
+          ],
+          "id": "Lightricks/LTX-Video",
+          "name": "Lightricks/LTX-Video",
+          "repo_id": "Lightricks/LTX-Video",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "LTX-Video (Text-to-Video)"
     },
     {
       "basic_fields": [
@@ -18667,7 +20365,7 @@
         },
         {
           "default": 124,
-          "description": "Frames to generate at the fixed 24 fps. Snapped up to the next 17n+5 the video VAE can decode; the result must stay between 5 and 15 seconds.",
+          "description": "Frames to generate at the fixed 24 fps. Snapped to the nearest 17n+5 the video VAE can decode; the result must stay between 5 and 15 seconds.",
           "max": 345.0,
           "min": 120.0,
           "name": "num_frames",
@@ -18766,6 +20464,7 @@
             "**/*.json",
             "**/*.txt",
             "**/*.model",
+            "**/*.jinja",
             "*.json"
           ],
           "id": "MiniMaxAI/MiniMax-H3",
@@ -18815,7 +20514,7 @@
         },
         {
           "default": 124,
-          "description": "Frames to generate at the fixed 24 fps. Snapped up to the next 17n+5 the video VAE can decode; the result must stay between 5 and 15 seconds.",
+          "description": "Frames to generate at the fixed 24 fps. Snapped to the nearest 17n+5 the video VAE can decode; the result must stay between 5 and 15 seconds.",
           "max": 345.0,
           "min": 120.0,
           "name": "num_frames",
@@ -18926,6 +20625,7 @@
             "**/*.json",
             "**/*.txt",
             "**/*.model",
+            "**/*.jinja",
             "*.json"
           ],
           "id": "MiniMaxAI/MiniMax-H3",
@@ -19100,8 +20800,8 @@
           }
         },
         {
-          "default": false,
-          "description": "Process VAE in tiles for large videos. May affect quality.",
+          "default": true,
+          "description": "Process VAE in tiles for large videos. Keeps the fp32 Wan VAE decode within budget on GPUs with less than 24GB VRAM.",
           "name": "enable_vae_tiling",
           "title": "Enable Vae Tiling",
           "type": {
@@ -19546,965 +21246,8 @@
         }
       ],
       "title": "HF Video Classifier"
-    },
-    {
-      "title": "LTX-Video (Text-to-Video)",
-      "description": "Generates high-quality videos from text prompts using LTX-Video diffusion models.\n    video, generation, AI, text-to-video, diffusion, LTX, Lightricks, cinematic\n\n    Use cases:\n    - Create smooth, high-fidelity videos from detailed text descriptions\n    - Generate cinematic and artistic video content\n    - Produce short animated clips for social media and creative projects\n    - Build AI-driven video generation pipelines\n    - Create visual content with fine-grained temporal control\n\n    **Note:** LTX-Video-0.9.5 is recommended for best quality; older versions are also supported.",
-      "namespace": "huggingface.text_to_video",
-      "node_type": "huggingface.text_to_video.LTXVideo",
-      "body": "content_card",
-      "properties": [
-        {
-          "name": "model_variant",
-          "type": {
-            "type": "enum",
-            "values": [
-              "Lightricks/LTX-Video-0.9.5",
-              "Lightricks/LTX-Video-0.9.1",
-              "Lightricks/LTX-Video"
-            ],
-            "type_name": "nodetool.nodes.huggingface.text_to_video.LTXVideo.LTXModel"
-          },
-          "default": "Lightricks/LTX-Video-0.9.5",
-          "title": "Model Variant",
-          "description": "The LTX-Video model variant. 0.9.5 is the latest and recommended."
-        },
-        {
-          "name": "prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "A serene mountain landscape at sunrise, misty valleys below, golden light on snow-capped peaks, cinematic quality",
-          "title": "Prompt",
-          "description": "Detailed text description of the video to generate."
-        },
-        {
-          "name": "negative_prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
-          "title": "Negative Prompt",
-          "description": "Describe what to avoid in the video."
-        },
-        {
-          "name": "num_frames",
-          "type": {
-            "type": "int"
-          },
-          "default": 161,
-          "title": "Num Frames",
-          "description": "Total frames in the output video. Must be 8n+1 (e.g. 65, 97, 129, 161). More frames = longer video.",
-          "min": 9,
-          "max": 257
-        },
-        {
-          "name": "guidance_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 3,
-          "title": "Guidance Scale",
-          "description": "How strongly to follow the prompt. 3.0 is typical for LTX-Video.",
-          "min": 1,
-          "max": 20
-        },
-        {
-          "name": "num_inference_steps",
-          "type": {
-            "type": "int"
-          },
-          "default": 50,
-          "title": "Num Inference Steps",
-          "description": "Denoising steps. 50 is recommended; lower for faster generation.",
-          "min": 1,
-          "max": 100
-        },
-        {
-          "name": "height",
-          "type": {
-            "type": "int"
-          },
-          "default": 480,
-          "title": "Height",
-          "description": "Output video height in pixels. Best results at 480 or 512.",
-          "min": 64,
-          "max": 1024
-        },
-        {
-          "name": "width",
-          "type": {
-            "type": "int"
-          },
-          "default": 704,
-          "title": "Width",
-          "description": "Output video width in pixels. Best results at 704 or 768.",
-          "min": 64,
-          "max": 1280
-        },
-        {
-          "name": "frame_rate",
-          "type": {
-            "type": "int"
-          },
-          "default": 25,
-          "title": "Frame Rate",
-          "description": "Frame rate for the output video file.",
-          "min": 1,
-          "max": 60
-        },
-        {
-          "name": "seed",
-          "type": {
-            "type": "int"
-          },
-          "default": -1,
-          "title": "Seed",
-          "description": "Random seed for reproducible generation. Use -1 for random.",
-          "min": -1
-        },
-        {
-          "name": "max_sequence_length",
-          "type": {
-            "type": "int"
-          },
-          "default": 128,
-          "title": "Max Sequence Length",
-          "description": "Maximum prompt encoding length. Higher allows longer prompts.",
-          "min": 32,
-          "max": 512
-        },
-        {
-          "name": "enable_cpu_offload",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Cpu Offload",
-          "description": "Offload model components to CPU to reduce VRAM usage."
-        },
-        {
-          "name": "enable_vae_slicing",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Vae Slicing",
-          "description": "Process VAE in slices to reduce peak memory usage."
-        },
-        {
-          "name": "enable_vae_tiling",
-          "type": {
-            "type": "bool"
-          },
-          "default": false,
-          "title": "Enable Vae Tiling",
-          "description": "Process VAE in tiles for large videos. May affect quality."
-        }
-      ],
-      "outputs": [
-        {
-          "type": {
-            "type": "video"
-          },
-          "name": "output"
-        }
-      ],
-      "recommended_models": [
-        {
-          "id": "Lightricks/LTX-Video-0.9.5",
-          "type": "hf.text_to_video",
-          "name": "Lightricks/LTX-Video-0.9.5",
-          "repo_id": "Lightricks/LTX-Video-0.9.5",
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ]
-        },
-        {
-          "id": "Lightricks/LTX-Video-0.9.1",
-          "type": "hf.text_to_video",
-          "name": "Lightricks/LTX-Video-0.9.1",
-          "repo_id": "Lightricks/LTX-Video-0.9.1",
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ]
-        },
-        {
-          "id": "Lightricks/LTX-Video",
-          "type": "hf.text_to_video",
-          "name": "Lightricks/LTX-Video",
-          "repo_id": "Lightricks/LTX-Video",
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ]
-        }
-      ],
-      "basic_fields": [
-        "prompt",
-        "model_variant",
-        "num_frames",
-        "height",
-        "width"
-      ],
-      "input_fields": [
-        "prompt",
-        "negative_prompt"
-      ]
-    },
-    {
-      "title": "LTX-2 (Text-to-Video)",
-      "description": "Generates videos from text prompts using LTX-2, the newest Lightricks video generation model.\n    video, generation, AI, text-to-video, diffusion, LTX2, Lightricks, cinematic\n\n    Use cases:\n    - Create high-quality videos with the latest LTX-2 architecture\n    - Generate videos with improved temporal consistency and visual fidelity\n    - Produce cinematic content with detailed motion and scene description\n    - Build next-generation AI video generation workflows\n    - Create visual content with support for audio output\n\n    **Note:** LTX-2 uses a Gemma3 text encoder and requires more VRAM than LTX-Video.",
-      "namespace": "huggingface.text_to_video",
-      "node_type": "huggingface.text_to_video.LTX2Video",
-      "body": "content_card",
-      "properties": [
-        {
-          "name": "prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "A woman with long brown hair smiles warmly in soft golden sunlight, cinematic close-up shot, high quality",
-          "title": "Prompt",
-          "description": "Detailed text description of the video to generate."
-        },
-        {
-          "name": "negative_prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
-          "title": "Negative Prompt",
-          "description": "Describe what to avoid in the video."
-        },
-        {
-          "name": "num_frames",
-          "type": {
-            "type": "int"
-          },
-          "default": 121,
-          "title": "Num Frames",
-          "description": "Total frames in the output video. 121 is the default (about 5 seconds at 24fps).",
-          "min": 9,
-          "max": 257
-        },
-        {
-          "name": "guidance_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 4,
-          "title": "Guidance Scale",
-          "description": "How strongly to follow the prompt. 4.0 is recommended for LTX-2.",
-          "min": 1,
-          "max": 20
-        },
-        {
-          "name": "num_inference_steps",
-          "type": {
-            "type": "int"
-          },
-          "default": 40,
-          "title": "Num Inference Steps",
-          "description": "Denoising steps. 40 is recommended; lower for faster generation.",
-          "min": 1,
-          "max": 100
-        },
-        {
-          "name": "height",
-          "type": {
-            "type": "int"
-          },
-          "default": 512,
-          "title": "Height",
-          "description": "Output video height in pixels.",
-          "min": 64,
-          "max": 1024
-        },
-        {
-          "name": "width",
-          "type": {
-            "type": "int"
-          },
-          "default": 768,
-          "title": "Width",
-          "description": "Output video width in pixels.",
-          "min": 64,
-          "max": 1280
-        },
-        {
-          "name": "frame_rate",
-          "type": {
-            "type": "float"
-          },
-          "default": 24,
-          "title": "Frame Rate",
-          "description": "Frame rate for the output video file.",
-          "min": 1,
-          "max": 60
-        },
-        {
-          "name": "seed",
-          "type": {
-            "type": "int"
-          },
-          "default": -1,
-          "title": "Seed",
-          "description": "Random seed for reproducible generation. Use -1 for random.",
-          "min": -1
-        },
-        {
-          "name": "max_sequence_length",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Max Sequence Length",
-          "description": "Maximum prompt encoding length. LTX-2 supports long prompts up to 1024 tokens.",
-          "min": 64,
-          "max": 2048
-        },
-        {
-          "name": "enable_cpu_offload",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Cpu Offload",
-          "description": "Offload model components to CPU to reduce VRAM usage."
-        },
-        {
-          "name": "enable_vae_slicing",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Vae Slicing",
-          "description": "Process VAE in slices to reduce peak memory usage."
-        }
-      ],
-      "outputs": [
-        {
-          "type": {
-            "type": "video"
-          },
-          "name": "output"
-        }
-      ],
-      "recommended_models": [
-        {
-          "id": "Lightricks/LTX-2",
-          "type": "hf.text_to_video",
-          "name": "Lightricks/LTX-2",
-          "repo_id": "Lightricks/LTX-2",
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ]
-        }
-      ],
-      "basic_fields": [
-        "prompt",
-        "num_frames",
-        "height",
-        "width"
-      ],
-      "input_fields": [
-        "prompt",
-        "negative_prompt"
-      ]
-    },
-    {
-      "title": "LTX-2.5",
-      "description": "Generates synchronized video and audio using Lightricks' LTX-2.5 Diffusers checkpoint.\n    video, audio, generation, AI, text-to-video, ltx, ltx-2.5, cinematic\n\n    LTX-2.5 runs through Diffusers 0.39's LTX2Pipeline and produces video and\n    audio together in one denoising process. The model is gated, so its license\n    must be accepted on Hugging Face before it can be downloaded.\n\n    Use cases:\n    - Generate cinematic clips with synchronized dialogue, ambience, or effects\n    - Produce audiovisual storyboards directly from detailed prompts\n    - Create short marketing and social clips with matching soundtracks\n    - Build local text-to-audio-video generation workflows",
-      "namespace": "huggingface.text_to_video",
-      "node_type": "huggingface.text_to_video.LTX25",
-      "body": "content_card",
-      "properties": [
-        {
-          "name": "model",
-          "type": {
-            "type": "hf.text_to_video"
-          },
-          "default": {
-            "type": "hf.text_to_video",
-            "repo_id": "Lightricks/LTX-2.5-Diffusers",
-            "path": null,
-            "variant": null,
-            "allow_patterns": null,
-            "ignore_patterns": null
-          },
-          "title": "Model",
-          "description": "The gated LTX-2.5 Diffusers checkpoint."
-        },
-        {
-          "name": "prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "A majestic eagle soaring over snow-capped mountains at sunrise, cinematic, highly detailed.",
-          "title": "Prompt",
-          "description": "Detailed text description of the video to generate."
-        },
-        {
-          "name": "negative_prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
-          "title": "Negative Prompt",
-          "description": "Describe what to avoid in the video."
-        },
-        {
-          "name": "num_frames",
-          "type": {
-            "type": "int"
-          },
-          "default": 121,
-          "title": "Num Frames",
-          "description": "Total frames in the output. More frames = longer video.",
-          "min": 9,
-          "max": 257
-        },
-        {
-          "name": "frame_rate",
-          "type": {
-            "type": "float"
-          },
-          "default": 24,
-          "title": "Frame Rate",
-          "description": "Frame rate the model generates at (also used for the output file).",
-          "min": 1,
-          "max": 60
-        },
-        {
-          "name": "guidance_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 4,
-          "title": "Guidance Scale",
-          "description": "How strongly to follow the prompt. 3-5 is typical.",
-          "min": 1,
-          "max": 20
-        },
-        {
-          "name": "num_inference_steps",
-          "type": {
-            "type": "int"
-          },
-          "default": 40,
-          "title": "Num Inference Steps",
-          "description": "Denoising steps. 40 is recommended; lower for faster generation.",
-          "min": 1,
-          "max": 100
-        },
-        {
-          "name": "height",
-          "type": {
-            "type": "int"
-          },
-          "default": 512,
-          "title": "Height",
-          "description": "Output video height in pixels.",
-          "min": 256,
-          "max": 1280
-        },
-        {
-          "name": "width",
-          "type": {
-            "type": "int"
-          },
-          "default": 768,
-          "title": "Width",
-          "description": "Output video width in pixels.",
-          "min": 256,
-          "max": 1280
-        },
-        {
-          "name": "seed",
-          "type": {
-            "type": "int"
-          },
-          "default": -1,
-          "title": "Seed",
-          "description": "Random seed for reproducible generation. Use -1 for random.",
-          "min": -1
-        },
-        {
-          "name": "enable_cpu_offload",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Cpu Offload",
-          "description": "Offload model components to CPU to reduce VRAM usage."
-        }
-      ],
-      "outputs": [
-        {
-          "type": {
-            "type": "video"
-          },
-          "name": "video"
-        },
-        {
-          "type": {
-            "type": "audio"
-          },
-          "name": "audio"
-        }
-      ],
-      "recommended_models": [
-        {
-          "id": "Lightricks/LTX-2.5-Diffusers",
-          "type": "hf.text_to_video",
-          "name": "Lightricks/LTX-2.5-Diffusers",
-          "repo_id": "Lightricks/LTX-2.5-Diffusers",
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "**/*.model",
-            "**/*.jinja",
-            "*.json"
-          ]
-        }
-      ],
-      "basic_fields": [
-        "model",
-        "prompt",
-        "num_frames",
-        "height",
-        "width"
-      ],
-      "input_fields": [
-        "prompt",
-        "negative_prompt"
-      ]
-    },
-    {
-      "title": "LTX-Video (Image-to-Video)",
-      "description": "Animates a static image into a video using LTX-Video image-to-video diffusion models.\n    video, generation, AI, image-to-video, diffusion, LTX, Lightricks, animation\n\n    Use cases:\n    - Animate photographs or artwork into dynamic video clips\n    - Create motion-driven video from a single input image with text guidance\n    - Generate content for social media or creative projects from still images\n    - Bring product images or illustrations to life\n    - Produce smooth animated sequences with fine temporal control\n\n    **Note:** LTX-Video-0.9.5 is recommended for best quality.",
-      "namespace": "huggingface.image_to_video",
-      "node_type": "huggingface.image_to_video.LTXVideoI2V",
-      "body": "content_card",
-      "properties": [
-        {
-          "name": "model_variant",
-          "type": {
-            "type": "enum",
-            "values": [
-              "Lightricks/LTX-Video-0.9.5",
-              "Lightricks/LTX-Video-0.9.1",
-              "Lightricks/LTX-Video"
-            ],
-            "type_name": "nodetool.nodes.huggingface.image_to_video.LTXVideoI2V.LTXModel"
-          },
-          "default": "Lightricks/LTX-Video-0.9.5",
-          "title": "Model Variant",
-          "description": "The LTX-Video model variant. 0.9.5 is the latest and recommended."
-        },
-        {
-          "name": "input_image",
-          "type": {
-            "type": "image"
-          },
-          "default": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null,
-            "metadata": null
-          },
-          "title": "Input Image",
-          "description": "The source image to animate. Image content guides the video's appearance."
-        },
-        {
-          "name": "prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "The scene comes to life with smooth, natural motion, cinematic quality",
-          "title": "Prompt",
-          "description": "Text description guiding how the image should animate and move."
-        },
-        {
-          "name": "negative_prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
-          "title": "Negative Prompt",
-          "description": "Describe what to avoid in the generated video."
-        },
-        {
-          "name": "num_frames",
-          "type": {
-            "type": "int"
-          },
-          "default": 161,
-          "title": "Num Frames",
-          "description": "Total frames in the output video. Must be 8n+1 (e.g. 65, 97, 129, 161). More frames = longer video.",
-          "min": 9,
-          "max": 257
-        },
-        {
-          "name": "guidance_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 3,
-          "title": "Guidance Scale",
-          "description": "How strongly to follow the prompt. 3.0 is typical for LTX-Video.",
-          "min": 1,
-          "max": 20
-        },
-        {
-          "name": "num_inference_steps",
-          "type": {
-            "type": "int"
-          },
-          "default": 50,
-          "title": "Num Inference Steps",
-          "description": "Denoising steps. 50 is recommended; lower for faster generation.",
-          "min": 1,
-          "max": 100
-        },
-        {
-          "name": "height",
-          "type": {
-            "type": "int"
-          },
-          "default": 480,
-          "title": "Height",
-          "description": "Output video height in pixels.",
-          "min": 64,
-          "max": 1024
-        },
-        {
-          "name": "width",
-          "type": {
-            "type": "int"
-          },
-          "default": 704,
-          "title": "Width",
-          "description": "Output video width in pixels.",
-          "min": 64,
-          "max": 1280
-        },
-        {
-          "name": "frame_rate",
-          "type": {
-            "type": "int"
-          },
-          "default": 25,
-          "title": "Frame Rate",
-          "description": "Frame rate for the output video file.",
-          "min": 1,
-          "max": 60
-        },
-        {
-          "name": "seed",
-          "type": {
-            "type": "int"
-          },
-          "default": -1,
-          "title": "Seed",
-          "description": "Random seed for reproducible generation. Use -1 for random.",
-          "min": -1
-        },
-        {
-          "name": "max_sequence_length",
-          "type": {
-            "type": "int"
-          },
-          "default": 128,
-          "title": "Max Sequence Length",
-          "description": "Maximum prompt encoding length. Higher allows longer prompts.",
-          "min": 32,
-          "max": 512
-        },
-        {
-          "name": "enable_cpu_offload",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Cpu Offload",
-          "description": "Offload model components to CPU to reduce VRAM usage."
-        },
-        {
-          "name": "enable_vae_slicing",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Vae Slicing",
-          "description": "Process VAE in slices to reduce peak memory usage."
-        },
-        {
-          "name": "enable_vae_tiling",
-          "type": {
-            "type": "bool"
-          },
-          "default": false,
-          "title": "Enable Vae Tiling",
-          "description": "Process VAE in tiles for large videos. May affect quality."
-        }
-      ],
-      "outputs": [
-        {
-          "type": {
-            "type": "video"
-          },
-          "name": "output"
-        }
-      ],
-      "recommended_models": [
-        {
-          "id": "Lightricks/LTX-Video-0.9.5",
-          "type": "hf.text_to_video",
-          "name": "Lightricks/LTX-Video-0.9.5",
-          "repo_id": "Lightricks/LTX-Video-0.9.5",
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ]
-        },
-        {
-          "id": "Lightricks/LTX-Video-0.9.1",
-          "type": "hf.text_to_video",
-          "name": "Lightricks/LTX-Video-0.9.1",
-          "repo_id": "Lightricks/LTX-Video-0.9.1",
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ]
-        },
-        {
-          "id": "Lightricks/LTX-Video",
-          "type": "hf.text_to_video",
-          "name": "Lightricks/LTX-Video",
-          "repo_id": "Lightricks/LTX-Video",
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ]
-        }
-      ],
-      "basic_fields": [
-        "input_image",
-        "prompt",
-        "model_variant",
-        "num_frames",
-        "height",
-        "width"
-      ],
-      "input_fields": [
-        "input_image",
-        "prompt",
-        "negative_prompt"
-      ]
-    },
-    {
-      "title": "LTX-2 (Image-to-Video)",
-      "description": "Animates a static image into a video using LTX-2, the newest Lightricks image-to-video model.\n    video, generation, AI, image-to-video, diffusion, LTX2, Lightricks, animation\n\n    Use cases:\n    - Animate images with the latest LTX-2 model for improved quality\n    - Create smooth video transitions from a single reference image\n    - Generate motion-driven video content with extended prompt support\n    - Produce high-fidelity animated clips for creative and commercial use\n    - Build next-generation image animation workflows\n\n    **Note:** LTX-2 uses a Gemma3 text encoder and requires more VRAM than LTX-Video.",
-      "namespace": "huggingface.image_to_video",
-      "node_type": "huggingface.image_to_video.LTX2VideoI2V",
-      "body": "content_card",
-      "properties": [
-        {
-          "name": "input_image",
-          "type": {
-            "type": "image"
-          },
-          "default": {
-            "type": "image",
-            "uri": "",
-            "asset_id": null,
-            "data": null,
-            "metadata": null
-          },
-          "title": "Input Image",
-          "description": "The source image to animate. Image content guides the video's appearance."
-        },
-        {
-          "name": "prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "The scene comes to life with smooth, natural motion, cinematic quality",
-          "title": "Prompt",
-          "description": "Text description guiding how the image should animate and move."
-        },
-        {
-          "name": "negative_prompt",
-          "type": {
-            "type": "str"
-          },
-          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
-          "title": "Negative Prompt",
-          "description": "Describe what to avoid in the generated video."
-        },
-        {
-          "name": "num_frames",
-          "type": {
-            "type": "int"
-          },
-          "default": 121,
-          "title": "Num Frames",
-          "description": "Total frames in the output video. 121 is the default (about 5 seconds at 24fps).",
-          "min": 9,
-          "max": 257
-        },
-        {
-          "name": "guidance_scale",
-          "type": {
-            "type": "float"
-          },
-          "default": 4,
-          "title": "Guidance Scale",
-          "description": "How strongly to follow the prompt. 4.0 is recommended for LTX-2.",
-          "min": 1,
-          "max": 20
-        },
-        {
-          "name": "num_inference_steps",
-          "type": {
-            "type": "int"
-          },
-          "default": 40,
-          "title": "Num Inference Steps",
-          "description": "Denoising steps. 40 is recommended; lower for faster generation.",
-          "min": 1,
-          "max": 100
-        },
-        {
-          "name": "height",
-          "type": {
-            "type": "int"
-          },
-          "default": 512,
-          "title": "Height",
-          "description": "Output video height in pixels.",
-          "min": 64,
-          "max": 1024
-        },
-        {
-          "name": "width",
-          "type": {
-            "type": "int"
-          },
-          "default": 768,
-          "title": "Width",
-          "description": "Output video width in pixels.",
-          "min": 64,
-          "max": 1280
-        },
-        {
-          "name": "frame_rate",
-          "type": {
-            "type": "float"
-          },
-          "default": 24,
-          "title": "Frame Rate",
-          "description": "Frame rate for the output video file.",
-          "min": 1,
-          "max": 60
-        },
-        {
-          "name": "seed",
-          "type": {
-            "type": "int"
-          },
-          "default": -1,
-          "title": "Seed",
-          "description": "Random seed for reproducible generation. Use -1 for random.",
-          "min": -1
-        },
-        {
-          "name": "max_sequence_length",
-          "type": {
-            "type": "int"
-          },
-          "default": 1024,
-          "title": "Max Sequence Length",
-          "description": "Maximum prompt encoding length. LTX-2 supports long prompts up to 1024 tokens.",
-          "min": 64,
-          "max": 2048
-        },
-        {
-          "name": "enable_cpu_offload",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Cpu Offload",
-          "description": "Offload model components to CPU to reduce VRAM usage."
-        },
-        {
-          "name": "enable_vae_slicing",
-          "type": {
-            "type": "bool"
-          },
-          "default": true,
-          "title": "Enable Vae Slicing",
-          "description": "Process VAE in slices to reduce peak memory usage."
-        }
-      ],
-      "outputs": [
-        {
-          "type": {
-            "type": "video"
-          },
-          "name": "output"
-        }
-      ],
-      "recommended_models": [
-        {
-          "id": "Lightricks/LTX-2",
-          "type": "hf.text_to_video",
-          "name": "Lightricks/LTX-2",
-          "repo_id": "Lightricks/LTX-2",
-          "allow_patterns": [
-            "**/*.safetensors",
-            "**/*.json",
-            "**/*.txt",
-            "*.json"
-          ]
-        }
-      ],
-      "basic_fields": [
-        "input_image",
-        "prompt",
-        "num_frames",
-        "height",
-        "width"
-      ],
-      "input_fields": [
-        "input_image",
-        "prompt",
-        "negative_prompt"
-      ]
     }
   ],
   "repo_id": "",
-  "version": "0.7.3"
+  "version": "0.7.4"
 }
