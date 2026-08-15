@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from enum import Enum
+import hashlib
 import os
+import re
 from random import randint
 import asyncio
 from typing import Any, TYPE_CHECKING
@@ -422,23 +424,73 @@ class StableDiffusionXLQuantization(Enum):
     INT4 = "int4"
 
 
+def lora_adapter_name(path: str) -> str:
+    """Derive a safe, unique adapter name for a LoRA file path.
+
+    Adapter names become torch module names, so they may not contain dots,
+    spaces or other special characters. Only the final extension is stripped
+    (``My LoRA v1.2.safetensors`` keeps its ``v1.2`` version) and the remaining
+    characters are sanitized to ``[A-Za-z0-9_]``. A short deterministic hash of
+    the full original path is appended so that two paths that sanitize to the
+    same string never collide, while the same path always yields the same name.
+
+    Args:
+        path: Repository-relative or absolute path of the LoRA file.
+
+    Returns:
+        Adapter name matching ``^[A-Za-z0-9_]+$``.
+    """
+    path = path or ""
+    base_name = os.path.splitext(os.path.basename(path))[0]
+    sanitized = re.sub(r"[^A-Za-z0-9_]", "_", base_name)
+    digest = hashlib.sha256(path.encode("utf-8")).hexdigest()[:8]
+    if not sanitized:
+        sanitized = "lora"
+    return f"{sanitized}_{digest}"
+
+
+def unload_loras(pipeline: Any) -> None:
+    """Remove any LoRA weights previously loaded into ``pipeline``.
+
+    Repeated ``load_lora_weights`` calls stack adapters, so the previously
+    bound set is always cleared before loading the requested one. Not every
+    pipeline implements unloading, hence the guard.
+    """
+    if not hasattr(pipeline, "unload_lora_weights"):
+        return
+    try:
+        pipeline.unload_lora_weights()
+        log.debug("Unloaded previously loaded LoRA weights")
+    except Exception as e:
+        log.warning(f"Failed to unload previous LoRA weights: {e}")
+
+
 async def load_loras(
     pipeline: Any, loras: list[HFLoraSDConfig] | list[HFLoraSDXLConfig]
 ):
+    """Bind exactly the given set of LoRAs to the pipeline.
+
+    Must be called before ``enable_model_cpu_offload()`` installs its hooks,
+    see the note at the call sites.
+    """
     log.debug(f"Loading LoRAs. Total LoRAs provided: {len(loras)}")
     loras = [lora for lora in loras if lora.lora.is_set()]
     log.debug(f"LoRAs after filtering (only set ones): {len(loras)}")
 
-    if len(loras) == 0:
-        log.debug("No LoRAs to load")
-        return
-
     if not hasattr(pipeline, "load_lora_weights") or not hasattr(
         pipeline, "set_adapters"
     ):
-        log.warning(
-            "Skipping LoRA loading because the current pipeline does not support adapters"
-        )
+        if loras:
+            log.warning(
+                "Skipping LoRA loading because the current pipeline does not support adapters"
+            )
+        return
+
+    # Loading stacks on top of whatever is already bound, so always start clean.
+    unload_loras(pipeline)
+
+    if len(loras) == 0:
+        log.debug("No LoRAs to load")
         return
 
     lora_names = []
@@ -456,12 +508,12 @@ async def load_loras(
             raise ValueError(
                 f"Install {lora.lora.repo_id}/{lora.lora.path} LORA to use it (Recommended Models above)"
             )
-        base_name = os.path.basename(lora.lora.path or "").split(".")[0]
+        adapter_name = lora_adapter_name(lora.lora.path or "")
         log.debug(f"LoRA loaded from cache: {cache_path}")
-        log.debug(f"LoRA base name: {base_name}, strength: {lora.strength}")
-        lora_names.append(base_name)
+        log.debug(f"LoRA adapter name: {adapter_name}, strength: {lora.strength}")
+        lora_names.append(adapter_name)
         lora_weights.append(lora.strength)
-        pipeline.load_lora_weights(cache_path, adapter_name=base_name)
+        pipeline.load_lora_weights(cache_path, adapter_name=adapter_name)
 
     log.debug(f"Setting LoRA adapters: names={lora_names}, weights={lora_weights}")
     pipeline.set_adapters(lora_names, adapter_weights=lora_weights)
@@ -863,6 +915,18 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             log.error("Pipeline not initialized")
             raise ValueError("Pipeline not initialized")
 
+        # LoRAs must be bound before enable_model_cpu_offload() installs its
+        # hooks, otherwise the injected weights fall outside the hook's device
+        # accounting and silently have no effect (or cause device mismatches).
+        log.debug(f"LoRAs to load: {len(self.loras)}")
+        await load_loras(self._pipeline, self.loras)
+        self._loaded_adapters = {
+            lora.lora.path
+            for lora in self.loras
+            if lora.lora.is_set() and lora.lora.path
+        }
+        log.debug(f"Total loaded adapters: {len(self._loaded_adapters)}")
+
         log.debug(f"Enable CPU offload: {self.enable_cpu_offload}")
         if self.enable_cpu_offload and hasattr(
             self._pipeline, "enable_model_cpu_offload"
@@ -876,14 +940,6 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         ):
             log.debug("Enabling attention slicing")
             self._pipeline.enable_attention_slicing()
-
-        loras = [
-            lora for lora in self.loras if lora.lora.path not in self._loaded_adapters
-        ]
-        log.debug(f"New LoRAs to load: {len(loras)}")
-        await load_loras(self._pipeline, loras)
-        self._loaded_adapters.update(lora.lora.path for lora in loras if lora.lora.path)
-        log.debug(f"Total loaded adapters: {len(self._loaded_adapters)}")
 
         log.debug("Setting up generator")
         generator = self._setup_generator()
@@ -1479,6 +1535,18 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             log.error("Pipeline not initialized")
             raise ValueError("Pipeline not initialized")
 
+        # LoRAs must be bound before enable_model_cpu_offload() installs its
+        # hooks, otherwise the injected weights fall outside the hook's device
+        # accounting and silently have no effect (or cause device mismatches).
+        log.debug(f"LoRAs to load (XL): {len(self.loras)}")
+        await load_loras(self._pipeline, self.loras)
+        self._loaded_adapters = {
+            lora.lora.path
+            for lora in self.loras
+            if lora.lora.is_set() and lora.lora.path
+        }
+        log.debug(f"Total loaded adapters (XL): {len(self._loaded_adapters)}")
+
         log.debug(f"Enable attention slicing: {self.enable_attention_slicing}")
         if self.enable_attention_slicing and hasattr(
             self._pipeline, "enable_attention_slicing"
@@ -1492,14 +1560,6 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         ):
             log.debug("Enabling model CPU offload (XL)")
             self._pipeline.enable_model_cpu_offload()
-
-        loras = [
-            lora for lora in self.loras if lora.lora.path not in self._loaded_adapters
-        ]
-        log.debug(f"New LoRAs to load (XL): {len(loras)}")
-        await load_loras(self._pipeline, loras)
-        self._loaded_adapters.update(lora.lora.path for lora in loras if lora.lora.path)
-        log.debug(f"Total loaded adapters (XL): {len(self._loaded_adapters)}")
 
         log.debug("Setting up generator (XL)")
         generator = self._setup_generator()
