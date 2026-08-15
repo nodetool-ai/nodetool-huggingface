@@ -43,6 +43,7 @@ from nodetool.huggingface.flux_utils import (
     is_nunchaku_transformer,
 )
 from nodetool.huggingface.local_provider_utils import (
+    _apply_memory_optimizations,
     _detect_cached_variant,
     _ensure_file_cached,
     _get_torch,
@@ -326,9 +327,14 @@ async def load_image_to_image_pipeline(
             variant=await _detect_cached_variant(model_id),
         )
 
-    if not use_cpu_offload:
-        target_device = _resolve_hf_device(context, device or context.device)
-        pipeline.to(target_device)
+    # Place the pipeline within the available VRAM budget. Large DiT pipelines
+    # (Flux, SD3, Qwen-Image-Edit, ...) don't fit on GPUs with less than 24GB
+    # VRAM in full precision, so CPU offload is installed automatically when
+    # the weights exceed the budget instead of moving them wholesale.
+    target_device = _resolve_hf_device(context, device or context.device)
+    use_cpu_offload = _apply_memory_optimizations(
+        pipeline, target_device, force_cpu_offload=use_cpu_offload
+    )
 
     ModelManager.set_model(node_id, cache_key, pipeline)
     return pipeline, use_cpu_offload

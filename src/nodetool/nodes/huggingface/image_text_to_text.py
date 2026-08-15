@@ -688,6 +688,9 @@ class Qwen2_5_VL(BaseQwenVL):
             Qwen2_5_VLForConditionalGeneration,
             self.model.repo_id,
             device_map="auto",
+            # Checkpoint weights are bf16; without a dtype the model
+            # materializes in fp32 and doubles its VRAM footprint.
+            torch_dtype="auto",
         )
         logger.debug(f"Model loaded successfully on device: {self._pipeline.device}")
 
@@ -784,6 +787,9 @@ class Qwen3_VL(BaseQwenVL):
             Qwen3VLForConditionalGeneration,
             self.model.repo_id,
             device_map="auto",
+            # Checkpoint weights are bf16; without a dtype the model
+            # materializes in fp32 and doubles its VRAM footprint.
+            torch_dtype="auto",
             # attn_implementation="sdpa",
         )
         logger.debug(f"Model loaded successfully on device: {self._pipeline.device}")

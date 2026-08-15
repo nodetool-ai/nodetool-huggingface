@@ -292,6 +292,9 @@ class HuggingFacePipelineNode(BaseNode):
                 torch.cuda.synchronize()
                 # Force Python GC to collect any temporary tensors
                 gc.collect()
+                # Return freed blocks to the driver so the next pipeline in a
+                # workflow doesn't see a fragmented, fully-reserved allocator.
+                torch.cuda.empty_cache()
 
             return result
 

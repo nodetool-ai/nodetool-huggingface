@@ -287,11 +287,18 @@ async def load_pipeline(
     def _create_pipeline():
         from transformers import pipeline
 
+        pipeline_kwargs = dict(kwargs)
+        # Honor the requested device on fresh loads (previously only cache
+        # hits were moved); accelerate handles placement when device_map is
+        # given, and transformers rejects passing both.
+        if device and "device_map" not in pipeline_kwargs:
+            pipeline_kwargs["device"] = device
+
         return pipeline(
             normalized_pipeline_task,
             model=model_id,
             torch_dtype=torch_dtype,
-            **kwargs,
+            **pipeline_kwargs,
         )
 
     try:
@@ -343,13 +350,25 @@ async def load_model(
     path: str | None = None,
     skip_cache: bool = False,
     cache_key: str | None = None,
+    device: str | None = None,
     **kwargs: Any,
 ) -> T:
-    """Load a HuggingFace model with optional VRAM recovery."""
+    """Load a HuggingFace model with optional VRAM recovery.
+
+    ``device`` explicitly picks the placement: ``"cpu"`` keeps the weights on
+    the host (callers that install CPU offload hooks afterwards rely on the
+    model never transiting the GPU in full). When omitted, the context device
+    is used. Models loaded with ``device_map`` are never moved — accelerate
+    already dispatched them.
+    """
     if model_id == "":
         raise ValueError("Please select a model")
 
-    target_device = _resolve_hf_device(context, context.device)
+    if device is not None:
+        target_device = device
+    else:
+        target_device = _resolve_hf_device(context, context.device)
+    skip_device_move = device == "cpu" or "device_map" in kwargs
 
     log.info("Loading model %s/%s from %s", model_id, path, target_device)
 
@@ -362,6 +381,8 @@ async def load_model(
     if not skip_cache:
         cached_model = ModelManager.get_model(cache_key)
         if cached_model:
+            if skip_device_move:
+                return cached_model
             return _ensure_model_on_device(cached_model, target_device)
 
     load_kwargs = dict(kwargs)
@@ -394,10 +415,15 @@ async def load_model(
         if path:
             assert cache_path is not None
             if _loads_safetensors_via_pretrained(model_class):
+                nunchaku_kwargs = dict(load_kwargs)
+                if device is not None:
+                    # Nunchaku loads its quantized weights directly onto the
+                    # requested device.
+                    nunchaku_kwargs["device"] = device
                 return model_class.from_pretrained(  # type: ignore[attr-defined]
                     cache_path,
                     torch_dtype=torch_dtype,
-                    **load_kwargs,
+                    **nunchaku_kwargs,
                 )
             if hasattr(model_class, "from_single_file"):
                 return model_class.from_single_file(  # type: ignore
@@ -453,7 +479,8 @@ async def load_model(
             )
             raise
 
-    model = _ensure_model_on_device(model, target_device)
+    if not skip_device_move:
+        model = _ensure_model_on_device(model, target_device)
     if not skip_cache:
         ModelManager.set_model(node_id, cache_key, model)
     return model
@@ -537,7 +564,7 @@ def _enable_pytorch2_attention(pipeline: Any, enabled: bool = True):
         log.info("Scaled dot product attention not available on this pipeline")
 
 
-def _apply_vae_optimizations(pipeline: Any):
+def _apply_vae_optimizations(pipeline: Any, enable_tiling: bool = False):
     """Apply VAE slicing and channels_last layout when available."""
     if pipeline is None:
         return
@@ -553,9 +580,121 @@ def _apply_vae_optimizations(pipeline: Any):
         except Exception as e:
             log.warning("Failed to enable VAE slicing: %s", e)
 
+    if enable_tiling and hasattr(vae, "enable_tiling"):
+        try:
+            vae.enable_tiling()
+            log.debug("Enabled VAE tiling")
+        except Exception as e:
+            log.warning("Failed to enable VAE tiling: %s", e)
+
     try:
         torch = _get_torch()
         vae.to(memory_format=torch.channels_last)
         log.debug("Set VAE to channels_last memory format")
     except Exception as e:
         log.warning("Failed to set VAE channels_last memory format: %s", e)
+
+
+# Activations, latents, text-encoder outputs and the CUDA context all need
+# space beyond the raw weights, so keep this much VRAM free when deciding
+# whether a pipeline fits on the device.
+_VRAM_HEADROOM_GB = 2.0
+
+
+def _cuda_free_vram_gb() -> float:
+    """Free VRAM on the current CUDA device in GiB, 0.0 when CUDA is absent."""
+    try:
+        torch = _get_torch()
+        if not _is_cuda_available():
+            return 0.0
+        free_bytes, _total = torch.cuda.mem_get_info()
+        return free_bytes / (1024**3)
+    except Exception:
+        return 0.0
+
+
+def _pipeline_component_sizes_gb(pipeline: Any) -> list[float]:
+    """Per-component parameter footprints (GiB) of a diffusers pipeline."""
+    sizes: list[float] = []
+    components = getattr(pipeline, "components", None) or {}
+    for component in components.values():
+        parameters = getattr(component, "parameters", None)
+        if not callable(parameters):
+            continue
+        try:
+            size = sum(p.numel() * p.element_size() for p in component.parameters())
+        except Exception:
+            continue
+        if size:
+            sizes.append(size / (1024**3))
+    return sizes
+
+
+def _apply_memory_optimizations(
+    pipeline: Any,
+    device: str,
+    force_cpu_offload: bool = False,
+) -> bool:
+    """Place a freshly loaded pipeline within the available VRAM budget.
+
+    Picks the cheapest strategy that fits: full device placement when the
+    summed weights fit in free VRAM, model-level CPU offload when they don't,
+    or sequential (per-layer) offload when even the largest single component
+    exceeds the budget (e.g. the 23 GiB bf16 Flux transformer on a 16-24 GiB
+    GPU). Returns True when any CPU offload hook was installed, in which case
+    the pipeline must not be moved via ``.to()`` afterwards.
+    """
+    if pipeline is None:
+        return False
+
+    from nodetool.huggingface.memory_utils import has_cpu_offload_enabled
+
+    if has_cpu_offload_enabled(pipeline):
+        # Nunchaku loaders install their own offload strategy; exactly one
+        # strategy may exist per pipeline.
+        _apply_vae_optimizations(pipeline)
+        return True
+
+    if not _is_cuda_available() or not str(device).startswith("cuda"):
+        # On MPS the offloaded weights share unified memory with the device,
+        # so offloading frees nothing; on CPU it is meaningless.
+        _apply_vae_optimizations(pipeline)
+        pipeline.to(device)
+        return False
+
+    sizes = _pipeline_component_sizes_gb(pipeline)
+    total_gb = sum(sizes)
+    largest_gb = max(sizes, default=0.0)
+    budget_gb = max(_cuda_free_vram_gb() - _VRAM_HEADROOM_GB, 0.0)
+
+    if not force_cpu_offload and total_gb <= budget_gb:
+        _apply_vae_optimizations(pipeline)
+        pipeline.to(device)
+        return False
+
+    if largest_gb <= budget_gb and hasattr(pipeline, "enable_model_cpu_offload"):
+        log.info(
+            "Pipeline weights (%.1f GiB) exceed the %.1f GiB VRAM budget; "
+            "enabling model CPU offload",
+            total_gb,
+            budget_gb,
+        )
+        # Tiling keeps the VAE decode within budget at high resolutions.
+        _apply_vae_optimizations(pipeline, enable_tiling=True)
+        pipeline.enable_model_cpu_offload()
+        return True
+
+    if hasattr(pipeline, "enable_sequential_cpu_offload"):
+        log.info(
+            "Largest pipeline component (%.1f GiB) exceeds the %.1f GiB VRAM "
+            "budget; enabling sequential CPU offload",
+            largest_gb,
+            budget_gb,
+        )
+        _apply_vae_optimizations(pipeline, enable_tiling=True)
+        pipeline.enable_sequential_cpu_offload()
+        return True
+
+    _apply_vae_optimizations(pipeline)
+    pipeline.to(device)
+    return False
