@@ -121,10 +121,23 @@ def _require_sepformer() -> Any:
     return SepformerSeparation
 
 
-async def _load_separator(repo_id: str, device: str | None) -> Any:
-    """Load a SepFormer checkpoint on the shared pipeline thread pool."""
+async def _load_separator(node_id: str, repo_id: str, device: str | None) -> Any:
+    """Load a SepFormer checkpoint on the shared pipeline thread pool.
+
+    The result is registered with ``ModelManager``: SepFormer is loaded
+    straight onto the GPU, so an unregistered instance would be rebuilt on
+    every run and could never be offloaded by the VRAM reclaim path, which
+    only knows about cached models.
+    """
     if not repo_id:
         raise ValueError("A model repository id is required")
+
+    from nodetool.ml.core.model_manager import ModelManager
+
+    cache_key = f"{repo_id}_SepformerSeparation_{device or 'default'}"
+    cached = ModelManager.get_model(cache_key)
+    if cached is not None:
+        return cached
 
     separation_cls = _require_sepformer()
     savedir = _speechbrain_savedir(repo_id)
@@ -139,7 +152,9 @@ async def _load_separator(repo_id: str, device: str | None) -> Any:
         )
 
     loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(_pipeline_thread_pool, _load)
+    model = await loop.run_in_executor(_pipeline_thread_pool, _load)
+    ModelManager.set_model(node_id, cache_key, model)
+    return model
 
 
 def _as_numpy(estimated: Any) -> np.ndarray:
@@ -271,7 +286,9 @@ class SpeechSeparation(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
-        self._model = await _load_separator(self.get_model_id(), context.device)
+        self._model = await _load_separator(
+            self.id, self.get_model_id(), context.device
+        )
         self._sample_rate = _sample_rate_from_model(self._model, self.get_model_id())
 
     async def move_to_device(self, device: str):
@@ -362,7 +379,9 @@ class SpeechEnhancement(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
-        self._model = await _load_separator(self.get_model_id(), context.device)
+        self._model = await _load_separator(
+            self.id, self.get_model_id(), context.device
+        )
         self._sample_rate = _sample_rate_from_model(self._model, self.get_model_id())
 
     async def move_to_device(self, device: str):

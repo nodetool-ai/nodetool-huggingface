@@ -28,6 +28,10 @@ from nodetool.huggingface.video_utils import (
     video_from_frames,
     video_from_frames_with_audio,
 )
+from nodetool.huggingface.memory_utils import (
+    apply_cpu_offload_if_needed,
+    move_pipeline_to_device,
+)
 
 if TYPE_CHECKING:
     import torch
@@ -265,7 +269,7 @@ class CogVideoX(HuggingFacePipelineNode):
         # Apply memory optimization settings
         if self._pipeline is not None:
             if self.enable_cpu_offload:
-                self._pipeline.enable_model_cpu_offload()
+                apply_cpu_offload_if_needed(self._pipeline, method="model")
 
             if self.enable_vae_slicing:
                 self._pipeline.vae.enable_slicing()
@@ -275,7 +279,7 @@ class CogVideoX(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None and not self.enable_cpu_offload:
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> VideoRef:
         if self._pipeline is None:
@@ -513,7 +517,7 @@ class Wan_T2V(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None and not self.enable_cpu_offload:
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> VideoRef:
         if self._pipeline is None:
@@ -738,7 +742,7 @@ class LTX2(HuggingFacePipelineNode):
         if self._pipeline is not None and (
             not self.enable_cpu_offload or is_mps_device()
         ):
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     def _schedule_kwargs(self) -> dict[str, Any]:
         """Denoising schedule and guidance. LTX-2.5 replaces this with sigmas."""
@@ -1044,7 +1048,7 @@ class LTXVideo(HuggingFacePipelineNode):
 
         if self._pipeline is not None:
             if self.enable_cpu_offload:
-                self._pipeline.enable_model_cpu_offload()
+                apply_cpu_offload_if_needed(self._pipeline, method="model")
             if self.enable_vae_slicing and hasattr(self._pipeline, "vae"):
                 try:
                     self._pipeline.vae.enable_slicing()
@@ -1058,7 +1062,7 @@ class LTXVideo(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None and not self.enable_cpu_offload:
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> VideoRef:
         if self._pipeline is None:
@@ -1238,7 +1242,7 @@ class LTX2Video(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None and not self.enable_cpu_offload:
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> VideoRef:
         if self._pipeline is None:
@@ -1423,7 +1427,7 @@ class Kandinsky5Video(HuggingFacePipelineNode):
         if self._pipeline is not None and (
             not self.enable_cpu_offload or is_mps_device()
         ):
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> VideoRef:
         if self._pipeline is None:
@@ -1644,7 +1648,7 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
         if self._pipeline is None or self.enable_cpu_offload:
             return
         if hasattr(self._pipeline, "to"):
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     def _geometry(self) -> tuple[int, int, int]:
         """Snapped (width, height, num_frames); 0x0 leaves the canvas to the model."""

@@ -16,6 +16,7 @@ from nodetool.huggingface.flux_utils import (
     flux_variant_to_base_model_id,
 )
 from nodetool.huggingface.local_provider_utils import _get_torch, load_model
+from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
 from nodetool.workflows.memory_utils import log_memory, run_gc, MemoryTracker
 from nodetool.workflows.types import JobUpdate
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
@@ -385,10 +386,12 @@ async def load_nunchaku_qwen_pipeline(
         with MemoryTracker("Building Qwen pipeline from pretrained", run_gc_after=True):
             pipeline = await asyncio.to_thread(_build_pipeline)
 
-        # Exactly one offload strategy must be applied to a pipeline.
+        # Exactly one offload strategy must be applied to a pipeline. Going
+        # through the helper records which one, so callers that later ask for
+        # offload again don't tear this strategy down and replace it.
         if get_gpu_memory() > 18:
             log.info("Enabling model CPU offload")
-            pipeline.enable_model_cpu_offload()
+            apply_cpu_offload_if_needed(pipeline, method="model")
         else:
             log.info("Enabling model per-layer offloading")
             # use per-layer offloading for low VRAM. This only requires 3-4GB of VRAM.
@@ -396,7 +399,7 @@ async def load_nunchaku_qwen_pipeline(
                 True, use_pin_memory=False, num_blocks_on_gpu=20
             )  # increase num_blocks_on_gpu if you have more VRAM
             pipeline._exclude_from_cpu_offload.append("transformer")
-            pipeline.enable_sequential_cpu_offload()
+            apply_cpu_offload_if_needed(pipeline, method="sequential")
 
         if cache_key:
             ModelManager.set_model(node_id, cache_key, pipeline)

@@ -23,6 +23,10 @@ from nodetool.metadata.types import (
 )
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.huggingface.local_provider_utils import pipeline_progress_callback
+from nodetool.huggingface.memory_utils import (
+    apply_cpu_offload_if_needed,
+    move_pipeline_to_device,
+)
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     available_torch_dtype,
     is_mps_device,
@@ -344,7 +348,7 @@ class Text2Image(HuggingFacePipelineNode):
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
             try:
-                self._pipeline.to(device)
+                move_pipeline_to_device(self._pipeline, device)
             except torch.OutOfMemoryError as e:
                 raise ValueError(
                     "VRAM out of memory while moving TextToImage pipeline to device. "
@@ -1083,7 +1087,7 @@ class Chroma(HuggingFacePipelineNode):
                 # When moving to CPU, disable CPU offload and move all components to CPU
                 if device == "cpu":
                     try:
-                        self._pipeline.to(device)
+                        move_pipeline_to_device(self._pipeline, device)
                     except torch.OutOfMemoryError as e:
                         raise ValueError(
                             "VRAM out of memory while moving Chroma pipeline to device. "
@@ -1091,11 +1095,11 @@ class Chroma(HuggingFacePipelineNode):
                         ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
-                    self._pipeline.enable_model_cpu_offload()
+                    apply_cpu_offload_if_needed(self._pipeline, method="model")
             else:
                 # Normal device movement without CPU offload
                 try:
-                    self._pipeline.to(device)
+                    move_pipeline_to_device(self._pipeline, device)
                 except torch.OutOfMemoryError as e:
                     raise ValueError(
                         "VRAM out of memory while moving Chroma pipeline to device. "
@@ -1329,7 +1333,7 @@ class Bria(HuggingFacePipelineNode):
                 # When moving to CPU, disable CPU offload and move all components to CPU
                 if device == "cpu":
                     try:
-                        self._pipeline.to(device)
+                        move_pipeline_to_device(self._pipeline, device)
                     except torch.OutOfMemoryError as e:
                         raise ValueError(
                             "VRAM out of memory while moving Bria pipeline to device. "
@@ -1337,11 +1341,11 @@ class Bria(HuggingFacePipelineNode):
                         ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
-                    self._pipeline.enable_model_cpu_offload()
+                    apply_cpu_offload_if_needed(self._pipeline, method="model")
             else:
                 # Normal device movement without CPU offload
                 try:
-                    self._pipeline.to(device)
+                    move_pipeline_to_device(self._pipeline, device)
                 except torch.OutOfMemoryError as e:
                     raise ValueError(
                         "VRAM out of memory while moving Bria pipeline to device. "
@@ -1522,17 +1526,17 @@ class BriaFibo(HuggingFacePipelineNode):
             # When moving to CPU, disable offload by moving everything to CPU.
             if device == "cpu":
                 try:
-                    self._pipeline.to(device)
+                    move_pipeline_to_device(self._pipeline, device)
                 except torch.OutOfMemoryError as e:
                     raise ValueError(
                         "VRAM out of memory while moving FIBO pipeline to device. "
                         "Reduce image size/steps."
                     ) from e
             elif device in ["cuda", "mps"]:
-                self._pipeline.enable_model_cpu_offload()
+                apply_cpu_offload_if_needed(self._pipeline, method="model")
         else:
             try:
-                self._pipeline.to(device)
+                move_pipeline_to_device(self._pipeline, device)
             except torch.OutOfMemoryError as e:
                 raise ValueError(
                     "VRAM out of memory while moving FIBO pipeline to device. "
@@ -2153,7 +2157,7 @@ class FluxControl(HuggingFacePipelineNode):
                 # When moving to CPU, disable CPU offload and move all components to CPU
                 if device == "cpu":
                     try:
-                        self._pipeline.to(device)
+                        move_pipeline_to_device(self._pipeline, device)
                     except torch.OutOfMemoryError as e:
                         raise ValueError(
                             "VRAM out of memory while moving Flux Control to device. "
@@ -2169,7 +2173,7 @@ class FluxControl(HuggingFacePipelineNode):
             else:
                 # Normal device movement without CPU offload
                 try:
-                    self._pipeline.to(device)
+                    move_pipeline_to_device(self._pipeline, device)
                 except torch.OutOfMemoryError as e:
                     raise ValueError(
                         "VRAM out of memory while moving Flux Control to device. "
@@ -2332,7 +2336,7 @@ class Flux2(HuggingFacePipelineNode):
         if self._pipeline is not None and (
             not self.enable_cpu_offload or is_mps_device()
         ):
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
@@ -2452,7 +2456,7 @@ class Flux2Klein(HuggingFacePipelineNode):
         if self._pipeline is not None and (
             not self.enable_cpu_offload or is_mps_device()
         ):
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
@@ -2578,7 +2582,7 @@ class GlmImage(HuggingFacePipelineNode):
         if self._pipeline is not None and (
             not self.enable_cpu_offload or is_mps_device()
         ):
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
@@ -2710,7 +2714,7 @@ class QwenImageLayered(HuggingFacePipelineNode):
         if self._pipeline is not None and (
             not self.enable_cpu_offload or is_mps_device()
         ):
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
@@ -2848,7 +2852,7 @@ class Kandinsky5Image(HuggingFacePipelineNode):
         if self._pipeline is not None and (
             not self.enable_cpu_offload or is_mps_device()
         ):
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:

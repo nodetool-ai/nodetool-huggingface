@@ -37,6 +37,10 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
 )
 from nodetool.nodes.huggingface.huggingface_node import progress_callback
 from nodetool.huggingface.local_provider_utils import pipeline_progress_callback
+from nodetool.huggingface.memory_utils import (
+    apply_cpu_offload_if_needed,
+    move_pipeline_to_device,
+)
 from nodetool.workflows.processing_context import ProcessingContext
 
 import torch
@@ -330,7 +334,7 @@ class ImageToImage(HuggingFacePipelineNode):
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
             try:
-                self._pipeline.to(device)
+                move_pipeline_to_device(self._pipeline, device)
             except torch.OutOfMemoryError as e:
                 raise ValueError(
                     "VRAM out of memory while moving Qwen Image Edit pipeline to device. "
@@ -967,7 +971,7 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
@@ -1077,11 +1081,11 @@ class StableDiffusionLatentUpscaler(HuggingFacePipelineNode):
         assert self._pipeline is not None
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
-        self._pipeline.to(context.device)
+        move_pipeline_to_device(self._pipeline, context.device)
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> TorchTensor:
         if self._pipeline is None:
@@ -1344,7 +1348,7 @@ class StableDiffusionXLImg2Img(StableDiffusionXLBase):
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         if self.enable_cpu_offload:
-            self._pipeline.enable_model_cpu_offload()
+            apply_cpu_offload_if_needed(self._pipeline, method="model")
         self._set_scheduler(self.scheduler)
         await self._load_ip_adapter()
 
@@ -1501,7 +1505,7 @@ class StableDiffusionXLControlNet(StableDiffusionXLBase):
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
             # Move entire pipeline to device to ensure all components are on the same device
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def preload_model(self, context: ProcessingContext):
         from diffusers.models.controlnets.controlnet import ControlNetModel
@@ -1538,7 +1542,7 @@ class StableDiffusionXLControlNet(StableDiffusionXLBase):
         self._set_scheduler(self.scheduler)
         # Ensure pipeline is on the correct device after loading
         if self._pipeline is not None:
-            self._pipeline.to(context.device)
+            move_pipeline_to_device(self._pipeline, context.device)
 
     class OutputType(TypedDict):
         image: ImageRef | None
@@ -1616,7 +1620,7 @@ class StableDiffusionXLControlNetImg2ImgNode(StableDiffusionXLImg2Img):
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
             # Move entire pipeline to device to ensure all components are on the same device
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def preload_model(self, context: ProcessingContext):
         from diffusers.models.controlnets.controlnet import ControlNetModel
@@ -1651,7 +1655,7 @@ class StableDiffusionXLControlNetImg2ImgNode(StableDiffusionXLImg2Img):
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
         if self._pipeline is not None:
-            self._pipeline.to(context.device)
+            move_pipeline_to_device(self._pipeline, context.device)
 
     class OutputType(TypedDict):
         image: ImageRef | None
@@ -1788,11 +1792,11 @@ class OmniGenNode(HuggingFacePipelineNode):
         _apply_vae_optimizations(self._pipeline)
 
         if self.enable_model_cpu_offload and self._pipeline is not None:
-            self._pipeline.enable_model_cpu_offload()
+            apply_cpu_offload_if_needed(self._pipeline, method="model")
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
@@ -2086,7 +2090,7 @@ class QwenImageEdit(HuggingFacePipelineNode):
         )
         _apply_vae_optimizations(self._pipeline)
         if self.enable_cpu_offload:
-            self._pipeline.enable_model_cpu_offload()
+            apply_cpu_offload_if_needed(self._pipeline, method="model")
 
         if self.enable_memory_efficient_attention:
             self._pipeline.enable_attention_slicing()
@@ -2124,7 +2128,7 @@ class QwenImageEdit(HuggingFacePipelineNode):
         )
         _apply_vae_optimizations(self._pipeline)
         if self.enable_cpu_offload:
-            self._pipeline.enable_model_cpu_offload()
+            apply_cpu_offload_if_needed(self._pipeline, method="model")
         if self.enable_memory_efficient_attention:
             self._pipeline.enable_attention_slicing()
 
@@ -2146,14 +2150,14 @@ class QwenImageEdit(HuggingFacePipelineNode):
             if self.enable_cpu_offload:
                 # When moving to CPU, disable CPU offload and move all components to CPU
                 if device == "cpu":
-                    self._pipeline.to(device)
+                    move_pipeline_to_device(self._pipeline, device)
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
-                    self._pipeline.enable_model_cpu_offload()
+                    apply_cpu_offload_if_needed(self._pipeline, method="model")
             else:
                 # Normal device movement without CPU offload
                 try:
-                    self._pipeline.to(device)
+                    move_pipeline_to_device(self._pipeline, device)
                 except torch.OutOfMemoryError as e:
                     raise ValueError(
                         "VRAM out of memory while moving Qwen Image Edit pipeline to device. "
@@ -2411,7 +2415,7 @@ class FluxFill(HuggingFacePipelineNode):
                 if device == "cpu":
                     # Disable CPU offload and move all components to CPU
                     try:
-                        self._pipeline.to(device)
+                        move_pipeline_to_device(self._pipeline, device)
                     except torch.OutOfMemoryError as e:
                         raise ValueError(
                             "VRAM out of memory while moving Flux Fill to device. "
@@ -2427,7 +2431,7 @@ class FluxFill(HuggingFacePipelineNode):
             else:
                 # Normal device movement without CPU offload
                 try:
-                    self._pipeline.to(device)
+                    move_pipeline_to_device(self._pipeline, device)
                 except torch.OutOfMemoryError as e:
                     raise ValueError(
                         "VRAM out of memory while moving Flux Fill to device. "
@@ -2713,7 +2717,7 @@ class FluxKontext(HuggingFacePipelineNode):
         # Apply CPU offload if enabled
         _enable_pytorch2_attention(self._pipeline)
         if self._pipeline is not None and self.enable_cpu_offload:
-            self._pipeline.enable_model_cpu_offload()
+            apply_cpu_offload_if_needed(self._pipeline, method="model")
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:
@@ -2721,14 +2725,14 @@ class FluxKontext(HuggingFacePipelineNode):
             if self.enable_cpu_offload:
                 # When moving to CPU, disable CPU offload and move all components to CPU
                 if device == "cpu":
-                    self._pipeline.to(device)
+                    move_pipeline_to_device(self._pipeline, device)
                 # When moving to GPU with CPU offload, re-enable CPU offload
                 elif device in ["cuda", "mps"]:
-                    self._pipeline.enable_model_cpu_offload()
+                    apply_cpu_offload_if_needed(self._pipeline, method="model")
             else:
                 # Normal device movement without CPU offload
                 try:
-                    self._pipeline.to(device)
+                    move_pipeline_to_device(self._pipeline, device)
                 except torch.OutOfMemoryError as e:
                     raise ValueError(
                         "VRAM out of memory while moving Flux Kontext to device. "

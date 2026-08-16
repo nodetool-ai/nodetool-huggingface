@@ -18,6 +18,7 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
     maybe_enable_cpu_offload,
 )
 from nodetool.workflows.processing_context import ProcessingContext
+from nodetool.huggingface.memory_utils import move_pipeline_to_device
 from nodetool.workflows.memory_utils import run_gc
 from nodetool.workflows.types import NodeProgress
 
@@ -220,7 +221,7 @@ class MusicLDM(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline:
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> AudioRef:
         assert self._pipeline is not None, "Pipeline not initialized"
@@ -748,7 +749,7 @@ class AceStep(HuggingFacePipelineNode):
         if self._pipeline is not None and (
             not self.enable_cpu_offload or is_mps_device()
         ):
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> AudioRef:
         if self._pipeline is None:
@@ -896,7 +897,7 @@ class AceStepTaskBaseNode(HuggingFacePipelineNode):
         if self._pipeline is not None and (
             not self.enable_cpu_offload or is_mps_device()
         ):
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def _audio_to_tensor(
         self, context: ProcessingContext, audio: AudioRef
@@ -1315,7 +1316,7 @@ class LongCatAudioDiT(HuggingFacePipelineNode):
         if self._pipeline is not None and (
             not self.enable_cpu_offload or is_mps_device()
         ):
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> AudioRef:
         if self._pipeline is None:

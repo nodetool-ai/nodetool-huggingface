@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import os
+from contextlib import suppress
 from pathlib import Path
 from typing import Any, TypeVar, TYPE_CHECKING
 
@@ -147,8 +148,24 @@ async def _ensure_file_cached(
 
 
 def _ensure_model_on_device(model: Any, device: str | None) -> Any:
-    """Move HF pipelines/models onto the requested device when possible."""
+    """Move HF pipelines/models onto the requested device when possible.
+
+    Cached pipelines may carry CPU offload hooks installed by
+    ``_apply_memory_optimizations`` because their weights did not fit in VRAM.
+    Moving those onto the GPU wholesale would undo the offload on every cache
+    hit, so the move is skipped for them.
+    """
     if not device:
+        return model
+
+    from nodetool.huggingface.memory_utils import offload_kind
+
+    if str(device) != "cpu" and offload_kind(model) is not None:
+        log.debug(
+            "Keeping %s under CPU offload instead of moving it to %s",
+            model.__class__.__name__,
+            device,
+        )
         return model
 
     move_fn = getattr(model, "to", None)
@@ -183,6 +200,47 @@ def _is_vram_error(exc: Exception) -> bool:
     return any(indicator in error_msg for indicator in vram_indicators)
 
 
+def _reclaim_vram_before_load(label: str) -> None:
+    """Offload least-recently-used cached models when VRAM is already tight.
+
+    Nothing trims the model cache between workflow runs, so without this the
+    only reclaim ever attempted happens *after* a load has already raised OOM.
+    Asking first turns that into an eviction of cold models before the new
+    weights are allocated. ``free_vram_if_needed`` is a no-op when the device
+    is below its pressure threshold, is throttled by its own cooldown, and only
+    moves models to CPU, so a cache hit later still finds them.
+    """
+    try:
+        ModelManager.free_vram_if_needed(reason=f"Preparing to load {label}")
+    except Exception as exc:  # pragma: no cover - reclaim must never block a load
+        log.debug("Proactive VRAM reclaim failed for %s: %s", label, exc)
+
+
+def _release_exception(exc: BaseException) -> None:
+    """Drop an exception's traceback and cause chain, then collect.
+
+    A caught exception keeps every frame of the failed call alive through
+    ``__traceback__``. When the failure was an OOM during model loading, those
+    frames still hold the half-materialised GPU tensors, so any
+    ``empty_cache()``/offload attempt made while the exception is reachable
+    frees nothing. Callers that recover in-place must call this first.
+    """
+    import gc
+
+    exc.__traceback__ = None
+    exc.__cause__ = None
+    exc.__context__ = None
+    gc.collect()
+
+    try:
+        import torch
+
+        if hasattr(torch, "cuda") and torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:  # pragma: no cover - torch optional / CUDA absent
+        pass
+
+
 def _quantization_cache_suffix(kwargs: dict[str, Any]) -> str:
     """Derive a cache-key suffix from any quantization config in the load kwargs.
 
@@ -203,6 +261,52 @@ def _quantization_cache_suffix(kwargs: dict[str, Any]) -> str:
     return "_" + hashlib.sha1(marker.encode("utf-8")).hexdigest()[:8]
 
 
+#: Component kwargs that swap out a pipeline's heavy weights. Two loads that
+#: differ only in one of these produce genuinely different pipelines and must
+#: not share a cache entry.
+_COMPONENT_KWARGS = (
+    "unet",
+    "transformer",
+    "text_encoder",
+    "text_encoder_2",
+    "text_encoder_3",
+    "vae",
+)
+
+
+def _component_identity(component: Any) -> str:
+    """Stable identity for a pre-built pipeline component.
+
+    Components loaded through :func:`load_model` carry the cache key they were
+    stored under, which already encodes repo, class, path and quantization.
+    That is the only discriminator fine-grained enough to tell, say, an INT4
+    Nunchaku UNet from an FP4 one — both share a class name.
+    """
+    marker = getattr(component, "_nodetool_cache_key", None)
+    if isinstance(marker, str) and marker:
+        return marker
+    return f"{component.__class__.__name__}:{id(component):x}"
+
+
+def _component_cache_suffix(kwargs: dict[str, Any]) -> str:
+    """Derive a cache-key suffix from pre-built component kwargs.
+
+    Without it a pipeline assembled with a quantized transformer collides with
+    the full-precision pipeline for the same base repo: the second load returns
+    the first one's pipeline and the freshly loaded transformer is stranded on
+    the GPU with nothing referencing it.
+    """
+    parts = [
+        f"{name}={_component_identity(kwargs[name])}"
+        for name in _COMPONENT_KWARGS
+        if kwargs.get(name) is not None
+    ]
+    if not parts:
+        return ""
+    digest = hashlib.sha1("|".join(parts).encode("utf-8")).hexdigest()[:8]
+    return f"_c{digest}"
+
+
 def _normalize_pipeline_task(pipeline_task: str) -> str:
     """Map legacy/NodeTool task names to the task names supported by installed transformers."""
     task = pipeline_task.strip().lower()
@@ -220,6 +324,7 @@ async def load_pipeline(
     torch_dtype: "torch.dtype" | None = None,
     skip_cache: bool = False,
     cache_key: str | None = None,
+    cache_key_suffix: str = "",
     **kwargs: Any,
 ):
     """Load a HuggingFace pipeline model with optional VRAM recovery."""
@@ -232,6 +337,9 @@ async def load_pipeline(
         cache_key = (
             f"{model_id}_{normalized_pipeline_task}{_quantization_cache_suffix(kwargs)}"
         )
+    # Applied to explicit keys too: a caller that hands in its own key still
+    # must not share an entry with an adapter-carrying variant of the same model.
+    cache_key += cache_key_suffix
 
     if not skip_cache:
         cached_model = ModelManager.get_model(cache_key)
@@ -301,16 +409,26 @@ async def load_pipeline(
             **pipeline_kwargs,
         )
 
+    _reclaim_vram_before_load(f"pipeline {model_id}")
+
+    vram_error: str | None = None
+    model = None
     try:
         model = _create_pipeline()
     except (ValueError, RuntimeError) as exc:
         if not _is_vram_error(exc):
             raise
+        # Release the traceback before retrying: its frames still reference the
+        # partially loaded weights, so freeing VRAM while the exception is live
+        # would leave the failed attempt resident and the retry would OOM again.
+        vram_error = str(exc)
+        _release_exception(exc)
 
+    if vram_error is not None:
         log.warning(
             "VRAM error while loading pipeline %s: %s. Attempting to free cached models and retry...",
             model_id,
-            exc,
+            vram_error,
         )
         context.post_message(
             JobUpdate(
@@ -350,6 +468,7 @@ async def load_model(
     path: str | None = None,
     skip_cache: bool = False,
     cache_key: str | None = None,
+    cache_key_suffix: str = "",
     device: str | None = None,
     **kwargs: Any,
 ) -> T:
@@ -375,8 +494,9 @@ async def load_model(
     if cache_key is None:
         cache_key = (
             f"{model_id}_{model_class.__name__}_{path}"
-            f"{_quantization_cache_suffix(kwargs)}"
+            f"{_quantization_cache_suffix(kwargs)}{_component_cache_suffix(kwargs)}"
         )
+    cache_key += cache_key_suffix
 
     if not skip_cache:
         cached_model = ModelManager.get_model(cache_key)
@@ -445,16 +565,25 @@ async def load_model(
             **load_kwargs,
         )
 
+    _reclaim_vram_before_load(f"model {model_id}")
+
+    vram_error: str | None = None
+    model = None
     try:
         model = await asyncio.to_thread(_load_sync)
     except (ValueError, RuntimeError) as exc:
         if not _is_vram_error(exc):
             raise
+        # See the note in load_pipeline: the traceback pins the failed load's
+        # GPU tensors, so drop it before trying to reclaim VRAM.
+        vram_error = str(exc)
+        _release_exception(exc)
 
+    if vram_error is not None:
         log.warning(
             "VRAM error while loading model %s: %s. Attempting to free cached models and retry...",
             model_id,
-            exc,
+            vram_error,
         )
         context.post_message(
             JobUpdate(
@@ -481,6 +610,11 @@ async def load_model(
 
     if not skip_device_move:
         model = _ensure_model_on_device(model, target_device)
+    # Record the key even when the cache is skipped: callers embed this model
+    # into pipelines, and _component_cache_suffix uses the marker to keep those
+    # pipelines' cache entries distinct.
+    with suppress(AttributeError):
+        model._nodetool_cache_key = cache_key  # type: ignore[attr-defined]
     if not skip_cache:
         ModelManager.set_model(node_id, cache_key, model)
     return model
@@ -647,7 +781,10 @@ def _apply_memory_optimizations(
     if pipeline is None:
         return False
 
-    from nodetool.huggingface.memory_utils import has_cpu_offload_enabled
+    from nodetool.huggingface.memory_utils import (
+        apply_cpu_offload_if_needed,
+        has_cpu_offload_enabled,
+    )
 
     if has_cpu_offload_enabled(pipeline):
         # Nunchaku loaders install their own offload strategy; exactly one
@@ -681,7 +818,7 @@ def _apply_memory_optimizations(
         )
         # Tiling keeps the VAE decode within budget at high resolutions.
         _apply_vae_optimizations(pipeline, enable_tiling=True)
-        pipeline.enable_model_cpu_offload()
+        apply_cpu_offload_if_needed(pipeline, method="model")
         return True
 
     if hasattr(pipeline, "enable_sequential_cpu_offload"):
@@ -692,7 +829,7 @@ def _apply_memory_optimizations(
             budget_gb,
         )
         _apply_vae_optimizations(pipeline, enable_tiling=True)
-        pipeline.enable_sequential_cpu_offload()
+        apply_cpu_offload_if_needed(pipeline, method="sequential")
         return True
 
     _apply_vae_optimizations(pipeline)

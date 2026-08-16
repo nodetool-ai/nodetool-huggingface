@@ -163,6 +163,77 @@ async def test_pipeline_without_unload_support_still_loads(fake_cache):
     assert [c[0] for c in pipeline.calls] == ["load", "set"]
 
 
+@pytest.mark.asyncio
+async def test_identical_set_is_not_rebound(fake_cache):
+    """Cached pipelines are reused across runs; re-binding the same set is wasted work."""
+    pipeline = MockPipeline()
+    loras = [make_lora("a.safetensors")]
+
+    await load_loras(pipeline, loras)
+    calls_after_first = list(pipeline.calls)
+    await load_loras(pipeline, loras)
+
+    assert pipeline.calls == calls_after_first
+    assert pipeline.active == [lora_adapter_name("a.safetensors")]
+
+
+@pytest.mark.asyncio
+async def test_changed_strength_forces_rebind(fake_cache):
+    """Strength is part of the bound state, so a change must re-apply the adapters."""
+    pipeline = MockPipeline()
+
+    await load_loras(pipeline, [make_lora("a.safetensors", strength=0.5)])
+    await load_loras(pipeline, [make_lora("a.safetensors", strength=0.9)])
+
+    assert [c[0] for c in pipeline.calls] == [
+        "unload",
+        "load",
+        "set",
+        "unload",
+        "load",
+        "set",
+    ]
+
+
+def test_adapter_cache_suffix_distinguishes_configurations():
+    """The suffix keeps adapter-carrying pipelines in their own cache entries."""
+    from nodetool.metadata.types import HFIPAdapter
+    from nodetool.nodes.huggingface.stable_diffusion_base import adapter_cache_suffix
+
+    plain = adapter_cache_suffix([], None)
+    with_lora = adapter_cache_suffix([make_lora("a.safetensors")], None)
+    other_lora = adapter_cache_suffix([make_lora("b.safetensors")], None)
+    other_strength = adapter_cache_suffix(
+        [make_lora("a.safetensors", strength=0.3)], None
+    )
+    with_ip = adapter_cache_suffix(
+        [],
+        HFIPAdapter(repo_id="h94/IP-Adapter", path="models/ip-adapter_sd15.bin"),
+    )
+
+    assert plain == ""
+    assert len({with_lora, other_lora, other_strength, with_ip}) == 4
+
+
+def test_adapter_cache_suffix_ignores_lora_order():
+    """The bound set is what matters, not the order it was listed in."""
+    from nodetool.nodes.huggingface.stable_diffusion_base import adapter_cache_suffix
+
+    a, b = make_lora("a.safetensors"), make_lora("b.safetensors")
+    assert adapter_cache_suffix([a, b], None) == adapter_cache_suffix([b, a], None)
+
+
+def test_adapter_cache_suffix_skips_unset_loras():
+    """An unset LoRA slot leaves the pipeline unmodified, so it must not split the cache."""
+    from nodetool.nodes.huggingface.stable_diffusion_base import adapter_cache_suffix
+
+    unset = SimpleNamespace(
+        lora=SimpleNamespace(repo_id="", path="", is_set=lambda: False),
+        strength=1.0,
+    )
+    assert adapter_cache_suffix([unset], None) == ""
+
+
 def test_unload_loras_swallows_errors():
     class Failing:
         def unload_lora_weights(self):
