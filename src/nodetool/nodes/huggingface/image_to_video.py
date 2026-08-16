@@ -18,6 +18,10 @@ from nodetool.metadata.types import (
 from nodetool.workflows.types import NodeProgress
 from nodetool.workflows.memory_utils import run_gc
 from nodetool.huggingface.video_utils import video_from_frames
+from nodetool.huggingface.memory_utils import (
+    apply_cpu_offload_if_needed,
+    move_pipeline_to_device,
+)
 from .huggingface_pipeline import HuggingFacePipelineNode
 
 if TYPE_CHECKING:
@@ -248,7 +252,7 @@ class Wan_I2V(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None and not self.enable_cpu_offload:
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> VideoRef:
         if self._pipeline is None:
@@ -438,7 +442,7 @@ class Wan_FLF2V(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None and not self.enable_cpu_offload:
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> VideoRef:
         if self._pipeline is None:
@@ -635,7 +639,7 @@ class LTXVideoI2V(HuggingFacePipelineNode):
 
         if self._pipeline is not None:
             if self.enable_cpu_offload:
-                self._pipeline.enable_model_cpu_offload()
+                apply_cpu_offload_if_needed(self._pipeline, method="model")
             if self.enable_vae_slicing and hasattr(self._pipeline, "vae"):
                 try:
                     self._pipeline.vae.enable_slicing()
@@ -649,7 +653,7 @@ class LTXVideoI2V(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None and not self.enable_cpu_offload:
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> VideoRef:
         if self._pipeline is None:
@@ -839,7 +843,7 @@ class LTX2VideoI2V(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None and not self.enable_cpu_offload:
-            self._pipeline.to(device)
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> VideoRef:
         if self._pipeline is None:

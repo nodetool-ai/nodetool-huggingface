@@ -11,6 +11,7 @@ from nodetool.nodes.huggingface.huggingface_node import (
 from nodetool.workflows.processing_context import ProcessingContext
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 from nodetool.huggingface.local_provider_utils import load_model, load_pipeline
+from nodetool.huggingface.memory_utils import move_pipeline_to_device
 
 if TYPE_CHECKING:
     import torch
@@ -23,7 +24,9 @@ log = get_logger(__name__)
 
 # Shared thread pool for all HF pipeline operations to minimize CUDA memory pool fragmentation
 # Using a single thread ensures consistent CUDA memory pool usage
-_pipeline_thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="hf_pipeline")
+_pipeline_thread_pool = concurrent.futures.ThreadPoolExecutor(
+    max_workers=1, thread_name_prefix="hf_pipeline"
+)
 
 
 def select_inference_dtype() -> "torch.dtype":
@@ -226,6 +229,18 @@ class HuggingFacePipelineNode(BaseNode):
     def should_skip_cache(self):
         return False
 
+    def model_cache_suffix(self) -> str:
+        """Extra discriminator appended to derived model cache keys.
+
+        Nodes that mutate a pipeline after loading it — binding LoRA adapters
+        or an IP-Adapter — must not share a cache entry with an unmodified
+        pipeline for the same repo. Returning a suffix here keeps those
+        variants distinct *and* keeps them registered with ``ModelManager``,
+        which is what lets the VRAM reclaim path offload them under pressure.
+        Skipping the cache instead would make the weights unreclaimable.
+        """
+        return ""
+
     async def load_pipeline(
         self,
         context: ProcessingContext,
@@ -242,6 +257,7 @@ class HuggingFacePipelineNode(BaseNode):
             model_id,
             skip_cache=self.should_skip_cache(),
             cache_key=cache_key,
+            cache_key_suffix=self.model_cache_suffix(),
             **kwargs,
         )
 
@@ -262,12 +278,13 @@ class HuggingFacePipelineNode(BaseNode):
             model_id,
             skip_cache=skip_cache or self.should_skip_cache(),
             cache_key=cache_key,
+            cache_key_suffix=self.model_cache_suffix(),
             **kwargs,
         )
 
     async def move_to_device(self, device: str):
-        if self._pipeline is not None and hasattr(self._pipeline, "to"):
-            self._pipeline.to(device)
+        if self._pipeline is not None:
+            move_pipeline_to_device(self._pipeline, device)
 
     async def run_pipeline_in_thread(self, *args: Any, **kwargs: Any) -> Any:
         """

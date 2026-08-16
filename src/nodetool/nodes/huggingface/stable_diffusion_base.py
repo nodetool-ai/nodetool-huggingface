@@ -32,6 +32,10 @@ from nodetool.metadata.types import (
 
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.huggingface.local_provider_utils import _apply_vae_optimizations
+from nodetool.huggingface.memory_utils import (
+    apply_cpu_offload_if_needed,
+    move_pipeline_to_device,
+)
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import NodeProgress
 
@@ -449,6 +453,36 @@ def lora_adapter_name(path: str) -> str:
     return f"{sanitized}_{digest}"
 
 
+def adapter_cache_suffix(
+    loras: list[Any],
+    ip_adapter: HFIPAdapter | None = None,
+) -> str:
+    """Cache-key suffix identifying the adapters bound to a pipeline.
+
+    LoRA weights and IP-Adapters are fused into the pipeline after loading, so
+    a pipeline carrying them is not interchangeable with a plain one for the
+    same repo. Encoding them in the cache key keeps the variants apart while
+    still registering each with ``ModelManager`` — the alternative (skipping
+    the cache) builds a fresh multi-GB pipeline on every run and leaves it
+    invisible to the VRAM reclaim path, which cannot offload what it cannot
+    see.
+    """
+    parts: list[str] = []
+    for lora in loras or []:
+        model = getattr(lora, "lora", None)
+        if model is None or not model.is_set():
+            continue
+        parts.append(f"lora:{model.repo_id}/{model.path}@{lora.strength}")
+    parts.sort()
+
+    if ip_adapter is not None and ip_adapter.repo_id:
+        parts.append(f"ip:{ip_adapter.repo_id}/{ip_adapter.path}")
+
+    if not parts:
+        return ""
+    return "_a" + hashlib.sha1("|".join(parts).encode("utf-8")).hexdigest()[:8]
+
+
 def unload_loras(pipeline: Any) -> None:
     """Remove any LoRA weights previously loaded into ``pipeline``.
 
@@ -463,6 +497,8 @@ def unload_loras(pipeline: Any) -> None:
         log.debug("Unloaded previously loaded LoRA weights")
     except Exception as e:
         log.warning(f"Failed to unload previous LoRA weights: {e}")
+    finally:
+        pipeline._nodetool_bound_loras = None
 
 
 async def load_loras(
@@ -484,6 +520,14 @@ async def load_loras(
             log.warning(
                 "Skipping LoRA loading because the current pipeline does not support adapters"
             )
+        return
+
+    # Cached pipelines are reused across runs, so the requested set is often
+    # already bound. Re-binding would unload and re-inject every adapter for
+    # no change in behaviour.
+    requested = adapter_cache_suffix(loras)
+    if requested and getattr(pipeline, "_nodetool_bound_loras", None) == requested:
+        log.debug("LoRA adapters already bound to this pipeline; skipping reload")
         return
 
     # Loading stacks on top of whatever is already bound, so always start clean.
@@ -517,6 +561,7 @@ async def load_loras(
 
     log.debug(f"Setting LoRA adapters: names={lora_names}, weights={lora_weights}")
     pipeline.set_adapters(lora_names, adapter_weights=lora_weights)
+    pipeline._nodetool_bound_loras = requested
     log.debug("LoRA loading completed successfully")
 
 
@@ -803,12 +848,9 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             f"Pre-process complete. Model: {self.model.repo_id}, Seed: {self.seed}"
         )
 
-    def should_skip_cache(self):
-        if self.ip_adapter_model.repo_id != "":
-            return True
-        if len(self.loras) > 0:
-            return True
-        return False
+    def model_cache_suffix(self) -> str:
+        """Keep LoRA/IP-Adapter variants in distinct — but still cached — entries."""
+        return adapter_cache_suffix(self.loras, self.ip_adapter_model)
 
     async def _load_ip_adapter(self):
         log.debug("Checking IP Adapter configuration")
@@ -851,11 +893,18 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             log.debug(f"IP Adapter cache path: {cache_path}")
             log.debug(f"IP Adapter subfolder: {subfolder}")
             log.debug(f"IP Adapter weight name: {weight_name}")
+            # Cached pipelines keep their adapter across runs; loading again
+            # would stack a second copy of the image encoder in VRAM.
+            marker = f"{self.ip_adapter_model.repo_id}/{self.ip_adapter_model.path}"
+            if getattr(self._pipeline, "_nodetool_bound_ip_adapter", None) == marker:
+                log.debug("IP Adapter already bound to this pipeline; skipping")
+                return
             self._pipeline.load_ip_adapter(
                 self.ip_adapter_model.repo_id,
                 subfolder=subfolder,
                 weight_name=weight_name,
             )
+            self._pipeline._nodetool_bound_ip_adapter = marker
             log.debug("IP Adapter loaded successfully")
         else:
             log.debug("No IP Adapter model configured")
@@ -875,12 +924,15 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         log.debug(f"Moving pipeline to device: {device}")
-        if self._pipeline is not None:
-            log.debug("Pipeline found, moving to device")
-            self._pipeline.to(device)
+        if self._pipeline is None:
+            log.debug("No pipeline to move to device")
+            return
+        # A pipeline whose weights did not fit in VRAM carries CPU offload
+        # hooks; moving it onto the GPU wholesale would undo that.
+        if move_pipeline_to_device(self._pipeline, device):
             log.debug(f"Pipeline moved to device: {device}")
         else:
-            log.debug("No pipeline to move to device")
+            log.debug("Pipeline left under CPU offload")
 
     def _setup_generator(self):
         import torch
@@ -940,8 +992,9 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         if self.enable_cpu_offload and hasattr(
             self._pipeline, "enable_model_cpu_offload"
         ):
-            log.debug("Enabling model CPU offload")
-            self._pipeline.enable_model_cpu_offload()
+            # run_pipeline runs on every process() call, so this must not
+            # re-install the hooks on an already-offloaded cached pipeline.
+            apply_cpu_offload_if_needed(self._pipeline, method="model")
 
         log.debug(f"Enable attention slicing: {self.enable_attention_slicing}")
         if self.enable_attention_slicing and hasattr(
@@ -1255,12 +1308,9 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             f"Pre-process complete. Model: {self.model.repo_id}, Seed: {self.seed}"
         )
 
-    def should_skip_cache(self):
-        if self.ip_adapter_model.repo_id != "":
-            return True
-        if len(self.loras) > 0:
-            return True
-        return False
+    def model_cache_suffix(self) -> str:
+        """Keep LoRA/IP-Adapter variants in distinct — but still cached — entries."""
+        return adapter_cache_suffix(self.loras, self.ip_adapter_model)
 
     def _resolve_effective_quantization(self) -> StableDiffusionXLQuantization:
         quantization = self.quantization
@@ -1464,11 +1514,18 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             log.debug(f"IP Adapter cache path: {cache_path}")
             log.debug(f"IP Adapter subfolder: {subfolder}")
             log.debug(f"IP Adapter weight name: {weight_name}")
+            # Cached pipelines keep their adapter across runs; loading again
+            # would stack a second copy of the image encoder in VRAM.
+            marker = f"{self.ip_adapter_model.repo_id}/{self.ip_adapter_model.path}"
+            if getattr(self._pipeline, "_nodetool_bound_ip_adapter", None) == marker:
+                log.debug("IP Adapter already bound to this pipeline; skipping")
+                return
             self._pipeline.load_ip_adapter(
                 self.ip_adapter_model.repo_id,
                 subfolder=subfolder,
                 weight_name=weight_name,
             )
+            self._pipeline._nodetool_bound_ip_adapter = marker
             log.debug("IP Adapter loaded successfully (XL)")
         else:
             log.debug("No IP Adapter model configured (XL)")
@@ -1500,12 +1557,15 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
 
     async def move_to_device(self, device: str):
         log.debug(f"Moving pipeline to device: {device}")
-        if self._pipeline is not None:
-            log.debug("Pipeline found, moving to device")
-            self._pipeline.to(device)
+        if self._pipeline is None:
+            log.debug("No pipeline to move to device")
+            return
+        # A pipeline whose weights did not fit in VRAM carries CPU offload
+        # hooks; moving it onto the GPU wholesale would undo that.
+        if move_pipeline_to_device(self._pipeline, device):
             log.debug(f"Pipeline moved to device: {device}")
         else:
-            log.debug("No pipeline to move to device")
+            log.debug("Pipeline left under CPU offload")
 
     def _setup_generator(self):
         import torch
@@ -1567,8 +1627,8 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         if self.enable_cpu_offload and hasattr(
             self._pipeline, "enable_model_cpu_offload"
         ):
-            log.debug("Enabling model CPU offload (XL)")
-            self._pipeline.enable_model_cpu_offload()
+            # Same as the SD base: idempotent, this runs per process() call.
+            apply_cpu_offload_if_needed(self._pipeline, method="model")
 
         log.debug("Setting up generator (XL)")
         generator = self._setup_generator()

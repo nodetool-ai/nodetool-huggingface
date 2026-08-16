@@ -228,6 +228,18 @@ class Whisper(HuggingFacePipelineNode):
         logger.info("Initializing Whisper model...")
         import torch
         from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor
+        from nodetool.ml.core.model_manager import ModelManager
+
+        pipeline_task = "automatic-speech-recognition"
+        pipeline_cache_key = f"{self.model.repo_id}_{pipeline_task}"
+
+        # Short-circuit on a cached pipeline: it already owns the model and the
+        # processor, so rebuilding them would briefly duplicate the weights.
+        cached_pipeline = ModelManager.get_model(pipeline_cache_key)
+        if cached_pipeline is not None:
+            self._pipeline = cached_pipeline
+            logger.info("Reusing cached Whisper pipeline.")
+            return
 
         torch_dtype = torch.float16 if _is_cuda_available() else torch.float32
 
@@ -237,6 +249,10 @@ class Whisper(HuggingFacePipelineNode):
             mem_before = torch.cuda.memory_allocated() / 1024 / 1024
             logger.info("[VRAM DEBUG] preload_model START: %.1fMB", mem_before)
 
+        # The pipeline below is what gets cached, and it holds this model. A
+        # second cache entry for the same weights makes the VRAM reclaim path
+        # count them twice, so it stops offloading believing it freed double
+        # what it actually did.
         model = await self.load_model(
             context=context,
             model_class=AutoModelForSpeechSeq2Seq,
@@ -245,6 +261,7 @@ class Whisper(HuggingFacePipelineNode):
             low_cpu_mem_usage=True,
             use_safetensors=True,
             torch_dtype=torch_dtype,
+            skip_cache=True,
         )
 
         if torch.cuda.is_available():
@@ -269,13 +286,11 @@ class Whisper(HuggingFacePipelineNode):
 
         # Whisper handles both transcription and translation through the ASR
         # pipeline; translation is selected via generate_kwargs["task"].
-        pipeline_task = "automatic-speech-recognition"
-
         self._pipeline = await self.load_pipeline(
             context=context,
             pipeline_task=pipeline_task,
             model_id=model,
-            cache_key=f"{self.model.repo_id}_{pipeline_task}",
+            cache_key=pipeline_cache_key,
             tokenizer=processor.tokenizer,
             feature_extractor=processor.feature_extractor,
             torch_dtype=torch_dtype,
