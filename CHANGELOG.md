@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.5] - 2026-08-16
+
+### Fixed
+
+- Six related VRAM leaks that let GPU memory grow until a workflow OOMed:
+  - `offload_kind()` now recognizes both `AlignDevicesHook` and `CpuOffload`,
+    so model-level offload is no longer reported as "no offload" and a second
+    strategy can't be stacked on the first
+  - Offload is no longer torn down and rebuilt on every `process()` call —
+    all call sites route through `apply_cpu_offload_if_needed()`, a no-op when
+    a strategy is already installed
+  - Moves to an accelerator go through `move_pipeline_to_device()`, which skips
+    the move for offloaded pipelines instead of pulling their weights back onto
+    the GPU
+  - LoRA/IP-Adapter pipelines are visible to VRAM management again:
+    `should_skip_cache()` is replaced by `model_cache_suffix()`, keeping adapter
+    variants in distinct but still `ModelManager`-registered cache entries, and
+    re-binding an already-bound adapter set is skipped
+  - OOM retries release the traceback before reclaiming, so the failed load's
+    GPU tensors are actually freed
+  - Cache keys include component identity, so an SDXL pipeline assembled with a
+    Nunchaku UNet no longer shares a key with the full-precision one
+- SepFormer is registered with `ModelManager` instead of loading unregistered
+  straight onto the GPU; Whisper's duplicate cache entry is dropped; reclaim now
+  happens proactively on a cache miss rather than only after an OOM
+
 ## [0.7.4] - 2026-08-15
 
 ### Added
