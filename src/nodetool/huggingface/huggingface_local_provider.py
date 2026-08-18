@@ -92,6 +92,11 @@ class HuggingFaceLocalProvider(BaseProvider):
 
     provider_name = "hf_inference"
 
+    def __init__(self, secrets: dict[str, str] | None = None):
+        super().__init__(secrets=secrets)
+        self._tts_engines: dict[str, Any] = {}
+        self._tts_locks: dict[str, asyncio.Lock] = {}
+
     def get_container_env(self, context: ProcessingContext) -> dict[str, str]:
         """Return environment variables needed when running inside Docker."""
         # The nodes will handle HF_TOKEN internally
@@ -323,6 +328,8 @@ class HuggingFaceLocalProvider(BaseProvider):
             RuntimeError: If generation fails
         """
         from nodetool.nodes.huggingface.text_to_speech import KokoroTTS
+        from nodetool.nodes.huggingface.text_to_speech import F5TTS
+        from nodetool.nodes.huggingface.text_to_speech import SupertonicTTS
         from nodetool.nodes.huggingface.text_to_speech import TextToSpeech
 
         if context is None:
@@ -336,7 +343,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         if "kokoro" in model_lower:
             # Map voice string to Voice enum
             voice_value = voice or "af_heart"  # Default voice
-            lang_code = kwargs.get("lang_code", "en-us")  # Default to American English
+            lang_code = kwargs.get("language") or kwargs.get("lang_code") or "en-us"
 
             node = KokoroTTS(
                 model=HFTextToSpeech(repo_id=model),
@@ -359,6 +366,54 @@ class HuggingFaceLocalProvider(BaseProvider):
                     audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
                     yield audio_array
 
+        elif "supertonic" in model_lower:
+            language = kwargs.get("language") or kwargs.get("lang_code") or "na"
+            node = SupertonicTTS(
+                model=HFTextToSpeech(repo_id=model),
+                text=text,
+                voice=SupertonicTTS.Voice(voice or "M1"),
+                language=language,
+                speed=max(0.7, min(2.0, speed)),
+            )
+            lock = self._tts_locks.setdefault(model_lower, asyncio.Lock())
+            async with lock:
+                cached = self._tts_engines.get(model_lower)
+                if cached is None:
+                    await node.preload_model(context)
+                    self._tts_engines[model_lower] = node._tts
+                else:
+                    node._tts = cached
+                audio_ref = await node.process(context)
+            async for chunk in self._audio_ref_as_pcm24k(context, audio_ref):
+                yield chunk
+        elif "f5-tts" in model_lower:
+            reference_audio = kwargs.get("reference_audio")
+            reference_text = kwargs.get("reference_text")
+            if (
+                not isinstance(reference_audio, (bytes, bytearray, memoryview))
+                or not reference_audio
+            ):
+                raise ValueError("F5-TTS requires reference audio bytes")
+            if not isinstance(reference_text, str) or not reference_text.strip():
+                raise ValueError("F5-TTS requires an exact reference transcript")
+            node = F5TTS(
+                model=HFTextToSpeech(repo_id=model),
+                text=text,
+                reference_audio=AudioRef(data=bytes(reference_audio)),
+                reference_text=reference_text,
+                speed=max(0.3, min(2.0, speed)),
+            )
+            lock = self._tts_locks.setdefault(model_lower, asyncio.Lock())
+            async with lock:
+                cached = self._tts_engines.get(model_lower)
+                if cached is None:
+                    await node.preload_model(context)
+                    self._tts_engines[model_lower] = node._f5tts
+                else:
+                    node._f5tts = cached
+                audio_ref = await node.process(context)
+            async for chunk in self._audio_ref_as_pcm24k(context, audio_ref):
+                yield chunk
         else:
             node = TextToSpeech(
                 model=HFTextToSpeech(repo_id=model),
@@ -371,32 +426,24 @@ class HuggingFaceLocalProvider(BaseProvider):
             # Process to get audio
             audio_ref = await node.process(context)
 
-            # Convert AudioRef to numpy array
-            audio_bytes = await context.asset_to_bytes(audio_ref)
-            from pydub import AudioSegment
-
-            audio = AudioSegment.from_file(BytesIO(audio_bytes))
-
-            # Convert to mono if stereo
-            if audio.channels > 1:
-                audio = audio.set_channels(1)
-
-            # Resample to 24kHz if needed
-            if audio.frame_rate != 24000:
-                audio = audio.set_frame_rate(24000)
-
-            # Ensure 16-bit sample width
-            if audio.sample_width != 2:
-                audio = audio.set_sample_width(2)
-
-            # Convert to numpy array
-            audio_array = np.array(audio.get_array_of_samples(), dtype=np.int16)
-
-            # Yield in chunks (4096 samples at a time)
-            chunk_size = 4096
-            for i in range(0, len(audio_array), chunk_size):
-                chunk = audio_array[i : i + chunk_size]
+            async for chunk in self._audio_ref_as_pcm24k(context, audio_ref):
                 yield chunk
+
+    @staticmethod
+    async def _audio_ref_as_pcm24k(
+        context: Any, audio_ref: AudioRef
+    ) -> AsyncGenerator[np.ndarray[Any, np.dtype[np.int16]], None]:
+        """Normalize encoded node output to the provider's 24 kHz PCM contract."""
+        audio_bytes = await context.asset_to_bytes(audio_ref)
+        from pydub import AudioSegment
+
+        audio = AudioSegment.from_file(BytesIO(audio_bytes)).set_channels(1)
+        audio = audio.set_frame_rate(24_000).set_sample_width(2)
+        audio_array = np.asarray(audio.get_array_of_samples(), dtype=np.int16)
+        if audio_array.size == 0:
+            raise ValueError("TTS model returned empty audio")
+        for start in range(0, len(audio_array), 4096):
+            yield audio_array[start : start + 4096]
 
     async def text_to_audio(
         self,
@@ -984,8 +1031,119 @@ class HuggingFaceLocalProvider(BaseProvider):
             name="Kokoro TTS 82M",
             provider=Provider.HuggingFace,
             voices=kokoro_voices,
+            capabilities=["preset_voice", "language_selection"],
+            languages=[
+                "en-us",
+                "en-gb",
+                "es",
+                "fr-fr",
+                "hi",
+                "it",
+                "pt-br",
+                "ja",
+                "zh",
+            ],
+            sample_rate=24_000,
         )
         models.append(kokoro_model)
+
+        supertonic_languages = [
+            "en",
+            "ko",
+            "ja",
+            "ar",
+            "bg",
+            "cs",
+            "da",
+            "de",
+            "el",
+            "es",
+            "et",
+            "fi",
+            "fr",
+            "hi",
+            "hr",
+            "hu",
+            "id",
+            "it",
+            "lt",
+            "lv",
+            "nl",
+            "pl",
+            "pt",
+            "ro",
+            "ru",
+            "sk",
+            "sl",
+            "sv",
+            "tr",
+            "uk",
+            "vi",
+            "na",
+        ]
+        models.append(
+            TTSModel(
+                id="Supertone/supertonic-3",
+                name="Supertonic 3",
+                provider=Provider.HuggingFace,
+                voices=["M1", "M2", "M3", "M4", "M5", "F1", "F2", "F3", "F4", "F5"],
+                capabilities=["preset_voice", "language_selection"],
+                languages=supertonic_languages,
+                sample_rate=44_100,
+            )
+        )
+        models.append(
+            TTSModel(
+                id="SWivid/F5-TTS",
+                name="F5-TTS v1 Base (Non-commercial)",
+                provider=Provider.HuggingFace,
+                capabilities=[
+                    "voice_cloning",
+                    "reference_transcript",
+                    "language_selection",
+                ],
+                languages=["en", "zh"],
+                sample_rate=24_000,
+                requires_reference_text=True,
+            )
+        )
+
+        models.extend(
+            [
+                TTSModel(
+                    id="suno/bark",
+                    name="Bark",
+                    provider=Provider.HuggingFace,
+                    sample_rate=24_000,
+                ),
+                TTSModel(
+                    id="suno/bark-small",
+                    name="Bark Small",
+                    provider=Provider.HuggingFace,
+                    sample_rate=24_000,
+                ),
+            ]
+        )
+        for language_code, language_name in (
+            ("eng", "English"),
+            ("kor", "Korean"),
+            ("fra", "French"),
+            ("deu", "German"),
+            ("spa", "Spanish"),
+            ("por", "Portuguese"),
+            ("rus", "Russian"),
+            ("ara", "Arabic"),
+            ("hin", "Hindi"),
+        ):
+            models.append(
+                TTSModel(
+                    id=f"facebook/mms-tts-{language_code}",
+                    name=f"MMS TTS ({language_name})",
+                    provider=Provider.HuggingFace,
+                    languages=[language_code],
+                    sample_rate=16_000,
+                )
+            )
 
         log.debug(f"Returning {len(models)} HuggingFace TTS models")
         return models

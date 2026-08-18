@@ -5,6 +5,11 @@ from enum import Enum
 from nodetool.workflows.types import Chunk
 from nodetool.metadata.types import AudioRef, HFTextToSpeech, HuggingFaceModel
 from nodetool.nodes.huggingface._3d_common import MissingDependencyError
+from nodetool.nodes.huggingface._tts_common import (
+    normalized_mono_audio,
+    raise_if_cancelled,
+    temporary_reference_audio,
+)
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.memory_utils import run_gc, get_gpu_memory_usage_mb
@@ -309,7 +314,11 @@ class KokoroTTS(HuggingFacePipelineNode):
 
         # Debug: Log initial VRAM
         initial_vram = get_gpu_memory_usage_mb()
-        log.info(f"[KOKORO VRAM] Start: {initial_vram[0]:.1f}MB" if initial_vram else "[KOKORO VRAM] CUDA not available")
+        log.info(
+            f"[KOKORO VRAM] Start: {initial_vram[0]:.1f}MB"
+            if initial_vram
+            else "[KOKORO VRAM] CUDA not available"
+        )
 
         # Create generator (this may allocate internal buffers)
         generator = self._kpipeline(
@@ -322,7 +331,9 @@ class KokoroTTS(HuggingFacePipelineNode):
         vram_after_gen = get_gpu_memory_usage_mb()
         if initial_vram and vram_after_gen:
             gen_delta = vram_after_gen[0] - initial_vram[0]
-            log.info(f"[KOKORO VRAM] After generator creation: {vram_after_gen[0]:.1f}MB (delta: {gen_delta:+.1f}MB)")
+            log.info(
+                f"[KOKORO VRAM] After generator creation: {vram_after_gen[0]:.1f}MB (delta: {gen_delta:+.1f}MB)"
+            )
 
         audio_chunks: list[np.ndarray] = []
         chunk_idx = 0
@@ -339,7 +350,7 @@ class KokoroTTS(HuggingFacePipelineNode):
                 vram_before = get_gpu_memory_usage_mb()
 
                 # Move result.output to CPU to free GPU memory from pred_dur and other tensors
-                if result.output is not None and hasattr(result.output, 'audio'):
+                if result.output is not None and hasattr(result.output, "audio"):
                     # Create a detached CPU copy
                     audio_cpu = result.output.audio.detach().cpu()
                     audio_np = audio_cpu.numpy()
@@ -363,7 +374,9 @@ class KokoroTTS(HuggingFacePipelineNode):
                 vram_after = get_gpu_memory_usage_mb()
                 if vram_before and vram_after:
                     delta = vram_after[0] - vram_before[0]
-                    log.info(f"[KOKORO VRAM] Chunk {chunk_idx}: {vram_before[0]:.1f}MB -> {vram_after[0]:.1f}MB (delta: {delta:+.1f}MB)")
+                    log.info(
+                        f"[KOKORO VRAM] Chunk {chunk_idx}: {vram_before[0]:.1f}MB -> {vram_after[0]:.1f}MB (delta: {delta:+.1f}MB)"
+                    )
                 chunk_idx += 1
         finally:
             # Ensure generator is closed to release any GPU resources
@@ -372,7 +385,7 @@ class KokoroTTS(HuggingFacePipelineNode):
 
             # Clear KPipeline's voice cache - voice packs are loaded on GPU and cached
             # This is the main source of the ~12MB "leak" per run
-            if self._kpipeline is not None and hasattr(self._kpipeline, 'voices'):
+            if self._kpipeline is not None and hasattr(self._kpipeline, "voices"):
                 vram_before_clear = get_gpu_memory_usage_mb()
                 self._kpipeline.voices.clear()
                 if vram_before_clear:
@@ -405,7 +418,9 @@ class KokoroTTS(HuggingFacePipelineNode):
         vram_after_audio = get_gpu_memory_usage_mb()
         if vram_before_audio and vram_after_audio:
             delta = vram_after_audio[0] - vram_before_audio[0]
-            log.info(f"[KOKORO VRAM] audio_from_numpy: {vram_before_audio[0]:.1f}MB -> {vram_after_audio[0]:.1f}MB (delta: {delta:+.1f}MB)")
+            log.info(
+                f"[KOKORO VRAM] audio_from_numpy: {vram_before_audio[0]:.1f}MB -> {vram_after_audio[0]:.1f}MB (delta: {delta:+.1f}MB)"
+            )
 
         # Clean up audio chunks list
         audio_chunks.clear()
@@ -422,7 +437,9 @@ class KokoroTTS(HuggingFacePipelineNode):
         final_vram = get_gpu_memory_usage_mb()
         if initial_vram and final_vram:
             total_delta = final_vram[0] - initial_vram[0]
-            log.info(f"[KOKORO VRAM] Total: {initial_vram[0]:.1f}MB -> {final_vram[0]:.1f}MB (delta: {total_delta:+.1f}MB)")
+            log.info(
+                f"[KOKORO VRAM] Total: {initial_vram[0]:.1f}MB -> {final_vram[0]:.1f}MB (delta: {total_delta:+.1f}MB)"
+            )
 
         yield {
             "audio": audio_ref,
@@ -634,6 +651,232 @@ class TextToSpeech(HuggingFacePipelineNode):
         return await context.audio_from_numpy(audio_array, int(sample_rate))
 
 
+class SupertonicTTS(HuggingFacePipelineNode):
+    """
+    Generates fast, multilingual 44.1 kHz speech with Supertonic 3 on CPU.
+    tts, audio, speech, huggingface, multilingual, onnx, cpu
+
+    Use cases:
+    - Produce local narration without a GPU
+    - Generate speech in any of Supertonic 3's 31 supported languages
+    - Select from ten bundled male and female voice styles
+    - Synthesize long text with upstream sentence-aware chunking
+
+    Supertonic supports bundled styles and Voice Builder JSON exports. It does
+    not clone a voice directly from reference audio in this integration.
+    Install with ``pip install nodetool-huggingface[supertonic]``.
+    """
+
+    class Voice(str, Enum):
+        M1 = "M1"
+        M2 = "M2"
+        M3 = "M3"
+        M4 = "M4"
+        M5 = "M5"
+        F1 = "F1"
+        F2 = "F2"
+        F3 = "F3"
+        F4 = "F4"
+        F5 = "F5"
+
+    model: HFTextToSpeech = Field(
+        default=HFTextToSpeech(repo_id="Supertone/supertonic-3"),
+        title="Model",
+        description="The Supertonic 3 ONNX model.",
+    )
+    text: str = Field(
+        default="Hello from Supertonic.",
+        title="Text",
+        description="The text to convert to speech.",
+    )
+    language: str = Field(
+        default="na",
+        title="Language",
+        description="ISO language code, or 'na' for automatic fallback handling.",
+    )
+    voice: Voice = Field(
+        default=Voice.M1,
+        title="Voice",
+        description="One of the ten bundled Supertonic voice styles.",
+    )
+    speed: float = Field(
+        default=1.05,
+        ge=0.7,
+        le=2.0,
+        title="Speed",
+        description="Speech speed multiplier.",
+    )
+    total_steps: int = Field(
+        default=8,
+        ge=2,
+        le=12,
+        title="Quality Steps",
+        description="More steps improve quality but take longer.",
+    )
+
+    _tts: Any = None
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Supertonic TTS"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "text", "language", "voice", "speed"]
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [HFTextToSpeech(repo_id="Supertone/supertonic-3")]
+
+    def get_model_id(self):
+        return self.model.repo_id
+
+    async def preload_model(self, context: ProcessingContext):
+        try:
+            from supertonic import TTS
+        except ImportError as exc:
+            raise MissingDependencyError(
+                "Supertonic TTS requires the optional 'supertonic' package.",
+                install_hint="pip install nodetool-huggingface[supertonic]",
+            ) from exc
+
+        self._tts = await asyncio.to_thread(TTS, auto_download=True)
+
+    async def move_to_device(self, device: str):
+        # The official Python package uses ONNX Runtime and manages its device.
+        return None
+
+    async def process(self, context: ProcessingContext) -> AudioRef:
+        if self._tts is None:
+            raise ValueError("Supertonic model is not initialized")
+
+        style = self._tts.get_voice_style(self.voice.value)
+        wav, _duration = await asyncio.to_thread(
+            self._tts.synthesize,
+            self.text,
+            voice_style=style,
+            lang=self.language or "na",
+            speed=self.speed,
+            total_steps=self.total_steps,
+        )
+        audio = normalized_mono_audio(wav, "Supertonic")
+        sample_rate = int(getattr(self._tts, "sample_rate", 44_100))
+        return await context.audio_from_numpy(audio, sample_rate)
+
+    def requires_gpu(self) -> bool:
+        return False
+
+
+class F5TTS(HuggingFacePipelineNode):
+    """
+    Clones a consented reference voice with the F5-TTS bilingual base model.
+    tts, audio, speech, huggingface, voice-cloning, f5-tts
+
+    Use cases:
+    - Generate narration in the voice of a consented speaker
+    - Clone an English or Chinese voice from a short recording
+    - Preserve a speaker across long-form generated speech
+
+    A reference transcript is required. This avoids F5-TTS silently loading a
+    separate Whisper model to transcribe the clip. The checkpoint is licensed
+    CC-BY-NC-4.0. Install with ``pip install nodetool-huggingface[f5-tts]``.
+    """
+
+    model: HFTextToSpeech = Field(
+        default=HFTextToSpeech(repo_id="SWivid/F5-TTS"),
+        title="Model",
+        description="The F5-TTS v1 bilingual base checkpoint.",
+    )
+    text: str = Field(
+        default="Hello from a cloned voice.",
+        title="Text",
+        description="The text to generate.",
+    )
+    reference_audio: AudioRef = Field(
+        default=AudioRef(),
+        title="Reference Audio",
+        description="A short recording of a speaker who consented to voice cloning.",
+    )
+    reference_text: str = Field(
+        default="",
+        title="Reference Text",
+        description="Exact transcript of the reference recording (required).",
+    )
+    speed: float = Field(
+        default=1.0,
+        ge=0.3,
+        le=2.0,
+        title="Speed",
+        description="Speech speed multiplier.",
+    )
+    nfe_steps: int = Field(
+        default=32,
+        ge=8,
+        le=64,
+        title="Inference Steps",
+        description="Flow-matching inference steps; 32 is the upstream default.",
+    )
+
+    _f5tts: Any = None
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "F5-TTS Voice Cloning"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "text", "reference_audio", "reference_text", "speed"]
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [HFTextToSpeech(repo_id="SWivid/F5-TTS")]
+
+    def get_model_id(self):
+        return self.model.repo_id
+
+    async def preload_model(self, context: ProcessingContext):
+        try:
+            from f5_tts.api import F5TTS as F5TTSApi
+        except ImportError as exc:
+            raise MissingDependencyError(
+                "F5-TTS requires the optional 'f5-tts' package.",
+                install_hint="pip install nodetool-huggingface[f5-tts]",
+            ) from exc
+
+        self._f5tts = await asyncio.to_thread(
+            F5TTSApi,
+            model="F5TTS_v1_Base",
+            device=context.device or None,
+        )
+
+    async def move_to_device(self, device: str):
+        return None
+
+    async def process(self, context: ProcessingContext) -> AudioRef:
+        if self._f5tts is None:
+            raise ValueError("F5-TTS model is not initialized")
+        if not self.reference_text.strip():
+            raise ValueError("F5-TTS requires an exact reference transcript")
+
+        reference_bytes = await context.asset_to_bytes(self.reference_audio)
+        raise_if_cancelled(context, "F5-TTS")
+        with temporary_reference_audio(reference_bytes) as reference_path:
+            wav, sample_rate, _spectrogram = await asyncio.to_thread(
+                self._f5tts.infer,
+                ref_file=reference_path,
+                ref_text=self.reference_text.strip(),
+                gen_text=self.text,
+                speed=self.speed,
+                nfe_step=self.nfe_steps,
+            )
+        raise_if_cancelled(context, "F5-TTS")
+        audio = normalized_mono_audio(wav, "F5-TTS")
+        return await context.audio_from_numpy(audio, int(sample_rate or 24_000))
+
+    def requires_gpu(self) -> bool:
+        return True
+
+
 # class LoadSpeakerEmbedding(BaseNode):
 #     """
 #     Loads a speaker embedding from a dataset.
@@ -794,7 +1037,10 @@ class HiggsAudio(HuggingFacePipelineNode):
         assert self._processor is not None, "Processor not initialized"
 
         conversation: list[dict] = [
-            {"role": "system", "content": [{"type": "text", "text": self.system_prompt}]},
+            {
+                "role": "system",
+                "content": [{"type": "text", "text": self.system_prompt}],
+            },
         ]
         if self.scene.strip():
             conversation.append(
