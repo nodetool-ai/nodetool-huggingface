@@ -52,6 +52,7 @@ from nodetool.huggingface.local_provider_utils import (
     load_pipeline,
     pipeline_progress_callback,
 )
+from nodetool.huggingface.tts_adapter_manifest import get_tts_adapter_info
 from nodetool.huggingface.text_to_image_pipelines import (
     load_text_to_image_pipeline,
 )
@@ -1044,6 +1045,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 "zh",
             ],
             sample_rate=24_000,
+            adapter=get_tts_adapter_info("hexgrad/Kokoro-82M"),
         )
         models.append(kokoro_model)
 
@@ -1090,6 +1092,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 capabilities=["preset_voice", "language_selection"],
                 languages=supertonic_languages,
                 sample_rate=44_100,
+                adapter=get_tts_adapter_info("Supertone/supertonic-3"),
             )
         )
         models.append(
@@ -1105,6 +1108,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                 languages=["en", "zh"],
                 sample_rate=24_000,
                 requires_reference_text=True,
+                adapter=get_tts_adapter_info("SWivid/F5-TTS"),
             )
         )
 
@@ -1115,12 +1119,14 @@ class HuggingFaceLocalProvider(BaseProvider):
                     name="Bark",
                     provider=Provider.HuggingFace,
                     sample_rate=24_000,
+                    adapter=get_tts_adapter_info("suno/bark"),
                 ),
                 TTSModel(
                     id="suno/bark-small",
                     name="Bark Small",
                     provider=Provider.HuggingFace,
                     sample_rate=24_000,
+                    adapter=get_tts_adapter_info("suno/bark-small"),
                 ),
             ]
         )
@@ -1142,6 +1148,9 @@ class HuggingFaceLocalProvider(BaseProvider):
                     provider=Provider.HuggingFace,
                     languages=[language_code],
                     sample_rate=16_000,
+                    adapter=get_tts_adapter_info(
+                        f"facebook/mms-tts-{language_code}"
+                    ),
                 )
             )
 

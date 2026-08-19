@@ -5,6 +5,7 @@ import base64
 import os
 import sys
 import wave
+from importlib.machinery import ModuleSpec
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -91,6 +92,31 @@ async def test_tts_model_discovery_advertises_capabilities():
         "language_selection",
     ]
     assert f5.requires_reference_text is True
+
+
+@pytest.mark.asyncio
+async def test_tts_model_discovery_reports_adapter_dependencies(monkeypatch):
+    from nodetool.huggingface import tts_adapter_manifest
+
+    installed = {"kokoro", "transformers", "f5_tts", "torchcodec"}
+
+    def fake_find_spec(module: str):
+        return ModuleSpec(module, loader=None) if module in installed else None
+
+    monkeypatch.setattr(tts_adapter_manifest, "find_spec", fake_find_spec)
+
+    models = await HuggingFaceLocalProvider().get_available_tts_models()
+    by_id = {model.id: model for model in models}
+
+    assert by_id["hexgrad/Kokoro-82M"].adapter is not None
+    assert by_id["hexgrad/Kokoro-82M"].adapter.state == "installed"
+    assert by_id["Supertone/supertonic-3"].adapter is not None
+    assert by_id["Supertone/supertonic-3"].adapter.state == "missing_dependency"
+    assert by_id["Supertone/supertonic-3"].adapter.reason_code == "missing_dependency"
+    assert by_id["SWivid/F5-TTS"].adapter is not None
+    assert by_id["SWivid/F5-TTS"].adapter.state == "installed"
+    assert by_id["SWivid/F5-TTS"].adapter.artifact_ref is not None
+    assert by_id["SWivid/F5-TTS"].adapter.artifact_ref.repo_id == "SWivid/F5-TTS"
 
 
 def _wav_bytes(sample_rate: int = 16_000) -> bytes:
