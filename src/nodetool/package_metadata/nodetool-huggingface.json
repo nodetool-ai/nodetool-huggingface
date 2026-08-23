@@ -14488,10 +14488,9 @@
           }
         },
         {
-          "default": null,
+          "default": [],
           "description": "Track classes to add (e.g. ['drums', 'bass', 'guitar']). Empty lets the model decide.",
           "name": "complete_track_classes",
-          "required": true,
           "title": "Track Classes",
           "type": {
             "type": "list",
@@ -18717,6 +18716,113 @@
     {
       "basic_fields": [
         "model",
+        "text",
+        "reference_audio",
+        "reference_text",
+        "speed"
+      ],
+      "body": "content_card",
+      "description": "Clones a consented reference voice with the F5-TTS bilingual base model.\n    tts, audio, speech, huggingface, voice-cloning, f5-tts\n\n    Use cases:\n    - Generate narration in the voice of a consented speaker\n    - Clone an English or Chinese voice from a short recording\n    - Preserve a speaker across long-form generated speech\n\n    A reference transcript is required. This avoids F5-TTS silently loading a\n    separate Whisper model to transcribe the clip. The checkpoint is licensed\n    CC-BY-NC-4.0. Install with ``pip install nodetool-huggingface[f5-tts]``.",
+      "input_fields": [
+        "text",
+        "reference_audio"
+      ],
+      "namespace": "huggingface.text_to_speech",
+      "node_type": "huggingface.text_to_speech.F5TTS",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "SWivid/F5-TTS",
+            "type": "hf.text_to_speech",
+            "variant": null
+          },
+          "description": "The F5-TTS v1 bilingual base checkpoint.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_speech"
+          }
+        },
+        {
+          "default": "Hello from a cloned voice.",
+          "description": "The text to generate.",
+          "name": "text",
+          "title": "Text",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "A short recording of a speaker who consented to voice cloning.",
+          "name": "reference_audio",
+          "title": "Reference Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": "",
+          "description": "Exact transcript of the reference recording (required).",
+          "name": "reference_text",
+          "title": "Reference Text",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "Speech speed multiplier.",
+          "max": 2.0,
+          "min": 0.3,
+          "name": "speed",
+          "title": "Speed",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 32,
+          "description": "Flow-matching inference steps; 32 is the upstream default.",
+          "max": 64.0,
+          "min": 8.0,
+          "name": "nfe_steps",
+          "title": "Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "id": "SWivid/F5-TTS",
+          "name": "SWivid/F5-TTS",
+          "repo_id": "SWivid/F5-TTS",
+          "type": "hf.text_to_speech"
+        }
+      ],
+      "title": "F5-TTS Voice Cloning"
+    },
+    {
+      "basic_fields": [
+        "model",
         "prompt"
       ],
       "body": "content_card",
@@ -18971,6 +19077,119 @@
         }
       ],
       "title": "KokoroTTS"
+    },
+    {
+      "basic_fields": [
+        "model",
+        "text",
+        "language",
+        "voice",
+        "speed"
+      ],
+      "body": "content_card",
+      "description": "Generates fast, multilingual 44.1 kHz speech with Supertonic 3 on CPU.\n    tts, audio, speech, huggingface, multilingual, onnx, cpu\n\n    Use cases:\n    - Produce local narration without a GPU\n    - Generate speech in any of Supertonic 3's 31 supported languages\n    - Select from ten bundled male and female voice styles\n    - Synthesize long text with upstream sentence-aware chunking\n\n    Supertonic supports bundled styles and Voice Builder JSON exports. It does\n    not clone a voice directly from reference audio in this integration.\n    Install with ``pip install nodetool-huggingface[supertonic]``.",
+      "input_fields": [
+        "text"
+      ],
+      "namespace": "huggingface.text_to_speech",
+      "node_type": "huggingface.text_to_speech.SupertonicTTS",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "Supertone/supertonic-3",
+            "type": "hf.text_to_speech",
+            "variant": null
+          },
+          "description": "The Supertonic 3 ONNX model.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_speech"
+          }
+        },
+        {
+          "default": "Hello from Supertonic.",
+          "description": "The text to convert to speech.",
+          "name": "text",
+          "title": "Text",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "na",
+          "description": "ISO language code, or 'na' for automatic fallback handling.",
+          "name": "language",
+          "title": "Language",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "M1",
+          "description": "One of the ten bundled Supertonic voice styles.",
+          "name": "voice",
+          "title": "Voice",
+          "type": {
+            "type": "enum",
+            "type_name": "nodetool.nodes.huggingface.text_to_speech.SupertonicTTS.Voice",
+            "values": [
+              "M1",
+              "M2",
+              "M3",
+              "M4",
+              "M5",
+              "F1",
+              "F2",
+              "F3",
+              "F4",
+              "F5"
+            ]
+          }
+        },
+        {
+          "default": 1.05,
+          "description": "Speech speed multiplier.",
+          "max": 2.0,
+          "min": 0.7,
+          "name": "speed",
+          "title": "Speed",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 8,
+          "description": "More steps improve quality but take longer.",
+          "max": 12.0,
+          "min": 2.0,
+          "name": "total_steps",
+          "title": "Quality Steps",
+          "type": {
+            "type": "int"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "id": "Supertone/supertonic-3",
+          "name": "Supertone/supertonic-3",
+          "repo_id": "Supertone/supertonic-3",
+          "type": "hf.text_to_speech"
+        }
+      ],
+      "title": "Supertonic TTS"
     },
     {
       "basic_fields": [
