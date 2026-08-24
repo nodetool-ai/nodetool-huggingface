@@ -623,6 +623,7 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
         latent: TorchTensor | None
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers.models.controlnets.controlnet import ControlNetModel
         from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint import (
             StableDiffusionControlNetInpaintPipeline,
         )
@@ -631,12 +632,16 @@ class StableDiffusionControlNetInpaintNode(StableDiffusionBaseNode):
         controlnet_dtype = (
             torch.float32 if context.device == "mps" else available_torch_dtype()
         )
-        controlnet = await self.load_pipeline(
+        # A ControlNet repo is a diffusers model with no `model_type` in its
+        # config, so the transformers pipeline loader cannot read it. Load it
+        # as a diffusers model, the way the other ControlNet nodes do.
+        controlnet = await self.load_model(
             context,
-            "controlnet",
-            self.controlnet.value,
+            model_class=ControlNetModel,
+            model_id=self.controlnet.value,
             device=context.device,
             torch_dtype=controlnet_dtype,
+            variant=None,
         )
         # Align pipeline dtype with controlnet dtype to avoid mismatches
         self._pipeline = await self.load_model(
