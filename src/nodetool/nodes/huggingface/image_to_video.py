@@ -407,7 +407,9 @@ class Wan_FLF2V(HuggingFacePipelineNode):
         return ["first_image", "last_image"]
 
     async def preload_model(self, context: ProcessingContext):
-        from diffusers.pipelines.wan.pipeline_wan_flf2v import WanFLF2VPipeline
+        # Upstream folded first-last-frame into WanImageToVideoPipeline, which
+        # takes `last_image`; pipeline_wan_flf2v was deleted with it.
+        from diffusers import WanImageToVideoPipeline
         from nodetool.nodes.huggingface.stable_diffusion_base import (
             available_torch_dtype,
         )
@@ -417,7 +419,7 @@ class Wan_FLF2V(HuggingFacePipelineNode):
         # before the offload hooks are installed.
         self._pipeline = await self.load_model(
             context=context,
-            model_class=WanFLF2VPipeline,
+            model_class=WanImageToVideoPipeline,
             model_id=self.get_model_id(),
             torch_dtype=torch_dtype,
             device="cpu",

@@ -26,9 +26,9 @@ if TYPE_CHECKING:
     import torch
     import torchaudio
     from diffusers.pipelines.audioldm2.pipeline_audioldm2 import AudioLDM2Pipeline
-    from diffusers.pipelines.audioldm.pipeline_audioldm import AudioLDMPipeline
+    from diffusers import AudioLDMPipeline
     from diffusers.pipelines.pipeline_utils import DiffusionPipeline
-    from diffusers.pipelines.musicldm.pipeline_musicldm import MusicLDMPipeline
+    from diffusers import MusicLDMPipeline
     from diffusers.pipelines.stable_audio.pipeline_stable_audio import (
         StableAudioPipeline,
     )
@@ -213,7 +213,7 @@ class MusicLDM(HuggingFacePipelineNode):
         ]
 
     async def preload_model(self, context: ProcessingContext):
-        from diffusers.pipelines.musicldm.pipeline_musicldm import MusicLDMPipeline
+        from diffusers import MusicLDMPipeline
 
         self._pipeline = await self.load_model(
             context, MusicLDMPipeline, self.model.repo_id
@@ -290,7 +290,7 @@ class AudioLDM(HuggingFacePipelineNode):
         ]
 
     async def preload_model(self, context: ProcessingContext):
-        from diffusers.pipelines.audioldm.pipeline_audioldm import AudioLDMPipeline
+        from diffusers import AudioLDMPipeline
 
         self._pipeline = await self.load_model(
             context, AudioLDMPipeline, "cvssp/audioldm-s-full-v2"
