@@ -320,6 +320,163 @@ async def load_nunchaku_flux_pipeline(
         ) from exc
 
 
+def _shim_qwen_rope_signature() -> bool:
+    """Strip nunchaku's legacy positional ``txt_seq_lens`` from the rope call.
+
+    diffusers PR #12702 removed the ``txt_seq_lens`` parameter, moving ``device``
+    into the second positional slot::
+
+        0.36            forward(video_fhw, txt_seq_lens, device)
+        0.37, 0.38      forward(video_fhw, txt_seq_lens=None, device=None, max_txt_seq_len=None)
+        0.39, 0.40      forward(video_fhw, device=None, max_txt_seq_len=None)
+
+    nunchaku still calls the 0.36 form (``transformer_qwenimage.py:517``:
+    ``self.pos_embed(img_shapes, txt_seq_lens, device=...)``), so its second
+    positional argument lands in ``device`` and the keyword collides.
+
+    A positional argument alongside a keyword ``device`` is unambiguous: under
+    the current signature no caller can legitimately supply both, so the
+    positional is the legacy parameter whatever its value. That matters because
+    the value is normally ``None`` -- see :func:`_shim_qwen_transformer_seq_lens`.
+
+    The value conversion is diffusers' own 0.38 deprecation branch, verbatim from
+    ``transformer_qwenimage.py`` in v0.38.0::
+
+        # Use max of txt_seq_lens for backward compatibility
+        max_txt_seq_len = max(txt_seq_lens) if isinstance(txt_seq_lens, list) else txt_seq_lens
+
+    so this restores removed behaviour rather than inventing semantics.
+    """
+    import inspect
+
+    from diffusers.models.transformers.transformer_qwenimage import QwenEmbedRope
+
+    forward = QwenEmbedRope.forward
+    if getattr(forward, "_nodetool_qwen_rope_shim", False):
+        log.info("QwenEmbedRope shim: already applied")
+        return True
+
+    params = inspect.signature(forward).parameters
+    if "max_txt_seq_len" not in params or "txt_seq_lens" in params:
+        # Either an older diffusers that still accepts the legacy call, or a
+        # future signature this translation would not match. Leave it alone.
+        log.info(
+            "QwenEmbedRope shim: declined, signature does not need it (%s)",
+            tuple(params),
+        )
+        return False
+
+    def _forward(self, video_fhw, *args, **kwargs):  # type: ignore[no-untyped-def]
+        if args and "device" in kwargs:
+            legacy, *rest = args
+            args = tuple(rest)
+            if kwargs.get("max_txt_seq_len") is None and legacy is not None:
+                kwargs["max_txt_seq_len"] = (
+                    max(legacy) if isinstance(legacy, list) else legacy
+                )
+        return forward(self, video_fhw, *args, **kwargs)
+
+    _forward._nodetool_qwen_rope_shim = True  # type: ignore[attr-defined]
+    QwenEmbedRope.forward = _forward  # type: ignore[method-assign]
+    log.info(
+        "QwenEmbedRope shim: applied for nunchaku on diffusers >= 0.39 "
+        "(see nunchaku-ai/nunchaku#884)"
+    )
+    return True
+
+
+def _shim_qwen_transformer_seq_lens(transformer_class: type | None = None) -> bool:
+    """Give nunchaku's transformer the text sequence length the rope needs.
+
+    Stripping the legacy argument is not enough on its own. diffusers >= 0.39
+    dropped ``txt_seq_lens`` from ``QwenImagePipeline`` too, so it never passes
+    one and nunchaku forwards its own default -- ``None`` -- into the rope call.
+    ``QwenEmbedRope`` then raises ``ValueError: `max_txt_seq_len` must be
+    provided``.
+
+    Fill it the way diffusers' own transformer does. ``compute_text_seq_len_from_mask``
+    (v0.40.0) takes the padded length and ignores the mask for this purpose::
+
+        batch_size, text_seq_len = encoder_hidden_states.shape[:2]
+
+    and passes that as ``max_txt_seq_len``. A one-element list is enough because
+    the rope shim reduces it with ``max``.
+
+    Args:
+        transformer_class: The class to patch. Defaults to nunchaku's; tests
+            pass a stand-in so they can drive this code without the weights.
+    """
+    import inspect
+
+    if transformer_class is None:
+        try:
+            from nunchaku.models.transformers.transformer_qwenimage import (
+                NunchakuQwenImageTransformer2DModel,
+            )
+        except ImportError:
+            log.info(
+                "Qwen transformer shim: declined, nunchaku Qwen model not importable"
+            )
+            return False
+        transformer_class = NunchakuQwenImageTransformer2DModel
+
+    forward = transformer_class.forward
+    if getattr(forward, "_nodetool_qwen_seq_lens_shim", False):
+        log.info("Qwen transformer shim: already applied")
+        return True
+
+    signature = inspect.signature(forward)
+    if "txt_seq_lens" not in signature.parameters:
+        # nunchaku stopped taking the legacy argument, which means it no longer
+        # forwards it either. Nothing to fill.
+        log.info(
+            "Qwen transformer shim: declined, nunchaku no longer takes txt_seq_lens"
+        )
+        return False
+
+    def _forward(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+        bound = signature.bind(self, *args, **kwargs)
+        bound.apply_defaults()
+        if bound.arguments.get("txt_seq_lens") is None:
+            encoder_hidden_states = bound.arguments.get("encoder_hidden_states")
+            if encoder_hidden_states is not None:
+                bound.arguments["txt_seq_lens"] = [encoder_hidden_states.shape[1]]
+        return forward(*bound.args, **bound.kwargs)
+
+    _forward._nodetool_qwen_seq_lens_shim = True  # type: ignore[attr-defined]
+    transformer_class.forward = _forward  # type: ignore[method-assign]
+    log.info(
+        "Qwen transformer shim: applied, filling txt_seq_lens from encoder_hidden_states"
+    )
+    return True
+
+
+def apply_qwen_rope_compat_shim() -> bool:
+    """Make nunchaku's Qwen transformer run against diffusers >= 0.39.
+
+    Two changes are needed, because diffusers PR #12702 removed ``txt_seq_lens``
+    from both the rope module and the pipeline that used to supply it:
+
+    1. :func:`_shim_qwen_rope_signature` drops nunchaku's legacy positional
+       argument, which otherwise collides with ``device``.
+    2. :func:`_shim_qwen_transformer_seq_lens` supplies the text sequence length
+       nunchaku no longer receives, so the rope has a value to work with.
+
+    Both self-disable when the signature they target no longer needs them, both
+    are idempotent, and both log the decision they reached -- applied, already
+    applied, or declined and why. A silent shim is untestable on a remote
+    worker where the log is the only channel.
+
+    Delete all of this once nunchaku calls ``max_txt_seq_len``.
+
+    Returns:
+        True if the rope call is now translated, False if it was not needed.
+    """
+    rope = _shim_qwen_rope_signature()
+    _shim_qwen_transformer_seq_lens()
+    return rope
+
+
 async def load_nunchaku_qwen_pipeline(
     context: "ProcessingContext",
     repo_id: str,
@@ -347,6 +504,10 @@ async def load_nunchaku_qwen_pipeline(
     from nunchaku import NunchakuQwenImageTransformer2DModel
     from nunchaku.utils import get_gpu_memory
     from nodetool.ml.core.model_manager import ModelManager
+
+    # nunchaku's Qwen transformer calls QwenEmbedRope with the pre-0.39
+    # signature. Repair it before the transformer runs.
+    apply_qwen_rope_compat_shim()
 
     log_memory("load_nunchaku_qwen_pipeline - START")
 
