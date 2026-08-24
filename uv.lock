@@ -3078,7 +3078,7 @@ wheels = [
 
 [[package]]
 name = "nodetool-huggingface"
-version = "0.7.7"
+version = "0.7.9"
 source = { editable = "." }
 dependencies = [
     { name = "accelerate" },
@@ -3116,6 +3116,7 @@ dependencies = [
 all-3d = [
     { name = "diso", marker = "sys_platform != 'darwin'" },
     { name = "hy3dgen" },
+    { name = "opencv-python" },
     { name = "pymeshlab" },
     { name = "rembg" },
     { name = "scikit-image" },
@@ -3123,6 +3124,7 @@ all-3d = [
 all-3d-pypi = [
     { name = "diso", marker = "sys_platform != 'darwin'" },
     { name = "hy3dgen" },
+    { name = "opencv-python" },
     { name = "pymeshlab" },
     { name = "rembg", marker = "sys_platform != 'darwin'" },
     { name = "scikit-image" },
@@ -3151,6 +3153,7 @@ supertonic = [
 ]
 triposg = [
     { name = "diso", marker = "sys_platform != 'darwin'" },
+    { name = "opencv-python" },
     { name = "pymeshlab" },
     { name = "rembg", marker = "sys_platform != 'darwin'" },
     { name = "scikit-image" },
@@ -3178,7 +3181,8 @@ requires-dist = [
     { name = "mistral-common", extras = ["image"], specifier = ">=1.10.0,<2" },
     { name = "nodetool-core", specifier = ">=0.7.1" },
     { name = "nodetool-huggingface", extras = ["hunyuan3d", "triposg"], marker = "extra == 'all-3d-pypi'" },
-    { name = "nodetool-huggingface", extras = ["hunyuan3d", "triposg", "sf3d", "triposr", "trellis2"], marker = "extra == 'all-3d'" },
+    { name = "nodetool-huggingface", extras = ["hunyuan3d", "triposg", "sf3d", "triposr"], marker = "extra == 'all-3d'" },
+    { name = "opencv-python", marker = "extra == 'triposg'" },
     { name = "paddleocr", marker = "extra == 'ocr'" },
     { name = "paddlepaddle", marker = "extra == 'ocr'" },
     { name = "peft", specifier = ">=0.19.1,<1" },
@@ -3209,7 +3213,7 @@ requires-dist = [
     { name = "trimesh", specifier = ">=4.0.0" },
     { name = "typeguard" },
 ]
-provides-extras = ["ocr", "shape", "kokoro-ja", "supertonic", "f5-tts", "hunyuan3d", "triposg", "sf3d", "triposr", "trellis2", "all-3d-pypi", "all-3d"]
+provides-extras = ["ocr", "kokoro-ja", "supertonic", "f5-tts", "hunyuan3d", "triposg", "sf3d", "triposr", "shape", "all-3d-pypi", "all-3d"]
 
 [[package]]
 name = "num2words"

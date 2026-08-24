@@ -159,6 +159,76 @@ class MusicGen(HuggingFacePipelineNode):
         )
 
 
+def _musicldm_pipeline_unwraps_pooled_output() -> bool:
+    """True when the installed diffusers MusicLDM pipeline handles transformers 5.
+
+    diffusers fixed this in its AudioLDM2 pipeline by reading ``pooler_output``
+    off the model output. Read the source so an upstream fix to MusicLDM clears
+    the check on its own. Source that cannot be read counts as unfixed: a
+    MusicLDM run on transformers 5 is known broken, so the legible failure is
+    the better guess.
+    """
+    import inspect
+
+    from diffusers import MusicLDMPipeline
+
+    try:
+        source = inspect.getsource(MusicLDMPipeline.encode_prompt)
+    except (OSError, TypeError):
+        return False
+    return "pooler_output" in source
+
+
+def _musicldm_transformers_wall(
+    transformers_version: str, pipeline_unwraps_pooled_output: bool
+) -> str | None:
+    """Return why MusicLDM cannot run here, or None when it can.
+
+    ``MusicLDMPipeline.encode_prompt`` does::
+
+        prompt_embeds = self.text_encoder.get_text_features(...)
+        prompt_embeds = prompt_embeds.to(dtype=..., device=device)
+
+    transformers 4 returned a tensor from ``ClapModel.get_text_features``.
+    transformers 5 returns the whole ``BaseModelOutputWithPooling``, with the
+    embeddings in ``pooler_output``, and a ``ModelOutput`` has no ``.to``.
+
+    Reproduced on diffusers 0.40.0 with transformers 5.15.1 and
+    ucsd-reach/musicldm: the run dies with a bare ``AttributeError:
+    'BaseModelOutputWithPooling' object has no attribute 'to'`` after the model
+    has loaded. Say what is actually wrong instead.
+    """
+    match = re.match(r"(\d+)", transformers_version)
+    if match is None or int(match.group(1)) < 5:
+        return None
+    if pipeline_unwraps_pooled_output:
+        return None
+    return (
+        "MusicLDM cannot run with transformers "
+        f"{transformers_version}: diffusers' MusicLDM pipeline calls .to() on "
+        "the result of ClapModel.get_text_features, which transformers 5 "
+        "changed from a tensor to a BaseModelOutputWithPooling object -- the "
+        "embeddings now sit in its pooler_output. The run fails with "
+        "\"'BaseModelOutputWithPooling' object has no attribute 'to'\". This is "
+        "an upstream incompatibility, not a configuration problem -- it needs a "
+        "fix in the deprecated MusicLDM pipeline (diffusers already unwraps "
+        "pooler_output in its AudioLDM2 pipeline) or transformers<5. AudioLDM "
+        "(v1) is unaffected: it reads text_embeds off the model output, which "
+        "transformers 5 still returns."
+    )
+
+
+def _assert_musicldm_can_encode_prompts() -> None:
+    """Fail legibly, before the model download, when transformers 5 blocks MusicLDM."""
+    import transformers
+
+    message = _musicldm_transformers_wall(
+        transformers.__version__, _musicldm_pipeline_unwraps_pooled_output()
+    )
+    if message is not None:
+        raise RuntimeError(message)
+
+
 class MusicLDM(HuggingFacePipelineNode):
     """
     Generates music from text descriptions using latent diffusion models.
@@ -213,6 +283,8 @@ class MusicLDM(HuggingFacePipelineNode):
         ]
 
     async def preload_model(self, context: ProcessingContext):
+        _assert_musicldm_can_encode_prompts()
+
         from diffusers import MusicLDMPipeline
 
         self._pipeline = await self.load_model(
