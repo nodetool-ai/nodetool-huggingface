@@ -28,15 +28,26 @@ SAMPLE_RATE = 16_000
 
 PYANNOTE_IMPORT_ERROR = (
     "pyannote.audio is required for speaker diarization but is not installed. "
-    "Install it with `pip install 'pyannote.audio>=3.3,<4'`."
+    "Install it with `pip install 'pyannote.audio>=4.0.4,<5'`."
 )
+
+DEFAULT_REPO_ID = "pyannote/speaker-diarization-community-1"
 
 
 def _missing_token_error(repo_id: str) -> str:
+    extra = ""
+    if repo_id != DEFAULT_REPO_ID:
+        # A 3.x pipeline config still loads on pyannote.audio 4.x, but 4.x's
+        # SpeakerDiarization always builds a PLDA and its default lives in
+        # speaker-diarization-community-1, so that repo has to be accepted too.
+        extra = (
+            ", at the repositories it names (e.g. "
+            "https://huggingface.co/pyannote/segmentation-3.0), and at "
+            f"https://huggingface.co/{DEFAULT_REPO_ID}"
+        )
     return (
         f"'{repo_id}' is a gated model. Please accept the model's conditions at "
-        f"https://huggingface.co/{repo_id} (and at the repositories it depends on, "
-        "e.g. https://huggingface.co/pyannote/segmentation-3.0) and set HF_TOKEN "
+        f"https://huggingface.co/{repo_id}{extra} and set HF_TOKEN "
         "in Nodetool settings or in the environment."
     )
 
@@ -54,19 +65,20 @@ class SpeakerDiarization(HuggingFacePipelineNode):
     - Pre-process training data that requires single-speaker audio
 
     **Note:** pyannote models are GATED on the Hugging Face Hub. Before running this
-    node you must accept the conditions of `pyannote/speaker-diarization-3.1` and of
-    the models it depends on (`pyannote/segmentation-3.0`), then set `HF_TOKEN` in
-    Nodetool settings (or as an environment variable). Without a token the model
-    cannot be downloaded.
+    node you must accept the conditions of `pyannote/speaker-diarization-community-1`,
+    then set `HF_TOKEN` in Nodetool settings (or as an environment variable). Without
+    a token the model cannot be downloaded. The older `pyannote/speaker-diarization-3.1`
+    also needs `pyannote/segmentation-3.0` accepted, and on pyannote.audio 4.x it
+    additionally reads its PLDA from `pyannote/speaker-diarization-community-1`.
 
     **Links:**
     - https://github.com/pyannote/pyannote-audio
-    - https://huggingface.co/pyannote/speaker-diarization-3.1
+    - https://huggingface.co/pyannote/speaker-diarization-community-1
     """
 
     model: HFVoiceActivityDetection = Field(
         default=HFVoiceActivityDetection(
-            repo_id="pyannote/speaker-diarization-3.1",
+            repo_id=DEFAULT_REPO_ID,
         ),
         title="Model",
         description="The pyannote.audio diarization pipeline to use. Gated on the Hugging Face Hub: accept the model conditions and set HF_TOKEN.",
@@ -109,10 +121,10 @@ class SpeakerDiarization(HuggingFacePipelineNode):
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
         return [
             HFVoiceActivityDetection(
-                repo_id="pyannote/speaker-diarization-3.1",
+                repo_id=DEFAULT_REPO_ID,
             ),
             HFVoiceActivityDetection(
-                repo_id="pyannote/speaker-diarization-community-1",
+                repo_id="pyannote/speaker-diarization-3.1",
             ),
             HFVoiceActivityDetection(
                 repo_id="pyannote/segmentation-3.0",
@@ -161,7 +173,7 @@ class SpeakerDiarization(HuggingFacePipelineNode):
         except ImportError as exc:
             raise ImportError(PYANNOTE_IMPORT_ERROR) from exc
 
-        repo_id = self.model.repo_id or "pyannote/speaker-diarization-3.1"
+        repo_id = self.model.repo_id or DEFAULT_REPO_ID
         token = await self._resolve_token(context)
         if not token:
             raise ValueError(_missing_token_error(repo_id))
@@ -169,7 +181,8 @@ class SpeakerDiarization(HuggingFacePipelineNode):
         logger.info("Loading pyannote diarization pipeline: %s", repo_id)
 
         def _load():
-            return Pipeline.from_pretrained(repo_id, use_auth_token=token)
+            # pyannote.audio 4.0 renamed use_auth_token to token.
+            return Pipeline.from_pretrained(repo_id, token=token)
 
         loop = asyncio.get_event_loop()
         pipeline = await loop.run_in_executor(_pipeline_thread_pool, _load)
@@ -192,11 +205,19 @@ class SpeakerDiarization(HuggingFacePipelineNode):
 
     @staticmethod
     def _to_segments(diarization: Any) -> "SpeakerDiarization.OutputType":
-        """Flatten a pyannote ``Annotation`` into chunks ordered by start time."""
+        """Flatten a pyannote diarization result into chunks ordered by start time.
+
+        pyannote.audio 4.x returns a ``DiarizeOutput`` dataclass carrying the
+        regular diarization, an exclusive one, and speaker embeddings. Only a
+        pipeline built with ``legacy=True`` still returns a bare ``Annotation``.
+        Both shapes reach here, so take the ``Annotation`` out of the wrapper.
+        """
+        annotation = getattr(diarization, "speaker_diarization", diarization)
+
         segments: list[AudioChunk] = []
         speakers: list[str] = []
 
-        for turn, _, speaker in diarization.itertracks(yield_label=True):
+        for turn, _, speaker in annotation.itertracks(yield_label=True):
             label = str(speaker)
             segments.append(
                 AudioChunk(

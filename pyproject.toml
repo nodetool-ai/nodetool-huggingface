@@ -45,7 +45,18 @@ dependencies = [
     "typeguard",
     # Audio analysis: speaker diarization and source separation.  pyannote
     # checkpoints are gated on the Hub (accept conditions + HF_TOKEN required).
-    "pyannote.audio>=3.3,<4",
+    #
+    # 4.0 is required, not preferred: pyannote.audio 3.x does
+    # `from torchaudio import AudioMetaData` at import time and torchaudio 2.9
+    # removed the symbol, so `import pyannote.audio` raises AttributeError.
+    # 4.0 switched audio I/O to torchcodec and dropped the reference. The floor
+    # is 4.0.4 because 4.0.2 and 4.0.3 pin `torch==2.8.0` and
+    # `torchaudio==2.8.0`, which contradict this package's torch 2.9.
+    "pyannote.audio>=4.0.4,<5",
+    # pyannote.audio 4 decodes audio through torchcodec. Pin it to the build
+    # that matches torch 2.9 -- torchcodec links against libtorch, and pip
+    # would otherwise resolve a wheel built for a newer torch.
+    "torchcodec==0.9.1",
     "speechbrain>=1.0,<2",
     # transformers' document-question-answering pipeline runs Tesseract OCR
     # itself whenever it is handed an image without word_boxes, which is the
@@ -70,7 +81,6 @@ supertonic = [
 ]
 f5-tts = [
     "f5-tts>=1.1.22,<2",
-    "torchcodec==0.9.1",
 ]
 # Pure-Python / wheel deps — install everywhere, runtime gates CUDA
 hunyuan3d = [
