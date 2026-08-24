@@ -46,10 +46,11 @@ from nodetool.metadata.types import ImageRef  # noqa: E402
 from nodetool.nodes.huggingface import image_to_3d  # noqa: E402
 from nodetool.nodes.huggingface._3d_common import MissingDependencyError  # noqa: E402
 
-# Everything TripoSG imports that a base install may not have. cv2, skimage and
-# pymeshlab ship in the [triposg] extra; the triposg package is not on PyPI.
+# Everything TripoSG imports that a base install may not have. All three ship
+# in the [triposg] extra. The triposg package itself is NOT here: it is vendored
+# at src/triposg and ships inside the wheel, so it is never a user's to install
+# -- test_vendored_triposg_is_part_of_the_wheel pins that.
 EXTRA_MODULES = ("cv2", "skimage", "pymeshlab")
-UPSTREAM_MODULE = "triposg"
 
 
 class _BlockImports:
@@ -130,19 +131,28 @@ async def test_process_names_the_extra_instead_of_dying_on_the_import(
     assert "nodetool-huggingface[triposg]" in (raised.value.install_hint or "")
 
 
-@pytest.mark.asyncio
-async def test_process_points_upstream_for_the_package_the_extra_cannot_install(
-    block_modules, never_downloads, runnable_node
-):
-    """`pip install nodetool-huggingface[triposg]` does not install triposg itself."""
-    block_modules(UPSTREAM_MODULE)
+def test_vendored_triposg_is_part_of_the_wheel_not_a_users_to_install():
+    """Why the guard says nothing about the triposg package itself.
 
-    with pytest.raises(MissingDependencyError) as raised:
-        await runnable_node.process(context=None)  # type: ignore[arg-type]
+    It is not on PyPI -- `pip install git+https://github.com/VAST-AI-Research/
+    TripoSG.git` fails with "does not appear to be a Python project: neither
+    'setup.py' nor 'pyproject.toml' found". This repo vendors it at
+    src/triposg instead and ships it in the wheel, so a correct install always
+    has it and telling a user to go install it would be wrong.
+    """
+    import tomllib
 
-    message = str(raised.value)
-    assert "not on PyPI" in message
-    assert "github.com/VAST-AI-Research/TripoSG" in message
+    pyproject = tomllib.loads(
+        (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    packaged = pyproject["tool"]["hatch"]["build"]["targets"]["wheel"]["packages"]
+    assert "src/triposg" in packaged, (
+        "triposg is no longer shipped in the wheel; if it became something the "
+        "user must install, the guard needs to say so"
+    )
+    assert (ROOT / "src" / "triposg" / "__init__.py").is_file()
+    # ...so it never appears in a message asking the user to install it.
+    assert "triposg" not in EXTRA_MODULES
 
 
 @pytest.mark.asyncio
@@ -150,13 +160,13 @@ async def test_every_missing_module_is_named_at_once(
     block_modules, never_downloads, runnable_node
 ):
     """One run should not make the user rediscover the next missing package."""
-    block_modules(*EXTRA_MODULES, UPSTREAM_MODULE)
+    block_modules(*EXTRA_MODULES)
 
     with pytest.raises(MissingDependencyError) as raised:
         await runnable_node.process(context=None)  # type: ignore[arg-type]
 
     message = str(raised.value)
-    for name in (*EXTRA_MODULES, UPSTREAM_MODULE):
+    for name in EXTRA_MODULES:
         assert name in message, f"{name} is missing but the message does not say so"
 
 
@@ -206,7 +216,7 @@ async def test_preload_still_downloads_on_a_complete_install(
     monkeypatch, never_downloads
 ):
     """The guard must not turn a working install into a silent no-op."""
-    for name in (*EXTRA_MODULES, UPSTREAM_MODULE):
+    for name in EXTRA_MODULES:
         pytest.importorskip(name)
 
     torch = pytest.importorskip("torch")
@@ -223,7 +233,7 @@ async def test_process_gets_past_the_guard_on_a_complete_install(
     never_downloads, runnable_node
 ):
     """A complete install must not raise MissingDependencyError at all."""
-    for name in (*EXTRA_MODULES, UPSTREAM_MODULE):
+    for name in EXTRA_MODULES:
         pytest.importorskip(name)
 
     with pytest.raises(BaseException) as raised:

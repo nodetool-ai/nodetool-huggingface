@@ -1380,13 +1380,11 @@ class Trellis2(HuggingFacePipelineNode):
                 )
 
 
-# TripoSG reaches for four optional modules outside the ones _load_models
-# imports for itself, and they arrive from two different places -- which is why
-# the guard below reports them apart.  `triposg` is not on PyPI (there is no
-# requirements/triposg.txt either, unlike its sf3d/trellis2/triposr siblings),
-# so `[triposg]` cannot install it.  cv2, skimage and pymeshlab do ship in that
-# extra.
-TRIPOSG_UPSTREAM_MODULES = ("triposg",)
+# The optional modules TripoSG reaches for, all three from the [triposg] extra:
+# cv2 and skimage in _prepare_image, pymeshlab in _prepare_mesh.  The triposg
+# package itself is deliberately absent from this list -- it is vendored at
+# src/triposg and ships inside the wheel (see its UPSTREAM.md), so it is part of
+# the install rather than something a user can be asked to add.
 TRIPOSG_EXTRA_MODULES = ("cv2", "skimage", "pymeshlab")
 
 
@@ -1604,24 +1602,13 @@ class TripoSG(HuggingFacePipelineNode):
         ``_prepare_image`` reaches cv2 and skimage only *after* that download
         finishes, so an unguarded import spends the bandwidth and then fails.
         """
-        missing_upstream = _missing_modules(TRIPOSG_UPSTREAM_MODULES)
-        missing_extra = _missing_modules(TRIPOSG_EXTRA_MODULES)
-        if not missing_upstream and not missing_extra:
+        missing = _missing_modules(TRIPOSG_EXTRA_MODULES)
+        if not missing:
             return None
 
-        parts: list[str] = []
-        if missing_upstream:
-            parts.append(
-                f"the {', '.join(missing_upstream)} package, which is not on PyPI "
-                "-- see https://github.com/VAST-AI-Research/TripoSG for "
-                "installation instructions"
-            )
-        if missing_extra:
-            parts.append(
-                f"{', '.join(missing_extra)}, which ship in the [triposg] extra"
-            )
         return MissingDependencyError(
-            "TripoSG requires " + "; and ".join(parts) + ".",
+            f"TripoSG requires {', '.join(missing)}, which ship in the "
+            "[triposg] extra.",
             install_hint=cls.INSTALL_HINT,
         )
 
