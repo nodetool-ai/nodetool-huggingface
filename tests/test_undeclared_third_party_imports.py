@@ -7,6 +7,14 @@ straight inside `gen_process`, with no `try`/`except` and no entry anywhere in
 from reading the code.  `VisualizeObjectDetection`'s bare `import matplotlib`
 had the same shape.
 
+Both were fixed a second time by removing the import instead of declaring it:
+`SplitSentences` now chunks with `transformers`' own tokenizer (already a
+base dependency) instead of LangChain's wrapper around it, and
+`VisualizeObjectDetection` now draws with `PIL.ImageDraw` (already a base
+dependency, and already used in the same method) instead of matplotlib.
+Neither module is imported or declared anywhere in this package any more —
+see `test_matplotlib_and_langchain_are_fully_removed` below.
+
 This is the general form of the bug `tests/test_pipeline_backend_dependencies.py`
 fixed for pytesseract: a module imported unconditionally at module or function
 scope, with no `try`/`except ImportError` anywhere in the file to catch its
@@ -230,10 +238,25 @@ def test_unguarded_imports_are_declared_or_exempt():
     )
 
 
-@pytest.mark.parametrize("module", ["langchain_text_splitters", "langchain_core", "matplotlib"])
-def test_previously_broken_modules_are_now_declared(module):
-    """Pin the two concrete regressions this test was written for, so a
-    revert of the pyproject.toml fix fails loudly and by name."""
+@pytest.mark.parametrize(
+    "module", ["langchain_text_splitters", "langchain_core", "matplotlib"]
+)
+def test_matplotlib_and_langchain_are_fully_removed(module):
+    """Pin the regression this test was originally written for, in its
+    current form: `SplitSentences` and `VisualizeObjectDetection` were
+    rewritten to avoid langchain/matplotlib entirely, so neither module
+    should be imported anywhere in this package, nor declared in
+    pyproject.toml (base dependencies or any extra) — a revert of either
+    rewrite, or a stray re-import, fails this loudly and by name."""
+    findings = _unguarded_third_party_imports()
+    assert module not in findings, (
+        f"{module} is imported (unguarded) in {sorted(findings[module])} — "
+        "it was supposed to be removed, not re-declared"
+    )
+
     base, extra_names = _declared_names()
     dist = module.lower().replace("_", "-")
-    assert dist in base | extra_names, f"{module} is not declared anywhere in pyproject.toml"
+    assert dist not in (base | extra_names), (
+        f"{module} is still declared in pyproject.toml — it was supposed to "
+        "be removed by rewriting the one node that needed it"
+    )
