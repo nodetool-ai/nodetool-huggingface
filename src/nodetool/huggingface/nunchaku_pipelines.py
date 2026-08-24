@@ -17,7 +17,11 @@ from nodetool.huggingface.flux_utils import (
     flux_variant_to_pipeline_class,
 )
 from nodetool.huggingface.local_provider_utils import _get_torch, load_model
-from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
+from nodetool.huggingface.memory_utils import (
+    apply_cpu_offload_if_needed,
+    claim_pipeline_components,
+    owns_its_components,
+)
 from nodetool.workflows.memory_utils import log_memory, run_gc, MemoryTracker
 from nodetool.workflows.types import JobUpdate
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
@@ -238,9 +242,18 @@ async def load_nunchaku_flux_pipeline(
 
     if cache_key:
         cached_pipeline = ModelManager.get_model(cache_key)
-        if cached_pipeline:
+        if cached_pipeline and owns_its_components(cached_pipeline):
             log.info(f"[MEMORY] Returning cached pipeline for {cache_key}")
             return cached_pipeline
+        if cached_pipeline:
+            # Another pipeline claimed a shared component and stripped this
+            # one's offload hooks off it. Rebuilding is the only way back to
+            # a coherent placement; the weights themselves are still cached.
+            log.info(
+                "[MEMORY] Rebuilding %s - a shared component now belongs to "
+                "another pipeline",
+                cache_key,
+            )
 
     variant = detect_flux_variant(repo_id, transformer_path)
     # A caller that knows the pipeline wins; otherwise the class follows the
@@ -306,6 +319,10 @@ async def load_nunchaku_flux_pipeline(
             f"Building {pipeline_name} from pretrained", run_gc_after=True
         ):
             pipeline = await asyncio.to_thread(_build_pipeline)
+
+        # The nunchaku T5 encoder is shared with every other FLUX variant.
+        # Take it over before anything reads the pipeline's offload state.
+        claim_pipeline_components(pipeline)
 
         if cache_key:
             ModelManager.set_model(node_id, cache_key, pipeline)
@@ -519,7 +536,7 @@ async def load_nunchaku_qwen_pipeline(
         cache_key = f"{repo_id}/{transformer_path}"
 
     cached_pipeline = ModelManager.get_model(cache_key)
-    if cached_pipeline:
+    if cached_pipeline and owns_its_components(cached_pipeline):
         log.info(f"[MEMORY] Returning cached pipeline for {cache_key}")
         return cached_pipeline
 
@@ -548,6 +565,8 @@ async def load_nunchaku_qwen_pipeline(
 
         with MemoryTracker("Building Qwen pipeline from pretrained", run_gc_after=True):
             pipeline = await asyncio.to_thread(_build_pipeline)
+
+        claim_pipeline_components(pipeline)
 
         # Exactly one offload strategy must be applied to a pipeline. Going
         # through the helper records which one, so callers that later ask for
