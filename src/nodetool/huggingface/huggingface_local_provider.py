@@ -51,6 +51,7 @@ from nodetool.huggingface.local_provider_utils import (
     load_model,
     load_pipeline,
     pipeline_progress_callback,
+    vision_language_model_class,
 )
 from nodetool.huggingface.tts_adapter_manifest import get_tts_adapter_info
 from nodetool.huggingface.text_to_image_pipelines import (
@@ -1506,7 +1507,6 @@ class HuggingFaceLocalProvider(BaseProvider):
         from transformers import (
             BitsAndBytesConfig,
             AutoProcessor,
-            AutoModelForCausalLM,
             TextStreamer,
         )
 
@@ -1562,23 +1562,34 @@ class HuggingFaceLocalProvider(BaseProvider):
             # materializes in fp32 and a 7B VLM (~28GB) spills off a <24GB GPU.
             load_kwargs["torch_dtype"] = "auto"
 
-        # Load model using AutoModelForCausalLM as requested for VL models
+        # The auto class comes from the checkpoint's model type: transformers 5
+        # registers vision-language models under AutoModelForImageTextToText,
+        # and a handful of multimodal checkpoints only under AutoModelForCausalLM.
         model = await load_model(
             node_id=node_id,
             context=context,
-            model_class=AutoModelForCausalLM,  # User guide suggests this for Qwen2.5-VL/LLaVA
+            model_class=vision_language_model_class(repo_id),
             model_id=repo_id,
             **load_kwargs,
         )
 
-        # Prepare inputs
+        # transformers 5 collects a conversation's images from the content
+        # blocks themselves, and forwards any other keyword to the processor
+        # call it makes internally. The images here were lifted out of the
+        # content into `pil_images`, so `images=` reaches that call as a second
+        # value for a keyword it already passes and raises TypeError. Render
+        # the prompt first, then hand the text and the images to the processor
+        # -- the (text=, images=) call every transformers 5 vision-language
+        # processor accepts.
         def _prepare_inputs():
-            return processor.apply_chat_template(
+            prompt = processor.apply_chat_template(
                 cleaned_messages,
                 add_generation_prompt=True,
-                return_tensors="pt",
-                tokenize=True,
+            )
+            return processor(
+                text=prompt,
                 images=pil_images if pil_images else None,
+                return_tensors="pt",
             ).to(model.device)
 
         inputs = await asyncio.to_thread(_prepare_inputs)
