@@ -1394,7 +1394,7 @@ class TripoSG(HuggingFacePipelineNode):
     **Platforms:** Linux+CUDA, Windows+CUDA (build required).
 
     **Requirements:** CUDA GPU with at least 8GB VRAM.
-    First run downloads ~3GB model weights.
+    First run downloads ~8.8GB of model weights (7.9GB TripoSG + 0.8GB RMBG).
 
     Model: https://huggingface.co/VAST-AI/TripoSG
     License: MIT
@@ -1402,7 +1402,12 @@ class TripoSG(HuggingFacePipelineNode):
 
     # -- static metadata ---------------------------------------------------
     MIN_VRAM_GB: ClassVar[int] = 8
-    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 3.0
+    # VAST-AI/TripoSG is 7.95 GB / 7.40 GiB across 11 files, and
+    # _load_models' snapshot_download passes no allow_patterns, so it fetches
+    # all of them.  _check_disk_space compares this against free GiB, so the
+    # value must clear 7.40; 8.0 does, in either unit, and matches how the
+    # sibling nodes round.  It was 3.0, which under-reserved by 2.6x.
+    ESTIMATED_DOWNLOAD_GB: ClassVar[float] = 8.0
     license_warning: ClassVar[str | None] = None  # MIT
     SUPPORTED_PLATFORMS: ClassVar[list[str]] = ["linux", "windows"]
     INSTALL_HINT: ClassVar[str | None] = (
@@ -1507,7 +1512,11 @@ class TripoSG(HuggingFacePipelineNode):
             _log_cache_status(
                 self.RMBG_CACHE_KEY, is_cached=False, node_name=self.get_title()
             )
-            _check_disk_space(0.5)  # RMBG is ~0.2 GB
+            # briaai/RMBG-1.4 is 0.84 GB / 0.78 GiB: the weights are published
+            # in five formats (.pth, .bin, .safetensors, and three ONNX
+            # variants) and snapshot_download takes the whole repo, not the
+            # 0.18 GB the node loads.  The old 0.5 was sized from one file.
+            _check_disk_space(1.0)
             rmbg_path = snapshot_download(
                 repo_id="briaai/RMBG-1.4",
                 revision=_model_revision("briaai/RMBG-1.4"),
