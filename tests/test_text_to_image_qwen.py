@@ -8,12 +8,12 @@ async def test_qwen_image_quantization():
 
     # Verify that the model ID and path are resolved correctly
     model_config = qwen._resolve_model_config()
-    assert model_config.repo_id == "nunchaku-tech/nunchaku-qwen-image"
+    assert model_config.repo_id == "nunchaku-ai/nunchaku-qwen-image"
     assert "int4" in (model_config.path or "")
 
     qwen.quantization = QwenQuantization.FP4
     model_config = qwen._resolve_model_config()
-    assert model_config.repo_id == "nunchaku-tech/nunchaku-qwen-image"
+    assert model_config.repo_id == "nunchaku-ai/nunchaku-qwen-image"
     assert "fp4" in (model_config.path or "")
 
     qwen.quantization = QwenQuantization.FP16

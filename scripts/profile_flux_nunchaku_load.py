@@ -28,14 +28,14 @@ async def main() -> None:
     from nodetool.huggingface.nunchaku_pipelines import load_nunchaku_flux_pipeline
     from nodetool.workflows.processing_context import ProcessingContext
 
-    repo = "nunchaku-tech/nunchaku-flux.1-schnell"
+    repo = "nunchaku-ai/nunchaku-flux.1-schnell"
     path = "svdq-int4_r32-flux.1-schnell.safetensors"
     base = "black-forest-labs/FLUX.1-schnell"
 
     for r, p in [
         (base, "model_index.json"),
         (repo, path),
-        ("nunchaku-tech/nunchaku-t5", "awq-int4-flux.1-t5xxl.safetensors"),
+        ("nunchaku-ai/nunchaku-t5", "awq-int4-flux.1-t5xxl.safetensors"),
     ]:
         resolved = await HF_FAST_CACHE.resolve(r, p)
         stamp(f"cache {r}/{p} -> {'OK' if resolved else 'MISSING'}", t0)

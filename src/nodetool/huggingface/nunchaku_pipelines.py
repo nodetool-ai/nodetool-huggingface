@@ -56,7 +56,7 @@ def _require_nunchaku() -> None:
     if not _check_nunchaku_available():
         raise ImportError(
             "The SVDQuant nunchaku runtime is required for this operation but is not installed. "
-            "Install it from the NodeTool package manager (nunchaku-tech/nunchaku) or from the "
+            "Install it from the NodeTool package manager (nunchaku-ai/nunchaku) or from the "
             "NodeTool registry wheel index. Do not install the unrelated PyPI 'nunchaku' package."
         )
 
@@ -92,7 +92,7 @@ async def get_nunchaku_text_encoder(
     from huggingface_hub import hf_hub_download
 
     if repo_id is None:
-        repo_id = "nunchaku-tech/nunchaku-t5"
+        repo_id = "nunchaku-ai/nunchaku-t5"
     if path is None:
         path = f"awq-{get_precision()}-flux.1-t5xxl.safetensors"
 

@@ -1941,19 +1941,19 @@ class QwenImageEdit(HuggingFacePipelineNode):
                 allow_patterns=allow_patterns,
             ),
             HFQwenImageEdit(
-                repo_id="nunchaku-tech/nunchaku-qwen-image-edit",
+                repo_id="nunchaku-ai/nunchaku-qwen-image-edit",
                 path="svdq-int4_r32-qwen-image-edit.safetensors",
             ),
             HFQwenImageEdit(
-                repo_id="nunchaku-tech/nunchaku-qwen-image-edit",
+                repo_id="nunchaku-ai/nunchaku-qwen-image-edit",
                 path="svdq-fp4_r32-qwen-image-edit.safetensors",
             ),
             HFQwenImageEdit(
-                repo_id="nunchaku-tech/nunchaku-qwen-image-edit-2509",
+                repo_id="nunchaku-ai/nunchaku-qwen-image-edit-2509",
                 path="svdq-int4_r32-qwen-image-edit-2509.safetensors",
             ),
             HFQwenImageEdit(
-                repo_id="nunchaku-tech/nunchaku-qwen-image-edit-2509",
+                repo_id="nunchaku-ai/nunchaku-qwen-image-edit-2509",
                 path="svdq-fp4_r32-qwen-image-edit-2509.safetensors",
             ),
         ]
@@ -1990,10 +1990,10 @@ class QwenImageEdit(HuggingFacePipelineNode):
                         allow_patterns=QWEN_IMAGE_EDIT_ALLOW_PATTERNS,
                     ),
                     UnifiedModel(
-                        id="nunchaku-tech/nunchaku-qwen-image-edit:svdq-int4_r32-qwen-image-edit.safetensors",
+                        id="nunchaku-ai/nunchaku-qwen-image-edit:svdq-int4_r32-qwen-image-edit.safetensors",
                         type="hf.qwen_image_edit",
                         name="Nunchaku Qwen-Image-Edit Transformer (INT4)",
-                        repo_id="nunchaku-tech/nunchaku-qwen-image-edit",
+                        repo_id="nunchaku-ai/nunchaku-qwen-image-edit",
                         path="svdq-int4_r32-qwen-image-edit.safetensors",
                         size_on_disk=6500000000,
                     ),
@@ -2015,10 +2015,10 @@ class QwenImageEdit(HuggingFacePipelineNode):
                         allow_patterns=QWEN_IMAGE_EDIT_ALLOW_PATTERNS,
                     ),
                     UnifiedModel(
-                        id="nunchaku-tech/nunchaku-qwen-image-edit:svdq-fp4_r32-qwen-image-edit.safetensors",
+                        id="nunchaku-ai/nunchaku-qwen-image-edit:svdq-fp4_r32-qwen-image-edit.safetensors",
                         type="hf.qwen_image_edit",
                         name="Nunchaku Qwen-Image-Edit Transformer (FP4)",
-                        repo_id="nunchaku-tech/nunchaku-qwen-image-edit",
+                        repo_id="nunchaku-ai/nunchaku-qwen-image-edit",
                         path="svdq-fp4_r32-qwen-image-edit.safetensors",
                         size_on_disk=6500000000,
                     ),
@@ -2048,12 +2048,12 @@ class QwenImageEdit(HuggingFacePipelineNode):
         quantization = quantization or self.quantization
         if quantization == QwenImageEditQuantization.FP4:
             return HFQwenImageEdit(
-                repo_id="nunchaku-tech/nunchaku-qwen-image-edit",
+                repo_id="nunchaku-ai/nunchaku-qwen-image-edit",
                 path="svdq-fp4_r32-qwen-image-edit.safetensors",
             )
         if quantization == QwenImageEditQuantization.INT4:
             return HFQwenImageEdit(
-                repo_id="nunchaku-tech/nunchaku-qwen-image-edit",
+                repo_id="nunchaku-ai/nunchaku-qwen-image-edit",
                 path="svdq-int4_r32-qwen-image-edit.safetensors",
             )
         return self._get_base_model()
@@ -2302,11 +2302,11 @@ class FluxFill(HuggingFacePipelineNode):
                 allow_patterns=cls.FLUX_FILL_BASE_ALLOW_PATTERNS,
             ),
             HFFluxFill(
-                repo_id="nunchaku-tech/nunchaku-flux.1-fill-dev",
+                repo_id="nunchaku-ai/nunchaku-flux.1-fill-dev",
                 path="svdq-int4_r32-flux.1-fill-dev.safetensors",
             ),
             HFFluxFill(
-                repo_id="nunchaku-tech/nunchaku-flux.1-fill-dev",
+                repo_id="nunchaku-ai/nunchaku-flux.1-fill-dev",
                 path="svdq-fp4_r32-flux.1-fill-dev.safetensors",
             ),
         ]
@@ -2359,7 +2359,7 @@ class FluxFill(HuggingFacePipelineNode):
 
         precision = "fp4" if quantization == FluxFillQuantization.FP4 else "int4"
         transformer = HFFlux(
-            repo_id="nunchaku-tech/nunchaku-flux.1-fill-dev",
+            repo_id="nunchaku-ai/nunchaku-flux.1-fill-dev",
             path=f"svdq-{precision}_r32-flux.1-fill-dev.safetensors",
         )
         return base_model, transformer
@@ -2564,15 +2564,15 @@ class FluxKontext(HuggingFacePipelineNode):
                 allow_patterns=allow_patterns,
             ),
             HFFluxKontext(
-                repo_id="nunchaku-tech/nunchaku-flux.1-kontext-dev",
+                repo_id="nunchaku-ai/nunchaku-flux.1-kontext-dev",
                 path="svdq-int4_r32-flux.1-kontext-dev.safetensors",
             ),
             HFFluxKontext(
-                repo_id="nunchaku-tech/nunchaku-flux.1-kontext-dev",
+                repo_id="nunchaku-ai/nunchaku-flux.1-kontext-dev",
                 path="svdq-fp4_r32-flux.1-kontext-dev.safetensors",
             ),
             HFT5(
-                repo_id="nunchaku-tech/nunchaku-t5",
+                repo_id="nunchaku-ai/nunchaku-t5",
                 path="awq-int4-flux.1-t5xxl.safetensors",
             ),
         ]
@@ -2608,22 +2608,22 @@ class FluxKontext(HuggingFacePipelineNode):
         if quantization == FluxKontextQuantization.FP4:
             return (
                 HFFluxKontext(
-                    repo_id="nunchaku-tech/nunchaku-flux.1-kontext-dev",
+                    repo_id="nunchaku-ai/nunchaku-flux.1-kontext-dev",
                     path="svdq-fp4_r32-flux.1-kontext-dev.safetensors",
                 ),
                 HFT5(
-                    repo_id="nunchaku-tech/nunchaku-t5",
+                    repo_id="nunchaku-ai/nunchaku-t5",
                     path="awq-int4-flux.1-t5xxl.safetensors",
                 ),
             )
         if quantization == FluxKontextQuantization.INT4:
             return (
                 HFFluxKontext(
-                    repo_id="nunchaku-tech/nunchaku-flux.1-kontext-dev",
+                    repo_id="nunchaku-ai/nunchaku-flux.1-kontext-dev",
                     path="svdq-int4_r32-flux.1-kontext-dev.safetensors",
                 ),
                 HFT5(
-                    repo_id="nunchaku-tech/nunchaku-t5",
+                    repo_id="nunchaku-ai/nunchaku-t5",
                     path="awq-int4-flux.1-t5xxl.safetensors",
                 ),
             )

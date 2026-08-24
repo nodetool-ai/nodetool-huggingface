@@ -535,23 +535,23 @@ class Flux(HuggingFacePipelineNode):
                 allow_patterns=allow_patterns,
             ),
             HFFlux(
-                repo_id="nunchaku-tech/nunchaku-flux.1-schnell",
+                repo_id="nunchaku-ai/nunchaku-flux.1-schnell",
                 path="svdq-int4_r32-flux.1-schnell.safetensors",
             ),
             HFFlux(
-                repo_id="nunchaku-tech/nunchaku-flux.1-schnell",
+                repo_id="nunchaku-ai/nunchaku-flux.1-schnell",
                 path="svdq-fp4_r32-flux.1-schnell.safetensors",
             ),
             HFFlux(
-                repo_id="nunchaku-tech/nunchaku-flux.1-dev",
+                repo_id="nunchaku-ai/nunchaku-flux.1-dev",
                 path="svdq-int4_r32-flux.1-dev.safetensors",
             ),
             HFFlux(
-                repo_id="nunchaku-tech/nunchaku-flux.1-dev",
+                repo_id="nunchaku-ai/nunchaku-flux.1-dev",
                 path="svdq-fp4_r32-flux.1-dev.safetensors",
             ),
             HFT5(
-                repo_id="nunchaku-tech/nunchaku-t5",
+                repo_id="nunchaku-ai/nunchaku-t5",
                 path="awq-int4-flux.1-t5xxl.safetensors",
             ),
         ]
@@ -590,19 +590,19 @@ class Flux(HuggingFacePipelineNode):
                     UnifiedModel(
                         # Composite ID (repo_id:filename) used to distinguish this specific file variant
                         # from other files in the same repo, ensuring unique identification in State.
-                        id="nunchaku-tech/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
+                        id="nunchaku-ai/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
                         type="hf.flux",
                         name="Nunchaku Schnell Transformer (INT4)",
-                        repo_id="nunchaku-tech/nunchaku-flux.1-schnell",
+                        repo_id="nunchaku-ai/nunchaku-flux.1-schnell",
                         path="svdq-int4_r32-flux.1-schnell.safetensors",
                         size_on_disk=6400000000,
                     ),
                     UnifiedModel(
                         # Composite ID for T5 encoder variant
-                        id="nunchaku-tech/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
+                        id="nunchaku-ai/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
                         type="hf.t5",
                         name="Nunchaku T5-XXL Encoder (INT4)",
-                        repo_id="nunchaku-tech/nunchaku-t5",
+                        repo_id="nunchaku-ai/nunchaku-t5",
                         path="awq-int4-flux.1-t5xxl.safetensors",
                         size_on_disk=5000000000,
                     ),
@@ -624,18 +624,18 @@ class Flux(HuggingFacePipelineNode):
                         allow_patterns=FLUX_DEV_ALLOW_PATTERNS,
                     ),
                     UnifiedModel(
-                        id="nunchaku-tech/nunchaku-flux.1-dev:svdq-int4_r32-flux.1-dev.safetensors",
+                        id="nunchaku-ai/nunchaku-flux.1-dev:svdq-int4_r32-flux.1-dev.safetensors",
                         type="hf.flux",
                         name="Nunchaku Dev Transformer (INT4)",
-                        repo_id="nunchaku-tech/nunchaku-flux.1-dev",
+                        repo_id="nunchaku-ai/nunchaku-flux.1-dev",
                         path="svdq-int4_r32-flux.1-dev.safetensors",
                         size_on_disk=6400000000,
                     ),
                     UnifiedModel(
-                        id="nunchaku-tech/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
+                        id="nunchaku-ai/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
                         type="hf.t5",
                         name="Nunchaku T5-XXL Encoder (INT4)",
-                        repo_id="nunchaku-tech/nunchaku-t5",
+                        repo_id="nunchaku-ai/nunchaku-t5",
                         path="awq-int4-flux.1-t5xxl.safetensors",
                         size_on_disk=5000000000,
                     ),
@@ -653,22 +653,22 @@ class Flux(HuggingFacePipelineNode):
             if self.variant == FluxVariant.SCHNELL:
                 return (
                     HFFlux(
-                        repo_id="nunchaku-tech/nunchaku-flux.1-schnell",
+                        repo_id="nunchaku-ai/nunchaku-flux.1-schnell",
                         path="svdq-fp4_r32-flux.1-schnell.safetensors",
                     ),
                     HFT5(
-                        repo_id="nunchaku-tech/nunchaku-t5",
+                        repo_id="nunchaku-ai/nunchaku-t5",
                         path="awq-int4-flux.1-t5xxl.safetensors",
                     ),
                 )
             else:
                 return (
                     HFFlux(
-                        repo_id="nunchaku-tech/nunchaku-flux.1-dev",
+                        repo_id="nunchaku-ai/nunchaku-flux.1-dev",
                         path="svdq-fp4_r32-flux.1-dev.safetensors",
                     ),
                     HFT5(
-                        repo_id="nunchaku-tech/nunchaku-t5",
+                        repo_id="nunchaku-ai/nunchaku-t5",
                         path="awq-int4-flux.1-t5xxl.safetensors",
                     ),
                 )
@@ -676,22 +676,22 @@ class Flux(HuggingFacePipelineNode):
             if self.variant == FluxVariant.SCHNELL:
                 return (
                     HFFlux(
-                        repo_id="nunchaku-tech/nunchaku-flux.1-schnell",
+                        repo_id="nunchaku-ai/nunchaku-flux.1-schnell",
                         path="svdq-int4_r32-flux.1-schnell.safetensors",
                     ),
                     HFT5(
-                        repo_id="nunchaku-tech/nunchaku-t5",
+                        repo_id="nunchaku-ai/nunchaku-t5",
                         path="awq-int4-flux.1-t5xxl.safetensors",
                     ),
                 )
             else:
                 return (
                     HFFlux(
-                        repo_id="nunchaku-tech/nunchaku-flux.1-dev",
+                        repo_id="nunchaku-ai/nunchaku-flux.1-dev",
                         path="svdq-int4_r32-flux.1-dev.safetensors",
                     ),
                     HFT5(
-                        repo_id="nunchaku-tech/nunchaku-t5",
+                        repo_id="nunchaku-ai/nunchaku-t5",
                         path="awq-int4-flux.1-t5xxl.safetensors",
                     ),
                 )
@@ -1680,11 +1680,11 @@ class QwenImage(HuggingFacePipelineNode):
                 allow_patterns=allow_patterns,
             ),
             HFQwenImage(
-                repo_id="nunchaku-tech/nunchaku-qwen-image",
+                repo_id="nunchaku-ai/nunchaku-qwen-image",
                 path="svdq-int4_r32-qwen-image.safetensors",
             ),
             HFQwenImage(
-                repo_id="nunchaku-tech/nunchaku-qwen-image",
+                repo_id="nunchaku-ai/nunchaku-qwen-image",
                 path="svdq-fp4_r32-qwen-image.safetensors",
             ),
         ]
@@ -1721,10 +1721,10 @@ class QwenImage(HuggingFacePipelineNode):
                         allow_patterns=QWEN_IMAGE_ALLOW_PATTERNS,
                     ),
                     UnifiedModel(
-                        id="nunchaku-tech/nunchaku-qwen-image:svdq-int4_r32-qwen-image.safetensors",
+                        id="nunchaku-ai/nunchaku-qwen-image:svdq-int4_r32-qwen-image.safetensors",
                         type="hf.qwen_image",
                         name="Nunchaku Qwen Transformer (INT4)",
-                        repo_id="nunchaku-tech/nunchaku-qwen-image",
+                        repo_id="nunchaku-ai/nunchaku-qwen-image",
                         path="svdq-int4_r32-qwen-image.safetensors",
                         size_on_disk=6500000000,
                     ),
@@ -1751,12 +1751,12 @@ class QwenImage(HuggingFacePipelineNode):
     def _resolve_model_config(self) -> HFQwenImage:
         if self.quantization == QwenQuantization.FP4:
             return HFQwenImage(
-                repo_id="nunchaku-tech/nunchaku-qwen-image",
+                repo_id="nunchaku-ai/nunchaku-qwen-image",
                 path="svdq-fp4_r32-qwen-image.safetensors",
             )
         elif self.quantization == QwenQuantization.INT4:
             return HFQwenImage(
-                repo_id="nunchaku-tech/nunchaku-qwen-image",
+                repo_id="nunchaku-ai/nunchaku-qwen-image",
                 path="svdq-int4_r32-qwen-image.safetensors",
             )
         else:
@@ -1984,23 +1984,23 @@ class FluxControl(HuggingFacePipelineNode):
                 allow_patterns=allow_patterns,
             ),
             HFControlNetFlux(
-                repo_id="nunchaku-tech/nunchaku-flux.1-depth-dev",
+                repo_id="nunchaku-ai/nunchaku-flux.1-depth-dev",
                 path="svdq-int4_r32-flux.1-depth-dev.safetensors",
             ),
             HFControlNetFlux(
-                repo_id="nunchaku-tech/nunchaku-flux.1-depth-dev",
+                repo_id="nunchaku-ai/nunchaku-flux.1-depth-dev",
                 path="svdq-fp4_r32-flux.1-depth-dev.safetensors",
             ),
             HFControlNetFlux(
-                repo_id="nunchaku-tech/nunchaku-flux.1-canny-dev",
+                repo_id="nunchaku-ai/nunchaku-flux.1-canny-dev",
                 path="svdq-int4_r32-flux.1-canny-dev.safetensors",
             ),
             HFControlNetFlux(
-                repo_id="nunchaku-tech/nunchaku-flux.1-canny-dev",
+                repo_id="nunchaku-ai/nunchaku-flux.1-canny-dev",
                 path="svdq-fp4_r32-flux.1-canny-dev.safetensors",
             ),
             HFT5(
-                repo_id="nunchaku-tech/nunchaku-t5",
+                repo_id="nunchaku-ai/nunchaku-t5",
                 path="awq-int4-flux.1-t5xxl.safetensors",
             ),
         ]
@@ -2137,11 +2137,11 @@ class FluxControl(HuggingFacePipelineNode):
 
         precision = "fp4" if quantization == FluxControlQuantization.FP4 else "int4"
         transformer_model = HFControlNetFlux(
-            repo_id=f"nunchaku-tech/nunchaku-flux.1-{variant_key}",
+            repo_id=f"nunchaku-ai/nunchaku-flux.1-{variant_key}",
             path=f"svdq-{precision}_r32-flux.1-{variant_key}.safetensors",
         )
         text_encoder_model = HFT5(
-            repo_id="nunchaku-tech/nunchaku-t5",
+            repo_id="nunchaku-ai/nunchaku-t5",
             path="awq-int4-flux.1-t5xxl.safetensors",
         )
         base_model = HFControlNetFlux(

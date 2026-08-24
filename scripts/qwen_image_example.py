@@ -11,7 +11,7 @@ rank = 32  # you can also use rank=128 model to improve the quality
 
 # Load the model
 transformer = NunchakuQwenImageTransformer2DModel.from_pretrained(
-    f"nunchaku-tech/nunchaku-qwen-image/svdq-{get_precision()}_r{rank}-qwen-image.safetensors"
+    f"nunchaku-ai/nunchaku-qwen-image/svdq-{get_precision()}_r{rank}-qwen-image.safetensors"
 )
 
 # currently, you need to use this pipeline to offload the model to CPU

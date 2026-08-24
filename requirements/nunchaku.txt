@@ -7,4 +7,4 @@
 # https://nodetool-ai.github.io/nodetool-registry/simple/nunchaku/
 #
 # Example (Python 3.11, torch 2.9, CUDA 12.8, Windows):
-# pip install "https://github.com/nunchaku-tech/nunchaku/releases/download/v1.2.1/nunchaku-1.2.1+cu12.8torch2.9-cp311-cp311-win_amd64.whl"
+# pip install "https://github.com/nunchaku-ai/nunchaku/releases/download/v1.2.1/nunchaku-1.2.1+cu12.8torch2.9-cp311-cp311-win_amd64.whl"

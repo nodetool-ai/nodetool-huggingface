@@ -4237,17 +4237,17 @@
           "type": "hf.inpainting"
         },
         {
-          "id": "nunchaku-tech/nunchaku-flux.1-fill-dev:svdq-int4_r32-flux.1-fill-dev.safetensors",
-          "name": "nunchaku-tech/nunchaku-flux.1-fill-dev",
+          "id": "nunchaku-ai/nunchaku-flux.1-fill-dev:svdq-int4_r32-flux.1-fill-dev.safetensors",
+          "name": "nunchaku-ai/nunchaku-flux.1-fill-dev",
           "path": "svdq-int4_r32-flux.1-fill-dev.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-flux.1-fill-dev",
+          "repo_id": "nunchaku-ai/nunchaku-flux.1-fill-dev",
           "type": "hf.inpainting"
         },
         {
-          "id": "nunchaku-tech/nunchaku-flux.1-fill-dev:svdq-fp4_r32-flux.1-fill-dev.safetensors",
-          "name": "nunchaku-tech/nunchaku-flux.1-fill-dev",
+          "id": "nunchaku-ai/nunchaku-flux.1-fill-dev:svdq-fp4_r32-flux.1-fill-dev.safetensors",
+          "name": "nunchaku-ai/nunchaku-flux.1-fill-dev",
           "path": "svdq-fp4_r32-flux.1-fill-dev.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-flux.1-fill-dev",
+          "repo_id": "nunchaku-ai/nunchaku-flux.1-fill-dev",
           "type": "hf.inpainting"
         }
       ],
@@ -4364,24 +4364,24 @@
           "type": "hf.flux_kontext"
         },
         {
-          "id": "nunchaku-tech/nunchaku-flux.1-kontext-dev:svdq-int4_r32-flux.1-kontext-dev.safetensors",
-          "name": "nunchaku-tech/nunchaku-flux.1-kontext-dev",
+          "id": "nunchaku-ai/nunchaku-flux.1-kontext-dev:svdq-int4_r32-flux.1-kontext-dev.safetensors",
+          "name": "nunchaku-ai/nunchaku-flux.1-kontext-dev",
           "path": "svdq-int4_r32-flux.1-kontext-dev.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-flux.1-kontext-dev",
+          "repo_id": "nunchaku-ai/nunchaku-flux.1-kontext-dev",
           "type": "hf.flux_kontext"
         },
         {
-          "id": "nunchaku-tech/nunchaku-flux.1-kontext-dev:svdq-fp4_r32-flux.1-kontext-dev.safetensors",
-          "name": "nunchaku-tech/nunchaku-flux.1-kontext-dev",
+          "id": "nunchaku-ai/nunchaku-flux.1-kontext-dev:svdq-fp4_r32-flux.1-kontext-dev.safetensors",
+          "name": "nunchaku-ai/nunchaku-flux.1-kontext-dev",
           "path": "svdq-fp4_r32-flux.1-kontext-dev.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-flux.1-kontext-dev",
+          "repo_id": "nunchaku-ai/nunchaku-flux.1-kontext-dev",
           "type": "hf.flux_kontext"
         },
         {
-          "id": "nunchaku-tech/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
-          "name": "nunchaku-tech/nunchaku-t5",
+          "id": "nunchaku-ai/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
+          "name": "nunchaku-ai/nunchaku-t5",
           "path": "awq-int4-flux.1-t5xxl.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-t5",
+          "repo_id": "nunchaku-ai/nunchaku-t5",
           "type": "hf.t5"
         }
       ],
@@ -4737,10 +4737,10 @@
               "type": "hf.qwen_image_edit"
             },
             {
-              "id": "nunchaku-tech/nunchaku-qwen-image-edit:svdq-int4_r32-qwen-image-edit.safetensors",
+              "id": "nunchaku-ai/nunchaku-qwen-image-edit:svdq-int4_r32-qwen-image-edit.safetensors",
               "name": "Nunchaku Qwen-Image-Edit Transformer (INT4)",
               "path": "svdq-int4_r32-qwen-image-edit.safetensors",
-              "repo_id": "nunchaku-tech/nunchaku-qwen-image-edit",
+              "repo_id": "nunchaku-ai/nunchaku-qwen-image-edit",
               "size_on_disk": 6500000000,
               "type": "hf.qwen_image_edit"
             }
@@ -4777,10 +4777,10 @@
               "type": "hf.qwen_image_edit"
             },
             {
-              "id": "nunchaku-tech/nunchaku-qwen-image-edit:svdq-fp4_r32-qwen-image-edit.safetensors",
+              "id": "nunchaku-ai/nunchaku-qwen-image-edit:svdq-fp4_r32-qwen-image-edit.safetensors",
               "name": "Nunchaku Qwen-Image-Edit Transformer (FP4)",
               "path": "svdq-fp4_r32-qwen-image-edit.safetensors",
-              "repo_id": "nunchaku-tech/nunchaku-qwen-image-edit",
+              "repo_id": "nunchaku-ai/nunchaku-qwen-image-edit",
               "size_on_disk": 6500000000,
               "type": "hf.qwen_image_edit"
             }
@@ -4924,31 +4924,31 @@
           "type": "hf.qwen_image_edit"
         },
         {
-          "id": "nunchaku-tech/nunchaku-qwen-image-edit:svdq-int4_r32-qwen-image-edit.safetensors",
-          "name": "nunchaku-tech/nunchaku-qwen-image-edit",
+          "id": "nunchaku-ai/nunchaku-qwen-image-edit:svdq-int4_r32-qwen-image-edit.safetensors",
+          "name": "nunchaku-ai/nunchaku-qwen-image-edit",
           "path": "svdq-int4_r32-qwen-image-edit.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-qwen-image-edit",
+          "repo_id": "nunchaku-ai/nunchaku-qwen-image-edit",
           "type": "hf.qwen_image_edit"
         },
         {
-          "id": "nunchaku-tech/nunchaku-qwen-image-edit:svdq-fp4_r32-qwen-image-edit.safetensors",
-          "name": "nunchaku-tech/nunchaku-qwen-image-edit",
+          "id": "nunchaku-ai/nunchaku-qwen-image-edit:svdq-fp4_r32-qwen-image-edit.safetensors",
+          "name": "nunchaku-ai/nunchaku-qwen-image-edit",
           "path": "svdq-fp4_r32-qwen-image-edit.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-qwen-image-edit",
+          "repo_id": "nunchaku-ai/nunchaku-qwen-image-edit",
           "type": "hf.qwen_image_edit"
         },
         {
-          "id": "nunchaku-tech/nunchaku-qwen-image-edit-2509:svdq-int4_r32-qwen-image-edit-2509.safetensors",
-          "name": "nunchaku-tech/nunchaku-qwen-image-edit-2509",
+          "id": "nunchaku-ai/nunchaku-qwen-image-edit-2509:svdq-int4_r32-qwen-image-edit-2509.safetensors",
+          "name": "nunchaku-ai/nunchaku-qwen-image-edit-2509",
           "path": "svdq-int4_r32-qwen-image-edit-2509.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-qwen-image-edit-2509",
+          "repo_id": "nunchaku-ai/nunchaku-qwen-image-edit-2509",
           "type": "hf.qwen_image_edit"
         },
         {
-          "id": "nunchaku-tech/nunchaku-qwen-image-edit-2509:svdq-fp4_r32-qwen-image-edit-2509.safetensors",
-          "name": "nunchaku-tech/nunchaku-qwen-image-edit-2509",
+          "id": "nunchaku-ai/nunchaku-qwen-image-edit-2509:svdq-fp4_r32-qwen-image-edit-2509.safetensors",
+          "name": "nunchaku-ai/nunchaku-qwen-image-edit-2509",
           "path": "svdq-fp4_r32-qwen-image-edit-2509.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-qwen-image-edit-2509",
+          "repo_id": "nunchaku-ai/nunchaku-qwen-image-edit-2509",
           "type": "hf.qwen_image_edit"
         }
       ],
@@ -9191,17 +9191,17 @@
           "type": "hf.stable_diffusion_xl"
         },
         {
-          "id": "nunchaku-tech/nunchaku-sdxl:svdq-int4_r32-sdxl.safetensors",
-          "name": "nunchaku-tech/nunchaku-sdxl",
+          "id": "nunchaku-ai/nunchaku-sdxl:svdq-int4_r32-sdxl.safetensors",
+          "name": "nunchaku-ai/nunchaku-sdxl",
           "path": "svdq-int4_r32-sdxl.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-sdxl",
+          "repo_id": "nunchaku-ai/nunchaku-sdxl",
           "type": "hf.stable_diffusion_xl"
         },
         {
-          "id": "nunchaku-tech/nunchaku-sdxl-turbo:svdq-int4_r32-sdxl-turbo.safetensors",
-          "name": "nunchaku-tech/nunchaku-sdxl-turbo",
+          "id": "nunchaku-ai/nunchaku-sdxl-turbo:svdq-int4_r32-sdxl-turbo.safetensors",
+          "name": "nunchaku-ai/nunchaku-sdxl-turbo",
           "path": "svdq-int4_r32-sdxl-turbo.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-sdxl-turbo",
+          "repo_id": "nunchaku-ai/nunchaku-sdxl-turbo",
           "type": "hf.stable_diffusion_xl"
         }
       ],
@@ -9595,17 +9595,17 @@
           "type": "hf.stable_diffusion_xl"
         },
         {
-          "id": "nunchaku-tech/nunchaku-sdxl:svdq-int4_r32-sdxl.safetensors",
-          "name": "nunchaku-tech/nunchaku-sdxl",
+          "id": "nunchaku-ai/nunchaku-sdxl:svdq-int4_r32-sdxl.safetensors",
+          "name": "nunchaku-ai/nunchaku-sdxl",
           "path": "svdq-int4_r32-sdxl.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-sdxl",
+          "repo_id": "nunchaku-ai/nunchaku-sdxl",
           "type": "hf.stable_diffusion_xl"
         },
         {
-          "id": "nunchaku-tech/nunchaku-sdxl-turbo:svdq-int4_r32-sdxl-turbo.safetensors",
-          "name": "nunchaku-tech/nunchaku-sdxl-turbo",
+          "id": "nunchaku-ai/nunchaku-sdxl-turbo:svdq-int4_r32-sdxl-turbo.safetensors",
+          "name": "nunchaku-ai/nunchaku-sdxl-turbo",
           "path": "svdq-int4_r32-sdxl-turbo.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-sdxl-turbo",
+          "repo_id": "nunchaku-ai/nunchaku-sdxl-turbo",
           "type": "hf.stable_diffusion_xl"
         }
       ],
@@ -16400,18 +16400,18 @@
               "type": "hf.flux"
             },
             {
-              "id": "nunchaku-tech/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
+              "id": "nunchaku-ai/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
               "name": "Nunchaku Schnell Transformer (INT4)",
               "path": "svdq-int4_r32-flux.1-schnell.safetensors",
-              "repo_id": "nunchaku-tech/nunchaku-flux.1-schnell",
+              "repo_id": "nunchaku-ai/nunchaku-flux.1-schnell",
               "size_on_disk": 6400000000,
               "type": "hf.flux"
             },
             {
-              "id": "nunchaku-tech/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
+              "id": "nunchaku-ai/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
               "name": "Nunchaku T5-XXL Encoder (INT4)",
               "path": "awq-int4-flux.1-t5xxl.safetensors",
-              "repo_id": "nunchaku-tech/nunchaku-t5",
+              "repo_id": "nunchaku-ai/nunchaku-t5",
               "size_on_disk": 5000000000,
               "type": "hf.t5"
             }
@@ -16447,18 +16447,18 @@
               "type": "hf.flux"
             },
             {
-              "id": "nunchaku-tech/nunchaku-flux.1-dev:svdq-int4_r32-flux.1-dev.safetensors",
+              "id": "nunchaku-ai/nunchaku-flux.1-dev:svdq-int4_r32-flux.1-dev.safetensors",
               "name": "Nunchaku Dev Transformer (INT4)",
               "path": "svdq-int4_r32-flux.1-dev.safetensors",
-              "repo_id": "nunchaku-tech/nunchaku-flux.1-dev",
+              "repo_id": "nunchaku-ai/nunchaku-flux.1-dev",
               "size_on_disk": 6400000000,
               "type": "hf.flux"
             },
             {
-              "id": "nunchaku-tech/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
+              "id": "nunchaku-ai/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
               "name": "Nunchaku T5-XXL Encoder (INT4)",
               "path": "awq-int4-flux.1-t5xxl.safetensors",
-              "repo_id": "nunchaku-tech/nunchaku-t5",
+              "repo_id": "nunchaku-ai/nunchaku-t5",
               "size_on_disk": 5000000000,
               "type": "hf.t5"
             }
@@ -16630,38 +16630,38 @@
           "type": "hf.flux"
         },
         {
-          "id": "nunchaku-tech/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
-          "name": "nunchaku-tech/nunchaku-flux.1-schnell",
+          "id": "nunchaku-ai/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
+          "name": "nunchaku-ai/nunchaku-flux.1-schnell",
           "path": "svdq-int4_r32-flux.1-schnell.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-flux.1-schnell",
+          "repo_id": "nunchaku-ai/nunchaku-flux.1-schnell",
           "type": "hf.flux"
         },
         {
-          "id": "nunchaku-tech/nunchaku-flux.1-schnell:svdq-fp4_r32-flux.1-schnell.safetensors",
-          "name": "nunchaku-tech/nunchaku-flux.1-schnell",
+          "id": "nunchaku-ai/nunchaku-flux.1-schnell:svdq-fp4_r32-flux.1-schnell.safetensors",
+          "name": "nunchaku-ai/nunchaku-flux.1-schnell",
           "path": "svdq-fp4_r32-flux.1-schnell.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-flux.1-schnell",
+          "repo_id": "nunchaku-ai/nunchaku-flux.1-schnell",
           "type": "hf.flux"
         },
         {
-          "id": "nunchaku-tech/nunchaku-flux.1-dev:svdq-int4_r32-flux.1-dev.safetensors",
-          "name": "nunchaku-tech/nunchaku-flux.1-dev",
+          "id": "nunchaku-ai/nunchaku-flux.1-dev:svdq-int4_r32-flux.1-dev.safetensors",
+          "name": "nunchaku-ai/nunchaku-flux.1-dev",
           "path": "svdq-int4_r32-flux.1-dev.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-flux.1-dev",
+          "repo_id": "nunchaku-ai/nunchaku-flux.1-dev",
           "type": "hf.flux"
         },
         {
-          "id": "nunchaku-tech/nunchaku-flux.1-dev:svdq-fp4_r32-flux.1-dev.safetensors",
-          "name": "nunchaku-tech/nunchaku-flux.1-dev",
+          "id": "nunchaku-ai/nunchaku-flux.1-dev:svdq-fp4_r32-flux.1-dev.safetensors",
+          "name": "nunchaku-ai/nunchaku-flux.1-dev",
           "path": "svdq-fp4_r32-flux.1-dev.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-flux.1-dev",
+          "repo_id": "nunchaku-ai/nunchaku-flux.1-dev",
           "type": "hf.flux"
         },
         {
-          "id": "nunchaku-tech/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
-          "name": "nunchaku-tech/nunchaku-t5",
+          "id": "nunchaku-ai/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
+          "name": "nunchaku-ai/nunchaku-t5",
           "path": "awq-int4-flux.1-t5xxl.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-t5",
+          "repo_id": "nunchaku-ai/nunchaku-t5",
           "type": "hf.t5"
         }
       ],
@@ -17108,38 +17108,38 @@
           "type": "hf.controlnet_flux"
         },
         {
-          "id": "nunchaku-tech/nunchaku-flux.1-depth-dev:svdq-int4_r32-flux.1-depth-dev.safetensors",
-          "name": "nunchaku-tech/nunchaku-flux.1-depth-dev",
+          "id": "nunchaku-ai/nunchaku-flux.1-depth-dev:svdq-int4_r32-flux.1-depth-dev.safetensors",
+          "name": "nunchaku-ai/nunchaku-flux.1-depth-dev",
           "path": "svdq-int4_r32-flux.1-depth-dev.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-flux.1-depth-dev",
+          "repo_id": "nunchaku-ai/nunchaku-flux.1-depth-dev",
           "type": "hf.controlnet_flux"
         },
         {
-          "id": "nunchaku-tech/nunchaku-flux.1-depth-dev:svdq-fp4_r32-flux.1-depth-dev.safetensors",
-          "name": "nunchaku-tech/nunchaku-flux.1-depth-dev",
+          "id": "nunchaku-ai/nunchaku-flux.1-depth-dev:svdq-fp4_r32-flux.1-depth-dev.safetensors",
+          "name": "nunchaku-ai/nunchaku-flux.1-depth-dev",
           "path": "svdq-fp4_r32-flux.1-depth-dev.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-flux.1-depth-dev",
+          "repo_id": "nunchaku-ai/nunchaku-flux.1-depth-dev",
           "type": "hf.controlnet_flux"
         },
         {
-          "id": "nunchaku-tech/nunchaku-flux.1-canny-dev:svdq-int4_r32-flux.1-canny-dev.safetensors",
-          "name": "nunchaku-tech/nunchaku-flux.1-canny-dev",
+          "id": "nunchaku-ai/nunchaku-flux.1-canny-dev:svdq-int4_r32-flux.1-canny-dev.safetensors",
+          "name": "nunchaku-ai/nunchaku-flux.1-canny-dev",
           "path": "svdq-int4_r32-flux.1-canny-dev.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-flux.1-canny-dev",
+          "repo_id": "nunchaku-ai/nunchaku-flux.1-canny-dev",
           "type": "hf.controlnet_flux"
         },
         {
-          "id": "nunchaku-tech/nunchaku-flux.1-canny-dev:svdq-fp4_r32-flux.1-canny-dev.safetensors",
-          "name": "nunchaku-tech/nunchaku-flux.1-canny-dev",
+          "id": "nunchaku-ai/nunchaku-flux.1-canny-dev:svdq-fp4_r32-flux.1-canny-dev.safetensors",
+          "name": "nunchaku-ai/nunchaku-flux.1-canny-dev",
           "path": "svdq-fp4_r32-flux.1-canny-dev.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-flux.1-canny-dev",
+          "repo_id": "nunchaku-ai/nunchaku-flux.1-canny-dev",
           "type": "hf.controlnet_flux"
         },
         {
-          "id": "nunchaku-tech/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
-          "name": "nunchaku-tech/nunchaku-t5",
+          "id": "nunchaku-ai/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
+          "name": "nunchaku-ai/nunchaku-t5",
           "path": "awq-int4-flux.1-t5xxl.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-t5",
+          "repo_id": "nunchaku-ai/nunchaku-t5",
           "type": "hf.t5"
         }
       ],
@@ -17493,10 +17493,10 @@
               "type": "hf.qwen_image"
             },
             {
-              "id": "nunchaku-tech/nunchaku-qwen-image:svdq-int4_r32-qwen-image.safetensors",
+              "id": "nunchaku-ai/nunchaku-qwen-image:svdq-int4_r32-qwen-image.safetensors",
               "name": "Nunchaku Qwen Transformer (INT4)",
               "path": "svdq-int4_r32-qwen-image.safetensors",
-              "repo_id": "nunchaku-tech/nunchaku-qwen-image",
+              "repo_id": "nunchaku-ai/nunchaku-qwen-image",
               "size_on_disk": 6500000000,
               "type": "hf.qwen_image"
             }
@@ -17628,17 +17628,17 @@
           "type": "hf.qwen_image"
         },
         {
-          "id": "nunchaku-tech/nunchaku-qwen-image:svdq-int4_r32-qwen-image.safetensors",
-          "name": "nunchaku-tech/nunchaku-qwen-image",
+          "id": "nunchaku-ai/nunchaku-qwen-image:svdq-int4_r32-qwen-image.safetensors",
+          "name": "nunchaku-ai/nunchaku-qwen-image",
           "path": "svdq-int4_r32-qwen-image.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-qwen-image",
+          "repo_id": "nunchaku-ai/nunchaku-qwen-image",
           "type": "hf.qwen_image"
         },
         {
-          "id": "nunchaku-tech/nunchaku-qwen-image:svdq-fp4_r32-qwen-image.safetensors",
-          "name": "nunchaku-tech/nunchaku-qwen-image",
+          "id": "nunchaku-ai/nunchaku-qwen-image:svdq-fp4_r32-qwen-image.safetensors",
+          "name": "nunchaku-ai/nunchaku-qwen-image",
           "path": "svdq-fp4_r32-qwen-image.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-qwen-image",
+          "repo_id": "nunchaku-ai/nunchaku-qwen-image",
           "type": "hf.qwen_image"
         }
       ],
@@ -18502,17 +18502,17 @@
           "type": "hf.stable_diffusion_xl"
         },
         {
-          "id": "nunchaku-tech/nunchaku-sdxl:svdq-int4_r32-sdxl.safetensors",
-          "name": "nunchaku-tech/nunchaku-sdxl",
+          "id": "nunchaku-ai/nunchaku-sdxl:svdq-int4_r32-sdxl.safetensors",
+          "name": "nunchaku-ai/nunchaku-sdxl",
           "path": "svdq-int4_r32-sdxl.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-sdxl",
+          "repo_id": "nunchaku-ai/nunchaku-sdxl",
           "type": "hf.stable_diffusion_xl"
         },
         {
-          "id": "nunchaku-tech/nunchaku-sdxl-turbo:svdq-int4_r32-sdxl-turbo.safetensors",
-          "name": "nunchaku-tech/nunchaku-sdxl-turbo",
+          "id": "nunchaku-ai/nunchaku-sdxl-turbo:svdq-int4_r32-sdxl-turbo.safetensors",
+          "name": "nunchaku-ai/nunchaku-sdxl-turbo",
           "path": "svdq-int4_r32-sdxl-turbo.safetensors",
-          "repo_id": "nunchaku-tech/nunchaku-sdxl-turbo",
+          "repo_id": "nunchaku-ai/nunchaku-sdxl-turbo",
           "type": "hf.stable_diffusion_xl"
         }
       ],
