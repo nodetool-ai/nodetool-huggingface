@@ -1380,6 +1380,37 @@ class Trellis2(HuggingFacePipelineNode):
                 )
 
 
+# TripoSG reaches for four optional modules outside the ones _load_models
+# imports for itself, and they arrive from two different places -- which is why
+# the guard below reports them apart.  `triposg` is not on PyPI (there is no
+# requirements/triposg.txt either, unlike its sf3d/trellis2/triposr siblings),
+# so `[triposg]` cannot install it.  cv2, skimage and pymeshlab do ship in that
+# extra.
+TRIPOSG_UPSTREAM_MODULES = ("triposg",)
+TRIPOSG_EXTRA_MODULES = ("cv2", "skimage", "pymeshlab")
+
+
+def _missing_modules(module_names: tuple[str, ...]) -> list[str]:
+    """Which of these top-level modules this install cannot import.
+
+    Uses ``find_spec`` rather than ``import``: the check runs before the model
+    downloads, and locating a module must not execute it.  Top-level names only,
+    so probing ``skimage`` never imports ``skimage.measure``.
+    """
+    import importlib.util
+
+    missing: list[str] = []
+    for name in module_names:
+        try:
+            found = importlib.util.find_spec(name) is not None
+        except (ImportError, ValueError):
+            # A parent package that is itself broken or absent.
+            found = False
+        if not found:
+            missing.append(name)
+    return missing
+
+
 class TripoSG(HuggingFacePipelineNode):
     """
     Generate high-fidelity 3D meshes from images using VAST TripoSG.
@@ -1565,10 +1596,43 @@ class TripoSG(HuggingFacePipelineNode):
                 self.CACHE_KEY, is_cached=True, node_name=self.get_title()
             )
 
+    @classmethod
+    def _dependency_error(cls) -> MissingDependencyError | None:
+        """Why TripoSG cannot run on this install, or None when it can.
+
+        Called before the model downloads.  ``VAST-AI/TripoSG`` is 7.9 GB and
+        ``_prepare_image`` reaches cv2 and skimage only *after* that download
+        finishes, so an unguarded import spends the bandwidth and then fails.
+        """
+        missing_upstream = _missing_modules(TRIPOSG_UPSTREAM_MODULES)
+        missing_extra = _missing_modules(TRIPOSG_EXTRA_MODULES)
+        if not missing_upstream and not missing_extra:
+            return None
+
+        parts: list[str] = []
+        if missing_upstream:
+            parts.append(
+                f"the {', '.join(missing_upstream)} package, which is not on PyPI "
+                "-- see https://github.com/VAST-AI-Research/TripoSG for "
+                "installation instructions"
+            )
+        if missing_extra:
+            parts.append(
+                f"{', '.join(missing_extra)}, which ship in the [triposg] extra"
+            )
+        return MissingDependencyError(
+            "TripoSG requires " + "; and ".join(parts) + ".",
+            install_hint=cls.INSTALL_HINT,
+        )
+
     async def preload_model(self, context: ProcessingContext):
         import torch
 
         if not torch.cuda.is_available():
+            return
+        if self._dependency_error() is not None:
+            # Same contract as the Hunyuan3D / StableFast3D / Trellis2 siblings:
+            # skip the download here, and let process() raise the message.
             return
         self._load_models()
 
@@ -1716,6 +1780,10 @@ class TripoSG(HuggingFacePipelineNode):
             raise UnsupportedPlatformError(
                 "TripoSG requires a CUDA-capable GPU with at least 8GB VRAM"
             )
+
+        dependency_error = self._dependency_error()
+        if dependency_error is not None:
+            raise dependency_error
 
         _report_stage(context, self.id, "loading_model")
         # Load models if not already loaded
