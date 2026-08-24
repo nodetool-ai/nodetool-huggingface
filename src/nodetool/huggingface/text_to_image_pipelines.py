@@ -2,7 +2,13 @@
 Text-to-image pipeline loading for local HuggingFace models.
 
 This module handles the loading of various HuggingFace diffusers pipelines for text-to-image generation.
-It employs a robust strategy to determine the correct pipeline class:
+It determines the correct pipeline class as follows:
+
+0. **Local Checkpoint (Before Anything Else):**
+   - A model reference naming a file on disk is loaded straight from that file.
+     Such a file has no Hub tags, so the family is read from its own tensor names
+     by `single_file_models.detect_single_file_checkpoint`. Steps 1-3 below all
+     depend on Hub metadata and do not apply.
 
 1. **Explicit Node Matching (First Priority):**
    - It checks if the requested model (repo_id + path) matches any "recommended model" defined
@@ -51,6 +57,11 @@ from nodetool.huggingface.local_provider_utils import (
 from nodetool.huggingface.nunchaku_pipelines import (
     load_nunchaku_flux_pipeline,
     load_nunchaku_qwen_pipeline,
+)
+from nodetool.huggingface.single_file_models import (
+    SingleFileLoadPlan,
+    detect_single_file_checkpoint,
+    resolve_local_checkpoint,
 )
 from nodetool.integrations.huggingface.huggingface_models import (
     HF_FAST_CACHE,
@@ -108,6 +119,48 @@ async def _resolve_full_repo_pipeline_class(model_id: str):
     return getattr(importlib.import_module(module_name), cls_name)
 
 
+async def load_local_single_file_pipeline(
+    checkpoint_path: str,
+    *,
+    plan: SingleFileLoadPlan | None = None,
+) -> Any:
+    """Build a text-to-image pipeline from one checkpoint file on disk.
+
+    The family is read from the file's own tensor names, because a local file has
+    no Hub tags to read.  Weights are never copied into the diffusers cache.
+    """
+    import importlib
+
+    plan = plan or detect_single_file_checkpoint(checkpoint_path)
+    torch = _get_torch()
+    dtype = getattr(torch, plan.dtype) if _is_cuda_available() else torch.float32
+
+    pipeline_cls = getattr(
+        importlib.import_module(plan.pipeline_module), plan.pipeline_class
+    )
+
+    if plan.load_kind == "pipeline":
+        return await asyncio.to_thread(
+            pipeline_cls.from_single_file, checkpoint_path, torch_dtype=dtype
+        )
+
+    # The pipeline class has no `from_single_file`. Load the transformer from the
+    # file and take the text encoder, VAE and scheduler from the base repo.
+    assert plan.transformer_module and plan.transformer_class and plan.base_repo_id
+    transformer_cls = getattr(
+        importlib.import_module(plan.transformer_module), plan.transformer_class
+    )
+    transformer = await asyncio.to_thread(
+        transformer_cls.from_single_file, checkpoint_path, torch_dtype=dtype
+    )
+    return await asyncio.to_thread(
+        pipeline_cls.from_pretrained,
+        plan.base_repo_id,
+        transformer=transformer,
+        torch_dtype=dtype,
+    )
+
+
 async def load_text_to_image_pipeline(
     *,
     context: ProcessingContext,
@@ -124,6 +177,25 @@ async def load_text_to_image_pipeline(
     """
     if not model_id:
         raise ValueError("Please select a model")
+
+    # A model reference that names a file on disk is loaded from that file. It
+    # has no Hub tags, so the family comes from the checkpoint's own keys.
+    local_checkpoint = resolve_local_checkpoint(model_id, model_path)
+    if local_checkpoint is not None:
+        plan = detect_single_file_checkpoint(local_checkpoint)
+        cache_key = cache_key or f"text-to-image:local:{local_checkpoint}"
+        cached = ModelManager.get_model(cache_key)
+        pipeline = cached or await load_local_single_file_pipeline(
+            local_checkpoint, plan=plan
+        )
+        target_device = _resolve_hf_device(context, device or context.device)
+        use_cpu_offload = _apply_memory_optimizations(
+            pipeline,
+            target_device,
+            force_cpu_offload=plan.load_kind == "transformer",
+        )
+        ModelManager.set_model(node_id, cache_key, pipeline)
+        return pipeline, use_cpu_offload
 
     # Determine whether this model configuration should use CPU offload.
     use_cpu_offload = False
