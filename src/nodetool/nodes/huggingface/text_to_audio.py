@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import inspect
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Mapping
 
 import numpy as np
 from pydantic import Field
@@ -555,6 +556,51 @@ class AudioLDM2(HuggingFacePipelineNode):
         return await context.audio_from_numpy(audio, 16000)
 
 
+DANCE_DIFFUSION_REPO_ID = "harmonai/maestro-150k"
+
+# Restores the Fourier time-embedding width that UNet1DModel hardcoded before
+# diffusers 0.36. Old code: ``GaussianFourierProjection(embedding_size=8)``, so
+# every harmonai checkpoint stores ``time_proj.weight`` with shape ``(8,)``.
+# 0.36 made the width configurable and defaulted it to
+# ``block_out_channels[0] * 2``, then halved it for the projection -- 128 for
+# these repos -- and the checkpoint stopped loading. Passing
+# ``time_embedding_dim=16`` gives back ``16 // 2 == 8``.
+LEGACY_FOURIER_TIME_EMBEDDING_DIM = 16
+
+
+def _legacy_fourier_time_embedding_dim(unet_config: Mapping[str, Any]) -> int | None:
+    """The ``time_embedding_dim`` a pre-0.36 UNet1DModel checkpoint needs, or None.
+
+    diffusers 0.36 widened ``UNet1DModel``'s Fourier time embedding from a
+    hardcoded 8 frequencies to ``block_out_channels[0]``. harmonai's
+    DanceDiffusion checkpoints were published against diffusers 0.5, so on
+    0.36+ they fail to load with::
+
+        Cannot load  because time_proj.weight expected shape
+        torch.Size([128]), but got torch.Size([8])
+
+    Reproduced on diffusers 0.38.0 and 0.40.0 with harmonai/maestro-150k.
+    Overriding the width makes all 1076 checkpoint tensors match; nothing is
+    randomly initialized, so the model this produces is the trained one.
+    """
+    if unet_config.get("time_embedding_type") != "fourier":
+        return None
+    if unet_config.get("time_embedding_dim") is not None:
+        # The checkpoint states its own width. Trust it.
+        return None
+    if unet_config.get("use_timestep_embedding"):
+        # ``timestep_input_dim`` also feeds ``time_mlp`` in that branch, and the
+        # old and new code disagree on it too. Out of scope for this override.
+        return None
+
+    from diffusers import UNet1DModel
+
+    if "time_embedding_dim" not in inspect.signature(UNet1DModel.__init__).parameters:
+        # diffusers < 0.36 already builds the 8-frequency projection.
+        return None
+    return LEGACY_FOURIER_TIME_EMBEDDING_DIM
+
+
 class DanceDiffusion(HuggingFacePipelineNode):
     """
     Generates AI-composed music using the DanceDiffusion unconditional audio model.
@@ -599,16 +645,32 @@ class DanceDiffusion(HuggingFacePipelineNode):
     def get_recommended_models(cls) -> list[HuggingFaceModel]:
         return [
             HFTextToAudio(
-                repo_id="harmonai/maestro-150k",
+                repo_id=DANCE_DIFFUSION_REPO_ID,
                 allow_patterns=["*.bin", "*.json", "*.txt"],
             ),
         ]
 
     async def preload_model(self, context: ProcessingContext):
+        from diffusers import UNet1DModel
         from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 
+        unet_config = UNet1DModel.load_config(
+            DANCE_DIFFUSION_REPO_ID, subfolder="unet"
+        )
+        overrides: dict[str, Any] = {}
+        time_embedding_dim = _legacy_fourier_time_embedding_dim(unet_config)
+        if time_embedding_dim is not None:
+            overrides["time_embedding_dim"] = time_embedding_dim
+
+        unet = await self.load_model(
+            context,
+            UNet1DModel,
+            DANCE_DIFFUSION_REPO_ID,
+            subfolder="unet",
+            **overrides,
+        )
         self._pipeline = await self.load_model(
-            context, DiffusionPipeline, "harmonai/maestro-150k"
+            context, DiffusionPipeline, DANCE_DIFFUSION_REPO_ID, unet=unet
         )
 
     async def process(self, context: ProcessingContext) -> AudioRef:
