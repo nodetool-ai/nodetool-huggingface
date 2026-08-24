@@ -5,7 +5,7 @@ import asyncio
 import logging
 from typing import Any, TypedDict, TYPE_CHECKING, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nodetool.config.logging_config import get_logger
@@ -2694,6 +2694,12 @@ class QwenImageLayered(HuggingFacePipelineNode):
     )
 
     _pipeline: Any = None
+
+    @field_validator("resolution", mode="before")
+    @classmethod
+    def _coerce_resolution(cls, value: Any) -> Any:
+        # Workflows saved before this was an enum carry the plain number.
+        return str(value) if isinstance(value, int) else value
 
     @classmethod
     def get_recommended_models(cls) -> list[HuggingFaceModel]:

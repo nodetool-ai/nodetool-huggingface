@@ -34,6 +34,14 @@ class FakeOutput:
         self.images = images
 
 
+def make_run(output, calls: list):
+    async def run_pipeline_in_thread(self, *args, **kwargs):
+        calls.append(kwargs)
+        return output
+
+    return run_pipeline_in_thread
+
+
 def make_node(monkeypatch, output, calls: list) -> QwenImageLayered:
     node = QwenImageLayered()
     node.image = ImageRef(uri="memory://input")
@@ -42,12 +50,8 @@ def make_node(monkeypatch, output, calls: list) -> QwenImageLayered:
     node.seed = 42
     node._pipeline = object()
 
-    async def run_pipeline_in_thread(self, *args, **kwargs):
-        calls.append(kwargs)
-        return output
-
     monkeypatch.setattr(
-        QwenImageLayered, "run_pipeline_in_thread", run_pipeline_in_thread
+        QwenImageLayered, "run_pipeline_in_thread", make_run(output, calls)
     )
     return node
 
@@ -108,3 +112,20 @@ async def test_empty_images_raises_naming_what_came_back(monkeypatch):
         await node.process(FakeContext())  # type: ignore[arg-type]
 
     assert "no usable layer images" in str(excinfo.value)
+
+
+@pytest.mark.asyncio
+async def test_a_saved_int_resolution_still_loads(monkeypatch):
+    calls: list = []
+    node = QwenImageLayered(resolution=640)  # type: ignore[arg-type]
+    monkeypatch.setattr(
+        QwenImageLayered,
+        "run_pipeline_in_thread",
+        make_run(FakeOutput(images=[[Image.new("RGBA", (64, 64))]]), calls),
+    )
+    node.image = ImageRef(uri="memory://input")
+    node._pipeline = object()
+
+    await node.process(FakeContext())  # type: ignore[arg-type]
+
+    assert calls[0]["resolution"] == 640
