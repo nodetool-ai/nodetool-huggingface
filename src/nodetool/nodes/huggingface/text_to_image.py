@@ -1829,7 +1829,16 @@ class QwenImage(HuggingFacePipelineNode):
         )
 
     async def move_to_device(self, device: str):
-        pass
+        # The nunchaku path builds its transformer straight onto
+        # `context.device`, so there is nothing left to move — which is why
+        # this override existed. The full-precision path is the opposite: it
+        # loads with `device="cpu"` and relies on this call to place the
+        # pipeline. A blanket `pass` covered both, so fp16 Qwen-Image ran a 20B
+        # model on the CPU while a GPU sat idle next to it.
+        if self._is_nunchaku_model():
+            return
+        if self._pipeline is not None:
+            move_pipeline_to_device(self._pipeline, device)
 
     async def process(self, context: ProcessingContext) -> ImageRef:
         if self._pipeline is None:
