@@ -1215,19 +1215,38 @@ class HuggingFaceLocalProvider(BaseProvider):
         repo_id, filename = parts
         return repo_id, filename
 
-    async def _load_image_data(self, image_ref) -> bytes:
-        """Load image data from an ImageRef."""
+    async def _resolve_image(
+        self, image_ref, context: ProcessingContext | None
+    ) -> Image.Image:
+        """Resolve a ``MessageImageContent.image`` to a PIL image.
+
+        Goes through ``ProcessingContext.image_to_pil`` so a ``file://`` URI
+        resolves against the context's own ``workspace_dir`` (and a
+        ``memory://`` URI against the context's memory cache), the same route
+        ``context.image_to_pil`` already gives every other node. Calling
+        ``fetch_uri_bytes_and_mime_async(uri)`` directly here used to drop the
+        context entirely, so its ``workspace_dir`` defaulted to ``None`` and a
+        blob written to the worker's assigned workspace failed with "No
+        workspace is assigned" even though one was provided.
+        """
+        if context is not None:
+            return await context.image_to_pil(image_ref)
+
+        # No context available (e.g. a bare `generate_message` call): fall
+        # back to reading the ImageRef's inline data or URI directly, without
+        # any workspace-relative resolution.
         if hasattr(image_ref, "data") and image_ref.data is not None:
-            return image_ref.data
+            data = image_ref.data
+        else:
+            uri = getattr(image_ref, "uri", "") if hasattr(image_ref, "uri") else ""
+            if not uri:
+                raise ValueError("ImageRef has no data or URI")
+            _mime, data = await fetch_uri_bytes_and_mime_async(uri)
+        return Image.open(BytesIO(data))
 
-        uri = getattr(image_ref, "uri", "") if hasattr(image_ref, "uri") else ""
-        if not uri:
-            raise ValueError("ImageRef has no data or URI")
-
-        _mime, data = await fetch_uri_bytes_and_mime_async(uri)
-        return data
-
-    async def convert_message(self, message: Message) -> Dict[str, Any]:
+    async def convert_message(
+        self, message: Message, context: ProcessingContext | None = None
+    ) -> Dict[str, Any]:
         """
         Convert an internal message to HF dict format.
         Preserves PIL images in content list for further processing.
@@ -1273,8 +1292,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                         content_list.append({"type": "text", "text": part.text})
                     elif isinstance(part, MessageImageContent):
                         # Load image to PIL
-                        data = await self._load_image_data(part.image)
-                        img = Image.open(BytesIO(data))
+                        img = await self._resolve_image(part.image, context)
                         # Store PIL image directly; will be extracted later
                         content_list.append({"type": "image", "image": img})
                         has_images = True
@@ -1389,7 +1407,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         # Ensure messages are in the format expected by HF (list of dicts)
         hf_messages = []
         for msg in messages:
-            hf_messages.append(await self.convert_message(msg))
+            hf_messages.append(await self.convert_message(msg, context=context))
 
         prompt = tokenizer.apply_chat_template(
             hf_messages, tokenize=False, add_generation_prompt=True
@@ -1499,7 +1517,7 @@ class HuggingFaceLocalProvider(BaseProvider):
 
         for msg in messages:
             # Use convert_message to standardize
-            converted = await self.convert_message(msg)
+            converted = await self.convert_message(msg, context=context)
 
             # Post-process for VLM: extract PIL images from content list
             if isinstance(converted.get("content"), list):
