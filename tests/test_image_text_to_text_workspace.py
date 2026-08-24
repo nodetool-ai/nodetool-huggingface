@@ -70,6 +70,11 @@ async def test_convert_message_resolves_file_uri_against_assigned_workspace(tmp_
 
     provider = HuggingFaceLocalProvider()
     converted = await provider.convert_message(message, context=context)
+    # Note on what this proves. Against the unfixed code this test fails with
+    # `TypeError: unexpected keyword argument 'context'` -- which shows the new
+    # parameter is missing, not that the reported bug occurred. The bug itself
+    # is pinned by test_the_old_context_free_route_still_raises below, which
+    # calls the pre-fix route and asserts the exact failure.
 
     assert converted["role"] == "user"
     image_parts = [part for part in converted["content"] if part.get("type") == "image"]
@@ -97,3 +102,34 @@ async def test_pre_process_fails_before_model_download_on_bad_image(tmp_path, mo
         await node.pre_process(context)
 
     assert preload_calls == []
+
+
+@pytest.mark.asyncio
+async def test_the_old_context_free_route_still_raises(tmp_path):
+    """Pin the reported failure, not just the absence of the new parameter.
+
+    Dropping the context is what the pre-fix `convert_message` did: it called
+    `fetch_uri_bytes_and_mime_async(uri)` with no workspace_dir. Reproduced on
+    unfixed main, with a workspace assigned:
+
+        PermissionError: No workspace is assigned. File operations require a
+        user-defined workspace.
+
+    Calling the same route with context=None must still raise, so a later
+    refactor that quietly reintroduces the context-free path is caught here
+    rather than after a multi-gigabyte download on a worker.
+    """
+    context = ProcessingContext(workspace_dir=str(tmp_path))
+    image = _write_worker_style_image(str(tmp_path))
+    message = Message(
+        role="user",
+        content=[
+            MessageImageContent(image=image),
+            MessageTextContent(text="Describe this image."),
+        ],
+    )
+
+    provider = HuggingFaceLocalProvider()
+
+    with pytest.raises((PermissionError, FileNotFoundError, ValueError)):
+        await provider.convert_message(message, context=None)
