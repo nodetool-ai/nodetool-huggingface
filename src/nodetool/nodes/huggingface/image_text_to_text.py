@@ -22,6 +22,7 @@ from nodetool.metadata.types import (
     Provider,
     VideoRef,
 )
+from nodetool.huggingface.local_provider_utils import single_gpu_load_kwargs
 from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.types import Chunk
@@ -696,7 +697,7 @@ class Qwen2_5_VL(BaseQwenVL):
             context,
             Qwen2_5_VLForConditionalGeneration,
             self.model.repo_id,
-            device_map="auto",
+            **single_gpu_load_kwargs(context.device),
             # Checkpoint weights are bf16; without a dtype the model
             # materializes in fp32 and doubles its VRAM footprint.
             torch_dtype="auto",
@@ -795,7 +796,7 @@ class Qwen3_VL(BaseQwenVL):
             context,
             Qwen3VLForConditionalGeneration,
             self.model.repo_id,
-            device_map="auto",
+            **single_gpu_load_kwargs(context.device),
             # Checkpoint weights are bf16; without a dtype the model
             # materializes in fp32 and doubles its VRAM footprint.
             torch_dtype="auto",

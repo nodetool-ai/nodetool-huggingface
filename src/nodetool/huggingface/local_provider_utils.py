@@ -362,6 +362,61 @@ def _model_type_for_repo(repo_id: str) -> str | None:
         return None
     model_type = getattr(config, "model_type", None)
     return model_type if isinstance(model_type, str) and model_type else None
+def single_gpu_load_kwargs(device: str | None = None) -> dict[str, Any]:
+    """Load kwargs that keep an accelerate-dispatched model on one GPU.
+
+    ``device_map="auto"`` spreads a model over every visible GPU. Every
+    inference path here then moves its inputs to one device -- the model's
+    first-parameter device -- and a sharded model fails with "Expected all
+    tensors to be on the same device, but got mat2 is on cuda:3, different
+    from other tensors on cuda:0".
+
+    Capping the memory budget at one GPU keeps the whole model on that card
+    while leaving accelerate free to offload the overflow to CPU, which is
+    what ``"auto"`` bought on a single-GPU host. A host with one GPU (or
+    none) keeps the plain ``"auto"`` it had, so its placement is unchanged.
+    """
+    torch = _get_torch()
+    if not _is_cuda_available() or torch.cuda.device_count() <= 1:
+        return {"device_map": "auto"}
+
+    from accelerate.utils import get_max_memory
+
+    budget = get_max_memory()
+    index = _cuda_device_index(device, budget)
+    if index is None:
+        return {"device_map": "auto"}
+
+    max_memory = {index: budget[index]}
+    if "cpu" in budget:
+        max_memory["cpu"] = budget["cpu"]
+    log.info(
+        "%d GPUs visible; pinning the model to cuda:%d instead of sharding it",
+        torch.cuda.device_count(),
+        index,
+    )
+    return {"device_map": "auto", "max_memory": max_memory}
+
+
+def _cuda_device_index(device: str | None, budget: dict[Any, Any]) -> int | None:
+    """Resolve the CUDA index to pin to, or None when the budget has no GPU."""
+    gpu_indices = sorted(key for key in budget if isinstance(key, int))
+    if not gpu_indices:
+        return None
+
+    index: int | None = None
+    if device:
+        torch = _get_torch()
+        try:
+            parsed = torch.device(device)
+        except (RuntimeError, TypeError, ValueError):
+            parsed = None
+        if parsed is not None and parsed.type == "cuda":
+            index = parsed.index
+    if index is None:
+        index = _get_torch().cuda.current_device()
+
+    return index if index in gpu_indices else gpu_indices[0]
 
 
 def _normalize_pipeline_task(pipeline_task: str) -> str:

@@ -52,6 +52,7 @@ from nodetool.huggingface.local_provider_utils import (
     load_pipeline,
     pipeline_progress_callback,
     vision_language_model_class,
+    single_gpu_load_kwargs,
 )
 from nodetool.huggingface.tts_adapter_manifest import get_tts_adapter_info
 from nodetool.huggingface.text_to_image_pipelines import (
@@ -1542,7 +1543,7 @@ class HuggingFaceLocalProvider(BaseProvider):
             model_id=repo_id,
         )
 
-        load_kwargs = {"device_map": "auto"}
+        load_kwargs = single_gpu_load_kwargs(context.device)
         if quantization == "nf4":
             load_kwargs["quantization_config"] = BitsAndBytesConfig(
                 load_in_4bit=True,
