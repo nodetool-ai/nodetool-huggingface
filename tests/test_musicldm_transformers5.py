@@ -19,7 +19,10 @@ wrong, and says it before the download.
 AudioLDM (v1) shares MusicLDM's ancestry but not this bug: its pipeline calls
 ``self.text_encoder(...)`` and reads ``.text_embeds`` off the result, and
 transformers 5's ``ClapTextModelWithProjection`` still returns a
-``ClapTextModelOutput`` carrying ``text_embeds``. It is left alone.
+``ClapTextModelOutput`` carrying ``text_embeds``. It was run on the same A40,
+same session, same versions, with cvssp/audioldm-s-full-v2 and finished in 9.5s.
+It gets no check here: one that can never fire implies coverage that is not
+there.
 """
 
 import sys
