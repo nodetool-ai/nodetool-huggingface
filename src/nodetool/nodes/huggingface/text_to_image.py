@@ -2618,29 +2618,48 @@ class GlmImage(HuggingFacePipelineNode):
         return await context.image_from_pil(image)
 
 
+class QwenLayeredResolution(str, Enum):
+    """Resolution buckets QwenImageLayeredPipeline accepts."""
+
+    RES_640 = "640"
+    RES_1024 = "1024"
+
+
+def _describe_pipeline_images(images: Any) -> str:
+    """Name the shape a pipeline returned, for an error message."""
+    if isinstance(images, (list, tuple)):
+        inner = ", ".join(_describe_pipeline_images(item) for item in images)
+        return f"[{inner}]"
+    return type(images).__name__
+
+
 class QwenImageLayered(HuggingFacePipelineNode):
     """
-    Generates layered images from text prompts using Qwen-Image-Layered.
-    image, generation, AI, text-to-image, qwen, layered, transparent
+    Decomposes an image into separate RGBA layers using Qwen-Image-Layered.
+    image, layers, decomposition, AI, qwen, transparent
 
     Use cases:
-    - Generate images decomposed into separate layers
-    - Produce assets with transparent foregrounds and backgrounds
-    - Create compositable graphics for design workflows
-    - Build layered content generation systems
+    - Split an image into independently editable layers
+    - Extract transparent foregrounds from a background
+    - Produce compositable graphics for design workflows
+    - Isolate an object so it can be moved, resized, or recolored
     """
 
     model: HFTextToImage = Field(
         default=HFTextToImage(repo_id="Qwen/Qwen-Image-Layered"),
         description="The Qwen-Image-Layered model to use.",
     )
+    image: ImageRef = Field(
+        default=ImageRef(),
+        description="The image to decompose into layers.",
+    )
     prompt: str = Field(
-        default="A cat holding a sign that says hello world",
-        description="Text description of the image to generate.",
+        default="",
+        description="Caption of the image. Leave empty to let the model caption it.",
     )
     negative_prompt: str = Field(
-        default="",
-        description="Describe what to avoid in the image.",
+        default=" ",
+        description="Describe what to avoid in the generated layers.",
     )
     layers: int = Field(
         default=4,
@@ -2648,11 +2667,9 @@ class QwenImageLayered(HuggingFacePipelineNode):
         ge=1,
         le=8,
     )
-    resolution: int = Field(
-        default=640,
-        description="Working resolution for layer generation.",
-        ge=256,
-        le=1536,
+    resolution: QwenLayeredResolution = Field(
+        default=QwenLayeredResolution.RES_640,
+        description="Working resolution bucket. The pipeline accepts 640 or 1024.",
     )
     true_cfg_scale: float = Field(
         default=4.0,
@@ -2693,7 +2710,7 @@ class QwenImageLayered(HuggingFacePipelineNode):
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
-        return ["model", "prompt", "layers", "resolution", "num_inference_steps"]
+        return ["model", "image", "layers", "resolution", "num_inference_steps"]
 
     def get_model_id(self) -> str:
         return self.model.repo_id or "Qwen/Qwen-Image-Layered"
@@ -2725,19 +2742,45 @@ class QwenImageLayered(HuggingFacePipelineNode):
         ):
             move_pipeline_to_device(self._pipeline, device)
 
-    async def process(self, context: ProcessingContext) -> ImageRef:
+    @staticmethod
+    def _layers_from_output(output: Any) -> list[Any]:
+        """Read the per-layer images out of a QwenImagePipelineOutput.
+
+        The pipeline returns one entry per batch item, each entry a list of
+        per-layer RGBA images. Anything else means the run produced nothing
+        usable, which must be reported instead of reaching PIL as None.
+        """
+        images = getattr(output, "images", output)
+        batch = images[0] if isinstance(images, (list, tuple)) and images else None
+        layers = list(batch) if isinstance(batch, (list, tuple)) else [batch]
+        if not layers or any(getattr(layer, "size", None) is None for layer in layers):
+            raise ValueError(
+                "Qwen-Image-Layered returned no usable layer images: "
+                f"{_describe_pipeline_images(images)}"
+            )
+        return layers
+
+    async def process(self, context: ProcessingContext) -> list[ImageRef]:
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
+        if self.image.is_empty():
+            raise ValueError(
+                "Qwen-Image-Layered requires an input image to decompose into layers."
+            )
+
+        input_image = await context.image_to_pil(self.image)
+        input_image = input_image.convert("RGBA")
 
         generator = None
         if self.seed != -1:
             generator = torch.Generator(device="cpu").manual_seed(self.seed)
 
         output = await self.run_pipeline_in_thread(
+            image=input_image,
             prompt=self.prompt,
             negative_prompt=self.negative_prompt,
             layers=self.layers,
-            resolution=self.resolution,
+            resolution=int(self.resolution.value),
             true_cfg_scale=self.true_cfg_scale,
             num_inference_steps=self.num_inference_steps,
             generator=generator,
@@ -2746,12 +2789,9 @@ class QwenImageLayered(HuggingFacePipelineNode):
             ),
             callback_on_step_end_tensor_inputs=["latents"],
         )
-        images = output.images[0]
-        # Layered pipelines may return a list of per-layer images; pick the first.
-        if isinstance(images, (list, tuple)):
-            images = images[0]
+        layers = self._layers_from_output(output)
         run_gc("After Qwen-Image-Layered inference", log_before_after=False)
-        return await context.image_from_pil(images)
+        return [await context.image_from_pil(layer) for layer in layers]
 
 
 class Kandinsky5Image(HuggingFacePipelineNode):
