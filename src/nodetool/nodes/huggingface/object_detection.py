@@ -187,23 +187,14 @@ class VisualizeObjectDetection(BaseNode):
         return "Visualize Object Detection"
 
     async def process(self, context: ProcessingContext) -> ImageRef:
-        import matplotlib
-
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-        import matplotlib.patches as patches
         import io
 
+        from PIL import ImageDraw, ImageFont
+
         image = await context.image_to_pil(self.image)
-
-        # Get the size of the input image
-        width, height = image.size
-
-        # Create figure with the same size as the input image
-        fig, ax = plt.subplots(
-            figsize=(width / 100, height / 100)
-        )  # Convert pixels to inches
-        ax.imshow(image)
+        image = image.convert("RGB")
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.load_default()
 
         for obj in self.objects:
             xmin = obj.box.xmin
@@ -211,34 +202,15 @@ class VisualizeObjectDetection(BaseNode):
             xmax = obj.box.xmax
             ymax = obj.box.ymax
 
-            rect = patches.Rectangle(
-                (xmin, ymin),
-                xmax - xmin,
-                ymax - ymin,
-                linewidth=1,
-                edgecolor="r",
-                facecolor="none",
-            )
-            ax.add_patch(rect)
-            ax.text(
-                xmin,
-                ymin,
-                f"{obj.label} ({obj.score:.2f})",
-                color="r",
-                fontsize=8,
-                backgroundcolor="w",
-            )
+            draw.rectangle((xmin, ymin, xmax, ymax), outline="red", width=1)
 
-        ax.axis("off")
+            label = f"{obj.label} ({obj.score:.2f})"
+            text_bbox = draw.textbbox((xmin, ymin), label, font=font)
+            draw.rectangle(text_bbox, fill="white")
+            draw.text((xmin, ymin), label, fill="red", font=font)
 
-        # Remove padding around the image
-        plt.tight_layout(pad=0)
-
-        if fig is None:
-            raise ValueError("Invalid plot")
         img_bytes = io.BytesIO()
-        fig.savefig(img_bytes, format="png", dpi=100, bbox_inches="tight", pad_inches=0)
-        plt.close(fig)
+        image.save(img_bytes, format="PNG")
         return await context.image_from_bytes(img_bytes.getvalue())
 
 

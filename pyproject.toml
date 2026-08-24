@@ -53,11 +53,6 @@ dependencies = [
     # extra: the node ships in every install, so its OCR binding must too.
     # (The tesseract binary is a system package the deployment installs.)
     "pytesseract>=0.3.13",
-    # VisualizeObjectDetection draws bounding boxes with matplotlib.  A base
-    # dependency, not an extra: the node ships in every install, is
-    # lightweight and pure Python/numpy, and nothing else in this package's
-    # dependency tree pulls it in transitively.
-    "matplotlib",
 ]
 
 [project.optional-dependencies]
@@ -103,12 +98,6 @@ triposr = ["rembg"]
 # builds CUDA C++ extensions at install time, which PyPI extras cannot express.
 # There is deliberately no `trellis2` extra: the node's own INSTALL_HINT points
 # at `pip install -r requirements/trellis2.txt`, never at this extras group.
-
-# Split into Sentences uses LangChain's sentence-aware text splitter.
-langchain = [
-    "langchain-text-splitters>=0.3,<2",
-    "langchain-core>=0.3,<2",
-]
 
 # Always installable — Shap-E only needs diffusers (already in core deps)
 shape = []
