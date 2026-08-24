@@ -14,6 +14,7 @@ from nodetool.config.logging_config import get_logger
 from nodetool.huggingface.flux_utils import (
     detect_flux_variant,
     flux_variant_to_base_model_id,
+    flux_variant_to_pipeline_class,
 )
 from nodetool.huggingface.local_provider_utils import _get_torch, load_model
 from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
@@ -231,13 +232,9 @@ async def load_nunchaku_flux_pipeline(
     _require_nunchaku()
 
     from nunchaku import NunchakuFluxTransformer2dModel
-    from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
     from nodetool.ml.core.model_manager import ModelManager
 
     log_memory("load_nunchaku_flux_pipeline - START")
-
-    pipeline_class = pipeline_class or FluxPipeline
-    pipeline_name = pipeline_class.__name__
 
     if cache_key:
         cached_pipeline = ModelManager.get_model(cache_key)
@@ -246,6 +243,11 @@ async def load_nunchaku_flux_pipeline(
             return cached_pipeline
 
     variant = detect_flux_variant(repo_id, transformer_path)
+    # A caller that knows the pipeline wins; otherwise the class follows the
+    # variant, because a Fill/Canny/Depth/Kontext base repo cannot be loaded by
+    # the plain FluxPipeline.
+    pipeline_class = pipeline_class or flux_variant_to_pipeline_class(variant)
+    pipeline_name = pipeline_class.__name__
     base_model_id = flux_variant_to_base_model_id(variant)
     hf_token = await context.get_secret("HF_TOKEN")
     if variant != "schnell" and not hf_token:
