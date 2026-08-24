@@ -53,6 +53,12 @@ dependencies = [
     # extra: the node ships in every install, so its OCR binding must too.
     # (The tesseract binary is a system package the deployment installs.)
     "pytesseract>=0.3.13",
+    # diffusers' Wan image-to-video pipeline cleans every prompt with
+    # ftfy.fix_text and, unlike its text-to-video sibling, does not guard that
+    # call — so Wan_I2V and Wan_FLF2V raise NameError on their first prompt
+    # without it.  A base dependency, not an extra: both nodes ship in every
+    # install, and the Dockerfile installs this package with no extras.
+    "ftfy>=6.1",
 ]
 
 [project.optional-dependencies]
