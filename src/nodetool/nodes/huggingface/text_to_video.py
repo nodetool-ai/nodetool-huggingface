@@ -1478,6 +1478,17 @@ MINIMAX_H3_FPS = 24
 MINIMAX_H3_MIN_FRAMES = 120
 MINIMAX_H3_MAX_FRAMES = 345
 MINIMAX_H3_MODULE = "diffusers.modular_pipelines.minimax_h3"
+
+# The repository is 498.5GB, but the modular pipeline reads 210.3GB of it. Every
+# component in `modular_model_index.json` names its subfolder, and the complete
+# set is nine: audio_scheduler, audio_vae, processor, scheduler, text_encoder,
+# tokenizer, transformer, transformer_ref, vae. The two remaining top-level
+# trees — `FL2VA/` and `Ref2VA/`, 144.1GB each — are self-contained pipeline
+# copies for the original inference scripts, and no component entry points at
+# them. `_DIFFUSERS_REPO_ALLOW_PATTERNS` matches `**/*.safetensors`, so it
+# selects those copies too; an allowlist cannot subtract, so the exclusion goes
+# here.
+MINIMAX_H3_IGNORE_PATTERNS = ["FL2VA/*", "Ref2VA/*"]
 MINIMAX_H3_GEOMETRY = VideoGeometry(
     frame_step=17,
     frame_base=5,
@@ -1521,6 +1532,7 @@ def _minimax_h3_recommended_models() -> list[HuggingFaceModel]:
         HFTextToVideo(
             repo_id=MINIMAX_H3_REPO_ID,
             allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+            ignore_patterns=MINIMAX_H3_IGNORE_PATTERNS,
         ),
     ]
 
@@ -1628,6 +1640,11 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
         dtype = select_inference_dtype()
 
         def _load() -> Any:
+            # No download patterns here: `from_pretrained` reads
+            # `modular_model_index.json` and `load_components` then fetches each
+            # component by the subfolder that entry names, so this path never
+            # reaches `FL2VA/` or `Ref2VA/`. The exclusion belongs on the
+            # recommended-model record, which is what pre-downloads the repo.
             manager = components_manager_class() if offload else None
             pipeline = modular_pipeline_class.from_pretrained(
                 MINIMAX_H3_REPO_ID,
