@@ -51,6 +51,7 @@ from nodetool.huggingface.local_provider_utils import (
     load_model,
     load_pipeline,
     pipeline_progress_callback,
+    vision_language_model_class,
 )
 from nodetool.huggingface.tts_adapter_manifest import get_tts_adapter_info
 from nodetool.huggingface.text_to_image_pipelines import (
@@ -1506,7 +1507,6 @@ class HuggingFaceLocalProvider(BaseProvider):
         from transformers import (
             BitsAndBytesConfig,
             AutoProcessor,
-            AutoModelForCausalLM,
             TextStreamer,
         )
 
@@ -1562,11 +1562,13 @@ class HuggingFaceLocalProvider(BaseProvider):
             # materializes in fp32 and a 7B VLM (~28GB) spills off a <24GB GPU.
             load_kwargs["torch_dtype"] = "auto"
 
-        # Load model using AutoModelForCausalLM as requested for VL models
+        # The auto class comes from the checkpoint's model type: transformers 5
+        # registers vision-language models under AutoModelForImageTextToText,
+        # and a handful of multimodal checkpoints only under AutoModelForCausalLM.
         model = await load_model(
             node_id=node_id,
             context=context,
-            model_class=AutoModelForCausalLM,  # User guide suggests this for Qwen2.5-VL/LLaVA
+            model_class=vision_language_model_class(repo_id),
             model_id=repo_id,
             **load_kwargs,
         )

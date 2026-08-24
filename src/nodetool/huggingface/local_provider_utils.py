@@ -323,6 +323,47 @@ def _component_cache_suffix(kwargs: dict[str, Any]) -> str:
     return f"_c{digest}"
 
 
+def vision_language_model_class(repo_id: str) -> type:
+    """Pick the auto class transformers registers for a vision-language checkpoint.
+
+    transformers 5 registers vision-language models under
+    ``AutoModelForImageTextToText``; loading one with ``AutoModelForCausalLM``
+    raises "Unrecognized configuration class ... for this kind of AutoModel"
+    because the config is absent from the causal-LM mapping (idefics3,
+    qwen3_vl, llava, internvl, florence2, glm4v, ...). A few multimodal
+    checkpoints are still causal-LM only -- ``phi4_multimodal`` is one -- so
+    the class is chosen from the checkpoint's own model type instead of being
+    hardcoded. A model type transformers does not know (a remote-code repo,
+    an unreachable config) keeps the causal-LM class.
+    """
+    from transformers import AutoModelForCausalLM, AutoModelForImageTextToText
+
+    model_type = _model_type_for_repo(repo_id)
+    if model_type is None:
+        return AutoModelForCausalLM
+
+    from transformers.models.auto.modeling_auto import (
+        MODEL_FOR_IMAGE_TEXT_TO_TEXT_MAPPING_NAMES,
+    )
+
+    if model_type in MODEL_FOR_IMAGE_TEXT_TO_TEXT_MAPPING_NAMES:
+        return AutoModelForImageTextToText
+    return AutoModelForCausalLM
+
+
+def _model_type_for_repo(repo_id: str) -> str | None:
+    """Read a checkpoint's ``model_type`` from its config, or None if unreadable."""
+    from transformers import AutoConfig
+
+    try:
+        config = AutoConfig.from_pretrained(repo_id)
+    except Exception as exc:
+        log.warning("Could not read config for %s: %s", repo_id, exc)
+        return None
+    model_type = getattr(config, "model_type", None)
+    return model_type if isinstance(model_type, str) and model_type else None
+
+
 def _normalize_pipeline_task(pipeline_task: str) -> str:
     """Map legacy/NodeTool task names to the task names supported by installed transformers."""
     task = pipeline_task.strip().lower()
