@@ -47,6 +47,12 @@ dependencies = [
     # checkpoints are gated on the Hub (accept conditions + HF_TOKEN required).
     "pyannote.audio>=3.3,<4",
     "speechbrain>=1.0,<2",
+    # transformers' document-question-answering pipeline runs Tesseract OCR
+    # itself whenever it is handed an image without word_boxes, which is the
+    # default path for DocumentQuestionAnswering.  A base dependency, not an
+    # extra: the node ships in every install, so its OCR binding must too.
+    # (The tesseract binary is a system package the deployment installs.)
+    "pytesseract>=0.3.13",
 ]
 
 [project.optional-dependencies]
