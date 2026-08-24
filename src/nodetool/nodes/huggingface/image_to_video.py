@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 from typing import Any, TYPE_CHECKING
 from enum import Enum
 from pydantic import Field
@@ -33,6 +34,30 @@ if TYPE_CHECKING:
     from diffusers.pipelines.ltx2.pipeline_ltx2_image2video import (
         LTX2ImageToVideoPipeline,
     )
+
+
+def declares_image_encoder(model_index_path: str | None) -> bool:
+    """Report whether a diffusers repo declares an image encoder component.
+
+    Wan 2.1 I2V/FLF2V ships `image_encoder` as
+    `["transformers", "CLIPVisionModelWithProjection"]`. Wan 2.2 declares
+    `[None, None]` and has no `image_encoder/` folder on disk, so loading that
+    subfolder fails with a misleading "does not appear to have a file named
+    pytorch_model.bin or model.safetensors".
+    """
+    if not model_index_path:
+        return False
+    try:
+        with open(model_index_path) as f:
+            model_index = json.load(f)
+    except Exception:
+        return False
+    if not isinstance(model_index, dict):
+        return False
+    entry = model_index.get("image_encoder")
+    if not isinstance(entry, (list, tuple)) or len(entry) < 2:
+        return False
+    return all(part is not None for part in entry[:2])
 
 
 class Wan_I2V(HuggingFacePipelineNode):
@@ -177,6 +202,7 @@ class Wan_I2V(HuggingFacePipelineNode):
             repo_id_for_cache, revision = repo_id_for_cache.rsplit("@", 1)
 
         cache_checked = False
+        model_index_path = None
         for candidate in ("model_index.json", "config.json"):
             try:
                 cache_path = await HF_FAST_CACHE.resolve(
@@ -189,6 +215,8 @@ class Wan_I2V(HuggingFacePipelineNode):
 
             if cache_path:
                 cache_checked = True
+                if candidate == "model_index.json":
+                    model_index_path = cache_path
                 break
 
         if not cache_checked:
@@ -197,17 +225,23 @@ class Wan_I2V(HuggingFacePipelineNode):
             )
 
         import torch
-        from transformers import CLIPVisionModel
         from diffusers.models.autoencoders.autoencoder_kl_wan import AutoencoderKLWan
         from diffusers.pipelines.wan.pipeline_wan_i2v import WanImageToVideoPipeline
 
-        image_encoder = await self.load_model(
-            context=context,
-            model_class=CLIPVisionModel,
-            model_id=model_id,
-            subfolder="image_encoder",
-            torch_dtype=torch.float32,
-        )
+        # Wan 2.2 has no image encoder. `image_encoder` is an optional
+        # component of WanImageToVideoPipeline, so omit the kwarg and let
+        # from_pretrained follow the repo's own model_index.json.
+        image_encoder = None
+        if declares_image_encoder(model_index_path):
+            from transformers import CLIPVisionModel
+
+            image_encoder = await self.load_model(
+                context=context,
+                model_class=CLIPVisionModel,
+                model_id=model_id,
+                subfolder="image_encoder",
+                torch_dtype=torch.float32,
+            )
         vae = await self.load_model(
             context=context,
             model_class=AutoencoderKLWan,
@@ -216,6 +250,9 @@ class Wan_I2V(HuggingFacePipelineNode):
             torch_dtype=torch.float32,
         )
         torch_dtype = available_torch_dtype()
+        pipeline_kwargs: dict[str, Any] = {}
+        if image_encoder is not None:
+            pipeline_kwargs["image_encoder"] = image_encoder
         self._pipeline = await self.load_model(
             context=context,
             model_class=WanImageToVideoPipeline,
@@ -223,7 +260,7 @@ class Wan_I2V(HuggingFacePipelineNode):
             torch_dtype=torch_dtype,
             device="cpu",
             vae=vae,
-            image_encoder=image_encoder,
+            **pipeline_kwargs,
         )
 
         if self._pipeline is not None:
