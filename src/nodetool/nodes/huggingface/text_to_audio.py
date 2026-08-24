@@ -330,6 +330,40 @@ class AudioLDM(HuggingFacePipelineNode):
         run_gc("After AudioLDM inference", log_before_after=False)
         return await context.audio_from_numpy(audio, 16000)
 
+def _assert_audioldm2_language_model_can_generate(pipeline) -> None:
+    """Fail legibly when diffusers' AudioLDM2 meets transformers 5.
+
+    ``AudioLDM2Pipeline.generate_language_model`` calls
+    ``self.language_model._update_model_kwargs_for_generation(...)``. That is a
+    ``GenerationMixin`` method, and transformers 5 stopped mixing generation
+    into base models -- ``GPT2Model`` is no longer a ``GenerationMixin``, only
+    ``GPT2LMHeadModel`` is. The pipeline's own ``model_index.json`` names
+    ``GPT2Model``, so nothing here can pick the other class.
+
+    Reproduced on diffusers 0.40.0 with transformers 5.15.1: the run dies deep
+    inside the pipeline with a bare ``AttributeError: 'GPT2Model' object has no
+    attribute '_update_model_kwargs_for_generation'`` after the model has
+    loaded. Say what is actually wrong instead.
+    """
+    language_model = getattr(pipeline, "language_model", None)
+    if language_model is None:
+        return
+    if hasattr(language_model, "_update_model_kwargs_for_generation"):
+        return
+
+    import transformers
+
+    raise RuntimeError(
+        "AudioLDM2 cannot run with transformers "
+        f"{transformers.__version__}: diffusers' AudioLDM2 pipeline calls "
+        "_update_model_kwargs_for_generation on its language model, which "
+        "transformers 5 removed from base models such as GPT2Model. This is an "
+        "upstream incompatibility, not a configuration problem -- it needs a "
+        "fix in diffusers or transformers<5. AudioLDM (v1) is unaffected."
+    )
+
+
+
 
 class AudioLDM2(HuggingFacePipelineNode):
     """
@@ -395,11 +429,22 @@ class AudioLDM2(HuggingFacePipelineNode):
         ]
 
     async def preload_model(self, context: ProcessingContext):
+        import torch
         from diffusers.pipelines.audioldm2.pipeline_audioldm2 import AudioLDM2Pipeline
 
+        # Pin the dtype. Without it every component loads in whatever dtype the
+        # repo stored it in, and cvssp/audioldm2 ships its CLAP text encoder as
+        # float64 while the rest is float32. The encoder's output then reaches
+        # the float32 projection model and torch raises "mat1 and mat2 must have
+        # the same dtype, but got Double and Float".
         self._pipeline = await self.load_model(
-            context, AudioLDM2Pipeline, "cvssp/audioldm2", variant=None
+            context,
+            AudioLDM2Pipeline,
+            "cvssp/audioldm2",
+            variant=None,
+            torch_dtype=torch.float32,
         )
+        _assert_audioldm2_language_model_can_generate(self._pipeline)
 
     async def process(self, context: ProcessingContext) -> AudioRef:
         if self._pipeline is None:
