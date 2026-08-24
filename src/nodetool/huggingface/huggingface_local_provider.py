@@ -1573,14 +1573,23 @@ class HuggingFaceLocalProvider(BaseProvider):
             **load_kwargs,
         )
 
-        # Prepare inputs
+        # transformers 5 collects a conversation's images from the content
+        # blocks themselves, and forwards any other keyword to the processor
+        # call it makes internally. The images here were lifted out of the
+        # content into `pil_images`, so `images=` reaches that call as a second
+        # value for a keyword it already passes and raises TypeError. Render
+        # the prompt first, then hand the text and the images to the processor
+        # -- the (text=, images=) call every transformers 5 vision-language
+        # processor accepts.
         def _prepare_inputs():
-            return processor.apply_chat_template(
+            prompt = processor.apply_chat_template(
                 cleaned_messages,
                 add_generation_prompt=True,
-                return_tensors="pt",
-                tokenize=True,
+            )
+            return processor(
+                text=prompt,
                 images=pil_images if pil_images else None,
+                return_tensors="pt",
             ).to(model.device)
 
         inputs = await asyncio.to_thread(_prepare_inputs)
