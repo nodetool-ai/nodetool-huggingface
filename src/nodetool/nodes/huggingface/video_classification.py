@@ -12,6 +12,22 @@ from nodetool.workflows.processing_context import ProcessingContext
 from pydantic import Field
 
 
+def frames_expected_by_config(config: Any) -> int | None:
+    """
+    Return the number of frames a video classifier's config pins, or None.
+
+    A video transformer's temporal position embeddings are sized at training
+    time, so the clip length is fixed per checkpoint: VideoMAE and TimeSformer
+    name it `num_frames`, V-JEPA 2 names it `frames_per_clip`. Feeding any
+    other count raises a tensor size mismatch inside the pipeline.
+    """
+    for key in ("num_frames", "frames_per_clip"):
+        value = getattr(config, key, None)
+        if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+            return value
+    return None
+
+
 class VideoClassifier(HuggingFacePipelineNode):
     """
     Classifies video clips into action or scene categories using video transformer models.
@@ -36,10 +52,10 @@ class VideoClassifier(HuggingFacePipelineNode):
         description="The video clip to classify. Shorter clips (2-10s) tend to give better results.",
     )
     num_frames: int = Field(
-        default=8,
+        default=0,
         title="Num Frames",
-        description="Number of frames to sample from the video for classification. Higher values capture more temporal detail but use more memory.",
-        ge=4,
+        description="Number of frames to sample from the video. Leave at 0 to use the frame count the model was trained with; every other value must match that count or the model rejects the clip.",
+        ge=0,
         le=32,
     )
 
@@ -109,14 +125,17 @@ class VideoClassifier(HuggingFacePipelineNode):
 
         # The video-classification pipeline decodes the video itself and only
         # accepts a local path or an http(s) URL, so materialize the asset.
+        num_frames = self.num_frames or frames_expected_by_config(
+            getattr(self._pipeline.model, "config", None)
+        )
+        kwargs: dict[str, Any] = {"num_frames": num_frames} if num_frames else {}
+
         video_bytes = await context.asset_to_bytes(self.video)
         tmp = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
         try:
             tmp.write(video_bytes)
             tmp.close()
-            result = await self.run_pipeline_in_thread(
-                tmp.name, num_frames=self.num_frames
-            )
+            result = await self.run_pipeline_in_thread(tmp.name, **kwargs)
         finally:
             os.unlink(tmp.name)
 
