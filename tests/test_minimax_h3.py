@@ -219,3 +219,80 @@ def test_diffusers_039_keeps_nodes_importable_and_reports_h3_unavailable(monkeyp
 
     with pytest.raises(ImportError, match=r"Diffusers 0\.39.*does not include"):
         _load_minimax_h3_runtime()
+
+
+# A cross-section of the real MiniMaxAI/MiniMax-H3 file listing: one file from
+# each of the nine subfolders `modular_model_index.json` names, the two
+# top-level trees no component entry references, and the repo-root files.
+MINIMAX_H3_REPO_FILES = [
+    "modular_model_index.json",
+    "model_index.json",
+    "README.md",
+    "audio_scheduler/scheduler_config.json",
+    "audio_vae/config.json",
+    "audio_vae/diffusion_pytorch_model.safetensors",
+    "processor/preprocessor_config.json",
+    "processor/merges.txt",
+    "scheduler/scheduler_config.json",
+    "text_encoder/config.json",
+    "text_encoder/model-00001-of-00014.safetensors",
+    "tokenizer/tokenizer.json",
+    "tokenizer/merges.txt",
+    "transformer/config.json",
+    "transformer/diffusion_pytorch_model-00001-of-00014.safetensors",
+    "transformer_ref/config.json",
+    "transformer_ref/diffusion_pytorch_model-00001-of-00014.safetensors",
+    "vae/config.json",
+    "vae/diffusion_pytorch_model-00001-of-00003.safetensors",
+    "FL2VA/model_index.json",
+    "FL2VA/transformer/diffusion_pytorch_model-00001-of-00014.safetensors",
+    "FL2VA/text_encoder/model-00001-of-00014.safetensors",
+    "FL2VA/video_vae/diffusion_pytorch_model.safetensors",
+    "Ref2VA/transformer/diffusion_pytorch_model-00001-of-00014.safetensors",
+    "Ref2VA/text_encoder/model-00001-of-00014.safetensors",
+    "Ref2VA/video_vae/diffusion_pytorch_model.safetensors",
+]
+
+MINIMAX_H3_INDEXED_SUBFOLDERS = [
+    "audio_scheduler",
+    "audio_vae",
+    "processor",
+    "scheduler",
+    "text_encoder",
+    "tokenizer",
+    "transformer",
+    "transformer_ref",
+    "vae",
+]
+
+
+def _minimax_h3_selected_files(filenames: list[str]) -> list[str]:
+    """Which repo files the recommended-model record would fetch.
+
+    Runs the real download filter (`filter_repo_paths`, the same allow/ignore
+    matcher the model download path applies) over a file listing, so the
+    assertions below are about selection, not about which symbols exist.
+    """
+    from nodetool.integrations.huggingface.hf_cache import filter_repo_paths
+
+    model = text_to_video._minimax_h3_recommended_models()[0]
+    files = [SimpleNamespace(path=name) for name in filenames]
+    selected = filter_repo_paths(files, model.allow_patterns, model.ignore_patterns)
+    return [f.path for f in selected]
+
+
+def test_download_skips_the_checkpoint_copies_the_pipeline_never_reads():
+    selected = _minimax_h3_selected_files(MINIMAX_H3_REPO_FILES)
+    unread = [f for f in selected if f.startswith(("FL2VA/", "Ref2VA/"))]
+    assert unread == [], (
+        "FL2VA/ and Ref2VA/ are 144.1GB each and no component in "
+        "modular_model_index.json references them"
+    )
+
+
+def test_download_keeps_every_subfolder_the_index_references():
+    selected = _minimax_h3_selected_files(MINIMAX_H3_REPO_FILES)
+    for subfolder in MINIMAX_H3_INDEXED_SUBFOLDERS:
+        assert any(f.startswith(f"{subfolder}/") for f in selected), subfolder
+    # The root index the modular pipeline reads first.
+    assert "modular_model_index.json" in selected
