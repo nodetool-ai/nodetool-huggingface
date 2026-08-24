@@ -285,6 +285,15 @@ class ImageTextToText(HuggingFacePipelineNode):
     def required_inputs(self):
         return ["image"]
 
+    async def pre_process(self, context: ProcessingContext) -> Any:
+        await super().pre_process(context)
+        # Resolve the image before preload_model downloads the model weights,
+        # so a bad image reference (or a workspace this run genuinely lacks)
+        # fails in seconds instead of after a multi-gigabyte download.
+        # gen_process resolves it again through the same route when it builds
+        # the provider message.
+        await context.image_to_pil(self.image)
+
     def _prepare_messages(self) -> list[Message]:
         """Prepare the HF-style messages for the pipeline."""
         return [
