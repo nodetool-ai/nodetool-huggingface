@@ -26,5 +26,5 @@ def test_flux_fill_resolve_int4():
 
     assert base_model.repo_id == "black-forest-labs/FLUX.1-Fill-dev"
     assert transformer_model is not None
-    assert transformer_model.repo_id == "nunchaku-tech/nunchaku-flux.1-fill-dev"
+    assert transformer_model.repo_id == "nunchaku-ai/nunchaku-flux.1-fill-dev"
     assert "svdq-int4" in (transformer_model.path or "")

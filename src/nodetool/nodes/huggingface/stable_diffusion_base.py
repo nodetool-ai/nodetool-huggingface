@@ -130,11 +130,11 @@ HF_STABLE_DIFFUSION_XL_MODELS = [
         path="RealVisXL_V5.0_fp16.safetensors",
     ),
     HFStableDiffusionXL(
-        repo_id="nunchaku-tech/nunchaku-sdxl",
+        repo_id="nunchaku-ai/nunchaku-sdxl",
         path="svdq-int4_r32-sdxl.safetensors",
     ),
     HFStableDiffusionXL(
-        repo_id="nunchaku-tech/nunchaku-sdxl-turbo",
+        repo_id="nunchaku-ai/nunchaku-sdxl-turbo",
         path="svdq-int4_r32-sdxl-turbo.safetensors",
     ),
 ]
@@ -1382,7 +1382,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
                 else "svdq-int4_r32-sdxl-turbo.safetensors"
             )
             return HFStableDiffusionXL(
-                repo_id="nunchaku-tech/nunchaku-sdxl-turbo",
+                repo_id="nunchaku-ai/nunchaku-sdxl-turbo",
                 path=path,
             )
 
@@ -1393,7 +1393,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         )
 
         return HFStableDiffusionXL(
-            repo_id="nunchaku-tech/nunchaku-sdxl",
+            repo_id="nunchaku-ai/nunchaku-sdxl",
             path=path,
         )
 

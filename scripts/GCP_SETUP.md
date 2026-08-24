@@ -95,7 +95,7 @@ When you start the instance, the script will:
 ### Run Action
 
 Executes the Stable Diffusion example script on the running instance:
-- Model: `nunchaku-tech/nunchaku-sdxl` (quantized SDXL)
+- Model: `nunchaku-ai/nunchaku-sdxl` (quantized SDXL)
 - Prompt: "A serene mountain landscape at sunset, highly detailed, photorealistic"
 - Output: Saved to `/opt/nodetool-huggingface/nodetool-huggingface/scripts/outputs/sd_example_output.png`
 

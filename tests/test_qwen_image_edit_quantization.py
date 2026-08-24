@@ -27,5 +27,5 @@ def test_qwen_image_edit_resolve_int4():
 
     model = node._resolve_model_config()
 
-    assert model.repo_id == "nunchaku-tech/nunchaku-qwen-image-edit"
+    assert model.repo_id == "nunchaku-ai/nunchaku-qwen-image-edit"
     assert model.path == "svdq-int4_r32-qwen-image-edit.safetensors"

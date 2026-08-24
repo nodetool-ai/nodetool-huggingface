@@ -34,7 +34,7 @@ def test_flux_control_resolve_int4_canny():
 
     assert base_model.repo_id == "black-forest-labs/FLUX.1-Canny-dev"
     assert transformer_model is not None
-    assert transformer_model.repo_id == "nunchaku-tech/nunchaku-flux.1-canny-dev"
+    assert transformer_model.repo_id == "nunchaku-ai/nunchaku-flux.1-canny-dev"
     assert "svdq-int4" in (transformer_model.path or "")
     assert text_encoder_model is not None
-    assert text_encoder_model.repo_id == "nunchaku-tech/nunchaku-t5"
+    assert text_encoder_model.repo_id == "nunchaku-ai/nunchaku-t5"

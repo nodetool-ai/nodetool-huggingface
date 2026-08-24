@@ -33,13 +33,13 @@ def test_sdxl_resolve_nunchaku_model_fp4():
         use_legacy_transformer=False,
     )
     assert model is not None
-    assert model.repo_id == "nunchaku-tech/nunchaku-sdxl"
+    assert model.repo_id == "nunchaku-ai/nunchaku-sdxl"
     assert model.path == "svdq-fp4_r32-sdxl.safetensors"
 
 
 def test_sdxl_detects_legacy_quantization_from_model_path():
     node = StableDiffusionXL()
-    node.model.repo_id = "nunchaku-tech/nunchaku-sdxl"
+    node.model.repo_id = "nunchaku-ai/nunchaku-sdxl"
     node.model.path = "svdq-int4_r32-sdxl.safetensors"
     legacy = node._detect_legacy_quantization()
     assert legacy == StableDiffusionXLQuantization.INT4
