@@ -241,6 +241,22 @@ def _release_exception(exc: BaseException) -> None:
         pass
 
 
+def _dtype_cache_suffix(torch_dtype: Any) -> str:
+    """Derive a cache-key suffix from the requested dtype.
+
+    ``torch_dtype`` is a named parameter, so it never reached the derived key.
+    Every FLUX variant asks for the same nunchaku T5 encoder but not the same
+    dtype — bfloat16 for schnell and dev, float16 for fill, canny, depth and
+    kontext — and whichever ran first won. The later pipeline then fed bf16
+    hidden states into fp16 layers: "Input type (c10::BFloat16) and bias type
+    (c10::Half) should be the same".
+    """
+    if torch_dtype is None:
+        return ""
+    name = getattr(torch_dtype, "__name__", None) or str(torch_dtype)
+    return f"_{name.rsplit('.', 1)[-1]}"
+
+
 def _quantization_cache_suffix(kwargs: dict[str, Any]) -> str:
     """Derive a cache-key suffix from any quantization config in the load kwargs.
 
@@ -494,6 +510,7 @@ async def load_model(
     if cache_key is None:
         cache_key = (
             f"{model_id}_{model_class.__name__}_{path}"
+            f"{_dtype_cache_suffix(torch_dtype)}"
             f"{_quantization_cache_suffix(kwargs)}{_component_cache_suffix(kwargs)}"
         )
     cache_key += cache_key_suffix

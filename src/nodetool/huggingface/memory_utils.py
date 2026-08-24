@@ -17,6 +17,7 @@ For general memory utilities (memory tracking, GC, etc.), use:
 
 from __future__ import annotations
 
+import itertools
 from typing import TYPE_CHECKING
 
 from nodetool.config.logging_config import get_logger
@@ -47,7 +48,92 @@ __all__ = [
     "preferred_offload_method",
     "offload_kind",
     "move_pipeline_to_device",
+    "claim_pipeline_components",
+    "owns_its_components",
 ]
+
+
+_OWNER_ATTR = "_nodetool_offload_owner"
+_owner_tokens = itertools.count(1)
+
+
+def claim_pipeline_components(pipeline) -> bool:
+    """Make ``pipeline`` the sole owner of its components.
+
+    A component held in the ModelManager cache is shared, not copied: every
+    FLUX variant reuses one ``NunchakuT5EncoderModel`` because its cache key
+    carries neither the variant nor the dtype. When the pipeline that loaded
+    it first called ``enable_sequential_cpu_offload``, that object keeps its
+    ``AlignDevicesHook`` forever. :func:`offload_kind` then reports the
+    borrowed strategy for the *next* pipeline, so both
+    :func:`apply_cpu_offload_if_needed` and :func:`move_pipeline_to_device`
+    skip their work and the components nobody hooked stay on the CPU. That is
+    the "index is on cuda:0, other tensors on cpu" failure in FluxFill and
+    FluxControl after any FluxKontext run.
+
+    Strip the borrowed hooks and stamp a fresh ownership token, so a stale
+    pipeline can be detected by :func:`owns_its_components` and rebuilt.
+
+    Returns:
+        True when a hook left by a previous owner was removed.
+    """
+    if pipeline is None:
+        return False
+    try:
+        from accelerate.hooks import remove_hook_from_module
+    except ImportError:
+        remove_hook_from_module = None  # type: ignore[assignment]
+
+    # Re-claiming a pipeline that already owns everything must not tear down
+    # the offload strategy it installed itself.
+    token = getattr(pipeline, _OWNER_ATTR, None)
+    if token is None or not owns_its_components(pipeline):
+        token = next(_owner_tokens)
+    stripped = False
+    for component in _pipeline_modules(pipeline):
+        prior = getattr(component, _OWNER_ATTR, None)
+        if prior is not None and prior != token and remove_hook_from_module is not None:
+            try:
+                remove_hook_from_module(component, recurse=True)
+                stripped = True
+            except Exception:  # pragma: no cover - defensive
+                log.warning("Could not detach borrowed offload hooks", exc_info=True)
+        try:
+            setattr(component, _OWNER_ATTR, token)
+        except Exception:  # pragma: no cover - exotic components
+            continue
+    try:
+        setattr(pipeline, _OWNER_ATTR, token)
+    except Exception:  # pragma: no cover
+        pass
+    if stripped:
+        log.info(
+            "Detached offload hooks a previous pipeline left on a shared component"
+        )
+        for attr in ("_nodetool_offload_kind", "_nodetool_cpu_offload_applied"):
+            try:
+                delattr(pipeline, attr)
+            except Exception:
+                pass
+    return stripped
+
+
+def owns_its_components(pipeline) -> bool:
+    """Is every component of ``pipeline`` still owned by ``pipeline``?
+
+    False once another pipeline has claimed a shared component, which also
+    stripped this pipeline's offload hooks from it. A cached pipeline in that
+    state must be rebuilt rather than returned.
+    """
+    if pipeline is None:
+        return False
+    token = getattr(pipeline, _OWNER_ATTR, None)
+    if token is None:
+        return True
+    return all(
+        getattr(component, _OWNER_ATTR, token) == token
+        for component in _pipeline_modules(pipeline)
+    )
 
 
 def preferred_offload_method(pipeline) -> str:
