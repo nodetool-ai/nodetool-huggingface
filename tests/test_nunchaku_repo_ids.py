@@ -48,7 +48,10 @@ SKIP_DIRS = {
 }
 
 STALE_ORG = "nunchaku-tech"
-NUNCHAKU_ID_RE = re.compile(r"nunchaku-ai/[A-Za-z0-9._-]*")
+# One or more name characters, not zero: `nunchaku-ai/*` written as a glob in
+# prose is an org mention, not a repo id, and matched as one with an empty
+# name — which reported the docs as declaring an unknown repo.
+NUNCHAKU_ID_RE = re.compile(r"nunchaku-ai/[A-Za-z0-9._-]+")
 
 
 def _text_files():
