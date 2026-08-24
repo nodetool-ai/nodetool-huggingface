@@ -318,6 +318,79 @@ async def load_nunchaku_flux_pipeline(
         ) from exc
 
 
+def apply_qwen_rope_compat_shim() -> bool:
+    """Let nunchaku's Qwen transformer call ``QwenEmbedRope`` on diffusers >= 0.39.
+
+    diffusers PR #12702 removed the ``txt_seq_lens`` parameter, moving ``device``
+    into the second positional slot::
+
+        0.36            forward(video_fhw, txt_seq_lens, device)
+        0.37, 0.38      forward(video_fhw, txt_seq_lens=None, device=None, max_txt_seq_len=None)
+        0.39, 0.40      forward(video_fhw, device=None, max_txt_seq_len=None)
+
+    nunchaku still calls the 0.36 form (``transformer_qwenimage.py:517``:
+    ``self.pos_embed(img_shapes, txt_seq_lens, device=...)``), so ``txt_seq_lens``
+    binds positionally to ``device`` and the call raises "got multiple values for
+    argument 'device'". This is nunchaku-ai/nunchaku#884, closed by a stale bot
+    rather than fixed; nunchaku ``main`` still carries the same line, so upgrading
+    the wheel does not help. Pinning diffusers back is blocked by this package's
+    own ``diffusers[torch]>=0.39.0`` floor.
+
+    The conversion below is diffusers' own 0.38 deprecation branch, verbatim from
+    ``transformer_qwenimage.py`` in v0.38.0::
+
+        # Use max of txt_seq_lens for backward compatibility
+        max_txt_seq_len = max(txt_seq_lens) if isinstance(txt_seq_lens, list) else txt_seq_lens
+
+    so this restores removed behaviour rather than inventing semantics.
+
+    The shim self-disables: it applies only while ``forward`` accepts
+    ``max_txt_seq_len`` and no longer accepts ``txt_seq_lens``. If nunchaku fixes
+    its call, or diffusers changes shape again, this becomes a no-op. Delete it
+    once nunchaku calls ``max_txt_seq_len``.
+
+    Returns:
+        True if the shim is now installed, False if it was not needed.
+    """
+    import inspect
+
+    from diffusers.models.transformers.transformer_qwenimage import QwenEmbedRope
+
+    forward = QwenEmbedRope.forward
+    if getattr(forward, "_nodetool_qwen_rope_shim", False):
+        return True  # idempotent: already wrapped
+
+    params = inspect.signature(forward).parameters
+    if "max_txt_seq_len" not in params or "txt_seq_lens" in params:
+        # Either an older diffusers that still accepts the legacy call, or a
+        # future signature this translation would not match. Leave it alone.
+        return False
+
+    torch = _get_torch()
+
+    def _forward(self, video_fhw, *args, **kwargs):  # type: ignore[no-untyped-def]
+        # Only a legacy positional `txt_seq_lens` is rewritten. A device passed
+        # positionally (torch.device, a "cuda" string, or None) falls through.
+        if args and (
+            isinstance(args[0], (list, tuple, int)) or torch.is_tensor(args[0])
+        ):
+            legacy, *rest = args
+            args = tuple(rest)
+            if kwargs.get("max_txt_seq_len") is None:
+                kwargs["max_txt_seq_len"] = (
+                    max(legacy) if isinstance(legacy, list) else legacy
+                )
+        return forward(self, video_fhw, *args, **kwargs)
+
+    _forward._nodetool_qwen_rope_shim = True  # type: ignore[attr-defined]
+    QwenEmbedRope.forward = _forward  # type: ignore[method-assign]
+    log.info(
+        "Applied QwenEmbedRope compatibility shim for nunchaku on diffusers >= 0.39 "
+        "(see nunchaku-ai/nunchaku#884)"
+    )
+    return True
+
+
 async def load_nunchaku_qwen_pipeline(
     context: "ProcessingContext",
     repo_id: str,
@@ -345,6 +418,10 @@ async def load_nunchaku_qwen_pipeline(
     from nunchaku import NunchakuQwenImageTransformer2DModel
     from nunchaku.utils import get_gpu_memory
     from nodetool.ml.core.model_manager import ModelManager
+
+    # nunchaku's Qwen transformer calls QwenEmbedRope with the pre-0.39
+    # signature. Repair it before the transformer runs.
+    apply_qwen_rope_compat_shim()
 
     log_memory("load_nunchaku_qwen_pipeline - START")
 
