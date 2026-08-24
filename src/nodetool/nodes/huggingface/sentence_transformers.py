@@ -1,4 +1,5 @@
 from nodetool.metadata.types import DocumentRef
+from nodetool.nodes.huggingface._3d_common import MissingDependencyError
 from nodetool.workflows.processing_context import ProcessingContext
 from typing import TypedDict, AsyncGenerator
 from nodetool.workflows.base_node import BaseNode
@@ -38,8 +39,16 @@ class SplitSentences(BaseNode):
     async def gen_process(
         self, context: ProcessingContext
     ) -> AsyncGenerator[OutputType, None]:
-        from langchain_text_splitters import SentenceTransformersTokenTextSplitter
-        from langchain_core.documents import Document
+        try:
+            from langchain_text_splitters import (
+                SentenceTransformersTokenTextSplitter,
+            )
+            from langchain_core.documents import Document
+        except ImportError as exc:
+            raise MissingDependencyError(
+                "Split into Sentences requires the optional 'langchain' package.",
+                install_hint="pip install nodetool-huggingface[langchain]",
+            ) from exc
 
         splitter = SentenceTransformersTokenTextSplitter(
             chunk_size=self.chunk_size,
