@@ -17647,15 +17647,18 @@
     {
       "basic_fields": [
         "model",
-        "prompt",
+        "image",
         "layers",
         "resolution",
         "num_inference_steps"
       ],
-      "body": "content_card",
-      "description": "Generates layered images from text prompts using Qwen-Image-Layered.\n    image, generation, AI, text-to-image, qwen, layered, transparent\n\n    Use cases:\n    - Generate images decomposed into separate layers\n    - Produce assets with transparent foregrounds and backgrounds\n    - Create compositable graphics for design workflows\n    - Build layered content generation systems",
+      "description": "Decomposes an image into separate RGBA layers using Qwen-Image-Layered.\n    image, layers, decomposition, AI, qwen, transparent\n\n    Use cases:\n    - Split an image into independently editable layers\n    - Extract transparent foregrounds from a background\n    - Produce compositable graphics for design workflows\n    - Isolate an object so it can be moved, resized, or recolored",
+      "inline_fields": [
+        "model",
+        "prompt"
+      ],
       "input_fields": [
-        "prompt",
+        "image",
         "negative_prompt"
       ],
       "namespace": "huggingface.text_to_image",
@@ -17664,7 +17667,12 @@
         {
           "name": "output",
           "type": {
-            "type": "image"
+            "type": "list",
+            "type_args": [
+              {
+                "type": "image"
+              }
+            ]
           }
         }
       ],
@@ -17686,8 +17694,23 @@
           }
         },
         {
-          "default": "A cat holding a sign that says hello world",
-          "description": "Text description of the image to generate.",
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "image",
+            "uri": ""
+          },
+          "description": "The image to decompose into layers.",
+          "name": "image",
+          "title": "Image",
+          "type": {
+            "type": "image"
+          }
+        },
+        {
+          "default": "",
+          "description": "Caption of the image. Leave empty to let the model caption it.",
           "name": "prompt",
           "title": "Prompt",
           "type": {
@@ -17695,8 +17718,8 @@
           }
         },
         {
-          "default": "",
-          "description": "Describe what to avoid in the image.",
+          "default": " ",
+          "description": "Describe what to avoid in the generated layers.",
           "name": "negative_prompt",
           "title": "Negative Prompt",
           "type": {
@@ -17715,14 +17738,17 @@
           }
         },
         {
-          "default": 640,
-          "description": "Working resolution for layer generation.",
-          "max": 1536.0,
-          "min": 256.0,
+          "default": "640",
+          "description": "Working resolution bucket. The pipeline accepts 640 or 1024.",
           "name": "resolution",
           "title": "Resolution",
           "type": {
-            "type": "int"
+            "type": "enum",
+            "type_name": "nodetool.nodes.huggingface.text_to_image.QwenLayeredResolution",
+            "values": [
+              "640",
+              "1024"
+            ]
           }
         },
         {
