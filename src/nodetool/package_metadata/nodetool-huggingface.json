@@ -12873,7 +12873,7 @@
         "chunk_size",
         "chunk_overlap"
       ],
-      "description": "Splits text into sentences using LangChain's SentenceTransformersTokenTextSplitter.\n    sentences, split, nlp\n\n    Use cases:\n    - Natural sentence-based text splitting\n    - Creating semantically meaningful chunks\n    - Processing text for sentence-level analysis",
+      "description": "Splits text into sentences using a sentence-transformer tokenizer's token count.\n    sentences, split, nlp\n\n    Use cases:\n    - Natural sentence-based text splitting\n    - Creating semantically meaningful chunks\n    - Processing text for sentence-level analysis",
       "inline_fields": [
         "chunk_size",
         "chunk_overlap"
@@ -12921,7 +12921,7 @@
         },
         {
           "default": 40,
-          "description": "Maximum number of tokens per chunk",
+          "description": "Maximum number of tokens per chunk. Capped at the embedding model's maximum sequence length (384 tokens for the default model) -- a larger value is clamped down to that limit, since the model cannot embed more tokens than that in one pass.",
           "name": "chunk_size",
           "title": "Chunk Size",
           "type": {
@@ -20713,6 +20713,10 @@
             "*.json"
           ],
           "id": "MiniMaxAI/MiniMax-H3",
+          "ignore_patterns": [
+            "FL2VA/*",
+            "Ref2VA/*"
+          ],
           "name": "MiniMaxAI/MiniMax-H3",
           "repo_id": "MiniMaxAI/MiniMax-H3",
           "type": "hf.text_to_video"
@@ -20874,6 +20878,10 @@
             "*.json"
           ],
           "id": "MiniMaxAI/MiniMax-H3",
+          "ignore_patterns": [
+            "FL2VA/*",
+            "Ref2VA/*"
+          ],
           "name": "MiniMaxAI/MiniMax-H3",
           "repo_id": "MiniMaxAI/MiniMax-H3",
           "type": "hf.text_to_video"
@@ -21393,10 +21401,10 @@
           }
         },
         {
-          "default": 8,
-          "description": "Number of frames to sample from the video for classification. Higher values capture more temporal detail but use more memory.",
+          "default": 0,
+          "description": "Number of frames to sample from the video. Leave at 0 to use the frame count the model was trained with; every other value must match that count or the model rejects the clip.",
           "max": 32.0,
-          "min": 4.0,
+          "min": 0.0,
           "name": "num_frames",
           "title": "Num Frames",
           "type": {
