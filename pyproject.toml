@@ -70,6 +70,20 @@ dependencies = [
     # without it.  A base dependency, not an extra: both nodes ship in every
     # install, and the Dockerfile installs this package with no extras.
     "ftfy>=6.1",
+    # transformers decodes an audio *path* through transformers.audio_utils
+    # .load_audio, whose "auto" backend picks torchcodec>=0.3.0 when it is
+    # installed and falls back to librosa otherwise.  AudioFlamingo is the one
+    # node here that hands transformers a path rather than a numpy array (the
+    # rest decode with context.audio_to_numpy, and load_audio returns an
+    # ndarray untouched), so on a pod with neither backend it failed with
+    # "load_audio requires the librosa library".  librosa is also the only
+    # backend the parakeet / nemotron_asr_streaming / cohere_asr feature
+    # extractors accept -- they build their mel filters with
+    # librosa.filters.mel, which torchcodec does not replace.  A base
+    # dependency, not an extra: the node ships in every install, and the
+    # Dockerfile installs this package with no extras.  The floor matches
+    # nodetool-lib-audio's so the two resolve together.
+    "librosa>=0.10.2",
 ]
 
 [project.optional-dependencies]
