@@ -4,6 +4,12 @@ pyannote.audio is an optional dependency and the diarization checkpoints are
 gated on the Hugging Face Hub, so every test here mocks the pipeline: a fake
 ``pyannote.audio`` module is installed into ``sys.modules`` and a stub
 annotation object stands in for the model output.
+
+The fake ``Pipeline`` mirrors **pyannote.audio 4.x**: ``from_pretrained``
+takes ``token``, not ``use_auth_token``, and ``apply`` returns a
+``DiarizeOutput`` dataclass rather than a bare ``Annotation``. Both changed in
+4.0.0, which the package now requires -- see
+``test_pyannote_audio_4_regression.py`` for why.
 """
 
 from __future__ import annotations
@@ -88,9 +94,17 @@ def fake_pyannote(monkeypatch):
         return_value: object = None
 
         @staticmethod
-        def from_pretrained(repo_id, use_auth_token=None):
-            loaded["repo_id"] = repo_id
-            loaded["token"] = use_auth_token
+        def from_pretrained(
+            checkpoint,
+            revision=None,
+            hparams_file=None,
+            subfolder=None,
+            token=None,
+            cache_dir=None,
+        ):
+            """pyannote.audio 4.x's signature. ``use_auth_token`` is gone."""
+            loaded["repo_id"] = checkpoint
+            loaded["token"] = token
             return Pipeline.return_value
 
     pyannote = types.ModuleType("pyannote")
@@ -109,9 +123,9 @@ def fake_pyannote(monkeypatch):
 # --------------------------------------------------------------------------
 
 
-def test_default_model_is_speaker_diarization_31():
+def test_default_model_is_the_pyannote_4_community_pipeline():
     node = SpeakerDiarization()
-    assert node.model.repo_id == "pyannote/speaker-diarization-3.1"
+    assert node.model.repo_id == "pyannote/speaker-diarization-community-1"
 
 
 def test_title():
@@ -220,7 +234,9 @@ async def test_preload_uses_settings_token(fake_pyannote):
     node = SpeakerDiarization()
     await node.preload_model(FakeContext(secret="hf_secret_token"))
 
-    assert fake_pyannote.loaded["repo_id"] == "pyannote/speaker-diarization-3.1"
+    assert (
+        fake_pyannote.loaded["repo_id"] == "pyannote/speaker-diarization-community-1"
+    )
     assert fake_pyannote.loaded["token"] == "hf_secret_token"
     assert node._pipeline is pipeline
 
