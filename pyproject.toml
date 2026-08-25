@@ -84,6 +84,41 @@ dependencies = [
     # Dockerfile installs this package with no extras.  The floor matches
     # nodetool-lib-audio's so the two resolve together.
     "librosa>=0.10.2",
+    # -- 3D and speech node dependencies -------------------------------------
+    # These were extras nobody installed, so four nodes failed out of the box on
+    # an import rather than doing their job.  Every one below has wheels for
+    # macOS, manylinux and Windows on Python 3.11-3.13; nothing here compiles at
+    # install time.
+    #
+    # scikit-image: TripoSG._prepare_image (skimage.measure.label,
+    #   skimage.morphology.remove_small_objects).
+    # pymeshlab:    TripoSG._prepare_mesh, and Hunyuan3D.
+    # hy3dgen:      Hunyuan3D.  Pulls opencv-python, rembg, onnxruntime and
+    #   gradio in itself, which is where those arrive from.
+    # supertonic:   SupertonicTTS.  Pure python over onnxruntime.
+    # f5-tts:       F5TTS.  By far the heaviest of the five: 41 of the 74
+    #   packages a plain install gains come from its subtree alone (wandb,
+    #   datasets, boto3, google-auth, sentry-sdk, pyarrow), and it pins
+    #   rich<14 through cached-path.  Promoted because the node is unusable
+    #   otherwise; drop this one line to get all of that back.
+    "scikit-image",
+    "pymeshlab",
+    "hy3dgen>=2.0.2",
+    "supertonic>=1.3.1,<2",
+    "f5-tts>=1.1.22,<2",
+    # NOT here, deliberately:
+    # opencv-python -- `cv2` already resolves on a plain install through
+    #   opencv-python-headless, which mistral-common[image] brings in.  Every
+    #   cv2 call in this package is core imgproc (threshold, findContours,
+    #   contourArea, INTER_AREA), none of it GUI, so headless serves them all.
+    #   Declaring opencv-python would add a second provider of the same `cv2`
+    #   module, which upstream tells you not to do.
+    # rembg -- only StableFast3D imports it, and that node needs the git-only
+    #   sf3d package, so it cannot run on a PyPI install regardless.  TripoSG
+    #   does its own background removal with the vendored BriaRMBG.
+    # diso -- sdist-only, compiles against a CUDA toolchain at install time.
+    #   TripoSG already guards it as the optional flash decoder and falls back
+    #   to marching cubes, so it stays in the triposg extra.
 ]
 
 [project.optional-dependencies]
@@ -96,24 +131,19 @@ kokoro-ja = [
     "misaki[ja]",
     "pyopenjtalk",
 ]
-supertonic = [
-    "supertonic>=1.3.1,<2",
-]
-f5-tts = [
-    "f5-tts>=1.1.22,<2",
-]
-# Pure-Python / wheel deps — install everywhere, runtime gates CUDA
-hunyuan3d = [
-    "hy3dgen>=2.0.2",
-    "pymeshlab",
-]
+# Kept as empty aliases, not deleted: their contents are base dependencies now,
+# and `pip install nodetool-huggingface[supertonic]` still appears in scripts,
+# Dockerfiles and this package's own node docstrings.  An empty extra installs
+# the base package and succeeds; a removed one is an error.  `shape` below has
+# been an empty alias for the same reason.
+supertonic = []
+f5-tts = []
+hunyuan3d = []
+# Still meaningful: diso is the optional flash decoder TripoSG falls back from,
+# and neither it nor rembg is a base dependency.
 triposg = [
     "diso ; platform_system != 'Darwin'",
     "rembg ; platform_system != 'Darwin'",
-    "pymeshlab",
-    "scikit-image",
-    # TripoSG._prepare_image crops/thresholds the RMBG mask with OpenCV.
-    "opencv-python",
 ]
 
 # Git-only stacks — the upstream packages (sf3d, tsr, o_voxel) are NOT on
