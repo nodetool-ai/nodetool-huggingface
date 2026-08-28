@@ -1,243 +1,83 @@
 # Nodetool-HuggingFace
 
-HuggingFace nodes for Nodetool - A comprehensive integration that brings state-of-the-art AI models to your workflows.
+HuggingFace nodes for [Nodetool](https://docs.nodetool.ai) — a large integration bringing HuggingFace's Transformers, Diffusers, and related model ecosystems into Nodetool workflows.
 
 ## Description
 
-This package provides a rich set of HuggingFace nodes for integration with Nodetool, allowing you to build powerful AI workflows using cutting-edge models. With support for over 25 different model types, you can create sophisticated pipelines for text, image, audio, and multimodal processing.
+This package ships well over 100 nodes spanning image generation and editing, video and 3D generation, speech and audio, text and document understanding, and multimodal vision-language models. Nodes wrap HuggingFace `transformers` pipelines and `diffusers` pipelines directly, so any compatible model repo on the Hub can generally be used, in addition to the recommended models called out per node.
 
 ## Node Categories
 
-### 🎨 Image Generation
+### 🎨 Text-to-Image Generation
 
-#### Text-to-Image Nodes
-- **Stable Diffusion** - Generate high-quality images from text prompts using Stable Diffusion models
-  - Custom width/height settings (256-1024px)
-  - Configurable inference steps and guidance scale
-  - Support for negative prompts
-  - Use cases: Art creation, concept visualization, content generation
+- **Stable Diffusion** / **Stable Diffusion XL** — classic and XL diffusion pipelines, with LoRA, IP-Adapter and ControlNet support
+- **Flux**, **Flux2**, **Flux2 Klein**, **Flux Control** — Black Forest Labs' FLUX family, with Nunchaku (FP16/FP4/INT4) and GGUF quantization and CPU offload for constrained VRAM
+- **Chroma** — Flux-based architecture with enhanced attention-based color control
+- **Qwen-Image**, **Qwen-Image-Layered** — Alibaba's Qwen-Image, including a mode that decomposes an image into separate RGBA layers
+- **Bria**, **Bria FIBO** — commercial-ready generation, including structured-JSON-prompt control with FIBO
+- **GLM-Image** — Zhipu AI's GLM-Image
+- **Kandinsky 5.0 Image Lite**
+- **Text2Image (AutoPipeline)** — automatic pipeline selection for any text-to-image checkpoint
+- **LoadTextToImageModel** — loads/validates a model repo for use by downstream nodes
 
-- **Stable Diffusion XL** - Enhanced image generation with SDXL models
-  - Higher resolution outputs (up to 1024px)
-  - Improved image quality and detail
-  - Support for IP adapters and LoRA models
-  - Use cases: Marketing materials, game assets, interior design concepts
+### 🖌️ Image-to-Image, Editing & Upscaling
 
-- **Flux** - Next-generation image generation with memory-efficient quantization
-  - Supports *schnell* (fast) and *dev* (high-quality) variants
-  - Nunchaku quantization (FP16, FP4, INT4) for reduced VRAM usage
-  - CPU offload support for large models
-  - Configurable max_sequence_length for prompt complexity
-  - Use cases: High-fidelity image generation with limited hardware
+- **Image to Image / Inpaint / ControlNet (SD & SDXL)** — img2img, inpainting, and ControlNet-guided generation for both Stable Diffusion and SDXL
+- **QwenImageEdit**, **FluxFill**, **FluxKontext** — instruction-based image editing/inpainting
+- **OmniGen** — multimodal image generation and editing from mixed image/text inputs
+- **RealESRGAN**, **Stable Diffusion Upscale**, **Stable Diffusion Latent Upscaler** — super-resolution
+- **VAEEncode / VAEDecode** — encode images to/decode latents from a Stable Diffusion VAE
+- **BackgroundRemoval** — RMBG-2.0 / BiRefNet / RMBG-1.4 matting, returns a cutout and alpha matte
+- **LoRA Selector** / **LoRA Selector XL** — combine up to 5 LoRAs with per-LoRA strength, 60+ pre-configured style LoRAs
 
-- **Flux Control** - Controlled image generation with depth/canny guidance
-  - Depth-aware and edge-guided generation
-  - Control image input for structural guidance
-  - Quantization support (FP16, FP4, INT4)
-  - Use cases: Controlled composition, maintaining structure while changing style
+### 🎬 Video Generation
 
-- **Chroma** - Flux-based model with advanced attention masking
-  - Professional-quality color control
-  - Attention slicing for memory optimization
-  - Use cases: Professional photography effects, precise color grading
+- **CogVideoX**, **Wan (T2V/I2V/FLF2V)**, **LTX-Video**, **LTX-2 / LTX-2.5 / LTX-2 Video**, **Kandinsky 5.0 Video** — text-to-video and image-to-video diffusion transformers
+- **MiniMax-H3** / **MiniMax-H3 Reference** — joint video + soundtrack generation (5–15s @ 24fps) from a prompt, optional keyframes, or image/video/audio references
+- **VideoClassifier** — action/scene recognition (VideoMAE, TimeSformer, V-JEPA 2)
 
-- **Qwen-Image** - High-quality general-purpose text-to-image generation
-  - Nunchaku quantization support
-  - True CFG scale control
-  - Use cases: General-purpose image generation, quick prototyping
+### 🧊 3D Generation
 
-- **Text2Image (AutoPipeline)** - Automatic pipeline selection for any text-to-image model
-  - Auto-detects best pipeline for given model
-  - Flexible generation without pipeline-specific knowledge
-  - Use cases: Testing different models, rapid prototyping
+- **Shap-E** (text-to-3D and image-to-3D) — always installable, no extra dependencies
+- **Hunyuan3D**, **TripoSR**, **TripoSG**, **Trellis2**, **StableFast3D** — image-to-3D mesh generation, most gated behind optional extras (`hunyuan3d`, `triposg`, `sf3d`, `triposr`, or `all-3d`) since they pull heavy or git-only dependencies
 
-#### Image-to-Image Transformation
-- **Image to Image** - Transform existing images using Stable Diffusion
-  - Strength parameter controls transformation amount
-  - Support for style transfer and image variations
-  - Use cases: Style transfer, image enhancement, creative remixing
+### 🗣️ Speech & Audio
 
-### 🗣️ Speech & Audio Processing
-
-#### Audio Classification
-- **Audio Classifier** - Classify audio into predefined categories
-  - Recommended models:
-    - `MIT/ast-finetuned-audioset-10-10-0.4593`
-    - `ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition`
-  - Use cases: Music genre classification, speech detection, environmental sounds, emotion recognition
-
-- **Zero-Shot Audio Classifier** - Classify audio without predefined categories
-  - Flexible classification with custom labels
-  - Use cases: Dynamic audio categorization, sound identification
-
-#### Automatic Speech Recognition
-- **Whisper** - Convert speech to text with multilingual support
-  - Supports 100+ languages
-  - Translation mode (translate any language to English)
-  - Timestamp options (word-level or sentence-level)
-  - Multiple model sizes (tiny to large-v3)
-  - Recommended models:
-    - `openai/whisper-large-v3` - Best accuracy
-    - `openai/whisper-large-v3-turbo` - Fast inference
-    - `openai/whisper-small` - Lightweight option
-  - Use cases: Transcription, translation, subtitle generation, voice interfaces
-
-- **ChunksToSRT** - Convert transcription chunks to SRT subtitle format
-  - Automatic timestamp formatting
-  - Time offset support
-  - Use cases: Video subtitling, accessibility features
-
-#### Audio Generation
-- **Text-to-Speech** - Generate natural-sounding speech from text
-  - Multiple voice options
-  - Configurable speaking rate and pitch
-  - Use cases: Voiceovers, accessibility, content creation
-
-- **Text-to-Audio** - Generate audio effects and sounds from text descriptions
-  - Creative sound generation
-  - Use cases: Sound effects, audio design, music production
+- **Whisper** — speech-to-text with 100+ languages, translation mode, word/sentence timestamps; **ChunksToSRT** converts chunks to subtitle files
+- **SpeakerDiarization** — "who spoke when" via pyannote.audio
+- **SpeechSeparation** / **SpeechEnhancement** — SpeechBrain SepFormer for cocktail-party separation and denoising
+- **AudioFlamingo** — NVIDIA Audio/Music Flamingo for speech/sound/music understanding and Q&A
+- **AudioClassifier** / **ZeroShotAudioClassifier** — audio tagging with fixed or custom labels
+- **Text-to-Speech**: Bark, KokoroTTS (+ `kokoro-ja` extra for Japanese), TextToSpeech (multi-model), SupertonicTTS (CPU, 44.1kHz), F5TTS (voice cloning, `f5-tts` extra), HiggsAudio
+- **Text-to-Audio / Music**: MusicGen, MusicLDM, AudioLDM, AudioLDM2, DanceDiffusion, StableAudio, LongCat-AudioDiT
+- **ACE-Step 1.5** — music generation plus audio-to-audio tasks: Cover, Repaint, Extract, Lego, Complete
 
 ### 📝 Text Processing
 
-#### Text Generation
-- **Text Generation** - Generate text using large language models
-  - Streaming output support
-  - Extensive model support including:
-    - Qwen3 series (0.6B to 32B parameters)
-    - Meta Llama 3.1 series
-    - Ministral 3 series
-    - Gemma 3 series
-    - TinyLlama for lightweight deployment
-  - Quantized model support (BitsAndBytes 4-bit)
-  - Configurable parameters:
-    - Temperature (0.0-2.0) - Controls randomness
-    - Top-p (0.0-1.0) - Controls diversity
-    - Max tokens (up to 512 default)
-  - GGUF model support for efficient inference
-  - Use cases: Chatbots, content generation, code completion, creative writing
+- **Text Generation** — LLM text generation with streaming, quantized (BitsAndBytes 4-bit) and GGUF model support across Qwen3, Llama 3.1, Ministral, Gemma 3 and more
+- **Text Classification** / **Zero-Shot Text Classification** — sentiment/topic labeling with fixed or custom labels
+- **Token Classification** — NER, POS tagging
+- **Fill Mask** — masked-language-model completion
+- **Table Question Answering** — natural-language queries over DataFrames (TAPAS, TAPEX)
+- **Document Question Answering** — Q&A over document images (PDFs, receipts, forms) combining OCR/LayoutLM/Donut
+- **Table Structure Recognition** — recovers HTML table structure from an image (PaddleOCR SLANet, `ocr` extra)
+- **Reranker** — cross-encoder relevance ranking of text pairs
+- **Sentence Similarity**, **Feature Extraction**, **SplitSentences** — embeddings, similarity scoring, tokenizer-aware sentence splitting
+- **TimesFMForecast** — zero-shot univariate time-series forecasting with Google's TimesFM 2.5
 
-#### Text Analysis
-- **Text Classification** - Classify text into categories
-  - Sentiment analysis
-  - Topic categorization
-  - Use cases: Content moderation, sentiment analysis, document organization
+### 🖼️ Image & Video Understanding
 
-- **Token Classification** - Identify and classify tokens in text
-  - Named entity recognition (NER)
-  - Part-of-speech tagging
-  - Use cases: Information extraction, text analysis
+- **Image Classifier** / **Zero-Shot Image Classifier** (CLIP) — labeling with fixed or custom categories
+- **Segmentation**, **SAM2Segmentation**, **MaskGeneration** — semantic and instance segmentation, plus SAM/SAM2/SAM3 automatic mask generation; **FindSegment** / **VisualizeSegmentation** helpers
+- **Object Detection** / **Zero-Shot Object Detection** — bounding boxes with fixed or custom labels; **VisualizeObjectDetection** helper
+- **Depth Estimation** — monocular depth prediction
+- **Pose Estimation** — RT-DETR person detection + ViTPose COCO-17 keypoints, including MoE (`vitpose-plus`); **VisualizePoseEstimation** renders the skeleton
+- **Image to Text** — image captioning
 
-- **Fill Mask** - Predict masked tokens in text
-  - BERT-style masked language modeling
-  - Use cases: Text completion, grammar correction
+### 🎭 Vision-Language / Multimodal
 
-#### Question Answering
-- **Table Question Answering** - Query tabular data with natural language
-  - Works with DataFrames
-  - Recommended models:
-    - `google/tapas-base-finetuned-wtq`
-    - `microsoft/tapex-large-finetuned-tabfact`
-  - Use cases: Database queries, spreadsheet analysis
-
-### 🖼️ Image Analysis
-
-#### Image Classification
-- **Image Classifier** - Classify images into predefined categories
-  - Recommended models:
-    - `google/vit-base-patch16-224` - Vision Transformer
-    - `microsoft/resnet-50` - ResNet architecture
-    - `Falconsai/nsfw_image_detection` - Content moderation
-    - `nateraw/vit-age-classifier` - Age estimation
-  - Returns confidence scores for each category
-  - Use cases: Content moderation, photo organization, age detection
-
-- **Zero-Shot Image Classifier** - Classify images without training data
-  - Uses CLIP models for flexible classification
-  - Custom candidate labels
-  - Recommended models:
-    - `openai/clip-vit-base-patch32`
-    - `laion/CLIP-ViT-H-14-laion2B-s32B-b79K`
-  - Use cases: Dynamic categorization, custom tagging
-
-#### Image Understanding
-- **Image Segmentation** - Segment images into different regions
-  - Instance and semantic segmentation
-  - Use cases: Object isolation, background removal
-
-- **Object Detection** - Detect and locate objects in images
-  - Bounding box outputs
-  - Multi-object detection
-  - Use cases: Surveillance, counting, automation
-
-- **Depth Estimation** - Estimate depth from 2D images
-  - Monocular depth prediction
-  - Use cases: 3D reconstruction, AR/VR, robotics
-
-### 🎭 Multimodal Processing
-
-#### Video Generation
-- **Text-to-Video (CogVideoX)** - Generate videos from text prompts
-  - Large diffusion transformer model
-  - High-quality, consistent video generation
-  - Longer video sequences
-  - Use cases: Video content creation, animated storytelling, marketing videos, cinematic content
-
-- **MiniMax-H3** - Generate a video and its soundtrack together
-  - Joint video + audio denoising, 5 to 15 seconds at 24 fps
-  - Optional first/last keyframes, or image, video and audio references
-  - Use cases: Sounded clips, keyframe transitions, character and voice consistency
-
-- **Image-to-Video** - Convert static images into video sequences
-  - Animate still images
-  - Add motion to photographs
-  - Use cases: Photo animation, creating video from stills, dynamic presentations
-
-#### Image-Text Models
-- **Image to Text** - Generate captions for images
-  - Automatic image captioning
-  - Use cases: Accessibility, content tagging, image search
-
-- **Image-Text-to-Text** - Process images with text queries
-  - Visual question answering
-  - Image reasoning with text context
-  - Use cases: Document understanding, visual Q&A, scene description
-
-- **Multimodal** - Process both image and text inputs
-  - Vision-language models
-  - Combined visual and textual understanding
-  - Use cases: Complex visual reasoning, document analysis, multimodal search
-
-### 🎯 Model Customization
-
-#### LoRA (Low-Rank Adaptation)
-- **LoRA Selector** - Apply LoRA models to Stable Diffusion
-  - Combine up to 5 LoRA models
-  - Adjustable strength per LoRA (0.0-2.0)
-  - 60+ pre-configured style LoRAs including:
-    - Art styles (anime, pixel art, 3D render)
-    - Character styles (Ghibli, Arcane, One Piece)
-    - Visual effects (fire, lightning, water)
-  - Use cases: Style customization, character consistency, artistic effects
-
-- **LoRA Selector XL** - Apply LoRA models to Stable Diffusion XL
-  - SDXL-specific LoRA support
-  - Enhanced quality for high-resolution outputs
-  - Use cases: High-quality style transfer, professional artwork
-
-### 🔧 Utility Nodes
-
-#### Feature Extraction
-- **Feature Extraction** - Extract embeddings from text or images
-  - Generate vector representations
-  - Use cases: Semantic search, similarity matching, clustering
-
-#### Sentence Similarity
-- **Sentence Similarity** - Compute similarity between text pairs
-  - Use cases: Duplicate detection, semantic search
-
-#### Ranking
-- **Ranking** - Rank documents by relevance
-  - Use cases: Search engines, recommendation systems
+- **ImageTextToText**, **Qwen2.5-VL**, **Qwen3-VL** — visual question answering and image/video reasoning with quantization options
+- **LoadImageToTextModel** / **LoadImageTextToTextModel** / **LoadImageToImageModel** / **LoadTextToImageModel** — shared model-loading/validation nodes used by downstream pipeline nodes
 
 ## Installation
 
@@ -245,13 +85,7 @@ This package provides a rich set of HuggingFace nodes for integration with Nodet
 pip install nodetool-huggingface
 ```
 
-Japanese Kokoro text-to-speech needs additional G2P dependencies:
-
-```bash
-pip install "nodetool-huggingface[kokoro-ja]"
-```
-
-Or install from source:
+Or from source:
 
 ```bash
 git clone https://github.com/nodetool-ai/nodetool-huggingface.git
@@ -259,207 +93,146 @@ cd nodetool-huggingface
 pip install -e .
 ```
 
+### Optional extras
+
+Most nodes work out of the box. A few pull in heavier or gated dependencies and are opt-in:
+
+| Extra | Enables |
+|---|---|
+| `ocr` | `TableStructureRecognition` (PaddleOCR/PaddlePaddle) |
+| `kokoro-ja` | Japanese text for `KokoroTTS` (misaki + pyopenjtalk) |
+| `f5-tts` | `F5TTS` voice cloning |
+| `hunyuan3d` | `Hunyuan3D` mesh generation |
+| `triposg` | Optional flash decoder + background removal for `TripoSG` |
+| `sf3d` / `triposr` | Companion deps for `StableFast3D` / `TripoSR` (the packages themselves install from `requirements/*.txt`, see below) |
+| `all-3d-pypi` / `all-3d` | Convenience bundles of the above 3D extras |
+
+```bash
+pip install "nodetool-huggingface[kokoro-ja]"
+pip install "nodetool-huggingface[all-3d-pypi]"
+```
+
+Some 3D nodes (`StableFast3D`, `TripoSR`, `Trellis2`) depend on packages that are not published to PyPI. Install those from the pinned requirement files in `requirements/` before using the corresponding node, e.g.:
+
+```bash
+pip install -r requirements/sf3d.txt
+pip install -r requirements/trellis2.txt
+```
+
 ## Requirements
 
-- Python 3.10+
-- PyTorch 2.9.0+
-- CUDA support recommended for optimal performance
-- See pyproject.toml for full dependencies
+- Python 3.11+
+- PyTorch 2.9.0 (installed automatically; CUDA build recommended for GPU inference)
+- See `pyproject.toml` for the full dependency list
+- Some nodes (gated Hub models, pyannote checkpoints) require an `HF_TOKEN`
 
 ## Usage Examples
 
-### Example 1: Text Generation Workflow
+### Text Generation
 ```python
 from nodetool.nodes.huggingface.text_generation import TextGeneration
 from nodetool.workflows.processing_context import ProcessingContext
 
-# Create a text generation node
 text_gen = TextGeneration(
-    model=HFTextGeneration(repo_id="Qwen/Qwen2.5-7B-Instruct"),
+    model=HFTextGeneration(repo_id="Qwen/Qwen3-8B"),
     prompt="Write a short story about a robot learning to paint",
     max_new_tokens=512,
     temperature=0.8,
-    top_p=0.9
+    top_p=0.9,
 )
-
-# Process in your workflow
 result = await text_gen.process(context)
-print(result)  # Generated text
 ```
 
-### Example 2: Image Generation with Stable Diffusion
+### Image Generation with Flux
 ```python
-from nodetool.nodes.huggingface.text_to_image import StableDiffusion
+from nodetool.nodes.huggingface.text_to_image import Flux
 
-# Create an image generation node
-sd = StableDiffusion(
+flux = Flux(
     prompt="A serene landscape with mountains and a lake at sunset, highly detailed",
-    negative_prompt="blurry, low quality, distorted",
-    width=512,
-    height=512,
-    num_inference_steps=50,
-    guidance_scale=7.5,
-    seed=42
+    width=1024,
+    height=1024,
+    num_inference_steps=25,
+    seed=42,
 )
-
-# Generate image
-output = await sd.process(context)
-# output['image'] contains the generated ImageRef
+output = await flux.process(context)
+# output.image contains the generated ImageRef
 ```
 
-### Example 3: Speech-to-Text Transcription
+### Speech-to-Text Transcription
 ```python
-from nodetool.nodes.huggingface.automatic_speech_recognition import Whisper
+from nodetool.nodes.huggingface.automatic_speech_recognition import Whisper, WhisperLanguage, Task, Timestamps
 
-# Create a Whisper transcription node
 whisper = Whisper(
     model=HFAutomaticSpeechRecognition(repo_id="openai/whisper-large-v3"),
     audio=audio_input,
     task=Task.TRANSCRIBE,
     language=WhisperLanguage.ENGLISH,
-    timestamps=Timestamps.WORD
+    timestamps=Timestamps.WORD,
 )
-
-# Transcribe audio
 result = await whisper.process(context)
-print(result['text'])  # Transcribed text
-print(result['chunks'])  # Word-level timestamps
 ```
 
-### Example 4: Image Classification
+### Image Classification
 ```python
 from nodetool.nodes.huggingface.image_classification import ImageClassifier
 
-# Create an image classifier node
 classifier = ImageClassifier(
     model=HFImageClassification(repo_id="google/vit-base-patch16-224"),
-    image=image_input
+    image=image_input,
 )
-
-# Classify image
 results = await classifier.process(context)
-# Returns dict of {label: confidence_score}
 ```
-
-### Example 5: Combining Multiple Nodes in a Workflow
-Here's an example of a complete workflow that transcribes audio, generates a summary, and creates an image:
-
-```python
-# Step 1: Transcribe audio
-transcription = await whisper_node.process(context)
-
-# Step 2: Summarize the transcription
-summary_node = TextGeneration(
-    prompt=f"Summarize the following text in 2-3 sentences: {transcription['text']}",
-    max_new_tokens=256
-)
-summary = await summary_node.process(context)
-
-# Step 3: Generate an image based on the summary
-image_node = StableDiffusion(
-    prompt=f"Create an illustration for: {summary}",
-    width=768,
-    height=512
-)
-image = await image_node.process(context)
-```
-
-## Key Features
-
-### Model Support
-- **25+ Node Types**: Comprehensive coverage of HuggingFace model types
-- **Streaming Output**: Real-time generation for text and audio
-- **Quantization**: Memory-efficient inference with Nunchaku (FP4, INT4)
-- **GPU Optimization**: Automatic device management and VRAM optimization
-- **CPU Offload**: Run large models on limited hardware
-- **LoRA Support**: Easy style customization for Stable Diffusion
-
-### Advanced Capabilities
-- **Multimodal Processing**: Combine text, image, and audio in workflows
-- **Batch Processing**: Process multiple inputs efficiently
-- **Custom Models**: Use any HuggingFace model repo
-- **Fine-tuning Ready**: Support for custom LoRA models
-- **Recommended Models**: Curated model lists for each node type
-- **Flexible Parameters**: Full control over generation parameters
-
-### Developer-Friendly
-- **Type Safety**: Full Pydantic type validation
-- **Error Handling**: Comprehensive error messages
-- **Progress Tracking**: Real-time progress updates for long operations
-- **Memory Management**: Automatic cleanup and optimization
-- **Documentation**: Detailed docstrings and use cases for all nodes
 
 ## Available Workflow Examples
 
-The package includes several pre-built workflow examples that demonstrate how to use the nodes:
+Pre-built example workflows live in `src/nodetool/examples/nodetool-huggingface/` and can be imported directly into Nodetool:
 
-- **Image to Image** - Transform images using Stable Diffusion
-- **Movie Posters** - Generate movie poster-style images
-- **Transcribe Audio** - Convert speech to text with Whisper
-- **Pokemon Maker** - Generate Pokemon-style creatures
-- **Depth Estimation** - Extract depth information from images
-- **Add Subtitles To Video** - Automatically generate and add subtitles
-- **Object Detection** - Detect and locate objects in images
-- **Summarize Audio** - Transcribe and summarize audio content
-- **Segmentation** - Segment images into regions
-- **Audio To Spectrogram** - Visualize audio as spectrograms
-
-These examples are located in `src/nodetool/examples/nodetool-huggingface/` and can be imported directly into Nodetool.
+- **Image to Image** — transform images with Stable Diffusion
+- **Upscaling** — image super-resolution
+- **Segmentation** — segment images into regions
+- **Object Detection** — detect and locate objects in images
+- **Depth Estimation** — extract depth information from images
+- **Add Subtitles To Video** — transcribe and burn subtitles into a video
+- **Audio To Spectrogram** — visualize audio as a spectrogram
 
 ## Model Downloads
 
-Models are automatically downloaded from HuggingFace Hub on first use. For better performance:
+Models are downloaded from the HuggingFace Hub automatically on first use.
 
-1. Set your `HF_TOKEN` environment variable for gated models
-2. Use `huggingface-cli login` to authenticate
-3. Models are cached in `~/.cache/huggingface/` by default
-4. Use `allow_patterns` to download only necessary files
+1. Set `HF_TOKEN` (environment variable or Nodetool secrets) for gated models
+2. Or authenticate with `huggingface-cli login`
+3. Models are cached under `~/.cache/huggingface/` by default
 
 ### Gated Models
-Some models (like FLUX) require accepting terms on HuggingFace:
-1. Visit the model page on HuggingFace
-2. Accept the terms of use
-3. Set your `HF_TOKEN` in Nodetool settings
+Some models (FLUX, pyannote checkpoints, etc.) require accepting terms on the Hub:
+1. Visit the model page on HuggingFace and accept the license
+2. Set `HF_TOKEN` in Nodetool settings
 
 ## Performance Tips
 
-### Memory Optimization
-- Use quantized models (INT4, FP4) for reduced VRAM usage
-- Enable CPU offload for large models
-- Use smaller model variants when possible
-- Enable attention slicing for memory-intensive operations
+### Memory
+- Use quantized checkpoints (Nunchaku FP4/INT4, GGUF, BitsAndBytes 4-bit) where a node supports them
+- Enable CPU offload for large diffusion/video pipelines
+- Prefer smaller model variants when possible
 
-### Speed Optimization
-- Use CUDA/GPU when available
-- Select appropriate model sizes (tiny/small vs large)
-- Use optimized models (e.g., whisper-large-v3-turbo)
-- Enable PyTorch 2 attention (automatic)
-
-### Quality vs Performance Trade-offs
-- **Fast + Low Memory**: Quantized models with CPU offload
-- **Balanced**: FP16 models on GPU
-- **Best Quality**: Full precision models with high inference steps
+### Speed
+- Use a CUDA GPU when available
+- Prefer turbo/fast/distilled variants (e.g. `whisper-large-v3-turbo`) when acceptable
 
 ## Troubleshooting
 
-### Common Issues
-
 **CUDA Out of Memory**
-- Enable CPU offload in advanced node properties
-- Use quantized models (INT4/FP4)
-- Reduce image size or inference steps
-- Close other GPU applications
+- Enable CPU offload in the node's advanced properties
+- Switch to a quantized model variant
+- Reduce resolution / inference steps / video length
 
-**Model Not Found**
-- Ensure model is downloaded first
-- Check HuggingFace Hub for model availability
-- Verify `HF_TOKEN` is set for gated models
+**Model Not Found / Import Error**
+- Check whether the node needs an optional extra installed (see the extras table above)
+- Verify the model repo id on the Hub and that `HF_TOKEN` is set for gated repos
 
 **Slow Inference**
-- Check if CUDA is available and being used
-- Use smaller or quantized models
-- Enable attention optimizations
-- Consider using turbo/fast variants
+- Confirm CUDA is actually being used
+- Use a smaller or quantized model, or a turbo/distilled variant
 
 ## License
 
@@ -478,10 +251,10 @@ pip install -e .
 
 ### Adding New Nodes
 1. Create a new node class in `src/nodetool/nodes/huggingface/`
-2. Inherit from `HuggingFacePipelineNode` or `BaseNode`
-3. Implement `preload_model()` and `process()` methods
-4. Add docstrings with use cases
-5. Include recommended models
+2. Inherit from `HuggingFacePipelineNode` (or `BaseNode` for non-pipeline helpers)
+3. Implement `preload_model()` and `process()`
+4. Add a docstring with use cases and recommended models
+5. See `CHANGELOG.md` for recent additions and conventions
 
 ## Links & Resources
 
