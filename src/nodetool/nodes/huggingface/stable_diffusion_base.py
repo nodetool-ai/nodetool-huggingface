@@ -957,6 +957,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
         def callback(
             pipeline, step: int, timestep: int, kwargs: dict[str, Any]
         ) -> dict[str, Any]:
+            context.raise_if_cancelled()
             context.post_message(
                 NodeProgress(
                     node_id=self.id,
@@ -971,6 +972,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
     async def run_pipeline(
         self, context: ProcessingContext, **kwargs
     ) -> ImageRef | TorchTensor:
+        context.raise_if_cancelled()
         log.debug("Starting pipeline execution")
         if self._pipeline is None:
             log.error("Pipeline not initialized")
@@ -1085,6 +1087,7 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
                 return self._pipeline(**call_kwargs)
 
         output = await asyncio.to_thread(_run_pipeline_sync)
+        context.raise_if_cancelled()
         image = output.images[0]
 
         log.debug("Pipeline inference completed")
@@ -1105,7 +1108,9 @@ class StableDiffusionBaseNode(HuggingFacePipelineNode):
             return result
         else:
             log.debug("Returning tensor output")
-            result = TorchTensor.from_tensor(image)
+            result = TorchTensor.from_tensor(
+                image.float() if str(image.dtype) == "torch.bfloat16" else image
+            )
             log.debug("Pipeline execution completed successfully")
             return result
 
@@ -1585,6 +1590,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         def callback(
             pipeline, step: int, timestep: int, kwargs: dict[str, Any]
         ) -> dict[str, Any]:
+            context.raise_if_cancelled()
             context.post_message(
                 NodeProgress(
                     node_id=self.id,
@@ -1599,6 +1605,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
     async def run_pipeline(
         self, context: ProcessingContext, **kwargs
     ) -> ImageRef | TorchTensor:
+        context.raise_if_cancelled()
         log.debug("Starting pipeline execution (XL)")
         if self._pipeline is None:
             log.error("Pipeline not initialized")
@@ -1686,6 +1693,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
                 return self._pipeline(**call_kwargs)
 
         output = await asyncio.to_thread(_run_pipeline_sync_xl)
+        context.raise_if_cancelled()
         image = output.images[0]
 
         log.debug("Pipeline inference completed (XL)")
@@ -1706,7 +1714,9 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
             return result
 
         log.debug("Returning tensor output (XL)")
-        result = TorchTensor.from_tensor(image)
+        result = TorchTensor.from_tensor(
+            image.float() if str(image.dtype) == "torch.bfloat16" else image
+        )
         log.debug("Pipeline execution completed successfully (XL)")
         return result
 

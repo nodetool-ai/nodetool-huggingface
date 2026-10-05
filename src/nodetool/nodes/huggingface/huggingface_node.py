@@ -5,6 +5,7 @@ import re
 import sys
 import logging
 import shutil
+from contextvars import ContextVar
 from nodetool.metadata.types import Provider, ImageRef, AudioRef, VideoRef, NPArray
 from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
@@ -42,17 +43,20 @@ if sys.platform == "win32":
         pass
 
 
+hf_log_route: ContextVar[tuple[ProcessingContext, str, str] | None] = ContextVar(
+    "hf_log_route", default=None
+)
+
+
 class HuggingFaceLogHandler(logging.Handler):
     """Custom logging handler that redirects HuggingFace logs to LogUpdate events."""
 
-    def __init__(self, context: ProcessingContext, node_id: str, node_name: str):
-        super().__init__()
-        self.context = context
-        self.node_id = node_id
-        self.node_name = node_name
-
     def emit(self, record: logging.LogRecord):
         """Emit a log record as a LogUpdate event."""
+        route = hf_log_route.get()
+        if route is None:
+            return
+        context, node_id, node_name = route
         try:
             message = self.format(record)
             # Map log levels to severity
@@ -66,12 +70,12 @@ class HuggingFaceLogHandler(logging.Handler):
             severity = severity_map.get(record.levelname, "info")
 
             log_update = LogUpdate(
-                node_id=self.node_id,
-                node_name=self.node_name,
+                node_id=node_id,
+                node_name=node_name,
                 content=message,
                 severity=severity,
             )
-            self.context.post_message(log_update)
+            context.post_message(log_update)
         except Exception:
             # Avoid infinite recursion if there's an error in logging
             pass
@@ -85,7 +89,7 @@ def setup_hf_logging(
     from diffusers.utils import logging as diffusers_logging
 
     # Create custom handler
-    handler = HuggingFaceLogHandler(context, node_id, node_name)
+    handler = _hf_log_handler
     handler.setFormatter(logging.Formatter("%(name)s - %(message)s"))
 
     # Add handler to transformers logger
@@ -132,8 +136,14 @@ def setup_hf_logging(
     return handler
 
 
+# One context-free handler per process; execution contexts live only in their
+# task's ContextVar and are copied into inference threads.
+_hf_log_handler = HuggingFaceLogHandler()
+
+
 def progress_callback(node_id: str, total_steps: int, context: ProcessingContext):
     def callback(step: int, timestep: int, latents: "torch.FloatTensor") -> None:
+        context.raise_if_cancelled()
         context.post_message(
             NodeProgress(
                 node_id=node_id,

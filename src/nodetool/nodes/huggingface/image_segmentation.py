@@ -11,7 +11,11 @@ from nodetool.metadata.types import (
     ImageRef,
     ImageSegmentationResult,
 )
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.huggingface_pipeline import (
+    HuggingFacePipelineNode,
+    _pipeline_thread_pool,
+)
+from contextvars import copy_context
 from nodetool.nodes.huggingface.stable_diffusion_base import (
     available_torch_dtype,
 )
@@ -195,22 +199,36 @@ class SAM2Segmentation(HuggingFacePipelineNode):
         # Convert input image to numpy array
         image = await context.image_to_numpy(self.image)
 
-        # Run inference with mixed precision
-        with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
-            self._pipeline.set_image(image)
-            masks, _, _ = self._pipeline.predict()
+        context.raise_if_cancelled()
 
-            # Convert each mask to an ImageRef
-            result = []
-            for i, mask in enumerate(masks):
-                # Convert mask to uint8 numpy array
-                mask_image = (mask * 255).astype(np.uint8)
+        def predict():
+            context.raise_if_cancelled()
+            # Keep both mutable predictor operations serialized, and establish
+            # thread-local torch contexts in the inference thread.
+            with torch.inference_mode(), torch.autocast(
+                "cuda", dtype=torch.bfloat16, enabled=context.device.startswith("cuda")
+            ):
+                self._pipeline.set_image(image)
+                masks, _, _ = self._pipeline.predict()
+                return masks
 
-                # Create ImageRef from mask
-                mask_ref = await context.image_from_numpy(mask_image)
-                result.append(mask_ref)
-
-            return result
+        future = asyncio.get_running_loop().run_in_executor(
+            _pipeline_thread_pool, copy_context().run, predict
+        )
+        try:
+            masks = await asyncio.shield(future)
+        except asyncio.CancelledError:
+            # Coroutine cancellation cannot stop a native call. Wait until the
+            # predictor is no longer in use before allowing finalization.
+            await future
+            raise
+        context.raise_if_cancelled()
+        result = []
+        for mask in masks:
+            mask_image = (mask * 255).astype(np.uint8)
+            result.append(await context.image_from_numpy(mask_image))
+        context.raise_if_cancelled()
+        return result
 
 
 class MaskGeneration(HuggingFacePipelineNode):
