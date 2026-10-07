@@ -4,9 +4,11 @@ from nodetool.workflows.graph import BaseNode
 from nodetool.workflows.base_node import split_camel_case
 import asyncio
 import concurrent.futures
+from contextvars import copy_context
 from nodetool.config.logging_config import get_logger
 from nodetool.nodes.huggingface.huggingface_node import (
     setup_hf_logging,
+    hf_log_route,
 )
 from nodetool.workflows.processing_context import ProcessingContext
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
@@ -223,6 +225,11 @@ class HuggingFacePipelineNode(BaseNode):
         # Heavy imports inside setup_hf_logging must not run on the asyncio event
         # loop — they block stdin/cancel handling and can deadlock the stdio worker.
         await asyncio.to_thread(setup_hf_logging, context, self.id, self.get_title())
+        hf_log_route.set((context, self.id, self.get_title()))
+
+    async def finalize(self, context: ProcessingContext):
+        hf_log_route.set(None)
+        await super().finalize(context)
 
     _pipeline: Any = None
 
@@ -318,7 +325,9 @@ class HuggingFacePipelineNode(BaseNode):
         # Use shared thread pool instead of asyncio.to_thread to ensure
         # consistent CUDA memory pool usage
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(_pipeline_thread_pool, _call)
+        return await loop.run_in_executor(
+            _pipeline_thread_pool, copy_context().run, _call
+        )
 
     async def process(self, context: ProcessingContext) -> Any:
         raise NotImplementedError("Subclasses must implement this method")

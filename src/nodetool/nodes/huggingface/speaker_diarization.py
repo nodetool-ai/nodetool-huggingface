@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import TYPE_CHECKING, Any, TypedDict
+from contextvars import copy_context
+from typing import TYPE_CHECKING, Any, ClassVar, TypedDict
 
 from pydantic import Field
 
@@ -107,6 +108,7 @@ class SpeakerDiarization(HuggingFacePipelineNode):
         description="Upper bound on the number of speakers. Use 0 to leave it unset. Ignored when 'Number of Speakers' is set.",
     )
 
+    _required_settings: ClassVar[list[str]] = ["HF_TOKEN"]
     _pipeline: Any = None
 
     @classmethod
@@ -185,7 +187,9 @@ class SpeakerDiarization(HuggingFacePipelineNode):
             return Pipeline.from_pretrained(repo_id, token=token)
 
         loop = asyncio.get_event_loop()
-        pipeline = await loop.run_in_executor(_pipeline_thread_pool, _load)
+        pipeline = await loop.run_in_executor(
+            _pipeline_thread_pool, copy_context().run, _load
+        )
 
         if pipeline is None:
             # pyannote returns None instead of raising when access is denied.
