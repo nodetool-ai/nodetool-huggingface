@@ -10,12 +10,16 @@ from nodetool.metadata.types import ModelAdapterInfo, ModelArtifactRef
 class TTSAdapterSpec:
     modules: tuple[str, ...]
     install_hint: str
+    # The files the adapter loads. Matches the node's recommended download, so
+    # a download from the model picker skips the repository's other formats.
+    allow_patterns: tuple[str, ...] | None = None
 
 
 _EXACT_SPECS: dict[str, TTSAdapterSpec] = {
     "hexgrad/Kokoro-82M": TTSAdapterSpec(
         modules=("kokoro",),
         install_hint="pip install nodetool-huggingface",
+        allow_patterns=("*.json", "*.pth", "voices/*.pt"),
     ),
     "Supertone/supertonic-3": TTSAdapterSpec(
         modules=("supertonic",),
@@ -28,10 +32,12 @@ _EXACT_SPECS: dict[str, TTSAdapterSpec] = {
     "suno/bark": TTSAdapterSpec(
         modules=("transformers",),
         install_hint="pip install nodetool-huggingface",
+        allow_patterns=("*.bin", "*.json", "*.txt"),
     ),
     "suno/bark-small": TTSAdapterSpec(
         modules=("transformers",),
         install_hint="pip install nodetool-huggingface",
+        allow_patterns=("*.bin", "*.json", "*.txt"),
     ),
 }
 
@@ -50,8 +56,14 @@ def _spec_for(repo_id: str) -> TTSAdapterSpec | None:
 def get_tts_adapter_info(repo_id: str) -> ModelAdapterInfo:
     """Return adapter readiness without importing a model runtime or weights."""
 
-    artifact_ref = ModelArtifactRef(source="huggingface", repo_id=repo_id)
     spec = _spec_for(repo_id)
+    artifact_ref = ModelArtifactRef(
+        source="huggingface",
+        repo_id=repo_id,
+        allow_patterns=(
+            list(spec.allow_patterns) if spec and spec.allow_patterns else None
+        ),
+    )
     if spec is None:
         return ModelAdapterInfo(state="unknown", artifact_ref=artifact_ref)
 

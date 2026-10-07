@@ -10,7 +10,6 @@ This module implements the BaseProvider interface for locally cached HuggingFace
 from __future__ import annotations
 
 import asyncio
-import base64
 import logging
 import re
 import os
@@ -356,18 +355,18 @@ class HuggingFaceLocalProvider(BaseProvider):
                 lang_code=KokoroTTS.LanguageCode(lang_code),
             )
 
-            # Preload model
             await node.preload_model(context)
 
-            # Stream chunks using gen_process
+            # The node synthesizes the whole text and yields one final item
+            # carrying the AudioRef; its chunk output is only the end marker.
+            audio_ref: AudioRef | None = None
             async for output in node.gen_process(context):
-                # Only yield chunk data (not the final AudioRef)
-                chunk = output.get("chunk")
-                if chunk and chunk.content and not chunk.done:
-                    # Decode base64 chunk to numpy array
-                    audio_bytes = base64.b64decode(chunk.content)
-                    audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
-                    yield audio_array
+                if output.get("audio") is not None:
+                    audio_ref = output["audio"]
+            if audio_ref is None:
+                raise ValueError("Kokoro returned no audio")
+            async for chunk in self._audio_ref_as_pcm24k(context, audio_ref):
+                yield chunk
 
         elif "supertonic" in model_lower:
             language = kwargs.get("language") or kwargs.get("lang_code") or "na"
