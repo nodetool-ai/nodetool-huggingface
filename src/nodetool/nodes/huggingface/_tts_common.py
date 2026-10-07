@@ -5,13 +5,13 @@ from __future__ import annotations
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Iterator
+from collections.abc import Generator
 
 import numpy as np
 
 
 @contextmanager
-def temporary_reference_audio(data: bytes, suffix: str = ".wav") -> Iterator[str]:
+def temporary_reference_audio(data: bytes, suffix: str = ".wav") -> Generator[str, None, None]:
     """Write reference audio for path-only upstream APIs and always remove it."""
     if not data:
         raise ValueError("Reference audio is required")

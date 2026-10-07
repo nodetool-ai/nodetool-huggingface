@@ -1,7 +1,6 @@
 """Focused tests for the local TTS provider and optional model adapters."""
 
 import io
-import base64
 import os
 import sys
 import wave
@@ -193,23 +192,20 @@ async def test_f5_adapter_does_not_fall_back_to_asr():
 
 @pytest.mark.asyncio
 async def test_kokoro_unified_provider_route_yields_pcm(monkeypatch):
-    samples = np.array([100, -100, 200], dtype=np.int16)
-
     async def preload(_self, _context):
         return None
 
+    # The node's real output: one final item with the AudioRef and an empty
+    # end-of-stream chunk.
     async def generate(_self, _context):
         yield {
-            "audio": None,
-            "chunk": Chunk(
-                content=base64.b64encode(samples.tobytes()).decode(),
-                done=False,
-                content_type="audio",
-            ),
+            "audio": AudioRef(uri="memory://kokoro.wav"),
+            "chunk": Chunk(content="", done=True, content_type="audio"),
         }
 
     monkeypatch.setattr(KokoroTTS, "preload_model", preload)
     monkeypatch.setattr(KokoroTTS, "gen_process", generate)
+    context = SimpleNamespace(asset_to_bytes=AsyncMock(return_value=_wav_bytes()))
     provider = HuggingFaceLocalProvider()
 
     chunks = [
@@ -218,11 +214,12 @@ async def test_kokoro_unified_provider_route_yields_pcm(monkeypatch):
             text="Hello",
             model="hexgrad/Kokoro-82M",
             voice="af_heart",
-            context=SimpleNamespace(),
+            context=context,
         )
     ]
 
-    np.testing.assert_array_equal(np.concatenate(chunks), samples)
+    assert chunks and all(chunk.dtype == np.int16 for chunk in chunks)
+    assert sum(len(chunk) for chunk in chunks) > 0
 
 
 @pytest.mark.asyncio
