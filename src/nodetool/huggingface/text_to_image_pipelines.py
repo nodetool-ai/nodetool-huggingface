@@ -72,7 +72,7 @@ from nodetool.workflows.processing_context import ProcessingContext
 
 # diffusers `_class_name` (from a repo's model_index.json) -> (module, class) for
 # full-repo text-to-image pipelines we load explicitly. AutoPipelineForText2Image
-# does not cover all of these (e.g. Kandinsky5T2I, QwenImageLayered).
+# does not cover all of these (e.g. Kandinsky5T2I, QwenImageLayered, LongCatImage).
 _EXPLICIT_T2I_PIPELINES: dict[str, tuple[str, str]] = {
     "Flux2Pipeline": ("diffusers.pipelines.flux2.pipeline_flux2", "Flux2Pipeline"),
     "Flux2KleinPipeline": (
@@ -87,10 +87,17 @@ _EXPLICIT_T2I_PIPELINES: dict[str, tuple[str, str]] = {
         "diffusers.pipelines.kandinsky5.pipeline_kandinsky_t2i",
         "Kandinsky5T2IPipeline",
     ),
+    "LongCatImagePipeline": (
+        "diffusers.pipelines.longcat_image.pipeline_longcat_image",
+        "LongCatImagePipeline",
+    ),
     "QwenImageLayeredPipeline": (
         "diffusers.pipelines.qwenimage.pipeline_qwenimage_layered",
         "QwenImageLayeredPipeline",
     ),
+    # AutoPipelineForText2Image knows Z-Image but loads it in float16; the
+    # model is trained in bfloat16, which the explicit path uses.
+    "ZImagePipeline": ("diffusers.pipelines.z_image.pipeline_z_image", "ZImagePipeline"),
 }
 
 

@@ -3833,7 +3833,7 @@
         "seed"
       ],
       "body": "content_card",
-      "description": "Generate high-fidelity 3D meshes from images using VAST TripoSG.\n    3d, generation, image-to-3d, triposg, mesh, local, high-fidelity, rectified-flow\n\n    Use cases:\n    - Generate detailed 3D models from single images\n    - Create 3D assets from photos, cartoons, or sketches\n    - Produce meshes with sharp geometric features and fine surface details\n    - Handle complex topology including thin structures\n\n    **Platforms:** Linux+CUDA, Windows+CUDA (build required).\n\n    **Requirements:** CUDA GPU with at least 8GB VRAM.\n    First run downloads ~3GB model weights.\n\n    Model: https://huggingface.co/VAST-AI/TripoSG\n    License: MIT",
+      "description": "Generate high-fidelity 3D meshes from images using VAST TripoSG.\n    3d, generation, image-to-3d, triposg, mesh, local, high-fidelity, rectified-flow\n\n    Use cases:\n    - Generate detailed 3D models from single images\n    - Create 3D assets from photos, cartoons, or sketches\n    - Produce meshes with sharp geometric features and fine surface details\n    - Handle complex topology including thin structures\n\n    **Platforms:** Linux+CUDA, Windows+CUDA (build required).\n\n    **Requirements:** CUDA GPU with at least 8GB VRAM.\n    First run downloads ~8.8GB of model weights (7.9GB TripoSG + 0.8GB RMBG).\n\n    Model: https://huggingface.co/VAST-AI/TripoSG\n    License: MIT",
       "input_fields": [
         "image"
       ],
@@ -4540,6 +4540,153 @@
         }
       ],
       "title": "HF Load Image To Image Model"
+    },
+    {
+      "basic_fields": [
+        "model",
+        "image",
+        "prompt",
+        "num_inference_steps",
+        "guidance_scale"
+      ],
+      "body": "content_card",
+      "description": "Edits images from text instructions using Meituan's LongCat-Image-Edit models.\n    image, editing, AI, instruction, longcat, bilingual, text-rendering\n\n    Use cases:\n    - Apply instruction-based edits in English or Chinese (\"change the cat to a dog\")\n    - Replace, add, or remove objects while keeping the rest of the image intact\n    - Edit text that appears inside an image\n    - Run fast 8-step edits with the Turbo checkpoint",
+      "input_fields": [
+        "image",
+        "prompt",
+        "negative_prompt"
+      ],
+      "namespace": "huggingface.image_to_image",
+      "node_type": "huggingface.image_to_image.LongCatImageEdit",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "image"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "meituan-longcat/LongCat-Image-Edit",
+            "type": "hf.image_to_image",
+            "variant": null
+          },
+          "description": "The LongCat-Image-Edit model to use.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.image_to_image"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "image",
+            "uri": ""
+          },
+          "description": "The image to edit.",
+          "name": "image",
+          "title": "Input Image",
+          "type": {
+            "type": "image"
+          }
+        },
+        {
+          "default": "Change the cat to a dog",
+          "description": "Instruction describing the edit to apply.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Describe what to avoid in the result.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 50,
+          "description": "Denoising steps. 50 for LongCat-Image-Edit, 8 for the Turbo checkpoint.",
+          "max": 100.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 4.5,
+          "description": "How strongly to follow the instruction. 4.5 for LongCat-Image-Edit, 1 for the Turbo checkpoint.",
+          "max": 20.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "*.json"
+          ],
+          "id": "meituan-longcat/LongCat-Image-Edit",
+          "name": "meituan-longcat/LongCat-Image-Edit",
+          "repo_id": "meituan-longcat/LongCat-Image-Edit",
+          "type": "hf.image_to_image"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "*.json"
+          ],
+          "id": "meituan-longcat/LongCat-Image-Edit-Turbo",
+          "name": "meituan-longcat/LongCat-Image-Edit-Turbo",
+          "repo_id": "meituan-longcat/LongCat-Image-Edit-Turbo",
+          "type": "hf.image_to_image"
+        }
+      ],
+      "title": "LongCat-Image-Edit"
     },
     {
       "basic_fields": [
@@ -9800,6 +9947,164 @@
     {
       "basic_fields": [
         "model",
+        "image",
+        "prompt",
+        "strength",
+        "num_inference_steps"
+      ],
+      "body": "content_card",
+      "description": "Transforms an existing image with a text prompt using Tongyi-MAI's Z-Image models.\n    image, image-to-image, img2img, z-image, turbo, restyle\n\n    Use cases:\n    - Restyle a photo or sketch in a few steps with Z-Image-Turbo\n    - Refine a draft image while keeping its composition\n    - Add bilingual text or detail to an existing image",
+      "input_fields": [
+        "image",
+        "prompt",
+        "negative_prompt"
+      ],
+      "namespace": "huggingface.image_to_image",
+      "node_type": "huggingface.image_to_image.ZImageImg2Img",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "image"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "Tongyi-MAI/Z-Image-Turbo",
+            "type": "hf.image_to_image",
+            "variant": null
+          },
+          "description": "The Z-Image model to use.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.image_to_image"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "image",
+            "uri": ""
+          },
+          "description": "The image to transform.",
+          "name": "image",
+          "title": "Input Image",
+          "type": {
+            "type": "image"
+          }
+        },
+        {
+          "default": "A watercolor painting of the scene",
+          "description": "Text description of the desired result.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Describe what to avoid in the image. Only used when guidance_scale is above 1.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 0.6,
+          "description": "How much to change the input image. 0 keeps it, 1 replaces it.",
+          "max": 1.0,
+          "min": 0.0,
+          "name": "strength",
+          "title": "Strength",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 9,
+          "description": "Denoising steps before strength is applied. 9 for Z-Image-Turbo, 28 to 50 for the base model.",
+          "max": 100.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 0.0,
+          "description": "How strongly to follow the prompt. 0 for Z-Image-Turbo, 3 to 5 for the base model.",
+          "max": 20.0,
+          "min": 0.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "*.json"
+          ],
+          "id": "Tongyi-MAI/Z-Image-Turbo",
+          "name": "Tongyi-MAI/Z-Image-Turbo",
+          "repo_id": "Tongyi-MAI/Z-Image-Turbo",
+          "type": "hf.image_to_image"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "*.json"
+          ],
+          "id": "Tongyi-MAI/Z-Image",
+          "name": "Tongyi-MAI/Z-Image",
+          "repo_id": "Tongyi-MAI/Z-Image",
+          "type": "hf.image_to_image"
+        }
+      ],
+      "title": "Z-Image (Image-to-Image)"
+    },
+    {
+      "basic_fields": [
+        "model",
         "image"
       ],
       "body": "content_card",
@@ -9979,6 +10284,218 @@
         }
       ],
       "title": "HF Load Image To Text Model"
+    },
+    {
+      "basic_fields": [
+        "model",
+        "input_image",
+        "prompt",
+        "num_frames"
+      ],
+      "body": "content_card",
+      "description": "Animates a still image into a video using Tencent's HunyuanVideo 1.5.\n    video, generation, AI, image-to-video, hunyuan, animation\n\n    Use cases:\n    - Turn a photo or illustration into a 5 second 480p or 720p clip\n    - Animate product shots and character art with prompt-guided motion\n    - Generate fast previews with the step-distilled checkpoint\n    - Build image animation workflows that run locally",
+      "input_fields": [
+        "input_image",
+        "prompt",
+        "negative_prompt"
+      ],
+      "namespace": "huggingface.image_to_video",
+      "node_type": "huggingface.image_to_video.HunyuanVideo15I2V",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "video"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_i2v",
+            "type": "hf.text_to_video",
+            "variant": null
+          },
+          "description": "The HunyuanVideo 1.5 image-to-video checkpoint to use.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_video"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "image",
+            "uri": ""
+          },
+          "description": "The image to animate. The output keeps its aspect ratio at the checkpoint's resolution.",
+          "name": "input_image",
+          "title": "Input Image",
+          "type": {
+            "type": "image"
+          }
+        },
+        {
+          "default": "The scene comes to life with smooth, natural motion",
+          "description": "Text description of how the image should move.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Describe what to avoid in the video.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 121,
+          "description": "Total frames in the output, of the form 4n+1. 121 is about 5 seconds at 24 fps.",
+          "max": 241.0,
+          "min": 5.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 50,
+          "description": "Denoising steps. 50 is typical; the step-distilled checkpoint uses 8 to 12.",
+          "max": 100.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1.0,
+          "description": "How strongly to follow the prompt. Use -1 to keep the checkpoint's own guidance.",
+          "max": 20.0,
+          "min": -1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 24,
+          "description": "Frames per second for the output video file.",
+          "max": 60.0,
+          "min": 1.0,
+          "name": "fps",
+          "title": "Fps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_i2v",
+          "name": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_i2v",
+          "repo_id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_i2v",
+          "type": "hf.text_to_video"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-720p_i2v",
+          "name": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-720p_i2v",
+          "repo_id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-720p_i2v",
+          "type": "hf.text_to_video"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_i2v_distilled",
+          "name": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_i2v_distilled",
+          "repo_id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_i2v_distilled",
+          "type": "hf.text_to_video"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-720p_i2v_distilled",
+          "name": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-720p_i2v_distilled",
+          "repo_id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-720p_i2v_distilled",
+          "type": "hf.text_to_video"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_i2v_step_distilled",
+          "name": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_i2v_step_distilled",
+          "repo_id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_i2v_step_distilled",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "HunyuanVideo 1.5 (Image-to-Video)"
     },
     {
       "basic_fields": [
@@ -12946,7 +13463,7 @@
         "audio",
         "num_speakers"
       ],
-      "description": "Detects who spoke when in an audio recording using pyannote.audio.\n    audio, diarization, speaker, segmentation, who-spoke-when, pyannote, huggingface\n\n    Use cases:\n    - Label meeting or interview recordings with per-speaker turns\n    - Combine with Whisper chunks to build speaker-attributed transcripts\n    - Split podcasts or calls into per-speaker segments for editing\n    - Measure talk-time balance across participants\n    - Pre-process training data that requires single-speaker audio\n\n    **Note:** pyannote models are GATED on the Hugging Face Hub. Before running this\n    node you must accept the conditions of `pyannote/speaker-diarization-3.1` and of\n    the models it depends on (`pyannote/segmentation-3.0`), then set `HF_TOKEN` in\n    Nodetool settings (or as an environment variable). Without a token the model\n    cannot be downloaded.\n\n    **Links:**\n    - https://github.com/pyannote/pyannote-audio\n    - https://huggingface.co/pyannote/speaker-diarization-3.1",
+      "description": "Detects who spoke when in an audio recording using pyannote.audio.\n    audio, diarization, speaker, segmentation, who-spoke-when, pyannote, huggingface\n\n    Use cases:\n    - Label meeting or interview recordings with per-speaker turns\n    - Combine with Whisper chunks to build speaker-attributed transcripts\n    - Split podcasts or calls into per-speaker segments for editing\n    - Measure talk-time balance across participants\n    - Pre-process training data that requires single-speaker audio\n\n    **Note:** pyannote models are GATED on the Hugging Face Hub. Before running this\n    node you must accept the conditions of `pyannote/speaker-diarization-community-1`,\n    then set `HF_TOKEN` in Nodetool settings (or as an environment variable). Without\n    a token the model cannot be downloaded. The older `pyannote/speaker-diarization-3.1`\n    also needs `pyannote/segmentation-3.0` accepted, and on pyannote.audio 4.x it\n    additionally reads its PLDA from `pyannote/speaker-diarization-community-1`.\n\n    **Links:**\n    - https://github.com/pyannote/pyannote-audio\n    - https://huggingface.co/pyannote/speaker-diarization-community-1",
       "inline_fields": [
         "model"
       ],
@@ -12985,7 +13502,7 @@
             "allow_patterns": null,
             "ignore_patterns": null,
             "path": null,
-            "repo_id": "pyannote/speaker-diarization-3.1",
+            "repo_id": "pyannote/speaker-diarization-community-1",
             "type": "hf.voice_activity_detection",
             "variant": null
           },
@@ -13044,15 +13561,15 @@
       ],
       "recommended_models": [
         {
-          "id": "pyannote/speaker-diarization-3.1",
-          "name": "pyannote/speaker-diarization-3.1",
-          "repo_id": "pyannote/speaker-diarization-3.1",
-          "type": "hf.voice_activity_detection"
-        },
-        {
           "id": "pyannote/speaker-diarization-community-1",
           "name": "pyannote/speaker-diarization-community-1",
           "repo_id": "pyannote/speaker-diarization-community-1",
+          "type": "hf.voice_activity_detection"
+        },
+        {
+          "id": "pyannote/speaker-diarization-3.1",
+          "name": "pyannote/speaker-diarization-3.1",
+          "repo_id": "pyannote/speaker-diarization-3.1",
           "type": "hf.voice_activity_detection"
         },
         {
@@ -13061,6 +13578,9 @@
           "repo_id": "pyannote/segmentation-3.0",
           "type": "hf.voice_activity_detection"
         }
+      ],
+      "required_settings": [
+        "HF_TOKEN"
       ],
       "title": "Speaker Diarization"
     },
@@ -17458,6 +17978,168 @@
     },
     {
       "basic_fields": [
+        "model",
+        "prompt",
+        "width",
+        "height",
+        "num_inference_steps"
+      ],
+      "body": "content_card",
+      "description": "Generates images from text prompts using Meituan's LongCat-Image model.\n    image, generation, AI, text-to-image, longcat, text-rendering, bilingual\n\n    Use cases:\n    - Generate photorealistic images from English or Chinese prompts\n    - Render accurate Chinese and English text inside images\n    - Expand short prompts automatically with the built-in prompt rewriter\n    - Run a 6B parameter image model on a single GPU",
+      "input_fields": [
+        "prompt",
+        "negative_prompt"
+      ],
+      "namespace": "huggingface.text_to_image",
+      "node_type": "huggingface.text_to_image.LongCatImage",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "image"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "meituan-longcat/LongCat-Image",
+            "type": "hf.text_to_image",
+            "variant": null
+          },
+          "description": "The LongCat-Image model to use for image generation.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_image"
+          }
+        },
+        {
+          "default": "A cat holding a sign that says hello world",
+          "description": "Text description of the image to generate.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Describe what to avoid in the image.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 1344,
+          "description": "Output image width in pixels. Should be a multiple of 16.",
+          "max": 2048.0,
+          "min": 256.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 768,
+          "description": "Output image height in pixels. Should be a multiple of 16.",
+          "max": 2048.0,
+          "min": 256.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 50,
+          "description": "Denoising steps. More steps = higher quality, slower generation.",
+          "max": 100.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 4.5,
+          "description": "How strongly to follow the prompt. 4.5 is recommended.",
+          "max": 20.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": true,
+          "description": "Let the model's text encoder expand the prompt before generation.",
+          "name": "enable_prompt_rewrite",
+          "title": "Enable Prompt Rewrite",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "*.json"
+          ],
+          "id": "meituan-longcat/LongCat-Image",
+          "name": "meituan-longcat/LongCat-Image",
+          "repo_id": "meituan-longcat/LongCat-Image",
+          "type": "hf.text_to_image"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "*.json"
+          ],
+          "id": "meituan-longcat/LongCat-Image-Dev",
+          "name": "meituan-longcat/LongCat-Image-Dev",
+          "repo_id": "meituan-longcat/LongCat-Image-Dev",
+          "type": "hf.text_to_image"
+        }
+      ],
+      "title": "LongCat-Image"
+    },
+    {
+      "basic_fields": [
         "quantization",
         "prompt",
         "negative_prompt",
@@ -18669,6 +19351,159 @@
     {
       "basic_fields": [
         "model",
+        "prompt",
+        "width",
+        "height",
+        "num_inference_steps"
+      ],
+      "body": "content_card",
+      "description": "Generates images from text prompts using Tongyi-MAI's Z-Image models.\n    image, generation, AI, text-to-image, z-image, turbo, text-rendering\n\n    Use cases:\n    - Generate photorealistic images in a few steps with Z-Image-Turbo\n    - Render bilingual (English and Chinese) text inside images\n    - Run high-quality text-to-image on consumer GPUs (6B parameters)\n    - Use the undistilled Z-Image base model with negative prompts",
+      "input_fields": [
+        "prompt",
+        "negative_prompt"
+      ],
+      "namespace": "huggingface.text_to_image",
+      "node_type": "huggingface.text_to_image.ZImage",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "image"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "Tongyi-MAI/Z-Image-Turbo",
+            "type": "hf.text_to_image",
+            "variant": null
+          },
+          "description": "The Z-Image model to use for image generation.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_image"
+          }
+        },
+        {
+          "default": "A cat holding a sign that says hello world",
+          "description": "Text description of the image to generate.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Describe what to avoid in the image. Only used when guidance_scale is above 1.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 1024,
+          "description": "Output image width in pixels. Should be a multiple of 16.",
+          "max": 2048.0,
+          "min": 256.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 1024,
+          "description": "Output image height in pixels. Should be a multiple of 16.",
+          "max": 2048.0,
+          "min": 256.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 9,
+          "description": "Denoising steps. 9 for Z-Image-Turbo, 28 to 50 for the Z-Image base model.",
+          "max": 100.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 0.0,
+          "description": "How strongly to follow the prompt. 0 for Z-Image-Turbo, 3 to 5 for the Z-Image base model.",
+          "max": 20.0,
+          "min": 0.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "*.json"
+          ],
+          "id": "Tongyi-MAI/Z-Image-Turbo",
+          "name": "Tongyi-MAI/Z-Image-Turbo",
+          "repo_id": "Tongyi-MAI/Z-Image-Turbo",
+          "type": "hf.text_to_image"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "*.json"
+          ],
+          "id": "Tongyi-MAI/Z-Image",
+          "name": "Tongyi-MAI/Z-Image",
+          "repo_id": "Tongyi-MAI/Z-Image",
+          "type": "hf.text_to_image"
+        }
+      ],
+      "title": "Z-Image"
+    },
+    {
+      "basic_fields": [
+        "model",
         "prompt"
       ],
       "body": "content_card",
@@ -19584,6 +20419,197 @@
         }
       ],
       "title": "CogVideoX"
+    },
+    {
+      "basic_fields": [
+        "model",
+        "prompt",
+        "num_frames",
+        "height",
+        "width"
+      ],
+      "body": "content_card",
+      "description": "Generates videos from text prompts using Tencent's HunyuanVideo 1.5.\n    video, generation, AI, text-to-video, hunyuan, cinematic\n\n    Use cases:\n    - Generate 5 second 480p or 720p clips from detailed prompts\n    - Produce cinematic motion with strong prompt adherence\n    - Run an 8.3B parameter video model on a single consumer GPU with offload\n    - Draft video ideas quickly with the distilled checkpoint",
+      "input_fields": [
+        "prompt",
+        "negative_prompt"
+      ],
+      "namespace": "huggingface.text_to_video",
+      "node_type": "huggingface.text_to_video.HunyuanVideo15",
+      "outputs": [
+        {
+          "name": "output",
+          "type": {
+            "type": "video"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_t2v",
+            "type": "hf.text_to_video",
+            "variant": null
+          },
+          "description": "The HunyuanVideo 1.5 text-to-video checkpoint to use.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_video"
+          }
+        },
+        {
+          "default": "A cat walks on the grass, realistic",
+          "description": "Detailed text description of the video to generate.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "",
+          "description": "Describe what to avoid in the video.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 121,
+          "description": "Total frames in the output, of the form 4n+1. 121 is about 5 seconds at 24 fps.",
+          "max": 241.0,
+          "min": 5.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 480,
+          "description": "Output video height in pixels. Use 720 with the 720p checkpoints.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 848,
+          "description": "Output video width in pixels. Use 1280 with the 720p checkpoints.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 50,
+          "description": "Denoising steps. 50 is typical; distilled checkpoints need fewer.",
+          "max": 100.0,
+          "min": 1.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1.0,
+          "description": "How strongly to follow the prompt. Use -1 to keep the checkpoint's own guidance.",
+          "max": 20.0,
+          "min": -1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 24,
+          "description": "Frames per second for the output video file.",
+          "max": 60.0,
+          "min": 1.0,
+          "name": "fps",
+          "title": "Fps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_t2v",
+          "name": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_t2v",
+          "repo_id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_t2v",
+          "type": "hf.text_to_video"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-720p_t2v",
+          "name": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-720p_t2v",
+          "repo_id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-720p_t2v",
+          "type": "hf.text_to_video"
+        },
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_t2v_distilled",
+          "name": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_t2v_distilled",
+          "repo_id": "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_t2v_distilled",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "HunyuanVideo 1.5"
     },
     {
       "basic_fields": [
@@ -21502,5 +22528,5 @@
     }
   ],
   "repo_id": "",
-  "version": "0.7.5"
+  "version": "0.8.1"
 }

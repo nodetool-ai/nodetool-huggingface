@@ -928,3 +928,154 @@ class LTX2VideoI2V(HuggingFacePipelineNode):
         fps = int(self.frame_rate)
         run_gc("After LTX-2 I2V inference", log_before_after=False)
         return await video_from_frames(context, output.frames[0], fps=fps)
+
+
+class HunyuanVideo15I2V(HuggingFacePipelineNode):
+    """
+    Animates a still image into a video using Tencent's HunyuanVideo 1.5.
+    video, generation, AI, image-to-video, hunyuan, animation
+
+    Use cases:
+    - Turn a photo or illustration into a 5 second 480p or 720p clip
+    - Animate product shots and character art with prompt-guided motion
+    - Generate fast previews with the step-distilled checkpoint
+    - Build image animation workflows that run locally
+    """
+
+    model: HFTextToVideo = Field(
+        default=HFTextToVideo(
+            repo_id="hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_i2v"
+        ),
+        description="The HunyuanVideo 1.5 image-to-video checkpoint to use.",
+    )
+    input_image: ImageRef = Field(
+        default=ImageRef(),
+        description="The image to animate. The output keeps its aspect ratio at the checkpoint's resolution.",
+    )
+    prompt: str = Field(
+        default="The scene comes to life with smooth, natural motion",
+        description="Text description of how the image should move.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Describe what to avoid in the video.",
+    )
+    num_frames: int = Field(
+        default=121,
+        description="Total frames in the output, of the form 4n+1. 121 is about 5 seconds at 24 fps.",
+        ge=5,
+        le=241,
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        description="Denoising steps. 50 is typical; the step-distilled checkpoint uses 8 to 12.",
+        ge=1,
+        le=100,
+    )
+    guidance_scale: float = Field(
+        default=-1.0,
+        description="How strongly to follow the prompt. Use -1 to keep the checkpoint's own guidance.",
+        ge=-1.0,
+        le=20.0,
+    )
+    fps: int = Field(
+        default=24,
+        description="Frames per second for the output video file.",
+        ge=1,
+        le=60,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        from .text_to_video import hunyuan_video_15_models
+
+        return hunyuan_video_15_models("i2v")
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "HunyuanVideo 1.5 (Image-to-Video)"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "input_image", "prompt", "num_frames"]
+
+    def required_inputs(self):
+        return ["input_image"]
+
+    def get_model_id(self) -> str:
+        return (
+            self.model.repo_id
+            or "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_i2v"
+        )
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.hunyuan_video1_5.pipeline_hunyuan_video1_5_image2video import (
+            HunyuanVideo15ImageToVideoPipeline,
+        )
+
+        from .text_to_video import load_hunyuan_video_15_pipeline
+
+        self._pipeline = await load_hunyuan_video_15_pipeline(
+            self,
+            context,
+            HunyuanVideo15ImageToVideoPipeline,
+            self.get_model_id(),
+            self.enable_cpu_offload,
+        )
+
+    async def move_to_device(self, device: str):
+        from nodetool.nodes.huggingface.stable_diffusion_base import is_mps_device
+
+        # On MPS we skip offload and load fully onto the device, so move here.
+        if self._pipeline is not None and (
+            not self.enable_cpu_offload or is_mps_device()
+        ):
+            move_pipeline_to_device(self._pipeline, device)
+
+    async def process(self, context: ProcessingContext) -> VideoRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        import torch
+
+        from .text_to_video import (
+            HUNYUAN_VIDEO_15_GEOMETRY,
+            apply_hunyuan_video_15_guidance,
+            snap_video_frames,
+        )
+
+        input_image = await context.image_to_pil(self.input_image)
+        num_frames = snap_video_frames(
+            self.num_frames, HUNYUAN_VIDEO_15_GEOMETRY, "HunyuanVideo 1.5"
+        )
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        apply_hunyuan_video_15_guidance(self._pipeline, self.guidance_scale)
+        # HunyuanVideo15ImageToVideoPipeline takes no step callback, so no
+        # per-step progress is reported.
+        output = await self.run_pipeline_in_thread(
+            image=input_image.convert("RGB"),
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt or None,
+            num_frames=num_frames,
+            num_inference_steps=self.num_inference_steps,
+            generator=generator,
+            output_type="np",
+        )
+
+        run_gc("After HunyuanVideo 1.5 I2V inference", log_before_after=False)
+        return await video_from_frames(context, output.frames[0], fps=self.fps)
