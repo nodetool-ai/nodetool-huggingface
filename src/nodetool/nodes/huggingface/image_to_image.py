@@ -32,6 +32,8 @@ from nodetool.nodes.huggingface.stable_diffusion_base import (
     HF_CONTROLNET_MODELS,
     HF_CONTROLNET_XL_MODELS,
     available_torch_dtype,
+    is_mps_device,
+    maybe_enable_cpu_offload,
     StableDiffusionBaseNode,
     StableDiffusionXLBase,
 )
@@ -2790,4 +2792,290 @@ class FluxKontext(HuggingFacePipelineNode):
         # Run GC after inference to clean up intermediate tensors
         run_gc("After FluxKontext inference", log_before_after=True)
 
+        return await context.image_from_pil(image)
+
+
+_DIFFUSERS_REPO_ALLOW_PATTERNS = [
+    "**/*.safetensors",
+    "**/*.json",
+    "**/*.txt",
+    "**/*.model",
+    "*.json",
+]
+
+
+class ZImageImg2Img(HuggingFacePipelineNode):
+    """
+    Transforms an existing image with a text prompt using Tongyi-MAI's Z-Image models.
+    image, image-to-image, img2img, z-image, turbo, restyle
+
+    Use cases:
+    - Restyle a photo or sketch in a few steps with Z-Image-Turbo
+    - Refine a draft image while keeping its composition
+    - Add bilingual text or detail to an existing image
+    """
+
+    model: HFImageToImage = Field(
+        default=HFImageToImage(repo_id="Tongyi-MAI/Z-Image-Turbo"),
+        description="The Z-Image model to use.",
+    )
+    image: ImageRef = Field(
+        default=ImageRef(),
+        title="Input Image",
+        description="The image to transform.",
+    )
+    prompt: str = Field(
+        default="A watercolor painting of the scene",
+        description="Text description of the desired result.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Describe what to avoid in the image. Only used when guidance_scale is above 1.",
+    )
+    strength: float = Field(
+        default=0.6,
+        description="How much to change the input image. 0 keeps it, 1 replaces it.",
+        ge=0.0,
+        le=1.0,
+    )
+    num_inference_steps: int = Field(
+        default=9,
+        description="Denoising steps before strength is applied. 9 for Z-Image-Turbo, 28 to 50 for the base model.",
+        ge=1,
+        le=100,
+    )
+    guidance_scale: float = Field(
+        default=0.0,
+        description="How strongly to follow the prompt. 0 for Z-Image-Turbo, 3 to 5 for the base model.",
+        ge=0.0,
+        le=20.0,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        from nodetool.nodes.huggingface.text_to_image import (
+            z_image_recommended_models,
+        )
+
+        return z_image_recommended_models(HFImageToImage)
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Z-Image (Image-to-Image)"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "image", "prompt", "strength", "num_inference_steps"]
+
+    def required_inputs(self):
+        return ["image"]
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id or "Tongyi-MAI/Z-Image-Turbo"
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.z_image.pipeline_z_image_img2img import (
+            ZImageImg2ImgPipeline,
+        )
+
+        if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
+            raise ValueError(
+                f"Model {self.get_model_id()} must be downloaded first from the recommended models"
+            )
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=ZImageImg2ImgPipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=available_torch_dtype(),
+            device="cpu",
+            local_files_only=True,
+        )
+        maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
+
+    async def move_to_device(self, device: str):
+        # On MPS we skip offload and load fully onto the device, so move here.
+        if self._pipeline is not None and (
+            not self.enable_cpu_offload or is_mps_device()
+        ):
+            move_pipeline_to_device(self._pipeline, device)
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        input_image = await context.image_to_pil(self.image)
+        input_image = input_image.convert("RGB")
+        # The transformer patchifies 16x16 latent-space pixels; keep the input
+        # size and only round it down onto that grid.
+        width = max(16, input_image.width // 16 * 16)
+        height = max(16, input_image.height // 16 * 16)
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        # img2img only runs the last `strength` share of the schedule.
+        total_steps = max(1, int(self.num_inference_steps * self.strength))
+        output = await self.run_pipeline_in_thread(
+            prompt=self.prompt,
+            image=input_image,
+            strength=self.strength,
+            negative_prompt=self.negative_prompt or None,
+            height=height,
+            width=width,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            generator=generator,
+            callback_on_step_end=pipeline_progress_callback(
+                self.id, total_steps, context
+            ),
+            callback_on_step_end_tensor_inputs=["latents"],
+        )
+        image = output.images[0]
+        run_gc("After Z-Image img2img inference", log_before_after=False)
+        return await context.image_from_pil(image)
+
+
+class LongCatImageEdit(HuggingFacePipelineNode):
+    """
+    Edits images from text instructions using Meituan's LongCat-Image-Edit models.
+    image, editing, AI, instruction, longcat, bilingual, text-rendering
+
+    Use cases:
+    - Apply instruction-based edits in English or Chinese ("change the cat to a dog")
+    - Replace, add, or remove objects while keeping the rest of the image intact
+    - Edit text that appears inside an image
+    - Run fast 8-step edits with the Turbo checkpoint
+    """
+
+    model: HFImageToImage = Field(
+        default=HFImageToImage(repo_id="meituan-longcat/LongCat-Image-Edit"),
+        description="The LongCat-Image-Edit model to use.",
+    )
+    image: ImageRef = Field(
+        default=ImageRef(),
+        title="Input Image",
+        description="The image to edit.",
+    )
+    prompt: str = Field(
+        default="Change the cat to a dog",
+        description="Instruction describing the edit to apply.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Describe what to avoid in the result.",
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        description="Denoising steps. 50 for LongCat-Image-Edit, 8 for the Turbo checkpoint.",
+        ge=1,
+        le=100,
+    )
+    guidance_scale: float = Field(
+        default=4.5,
+        description="How strongly to follow the instruction. 4.5 for LongCat-Image-Edit, 1 for the Turbo checkpoint.",
+        ge=1.0,
+        le=20.0,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFImageToImage(
+                repo_id="meituan-longcat/LongCat-Image-Edit",
+                allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+            ),
+            # Turbo: distilled, 8 steps at guidance 1.
+            HFImageToImage(
+                repo_id="meituan-longcat/LongCat-Image-Edit-Turbo",
+                allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "LongCat-Image-Edit"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "image", "prompt", "num_inference_steps", "guidance_scale"]
+
+    def required_inputs(self):
+        return ["image"]
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id or "meituan-longcat/LongCat-Image-Edit"
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.longcat_image.pipeline_longcat_image_edit import (
+            LongCatImageEditPipeline,
+        )
+
+        if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
+            raise ValueError(
+                f"Model {self.get_model_id()} must be downloaded first from the recommended models"
+            )
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=LongCatImageEditPipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=available_torch_dtype(),
+            device="cpu",
+            local_files_only=True,
+        )
+        maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
+
+    async def move_to_device(self, device: str):
+        # On MPS we skip offload and load fully onto the device, so move here.
+        if self._pipeline is not None and (
+            not self.enable_cpu_offload or is_mps_device()
+        ):
+            move_pipeline_to_device(self._pipeline, device)
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        input_image = await context.image_to_pil(self.image)
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        # The pipeline picks a ~1MP output matching the input's aspect ratio and
+        # takes no step callback, so no per-step progress is reported.
+        output = await self.run_pipeline_in_thread(
+            image=input_image.convert("RGB"),
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            generator=generator,
+        )
+        image = output.images[0]
+        run_gc("After LongCat-Image-Edit inference", log_before_after=False)
         return await context.image_from_pil(image)

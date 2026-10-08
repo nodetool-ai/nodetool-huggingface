@@ -17,13 +17,16 @@ This package ships well over 100 nodes spanning image generation and editing, vi
 - **Bria**, **Bria FIBO** — commercial-ready generation, including structured-JSON-prompt control with FIBO
 - **GLM-Image** — Zhipu AI's GLM-Image
 - **Kandinsky 5.0 Image Lite**
+- **Z-Image**, **Z-Image-Turbo** — Tongyi-MAI's 6B model, 9-step Turbo or the undistilled base, with bilingual text rendering
+- **LongCat-Image** — Meituan's bilingual model with built-in prompt rewriting
 - **Text2Image (AutoPipeline)** — automatic pipeline selection for any text-to-image checkpoint
 - **LoadTextToImageModel** — loads/validates a model repo for use by downstream nodes
 
 ### 🖌️ Image-to-Image, Editing & Upscaling
 
 - **Image to Image / Inpaint / ControlNet (SD & SDXL)** — img2img, inpainting, and ControlNet-guided generation for both Stable Diffusion and SDXL
-- **QwenImageEdit**, **FluxFill**, **FluxKontext** — instruction-based image editing/inpainting
+- **QwenImageEdit**, **FluxFill**, **FluxKontext**, **LongCat-Image-Edit** — instruction-based image editing/inpainting
+- **Z-Image (Image-to-Image)** — prompt-guided img2img with Z-Image-Turbo or Z-Image
 - **OmniGen** — multimodal image generation and editing from mixed image/text inputs
 - **RealESRGAN**, **Stable Diffusion Upscale**, **Stable Diffusion Latent Upscaler** — super-resolution
 - **VAEEncode / VAEDecode** — encode images to/decode latents from a Stable Diffusion VAE
@@ -32,7 +35,7 @@ This package ships well over 100 nodes spanning image generation and editing, vi
 
 ### 🎬 Video Generation
 
-- **CogVideoX**, **Wan (T2V/I2V/FLF2V)**, **LTX-Video**, **LTX-2 / LTX-2.5 / LTX-2 Video**, **Kandinsky 5.0 Video** — text-to-video and image-to-video diffusion transformers
+- **CogVideoX**, **Wan (T2V/I2V/FLF2V)**, **LTX-Video**, **LTX-2 / LTX-2.5 / LTX-2 Video**, **Kandinsky 5.0 Video**, **HunyuanVideo 1.5 (T2V/I2V)** — text-to-video and image-to-video diffusion transformers
 - **MiniMax-H3** / **MiniMax-H3 Reference** — joint video + soundtrack generation (5–15s @ 24fps) from a prompt, optional keyframes, or image/video/audio references
 - **VideoClassifier** — action/scene recognition (VideoMAE, TimeSformer, V-JEPA 2)
 

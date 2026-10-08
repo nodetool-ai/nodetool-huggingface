@@ -2943,3 +2943,291 @@ class Kandinsky5Image(HuggingFacePipelineNode):
             image = image[0]
         run_gc("After Kandinsky 5.0 Image inference", log_before_after=False)
         return await context.image_from_pil(image)
+
+
+Z_IMAGE_TURBO_REPO_ID = "Tongyi-MAI/Z-Image-Turbo"
+
+
+def z_image_recommended_models(model_type: type[HuggingFaceModel]) -> list[Any]:
+    return [
+        # Turbo: 8-step distilled, runs without classifier-free guidance.
+        model_type(
+            repo_id=Z_IMAGE_TURBO_REPO_ID,
+            allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+        ),
+        # Base: undistilled foundation model, uses guidance and negative prompts.
+        model_type(
+            repo_id="Tongyi-MAI/Z-Image",
+            allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+        ),
+    ]
+
+
+class ZImage(HuggingFacePipelineNode):
+    """
+    Generates images from text prompts using Tongyi-MAI's Z-Image models.
+    image, generation, AI, text-to-image, z-image, turbo, text-rendering
+
+    Use cases:
+    - Generate photorealistic images in a few steps with Z-Image-Turbo
+    - Render bilingual (English and Chinese) text inside images
+    - Run high-quality text-to-image on consumer GPUs (6B parameters)
+    - Use the undistilled Z-Image base model with negative prompts
+    """
+
+    model: HFTextToImage = Field(
+        default=HFTextToImage(repo_id=Z_IMAGE_TURBO_REPO_ID),
+        description="The Z-Image model to use for image generation.",
+    )
+    prompt: str = Field(
+        default="A cat holding a sign that says hello world",
+        description="Text description of the image to generate.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Describe what to avoid in the image. Only used when guidance_scale is above 1.",
+    )
+    width: int = Field(
+        default=1024,
+        description="Output image width in pixels. Should be a multiple of 16.",
+        ge=256,
+        le=2048,
+    )
+    height: int = Field(
+        default=1024,
+        description="Output image height in pixels. Should be a multiple of 16.",
+        ge=256,
+        le=2048,
+    )
+    num_inference_steps: int = Field(
+        default=9,
+        description="Denoising steps. 9 for Z-Image-Turbo, 28 to 50 for the Z-Image base model.",
+        ge=1,
+        le=100,
+    )
+    guidance_scale: float = Field(
+        default=0.0,
+        description="How strongly to follow the prompt. 0 for Z-Image-Turbo, 3 to 5 for the Z-Image base model.",
+        ge=0.0,
+        le=20.0,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return z_image_recommended_models(HFTextToImage)
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "Z-Image"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "prompt", "width", "height", "num_inference_steps"]
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id or Z_IMAGE_TURBO_REPO_ID
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.z_image.pipeline_z_image import ZImagePipeline
+
+        if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
+            raise ValueError(
+                f"Model {self.get_model_id()} must be downloaded first from the recommended models"
+            )
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=ZImagePipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=available_torch_dtype(),
+            device="cpu",
+            local_files_only=True,
+        )
+        maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
+
+    async def move_to_device(self, device: str):
+        # On MPS we skip offload and load fully onto the device, so move here.
+        if self._pipeline is not None and (
+            not self.enable_cpu_offload or is_mps_device()
+        ):
+            move_pipeline_to_device(self._pipeline, device)
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        # ZImagePipeline rejects sizes off its 16 px grid instead of snapping.
+        output = await self.run_pipeline_in_thread(
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt or None,
+            height=self.height // 16 * 16,
+            width=self.width // 16 * 16,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            generator=generator,
+            callback_on_step_end=pipeline_progress_callback(
+                self.id, self.num_inference_steps, context
+            ),
+            callback_on_step_end_tensor_inputs=["latents"],
+        )
+        image = output.images[0]
+        run_gc("After Z-Image inference", log_before_after=False)
+        return await context.image_from_pil(image)
+
+
+LONGCAT_IMAGE_REPO_ID = "meituan-longcat/LongCat-Image"
+
+
+class LongCatImage(HuggingFacePipelineNode):
+    """
+    Generates images from text prompts using Meituan's LongCat-Image model.
+    image, generation, AI, text-to-image, longcat, text-rendering, bilingual
+
+    Use cases:
+    - Generate photorealistic images from English or Chinese prompts
+    - Render accurate Chinese and English text inside images
+    - Expand short prompts automatically with the built-in prompt rewriter
+    - Run a 6B parameter image model on a single GPU
+    """
+
+    model: HFTextToImage = Field(
+        default=HFTextToImage(repo_id=LONGCAT_IMAGE_REPO_ID),
+        description="The LongCat-Image model to use for image generation.",
+    )
+    prompt: str = Field(
+        default="A cat holding a sign that says hello world",
+        description="Text description of the image to generate.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Describe what to avoid in the image.",
+    )
+    width: int = Field(
+        default=1344,
+        description="Output image width in pixels. Should be a multiple of 16.",
+        ge=256,
+        le=2048,
+    )
+    height: int = Field(
+        default=768,
+        description="Output image height in pixels. Should be a multiple of 16.",
+        ge=256,
+        le=2048,
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        description="Denoising steps. More steps = higher quality, slower generation.",
+        ge=1,
+        le=100,
+    )
+    guidance_scale: float = Field(
+        default=4.5,
+        description="How strongly to follow the prompt. 4.5 is recommended.",
+        ge=1.0,
+        le=20.0,
+    )
+    enable_prompt_rewrite: bool = Field(
+        default=True,
+        description="Let the model's text encoder expand the prompt before generation.",
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [
+            HFTextToImage(
+                repo_id=LONGCAT_IMAGE_REPO_ID,
+                allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+            ),
+            # Dev: mid-training checkpoint intended for fine-tuning.
+            HFTextToImage(
+                repo_id="meituan-longcat/LongCat-Image-Dev",
+                allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+            ),
+        ]
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "LongCat-Image"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "prompt", "width", "height", "num_inference_steps"]
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id or LONGCAT_IMAGE_REPO_ID
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.longcat_image.pipeline_longcat_image import (
+            LongCatImagePipeline,
+        )
+
+        if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
+            raise ValueError(
+                f"Model {self.get_model_id()} must be downloaded first from the recommended models"
+            )
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=LongCatImagePipeline,
+            model_id=self.get_model_id(),
+            torch_dtype=available_torch_dtype(),
+            device="cpu",
+            local_files_only=True,
+        )
+        maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
+
+    async def move_to_device(self, device: str):
+        # On MPS we skip offload and load fully onto the device, so move here.
+        if self._pipeline is not None and (
+            not self.enable_cpu_offload or is_mps_device()
+        ):
+            move_pipeline_to_device(self._pipeline, device)
+
+    async def process(self, context: ProcessingContext) -> ImageRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        # LongCatImagePipeline takes no step callback, so no per-step progress.
+        output = await self.run_pipeline_in_thread(
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt or None,
+            height=self.height,
+            width=self.width,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            enable_prompt_rewrite=self.enable_prompt_rewrite,
+            generator=generator,
+        )
+        image = output.images[0]
+        run_gc("After LongCat-Image inference", log_before_after=False)
+        return await context.image_from_pil(image)

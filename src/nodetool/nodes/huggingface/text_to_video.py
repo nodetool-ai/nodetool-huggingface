@@ -1916,3 +1916,221 @@ class MiniMaxH3Reference(_MiniMaxH3Base):
         self._validate_references()
         references = await self._build_references(context)
         return await self._generate(context, references=references)
+
+
+# HunyuanVideo 1.5 latents are 4x temporally and 16x spatially compressed.
+HUNYUAN_VIDEO_15_GEOMETRY = VideoGeometry(
+    frame_step=4, frame_base=1, min_frames=5, max_frames=241, dim_multiple=16
+)
+HUNYUAN_VIDEO_15_T2V_REPO_ID = "hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-480p_t2v"
+
+
+def hunyuan_video_15_models(task: str) -> list[HuggingFaceModel]:
+    """The community Diffusers conversions of HunyuanVideo 1.5 for ``task``.
+
+    ``task`` is ``"t2v"`` or ``"i2v"``. Distilled variants ship a guider config
+    without classifier-free guidance, so nodes keep that guider by default.
+    """
+    variants = {
+        "t2v": ["480p_t2v", "720p_t2v", "480p_t2v_distilled"],
+        "i2v": [
+            "480p_i2v",
+            "720p_i2v",
+            "480p_i2v_distilled",
+            "720p_i2v_distilled",
+            "480p_i2v_step_distilled",
+        ],
+    }[task]
+    return [
+        HFTextToVideo(
+            repo_id=f"hunyuanvideo-community/HunyuanVideo-1.5-Diffusers-{variant}",
+            allow_patterns=_DIFFUSERS_REPO_ALLOW_PATTERNS,
+        )
+        for variant in variants
+    ]
+
+
+def apply_hunyuan_video_15_guidance(pipeline: Any, guidance_scale: float) -> None:
+    """Set the guider's scale for one run, or restore the checkpoint's own guider.
+
+    HunyuanVideo 1.5 takes guidance from its ``guider`` component rather than a
+    ``guidance_scale`` call argument. The pipeline is cached across runs, so the
+    checkpoint's guider is kept aside and every run starts from it.
+    """
+    default_guider = getattr(pipeline, "_nodetool_default_guider", None)
+    if default_guider is None:
+        default_guider = pipeline.guider
+        pipeline._nodetool_default_guider = default_guider
+    if guidance_scale < 0:
+        pipeline.guider = default_guider
+    else:
+        pipeline.guider = default_guider.new(guidance_scale=guidance_scale)
+
+
+async def load_hunyuan_video_15_pipeline(
+    node: HuggingFacePipelineNode,
+    context: ProcessingContext,
+    model_class: Any,
+    model_id: str,
+    enable_cpu_offload: bool,
+) -> Any:
+    if not await HF_FAST_CACHE.resolve(model_id, "model_index.json"):
+        raise ValueError(
+            f"Model {model_id} must be downloaded first from the recommended models"
+        )
+
+    pipeline = await node.load_model(
+        context=context,
+        model_class=model_class,
+        model_id=model_id,
+        torch_dtype=available_torch_dtype(),
+        device="cpu",
+        local_files_only=True,
+    )
+    maybe_enable_cpu_offload(pipeline, enable_cpu_offload)
+    if pipeline is not None:
+        # Decoding 121 frames at 720p does not fit in VRAM without tiling.
+        pipeline.vae.enable_tiling()
+    return pipeline
+
+
+class HunyuanVideo15(HuggingFacePipelineNode):
+    """
+    Generates videos from text prompts using Tencent's HunyuanVideo 1.5.
+    video, generation, AI, text-to-video, hunyuan, cinematic
+
+    Use cases:
+    - Generate 5 second 480p or 720p clips from detailed prompts
+    - Produce cinematic motion with strong prompt adherence
+    - Run an 8.3B parameter video model on a single consumer GPU with offload
+    - Draft video ideas quickly with the distilled checkpoint
+    """
+
+    model: HFTextToVideo = Field(
+        default=HFTextToVideo(repo_id=HUNYUAN_VIDEO_15_T2V_REPO_ID),
+        description="The HunyuanVideo 1.5 text-to-video checkpoint to use.",
+    )
+    prompt: str = Field(
+        default="A cat walks on the grass, realistic",
+        description="Detailed text description of the video to generate.",
+    )
+    negative_prompt: str = Field(
+        default="",
+        description="Describe what to avoid in the video.",
+    )
+    num_frames: int = Field(
+        default=121,
+        description="Total frames in the output, of the form 4n+1. 121 is about 5 seconds at 24 fps.",
+        ge=5,
+        le=241,
+    )
+    height: int = Field(
+        default=480,
+        description="Output video height in pixels. Use 720 with the 720p checkpoints.",
+        ge=256,
+        le=1280,
+    )
+    width: int = Field(
+        default=848,
+        description="Output video width in pixels. Use 1280 with the 720p checkpoints.",
+        ge=256,
+        le=1280,
+    )
+    num_inference_steps: int = Field(
+        default=50,
+        description="Denoising steps. 50 is typical; distilled checkpoints need fewer.",
+        ge=1,
+        le=100,
+    )
+    guidance_scale: float = Field(
+        default=-1.0,
+        description="How strongly to follow the prompt. Use -1 to keep the checkpoint's own guidance.",
+        ge=-1.0,
+        le=20.0,
+    )
+    fps: int = Field(
+        default=24,
+        description="Frames per second for the output video file.",
+        ge=1,
+        le=60,
+    )
+    seed: int = Field(
+        default=-1,
+        description="Random seed for reproducible generation. Use -1 for random.",
+        ge=-1,
+    )
+    enable_cpu_offload: bool = Field(
+        default=True,
+        description="Offload model components to CPU to reduce VRAM usage.",
+    )
+
+    _pipeline: Any = None
+
+    @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return hunyuan_video_15_models("t2v")
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "HunyuanVideo 1.5"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["model", "prompt", "num_frames", "height", "width"]
+
+    def get_model_id(self) -> str:
+        return self.model.repo_id or HUNYUAN_VIDEO_15_T2V_REPO_ID
+
+    async def preload_model(self, context: ProcessingContext):
+        from diffusers.pipelines.hunyuan_video1_5.pipeline_hunyuan_video1_5 import (
+            HunyuanVideo15Pipeline,
+        )
+
+        self._pipeline = await load_hunyuan_video_15_pipeline(
+            self,
+            context,
+            HunyuanVideo15Pipeline,
+            self.get_model_id(),
+            self.enable_cpu_offload,
+        )
+
+    async def move_to_device(self, device: str):
+        # On MPS we skip offload and load fully onto the device, so move here.
+        if self._pipeline is not None and (
+            not self.enable_cpu_offload or is_mps_device()
+        ):
+            move_pipeline_to_device(self._pipeline, device)
+
+    async def process(self, context: ProcessingContext) -> VideoRef:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        import torch
+
+        width, height, num_frames = snap_video_geometry(
+            self.width,
+            self.height,
+            self.num_frames,
+            HUNYUAN_VIDEO_15_GEOMETRY,
+            "HunyuanVideo 1.5",
+        )
+
+        generator = None
+        if self.seed != -1:
+            generator = torch.Generator(device="cpu").manual_seed(self.seed)
+
+        apply_hunyuan_video_15_guidance(self._pipeline, self.guidance_scale)
+        # HunyuanVideo15Pipeline takes no step callback, so no per-step progress.
+        output = await self.run_pipeline_in_thread(
+            prompt=self.prompt,
+            negative_prompt=self.negative_prompt or None,
+            height=height,
+            width=width,
+            num_frames=num_frames,
+            num_inference_steps=self.num_inference_steps,
+            generator=generator,
+            output_type="np",
+        )
+
+        run_gc("After HunyuanVideo 1.5 inference", log_before_after=False)
+        return await video_from_frames(context, output.frames[0], fps=self.fps)

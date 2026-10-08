@@ -873,19 +873,24 @@ class HuggingFaceLocalProvider(BaseProvider):
         seed: int | None,
         context: ProcessingContext,
     ) -> VideoRef | None:
-        """Generate via the LTX-2 / Kandinsky 5 video nodes when the model matches.
+        """Generate via the LTX-2 / Kandinsky 5 / HunyuanVideo 1.5 nodes when the model matches.
 
         Returns a VideoRef, or None when the model is not one of these (so the
         caller falls back to the default Wan path).
         """
         class_name = await self._read_model_index_class_name(model)
-        if class_name not in ("LTX2Pipeline", "Kandinsky5T2VPipeline"):
+        if class_name not in (
+            "LTX2Pipeline",
+            "Kandinsky5T2VPipeline",
+            "HunyuanVideo15Pipeline",
+        ):
             return None
 
         from nodetool.metadata.types import HFTextToVideo
         from nodetool.nodes.huggingface.text_to_video import (
             LTX2,
             LTX25,
+            HunyuanVideo15,
             Kandinsky5Video,
         )
 
@@ -911,6 +916,14 @@ class HuggingFaceLocalProvider(BaseProvider):
                     num_inference_steps=num_inference_steps,
                     **common,
                 )
+        elif class_name == "HunyuanVideo15Pipeline":
+            # Guidance lives in the checkpoint's guider config (distilled
+            # variants ship without CFG), so the caller's scale is not forwarded.
+            node = HunyuanVideo15(
+                fps=fps,
+                num_inference_steps=num_inference_steps,
+                **common,
+            )
         else:
             node = Kandinsky5Video(
                 fps=fps,
