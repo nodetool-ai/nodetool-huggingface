@@ -14,6 +14,7 @@ import logging
 import re
 import os
 import threading
+from contextlib import aclosing
 import json
 from queue import Queue
 from typing import (
@@ -45,8 +46,10 @@ from nodetool.huggingface.image_to_image_pipelines import (
     load_image_to_image_pipeline,
 )
 from nodetool.huggingface.local_provider_utils import (
+    _ensure_model_on_device,
     _get_torch,
     _is_cuda_available,
+    _resolve_hf_device,
     load_model,
     load_pipeline,
     pipeline_progress_callback,
@@ -86,6 +89,63 @@ if TYPE_CHECKING:
     from transformers.pipelines import pipeline as transformers_pipeline
 
 log = get_logger(__name__)
+
+# diffusers ``_class_name`` values each generate path can actually load.
+# ``text_to_video`` routes LTX-2 and Kandinsky 5 to their nodes and everything
+# else to WanPipeline; ``text_to_audio`` routes LongCat to its node and
+# everything else to ACE-Step.
+_TEXT_TO_VIDEO_CLASS_NAMES = {"WanPipeline", "LTX2Pipeline", "Kandinsky5T2VPipeline"}
+_TEXT_TO_AUDIO_CLASS_NAMES = {"AceStepPipeline", "LongCatAudioDiTPipeline"}
+
+
+def _sampling_kwargs(temperature: Any, top_p: Any, do_sample: Any) -> dict[str, Any]:
+    """Generation kwargs for the requested sampling settings.
+
+    transformers rejects a temperature that is not a positive float, so a
+    temperature of 0 (or an int decoded from msgpack) selects greedy decoding.
+    """
+    temperature = 1.0 if temperature is None else float(temperature)
+    if do_sample is False or temperature <= 0:
+        return {"do_sample": False}
+    return {
+        "do_sample": True,
+        "temperature": temperature,
+        "top_p": 1.0 if top_p is None else float(top_p),
+    }
+
+
+class _StopOnEvent:
+    """transformers stopping criterion that ends generation once ``event`` is set."""
+
+    def __init__(self, event: threading.Event):
+        self.event = event
+
+    def __call__(self, input_ids: Any, scores: Any, **kwargs: Any) -> Any:
+        import torch
+
+        return torch.full(
+            (input_ids.shape[0],),
+            self.event.is_set(),
+            dtype=torch.bool,
+            device=input_ids.device,
+        )
+
+
+def _restore_pipeline_model_device(pipeline: Any) -> None:
+    """Move a cached transformers pipeline's model back to the pipeline device."""
+    model = getattr(pipeline, "model", None)
+    device = getattr(pipeline, "device", None)
+    if model is None or device is None:
+        return
+    # accelerate-dispatched and bitsandbytes models cannot be moved with .to().
+    if getattr(model, "hf_device_map", None) or getattr(model, "hf_quantizer", None):
+        return
+    if str(getattr(model, "device", device)) == str(device):
+        return
+    try:
+        model.to(device)
+    except Exception as exc:
+        log.warning("Failed to move cached pipeline model to %s: %s", device, exc)
 
 
 @register_provider(Provider.HuggingFace)
@@ -203,8 +263,8 @@ class HuggingFaceLocalProvider(BaseProvider):
         self,
         image: ImageBytes,
         params: ImageToImageParams,
-        context: ProcessingContext | None = None,
         timeout_s: int | None = None,
+        context: ProcessingContext | None = None,
         node_id: str | None = None,
     ) -> ImageBytes:
         """Transform an image based on a text prompt using HuggingFace diffusion models.
@@ -491,6 +551,11 @@ class HuggingFaceLocalProvider(BaseProvider):
 
         node_seed = seed if seed is not None else -1
         class_name = await self._read_model_index_class_name(model)
+        if class_name is not None and class_name not in _TEXT_TO_AUDIO_CLASS_NAMES:
+            raise ValueError(
+                f"{model} is a {class_name} model; the HuggingFace provider "
+                "generates audio only with ACE-Step and LongCat-AudioDiT models"
+            )
         if class_name == "LongCatAudioDiTPipeline":
             node: Any = LongCatAudioDiT(
                 model=HFTextToAudio(repo_id=model),
@@ -552,7 +617,11 @@ class HuggingFaceLocalProvider(BaseProvider):
         # Get or load the pipeline
         asr_pipeline = ModelManager.get_model(model)
 
-        if not asr_pipeline:
+        if asr_pipeline:
+            # The wrapped model is also cached under its own key, so VRAM
+            # reclaim can move it to the CPU while the pipeline stays cached.
+            _restore_pipeline_model_device(asr_pipeline)
+        else:
             log.info(f"Loading automatic speech recognition pipeline: {model}")
 
             import torch
@@ -599,7 +668,10 @@ class HuggingFaceLocalProvider(BaseProvider):
 
         audio_segment = AudioSegment.from_file(BytesIO(audio))
         # Whisper expects 16kHz mono audio
-        audio_segment = audio_segment.set_frame_rate(16000).set_channels(1)
+        # 16-bit samples so the 2**15 scale below holds for any source width.
+        audio_segment = (
+            audio_segment.set_frame_rate(16000).set_channels(1).set_sample_width(2)
+        )
 
         # Convert to numpy array (float32)
         samples = np.array(audio_segment.get_array_of_samples(), dtype=np.float32)
@@ -662,11 +734,16 @@ class HuggingFaceLocalProvider(BaseProvider):
         # Extract chunks from pipeline result
         chunks = []
         if isinstance(result, dict):
+            # The pipeline reports (start, None) for a final chunk whose end it
+            # could not predict; that chunk ends with the audio.
+            duration = len(samples) / 16000
             for chunk in result.get("chunks", []):
                 ts = chunk.get("timestamp", (0, 0))
+                start = ts[0] or 0
+                end = ts[1] if ts[1] is not None else max(duration, start)
                 chunks.append(
                     {
-                        "timestamp": [ts[0] or 0, ts[1] or 0],
+                        "timestamp": [start, end],
                         "text": chunk.get("text", ""),
                     }
                 )
@@ -751,10 +828,21 @@ class HuggingFaceLocalProvider(BaseProvider):
         if node_video is not None:
             return node_video
 
+        class_name = await self._read_model_index_class_name(model)
+        if class_name is not None and class_name not in _TEXT_TO_VIDEO_CLASS_NAMES:
+            raise ValueError(
+                f"{model} is a {class_name} model; the HuggingFace provider "
+                "generates video only with Wan, LTX-2 and Kandinsky 5 models"
+            )
+
         # Get or load the pipeline
         pipeline = ModelManager.get_model(model)
 
-        if not pipeline:
+        if pipeline:
+            pipeline = _ensure_model_on_device(
+                pipeline, _resolve_hf_device(context, context.device)
+            )
+        else:
             import torch
 
             log.info(f"Loading text-to-video pipeline: {model}")
@@ -920,7 +1008,11 @@ class HuggingFaceLocalProvider(BaseProvider):
             )
 
         await node.preload_model(context)
-        return await node.process(context)
+        output = await node.process(context)
+        # LTX-2.5 returns {"video", "audio"}; the provider contract is a VideoRef.
+        if isinstance(output, dict):
+            return output["video"]
+        return output
 
     async def get_available_language_models(self) -> List[LanguageModel]:
         """Get available HuggingFace language models.
@@ -950,16 +1042,30 @@ class HuggingFaceLocalProvider(BaseProvider):
     async def get_available_video_models(self) -> List[VideoModel]:
         """Get available HuggingFace text-to-video models from the local cache.
 
-        Surfaces Wan, LTX-2, CogVideoX, Kandinsky 5 and similar repos.
+        Lists only the Wan, LTX-2 and Kandinsky 5 text-to-video repos that
+        ``text_to_video`` can load.
         """
-        return await get_text_to_video_models_from_hf_cache()
+        models = await get_text_to_video_models_from_hf_cache()
+        return [
+            m
+            for m in models
+            if await self._read_model_index_class_name(m.id)
+            in _TEXT_TO_VIDEO_CLASS_NAMES
+        ]
 
     async def get_available_audio_models(self) -> List[AudioModel]:
         """Get available HuggingFace text-to-audio (music) models from the local cache.
 
-        Surfaces ACE-Step and other audio-generation repos.
+        Lists only the ACE-Step and LongCat-AudioDiT repos that ``text_to_audio``
+        can load.
         """
-        return await get_text_to_audio_models_from_hf_cache()
+        models = await get_text_to_audio_models_from_hf_cache()
+        return [
+            m
+            for m in models
+            if await self._read_model_index_class_name(m.id)
+            in _TEXT_TO_AUDIO_CLASS_NAMES
+        ]
 
     async def get_available_tts_models(self) -> List[TTSModel]:
         """Get available HuggingFace TTS models from recommended models.
@@ -1163,7 +1269,6 @@ class HuggingFaceLocalProvider(BaseProvider):
 
         Returns ASR models based on the recommended models from the Whisper node:
         - OpenAI Whisper models (large-v3, large-v3-turbo, large-v2, medium, small)
-        - Faster-whisper models (optimized for speed)
 
         Returns:
             List of ASRModel instances for HuggingFace ASR
@@ -1193,11 +1298,6 @@ class HuggingFaceLocalProvider(BaseProvider):
             ASRModel(
                 id="openai/whisper-small",
                 name="Whisper Small",
-                provider=Provider.HuggingFace,
-            ),
-            ASRModel(
-                id="Systran/faster-whisper-large-v3",
-                name="Faster Whisper Large V3",
                 provider=Provider.HuggingFace,
             ),
         ]
@@ -1352,7 +1452,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         quantization: str = "fp16",
     ) -> AsyncIterator[Chunk]:
         import torch
-        from transformers import BitsAndBytesConfig, TextStreamer
+        from transformers import BitsAndBytesConfig, StoppingCriteriaList, TextStreamer
 
         # The quantization is part of the identity of the loaded model, otherwise a
         # second call with a different quantization returns the first-loaded model.
@@ -1436,15 +1536,17 @@ class HuggingFaceLocalProvider(BaseProvider):
         )
 
         generation_error: list[BaseException] = []
+        stop_event = threading.Event()
 
         def generate():
             generation_kwargs = {
                 "max_new_tokens": max_tokens,
-                "temperature": temperature,
-                "top_p": top_p,
-                "do_sample": do_sample,
+                **_sampling_kwargs(temperature, top_p, do_sample),
                 "streamer": streamer,
                 "return_full_text": False,
+                # The rendered chat template already starts with the BOS token.
+                "add_special_tokens": False,
+                "stopping_criteria": StoppingCriteriaList([_StopOnEvent(stop_event)]),
             }
             try:
                 cached_pipeline(prompt, **generation_kwargs)
@@ -1470,6 +1572,8 @@ class HuggingFaceLocalProvider(BaseProvider):
                 if thread_finished and token_queue.empty():
                     done = True
         finally:
+            # Stops generation when the consumer cancels or closes the stream.
+            stop_event.set()
             thread.join(timeout=1.0)
 
         if generation_error:
@@ -1507,6 +1611,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         from transformers import (
             BitsAndBytesConfig,
             AutoProcessor,
+            StoppingCriteriaList,
             TextStreamer,
         )
 
@@ -1589,6 +1694,8 @@ class HuggingFaceLocalProvider(BaseProvider):
             return processor(
                 text=prompt,
                 images=pil_images if pil_images else None,
+                # The rendered chat template already starts with the BOS token.
+                add_special_tokens=False,
                 return_tensors="pt",
             ).to(model.device)
 
@@ -1621,6 +1728,7 @@ class HuggingFaceLocalProvider(BaseProvider):
         )
 
         generation_error: list[BaseException] = []
+        stop_event = threading.Event()
 
         def generate():
             # apply_chat_template returns a tensor or a mapping (BatchFeature,
@@ -1633,6 +1741,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                     **generate_inputs,
                     max_new_tokens=max_tokens,
                     streamer=streamer,
+                    stopping_criteria=StoppingCriteriaList([_StopOnEvent(stop_event)]),
                 )
             except BaseException as exc:  # re-raised in the consuming coroutine
                 generation_error.append(exc)
@@ -1656,6 +1765,8 @@ class HuggingFaceLocalProvider(BaseProvider):
                 if thread_finished and token_queue.empty():
                     done = True
         finally:
+            # Stops generation when the consumer cancels or closes the stream.
+            stop_event.set()
             thread.join(timeout=1.0)
 
         if generation_error:
@@ -1764,15 +1875,20 @@ class HuggingFaceLocalProvider(BaseProvider):
         pipeline_task = kwargs.get("pipeline_task")
         if pipeline_task == "image-text-to-text":
             repo_id, _ = self._parse_model_spec(model)
-            async for chunk in self._stream_image_text_to_text(
-                repo_id=repo_id,
-                messages=messages,
-                max_tokens=max_tokens,
-                context=context,
-                node_id=node_id,
-                quantization=quantization,
-            ):
-                yield chunk
+            # aclosing: closing this stream must close the inner one at once,
+            # since its cleanup is what stops the generation thread.
+            async with aclosing(
+                self._stream_image_text_to_text(
+                    repo_id=repo_id,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    context=context,
+                    node_id=node_id,
+                    quantization=quantization,
+                )
+            ) as stream:
+                async for chunk in stream:
+                    yield chunk
             return
 
         repo_id, filename = self._parse_model_spec(model)
@@ -1786,18 +1902,21 @@ class HuggingFaceLocalProvider(BaseProvider):
                 "repo id instead."
             )
 
-        async for chunk in self._stream_pipeline_generation(
-            repo_id=repo_id,
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            top_p=top_p,
-            do_sample=do_sample,
-            context=context,
-            node_id=node_id,
-            quantization=quantization,
-        ):
-            yield chunk
+        async with aclosing(
+            self._stream_pipeline_generation(
+                repo_id=repo_id,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                do_sample=do_sample,
+                context=context,
+                node_id=node_id,
+                quantization=quantization,
+            )
+        ) as stream:
+            async for chunk in stream:
+                yield chunk
 
 
 if __name__ == "__main__":

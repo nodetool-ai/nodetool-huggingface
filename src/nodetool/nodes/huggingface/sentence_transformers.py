@@ -1,3 +1,4 @@
+import asyncio
 import json
 from functools import lru_cache
 from pathlib import Path
@@ -125,7 +126,8 @@ class SplitSentences(BaseNode):
                 f"chunk_overlap must be >= 0, got {self.chunk_overlap}"
             )
 
-        model_max = _model_max_seq_length()
+        # Both may download from the Hub on first use.
+        model_max = await asyncio.to_thread(_model_max_seq_length)
         effective_chunk_size = min(self.chunk_size, model_max)
 
         if self.chunk_overlap >= effective_chunk_size:
@@ -140,8 +142,12 @@ class SplitSentences(BaseNode):
                 f"the effective chunk size ({effective_chunk_size}){capped_note}"
             )
 
-        text = self.document.data
-        tokenizer = _split_tokenizer()
+        if isinstance(self.document.data, str):
+            text = self.document.data
+        else:
+            # Bytes, or a document passed by URI (as the worker does for blobs).
+            text = (await context.asset_to_bytes(self.document)).decode("utf-8")
+        tokenizer = await asyncio.to_thread(_split_tokenizer)
         chunks = _split_text_on_tokens(
             text, tokenizer, effective_chunk_size, self.chunk_overlap
         )

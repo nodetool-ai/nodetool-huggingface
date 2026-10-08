@@ -9,6 +9,8 @@ These nodes run locally and do not require API keys.
 
 from __future__ import annotations
 
+import asyncio
+
 from typing import ClassVar
 
 from pydantic import Field
@@ -155,13 +157,16 @@ class ShapETextTo3D(HuggingFacePipelineNode):
 
         _report_stage(context, self.id, "inference")
         # Generate
-        images = pipeline(
-            self.prompt,
-            guidance_scale=self.guidance_scale,
-            num_inference_steps=self.num_inference_steps,
-            frame_size=self.frame_size,
-            generator=generator,
-            output_type="mesh",
+        images = (
+            await asyncio.to_thread(
+                pipeline,
+                self.prompt,
+                guidance_scale=self.guidance_scale,
+                num_inference_steps=self.num_inference_steps,
+                frame_size=self.frame_size,
+                generator=generator,
+                output_type="mesh",
+            )
         ).images
 
         if not images:

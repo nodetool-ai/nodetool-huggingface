@@ -49,6 +49,7 @@ from nodetool.huggingface.local_provider_utils import (
     _apply_memory_optimizations,
     _detect_cached_variant,
     _ensure_file_cached,
+    _ensure_model_on_device,
     _get_torch,
     _is_cuda_available,
     _is_node_model,
@@ -185,10 +186,18 @@ async def load_text_to_image_pipeline(
         plan = detect_single_file_checkpoint(local_checkpoint)
         cache_key = cache_key or f"text-to-image:local:{local_checkpoint}"
         cached = ModelManager.get_model(cache_key)
-        pipeline = cached or await load_local_single_file_pipeline(
-            local_checkpoint, plan=plan
-        )
         target_device = _resolve_hf_device(context, device or context.device)
+        if cached:
+            # Placement was chosen on the first load. Re-running it with the
+            # weights already resident would see too little free VRAM and
+            # switch a pipeline that fits to CPU offload.
+            from nodetool.huggingface.memory_utils import offload_kind
+
+            return (
+                _ensure_model_on_device(cached, target_device),
+                offload_kind(cached) is not None,
+            )
+        pipeline = await load_local_single_file_pipeline(local_checkpoint, plan=plan)
         use_cpu_offload = _apply_memory_optimizations(
             pipeline,
             target_device,
@@ -209,7 +218,9 @@ async def load_text_to_image_pipeline(
     cache_key = cache_key or f"text-to-image:{model_id}:{model_path or 'repo'}"
     cached = ModelManager.get_model(cache_key)
     if cached:
-        return cached, use_cpu_offload
+        # VRAM reclaim may have moved an idle cached pipeline to the CPU.
+        target_device = _resolve_hf_device(context, device or context.device)
+        return _ensure_model_on_device(cached, target_device), use_cpu_offload
 
     pipeline: Any
 

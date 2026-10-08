@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import tempfile
-from typing import Any
+from contextlib import suppress
+from pathlib import Path
+from typing import Any, Callable
 
 import numpy as np
 from PIL import Image
@@ -11,6 +14,22 @@ from nodetool.media.video.video_utils import export_to_video
 from nodetool.metadata.types import VideoRef
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.workflows.processing_offload import _in_thread
+
+
+async def _mp4_bytes(encode: Callable[[str], Any]) -> bytes:
+    """Run ``encode(path)`` into a closed temp file and return its bytes.
+
+    The file is closed before encoding because Windows cannot reopen a
+    ``NamedTemporaryFile`` that is still open.
+    """
+    fd, path = tempfile.mkstemp(suffix=".mp4")
+    os.close(fd)
+    try:
+        await _in_thread(encode, path)
+        return await asyncio.to_thread(Path(path).read_bytes)
+    finally:
+        with suppress(OSError):
+            os.unlink(path)
 
 
 async def video_from_frames_with_audio(
@@ -52,17 +71,11 @@ async def video_from_frames_with_audio(
         "audio_sample_rate": audio_sample_rate,
     }
 
-    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=True) as temp:
-        await _in_thread(
-            encode_video,
-            frames,
-            fps,
-            temp.name,
-            audio=audio,
-            audio_sample_rate=audio_sample_rate,
+    content = await _mp4_bytes(
+        lambda path: encode_video(
+            frames, fps, path, audio=audio, audio_sample_rate=audio_sample_rate
         )
-        temp.seek(0)
-        content = await asyncio.to_thread(temp.read)
+    )
 
     return await context.video_from_bytes(
         content,
@@ -98,10 +111,7 @@ async def video_from_frames(
         "duration_seconds": frame_count / fps if fps > 0 else None,
     }
 
-    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=True) as temp:
-        await _in_thread(export_to_video, frames, temp.name, fps=fps)
-        temp.seek(0)
-        content = await asyncio.to_thread(temp.read)
+    content = await _mp4_bytes(lambda path: export_to_video(frames, path, fps=fps))
 
     return await context.video_from_bytes(
         content,

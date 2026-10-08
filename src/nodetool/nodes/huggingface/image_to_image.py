@@ -350,6 +350,9 @@ class ImageToImage(HuggingFacePipelineNode):
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
+        else:
+            # A fresh generator starts from a fixed default seed.
+            generator.seed()
 
         input_image = await context.image_to_pil(self.image)
 
@@ -987,6 +990,9 @@ class StableDiffusionUpscale(HuggingFacePipelineNode):
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
+        else:
+            # A fresh generator starts from a fixed default seed.
+            generator.seed()
 
         def _run_pipeline_sync():
             with torch.inference_mode():
@@ -1100,6 +1106,9 @@ class StableDiffusionLatentUpscaler(HuggingFacePipelineNode):
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
+        else:
+            # A fresh generator starts from a fixed default seed.
+            generator.seed()
 
         # Convert TorchTensor to torch.Tensor and ensure device
         low_res_latents = self.latents.to_tensor()
@@ -1675,6 +1684,9 @@ class StableDiffusionXLControlNetImg2ImgNode(StableDiffusionXLImg2Img):
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
+        else:
+            # A fresh generator starts from a fixed default seed.
+            generator.seed()
 
         result = await self.run_pipeline(
             context,
@@ -1811,6 +1823,9 @@ class OmniGenNode(HuggingFacePipelineNode):
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
+        else:
+            # A fresh generator starts from a fixed default seed.
+            generator.seed()
 
         # Convert input images to PIL if provided
         input_images_pil = []
@@ -2177,6 +2192,9 @@ class QwenImageEdit(HuggingFacePipelineNode):
         generator = torch.Generator(device=context.device)
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
+        else:
+            # A fresh generator starts from a fixed default seed.
+            generator.seed()
 
         input_image = await context.image_to_pil(self.image)
 
@@ -2455,6 +2473,9 @@ class FluxFill(HuggingFacePipelineNode):
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
+        else:
+            # A fresh generator starts from a fixed default seed.
+            generator.seed()
 
         input_image = await context.image_to_pil(self.image)
         mask_image = await context.image_to_pil(self.mask_image)
@@ -2754,6 +2775,9 @@ class FluxKontext(HuggingFacePipelineNode):
         generator = torch.Generator(device=context.device)
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
+        else:
+            # A fresh generator starts from a fixed default seed.
+            generator.seed()
 
         input_image = await context.image_to_pil(self.image)
 

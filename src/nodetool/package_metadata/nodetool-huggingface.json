@@ -964,17 +964,6 @@
         },
         {
           "allow_patterns": [
-            "model.bin",
-            "*.json",
-            "*.txt"
-          ],
-          "id": "Systran/faster-whisper-large-v3",
-          "name": "Systran/faster-whisper-large-v3",
-          "repo_id": "Systran/faster-whisper-large-v3",
-          "type": "hf.automatic_speech_recognition"
-        },
-        {
-          "allow_patterns": [
             "model.safetensors",
             "*.json",
             "*.txt"

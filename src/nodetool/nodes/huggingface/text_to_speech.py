@@ -274,7 +274,9 @@ class KokoroTTS(HuggingFacePipelineNode):
         # looked attractive for startup time, but repeat runs could get stuck
         # after cancellation or a previous incomplete synthesis.
         try:
-            self._kpipeline = KPipeline(
+            # Construction downloads and loads the weights; keep it off the loop.
+            self._kpipeline = await asyncio.to_thread(
+                KPipeline,
                 lang_code=self.lang_code,
                 repo_id=self.get_model_id(),
                 device=device if device else None,
@@ -338,8 +340,14 @@ class KokoroTTS(HuggingFacePipelineNode):
         audio_chunks: list[np.ndarray] = []
         chunk_idx = 0
 
+        exhausted = object()
         try:
-            for result in generator:
+            while True:
+                # Each step synthesizes one segment; run it off the event loop
+                # so progress and cancel messages are still processed.
+                result = await asyncio.to_thread(next, generator, exhausted)
+                if result is exhausted:
+                    break
                 if self._is_cancelled(context):
                     raise asyncio.CancelledError("Kokoro synthesis cancelled")
                 audio = result.audio
