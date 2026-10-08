@@ -199,10 +199,6 @@ class Whisper(HuggingFacePipelineNode):
                 repo_id="openai/whisper-small",
                 allow_patterns=["model.safetensors", "*.json", "*.txt"],
             ),
-            HFAutomaticSpeechRecognition(
-                repo_id="Systran/faster-whisper-large-v3",
-                allow_patterns=["model.bin", "*.json", "*.txt"],
-            ),
             # Distil-Whisper: ~6x faster than large-v3 at comparable WER
             HFAutomaticSpeechRecognition(
                 repo_id="distil-whisper/distil-large-v3.5",
@@ -364,11 +360,20 @@ class Whisper(HuggingFacePipelineNode):
         chunks = []
         if self.timestamps != Timestamps.NONE:
             raw_chunks = result.get("chunks", [])
-            SEGMENT_LENGTH = 30.0  # Whisper's default segment length in seconds
+            duration = len(samples) / 16_000
 
             for chunk in raw_chunks:
                 try:
                     timestamp = chunk.get("timestamp")
+                    # The pipeline reports (start, None) for a final chunk
+                    # whose end it could not predict; it ends with the audio.
+                    if (
+                        timestamp
+                        and len(timestamp) == 2
+                        and isinstance(timestamp[0], (int, float))
+                        and timestamp[1] is None
+                    ):
+                        timestamp = (timestamp[0], max(duration, timestamp[0]))
                     if (
                         timestamp
                         and len(timestamp) == 2

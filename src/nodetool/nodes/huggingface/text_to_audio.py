@@ -378,6 +378,9 @@ class AudioLDM(HuggingFacePipelineNode):
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
+        else:
+            # A fresh generator starts from a fixed default seed.
+            generator.seed()
 
         def progress_callback(
             step: int, timestep: int, latents: "torch.FloatTensor"
@@ -528,6 +531,9 @@ class AudioLDM2(HuggingFacePipelineNode):
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
+        else:
+            # A fresh generator starts from a fixed default seed.
+            generator.seed()
 
         def progress_callback(
             step: int, timestep: int, latents: "torch.FloatTensor"
@@ -682,6 +688,9 @@ class DanceDiffusion(HuggingFacePipelineNode):
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
+        else:
+            # A fresh generator starts from a fixed default seed.
+            generator.seed()
 
         audio = await self.run_pipeline_in_thread(
             audio_length_in_s=self.audio_length_in_s,
@@ -779,6 +788,9 @@ class StableAudioNode(HuggingFacePipelineNode):
 
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
+        else:
+            # A fresh generator starts from a fixed default seed.
+            generator.seed()
 
         def progress_callback(
             step: int, timestep: int, latents: "torch.FloatTensor"
@@ -939,6 +951,9 @@ class AceStep(HuggingFacePipelineNode):
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
+        else:
+            # A fresh generator starts from a fixed default seed.
+            generator.seed()
 
         def progress_callback(step: int, timestep: int, latents: Any) -> None:
             context.post_message(
@@ -1111,6 +1126,9 @@ class AceStepTaskBaseNode(HuggingFacePipelineNode):
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
+        else:
+            # A fresh generator starts from a fixed default seed.
+            generator.seed()
 
         def progress_callback(step: int, timestep: int, latents: Any) -> None:
             context.post_message(
@@ -1506,6 +1524,9 @@ class LongCatAudioDiT(HuggingFacePipelineNode):
         generator = torch.Generator(device="cpu")
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
+        else:
+            # A fresh generator starts from a fixed default seed.
+            generator.seed()
 
         def callback_on_step_end(
             pipeline: Any, step: int, timestep: int, callback_kwargs: dict

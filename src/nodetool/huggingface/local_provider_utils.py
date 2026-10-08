@@ -526,7 +526,7 @@ async def load_pipeline(
     vram_error: str | None = None
     model = None
     try:
-        model = _create_pipeline()
+        model = await asyncio.to_thread(_create_pipeline)
     except (ValueError, RuntimeError) as exc:
         if not _is_vram_error(exc):
             raise
@@ -555,7 +555,7 @@ async def load_pipeline(
         )
 
         try:
-            model = _create_pipeline()
+            model = await asyncio.to_thread(_create_pipeline)
             log.info("Successfully loaded pipeline %s after freeing VRAM", model_id)
         except Exception as retry_exc:
             log.error(
@@ -774,11 +774,15 @@ def _is_node_model(model_id: str, model_path: str | None, node_cls: Any) -> bool
 
 
 def pipeline_progress_callback(
-    node_id: str, total_steps: int, context: ProcessingContext
+    node_id: str | None, total_steps: int, context: ProcessingContext
 ):
     def callback(
         pipeline: "Any", step: int, timestep: int, kwargs: dict[str, Any]
     ) -> dict[str, Any]:
+        # Provider calls through the worker carry no node id, and NodeProgress
+        # requires one, so progress is skipped for them.
+        if node_id is None:
+            return kwargs
         context.post_message(
             NodeProgress(
                 node_id=node_id,

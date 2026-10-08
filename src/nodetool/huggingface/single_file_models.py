@@ -266,7 +266,7 @@ def detect_single_file_checkpoint(path: str) -> SingleFileLoadPlan:
     rather than loading the file as something it is not.
     """
     shapes = read_checkpoint_shapes(path)
-    family = detect_family(shapes.keys())
+    family = detect_family(shapes)
     if family is None:
         raise UnknownCheckpointFamily(
             f"Could not identify the model family of {path}. NodeTool reads "

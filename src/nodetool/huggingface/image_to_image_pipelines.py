@@ -38,6 +38,7 @@ import asyncio
 from typing import Any
 
 from nodetool.huggingface.flux_utils import (
+    detect_flux_variant,
     is_nunchaku_flux_transformer,
     is_nunchaku_qwen_transformer,
     is_nunchaku_transformer,
@@ -46,6 +47,7 @@ from nodetool.huggingface.local_provider_utils import (
     _apply_memory_optimizations,
     _detect_cached_variant,
     _ensure_file_cached,
+    _ensure_model_on_device,
     _get_torch,
     _is_cuda_available,
     _is_node_model,
@@ -93,7 +95,9 @@ async def load_image_to_image_pipeline(
     cache_key = cache_key or f"image-to-image:{model_id}:{model_path or 'repo'}"
     cached = ModelManager.get_model(cache_key)
     if cached:
-        return cached, use_cpu_offload
+        # VRAM reclaim may have moved an idle cached pipeline to the CPU.
+        target_device = _resolve_hf_device(context, device or context.device)
+        return _ensure_model_on_device(cached, target_device), use_cpu_offload
 
     pipeline: Any
 
@@ -167,11 +171,21 @@ async def load_image_to_image_pipeline(
             )
             use_cpu_offload = True
         elif is_nunchaku_flux_transformer(model_id, model_path):
+            pipeline_class = None
+            if detect_flux_variant(model_id, model_path) in ("dev", "schnell"):
+                # The variant default is the text-to-image FluxPipeline, which
+                # takes no input image.
+                from diffusers.pipelines.flux.pipeline_flux_img2img import (
+                    FluxImg2ImgPipeline,
+                )
+
+                pipeline_class = FluxImg2ImgPipeline
             pipeline = await load_nunchaku_flux_pipeline(
                 context=context,
                 repo_id=model_id,
                 transformer_path=model_path,
                 node_id=node_id,
+                pipeline_class=pipeline_class,
             )
         else:
             model_info = await fetch_model_info(model_id)
