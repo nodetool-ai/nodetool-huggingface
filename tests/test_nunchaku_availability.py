@@ -29,3 +29,18 @@ def test_check_nunchaku_available_accepts_svdquant_runtime(monkeypatch):
     monkeypatch.setitem(sys.modules, "nunchaku", fake)
 
     assert nunchaku_pipelines._check_nunchaku_available() is True
+
+
+def test_missing_nunchaku_error_gives_a_real_install_path(monkeypatch):
+    """The error used to point at a Package Manager entry that does not exist."""
+    import pytest
+
+    from nodetool.huggingface import nunchaku_pipelines
+
+    monkeypatch.setattr(nunchaku_pipelines, "NUNCHAKU_AVAILABLE", False)
+    with pytest.raises(ImportError) as excinfo:
+        nunchaku_pipelines._require_nunchaku()
+    message = str(excinfo.value)
+    assert "package manager" not in message.lower()
+    assert "github.com/nunchaku-ai/nunchaku/releases" in message
+    assert "--no-build-isolation" in message

@@ -37,6 +37,24 @@ log = get_logger(__name__)
 NUNCHAKU_AVAILABLE: bool | None = None
 
 
+# The NodeTool package manager has no nunchaku entry, and PyPI's "nunchaku" is
+# an unrelated project, so the only install path is a manual one.
+NUNCHAKU_INSTALL_HINT = (
+    "Nunchaku (SVDQuant) models need the nunchaku runtime, which NodeTool does "
+    "not install. It runs on NVIDIA GPUs only (Linux or Windows) and must match "
+    "the installed torch, CUDA and Python versions. Into the NodeTool Python "
+    "environment, either install a wheel from "
+    "https://github.com/nunchaku-ai/nunchaku/releases whose name matches "
+    "`+cu<CUDA>torch<torch major.minor>-cp<python>` for your setup, or, when no "
+    "wheel matches the installed torch, build it against that torch with the "
+    "CUDA toolkit installed: `pip install --no-build-isolation "
+    "git+https://github.com/nunchaku-ai/nunchaku@v1.2.1`. "
+    "See requirements/nunchaku.txt in nodetool-huggingface. Do not run "
+    "`pip install nunchaku`: that PyPI package is an unrelated project. "
+    "Without nunchaku, use the non-Nunchaku variant of the model."
+)
+
+
 def _check_nunchaku_available() -> bool:
     """Check if the SVDQuant nunchaku runtime is available (lazy check)."""
     global NUNCHAKU_AVAILABLE
@@ -59,11 +77,7 @@ def is_nunchaku_available() -> bool:
 def _require_nunchaku() -> None:
     """Raise an error if nunchaku is not available."""
     if not _check_nunchaku_available():
-        raise ImportError(
-            "The SVDQuant nunchaku runtime is required for this operation but is not installed. "
-            "Install it from the NodeTool package manager (nunchaku-ai/nunchaku) or from the "
-            "NodeTool registry wheel index. Do not install the unrelated PyPI 'nunchaku' package."
-        )
+        raise ImportError(NUNCHAKU_INSTALL_HINT)
 
 
 async def get_nunchaku_text_encoder(
