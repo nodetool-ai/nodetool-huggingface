@@ -44,4 +44,9 @@ uv run pytest -q
 After changing dependencies in `pyproject.toml`, run `uv lock` and commit
 `uv.lock`.
 
+A release bump changes the version in `pyproject.toml`, `ARG HF_VERSION` in
+`Dockerfile` and both `HF_VERSION` values in `docker-compose.yaml`, then runs
+`uv lock` and `uv run nodetool-pkg scan --write` and commits the results. The
+publish workflow refuses a tag whose files disagree.
+
 Formatting issues or lint errors should be fixed before committing. Test coverage is expected to be added when applicable.
