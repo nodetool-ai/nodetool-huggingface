@@ -68,6 +68,25 @@ def _is_mps_available() -> bool:
         return False
 
 
+def _select_pipeline_dtype(prefer_bf16: bool) -> Any:
+    """Pick the load dtype for a provider pipeline, matching the nodes' rule.
+
+    CUDA: bfloat16 when the model prefers it and the GPU supports it, else
+    float16 (pre-Ampere cards emulate or reject bf16). MPS: float16, so a 12B
+    FLUX transformer does not load in float32. CPU: float32.
+    """
+    torch = _get_torch()
+    if _is_cuda_available():
+        if prefer_bf16:
+            is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
+            if callable(is_bf16_supported) and is_bf16_supported():
+                return torch.bfloat16
+        return torch.float16
+    if _is_mps_available():
+        return torch.float16
+    return torch.float32
+
+
 def _resolve_hf_device(
     context: ProcessingContext,
     requested_device: str | None = None,
