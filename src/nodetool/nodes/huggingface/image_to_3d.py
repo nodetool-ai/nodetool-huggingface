@@ -672,8 +672,12 @@ class StableFast3D(HuggingFacePipelineNode):
         "it builds C++/CUDA extensions (`texture_baker`, `uv_unwrapper`) at install "
         "time and needs a working compiler toolchain (and the CUDA toolkit on "
         "Linux/Windows for GPU support). "
-        "Run: `pip install -r requirements/sf3d.txt` from the nodetool-huggingface "
-        "repo. See https://github.com/Stability-AI/stable-fast-3d for upstream docs."
+        "The upstream repository has no Python packaging, so it is cloned and "
+        "added to the import path. Follow the two steps in requirements/sf3d.txt "
+        "in the nodetool-huggingface repo: `pip install --no-build-isolation -r "
+        "requirements/sf3d.txt`, then clone stable-fast-3d at the pinned commit "
+        "and register it with a .pth file. "
+        "See https://github.com/Stability-AI/stable-fast-3d for upstream docs."
     )
 
     class OutputFormat(str, Enum):
@@ -922,8 +926,12 @@ class TripoSR(HuggingFacePipelineNode):
         "Manual install required (terminal). The `tsr` package is not on PyPI "
         "and depends on `torchmcubes`, a C++ extension that needs a compiler "
         "toolchain (and CUDA for fast GPU marching cubes). "
-        "Run: `pip install -r requirements/triposr.txt` from the "
-        "nodetool-huggingface repo. "
+        "The upstream repository has no Python packaging, so it is cloned and "
+        "added to the import path. Follow the steps in requirements/triposr.txt "
+        "in the nodetool-huggingface repo: install torchmcubes and the runtime "
+        "dependencies with `pip install --no-build-isolation -r "
+        "requirements/triposr.txt`, then clone TripoSR at the pinned commit and "
+        "register it with a .pth file. "
         "See https://github.com/VAST-AI-Research/TripoSR for upstream docs."
     )
 
@@ -1151,8 +1159,10 @@ class Trellis2(HuggingFacePipelineNode):
         "Neither `trellis2` nor `o_voxel` is on PyPI; `o_voxel` builds CUDA C++ "
         "extensions at install time and needs the CUDA toolkit (`nvcc`) plus a "
         "C++ compiler. A 24 GB+ GPU is required at runtime. "
-        "Run: `pip install -r requirements/trellis2.txt` from the "
-        "nodetool-huggingface repo. "
+        "The upstream repository has no Python packaging; its setup.sh builds the "
+        "extensions. Follow the steps in requirements/trellis2.txt in the "
+        "nodetool-huggingface repo (clone at the pinned commit, run setup.sh "
+        "without --new-env, register the clone with a .pth file). "
         "See https://github.com/microsoft/TRELLIS.2 for upstream docs."
     )
 

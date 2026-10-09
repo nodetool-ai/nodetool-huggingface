@@ -1,12 +1,35 @@
-# Pinned requirements for Stability AI SF3D (Stable Fast 3D)
-#
-# SF3D is not published to PyPI. Install from the upstream git repo.
-# The texture_baker and uv_unwrapper sub-packages must be built separately
-# (they contain C++/CUDA extensions).
+# Stability AI SF3D (Stable Fast 3D) for the StableFast3D node.
 #
 # Repository: https://github.com/Stability-AI/stable-fast-3d
 # License:    Stability AI Community License (free < $1M revenue)
-# Pinned:     2025-01-22
+# Pinned:     ff21fc491b4dc5314bf6734c7c0dabd86b5f5bb2 (2025-01-22)
+#
+# The repository root has no setup.py or pyproject.toml, so `sf3d` itself
+# cannot be pip-installed. Install it in two steps, inside the NodeTool Python
+# environment:
+#
+# 1. Install the compiled helpers and runtime dependencies listed below. Their
+#    setup.py files import torch, so build them against the installed torch
+#    (a C++ compiler is required, and the CUDA toolkit for GPU support):
+#      pip install --no-build-isolation -r requirements/sf3d.txt
+#
+# 2. Clone the source at the pinned commit and put it on the import path with a
+#    .pth file:
+#      git clone https://github.com/Stability-AI/stable-fast-3d
+#      git -C stable-fast-3d checkout ff21fc491b4dc5314bf6734c7c0dabd86b5f5bb2
+#      python -c "import pathlib, sys, sysconfig; pathlib.Path(sysconfig.get_paths()['purelib'], 'stable-fast-3d.pth').write_text(str(pathlib.Path(sys.argv[1]).resolve()))" stable-fast-3d
+#
+# Upstream's requirements.txt pins old versions (transformers 4.42, numpy 1.26,
+# huggingface-hub 0.23) that conflict with this package, so the runtime
+# dependencies below are unpinned.
 
-sf3d @ git+https://github.com/Stability-AI/stable-fast-3d.git@ff21fc491b4dc5314bf6734c7c0dabd86b5f5bb2
+texture_baker @ git+https://github.com/Stability-AI/stable-fast-3d@ff21fc491b4dc5314bf6734c7c0dabd86b5f5bb2#subdirectory=texture_baker
+uv_unwrapper @ git+https://github.com/Stability-AI/stable-fast-3d@ff21fc491b4dc5314bf6734c7c0dabd86b5f5bb2#subdirectory=uv_unwrapper
+einops
+jaxtyping
+omegaconf
+open_clip_torch
+trimesh
+pynanoinstantmeshes
+gpytoolbox
 rembg

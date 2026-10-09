@@ -178,18 +178,18 @@ triposg = [
     "rembg ; platform_system != 'Darwin'",
 ]
 
-# Git-only stacks — the upstream packages (sf3d, tsr, o_voxel) are NOT on
-# PyPI.  Install them from the pinned requirement files in requirements/
-# (e.g. `pip install -r requirements/sf3d.txt`).  The extras here list only
-# the PyPI-available companion deps so `pip install nodetool-huggingface[sf3d]`
-# still pulls in what it can.  See D5 in FIX-MODEL3D.md.
+# Git-only stacks — sf3d, tsr and trellis2 are NOT on PyPI and their upstream
+# repositories have no Python packaging. requirements/{sf3d,triposr,trellis2}.txt
+# document the manual install (compiled helpers, then a clone on the import
+# path).  The extras here list only the PyPI-available companion deps so
+# `pip install nodetool-huggingface[sf3d]` still pulls in what it can.
 sf3d = ["rembg"]
 triposr = ["rembg"]
 # TRELLIS.2 (trellis2, o_voxel) has no PyPI-available companion dependency —
 # both packages themselves are git-only (requirements/trellis2.txt) and o_voxel
 # builds CUDA C++ extensions at install time, which PyPI extras cannot express.
 # There is deliberately no `trellis2` extra: the node's own INSTALL_HINT points
-# at `pip install -r requirements/trellis2.txt`, never at this extras group.
+# at the steps in requirements/trellis2.txt, never at this extras group.
 
 # Always installable — Shap-E only needs diffusers (already in core deps)
 shape = []
