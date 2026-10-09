@@ -30,6 +30,9 @@ on:
 
 env:
   PACKAGE_NAME: ${{ github.event.repository.name }} # e.g., "nodetool-base"
+  # build.py comes from a nodetool-core release tag, never from main, so a
+  # release of this package is reproducible. Bump it deliberately.
+  CORE_BUILD_REF: v0.8.1
 
 jobs:
   validate:
@@ -81,24 +84,39 @@ jobs:
 
       - name: Download build helper
         run: |
-          curl -fsSL https://raw.githubusercontent.com/nodetool-ai/nodetool-core/main/build.py -o build.py
+          curl -fsSL "https://raw.githubusercontent.com/nodetool-ai/nodetool-core/${CORE_BUILD_REF}/build.py" -o build.py
 
-      - name: Build wheel
+      - name: Check version
         run: |
-          echo "🏗️ Building wheel for ${{ env.PACKAGE_NAME }}"
-          python build.py build-wheel --expected-version "${{ needs.validate.outputs.version }}"
+          python - <<'PY'
+          import tomllib
+          actual = tomllib.load(open("pyproject.toml", "rb"))["project"]["version"]
+          expected = "${{ needs.validate.outputs.version }}"
+          if actual != expected:
+              raise SystemExit(f"Version mismatch: pyproject.toml has {actual}, expected {expected}")
+          PY
 
-      - name: Validate wheel
+      # One build produces every file that ships: the GitHub Release and PyPI
+      # both receive these exact files.
+      - name: Build sdist and wheel
         run: |
-          python build.py validate-wheel
+          echo "🏗️ Building ${{ env.PACKAGE_NAME }}"
+          rm -rf dist
+          python -m build --sdist --wheel --outdir dist .
+          python build.py sidecar
 
-      - name: Upload wheel artifact
+      - name: Validate distributions
+        run: |
+          twine check dist/*.whl dist/*.tar.gz
+
+      - name: Upload dist artifact
         uses: actions/upload-artifact@v7
         with:
-          name: wheel-${{ env.PACKAGE_NAME }}-${{ needs.validate.outputs.version }}
+          name: dist-${{ env.PACKAGE_NAME }}-${{ needs.validate.outputs.version }}
           path: |
             dist/*.whl
             dist/*.whl.metadata
+            dist/*.tar.gz
           retention-days: 30
 
   create-release:
@@ -114,12 +132,12 @@ jobs:
 
       - name: Download build helper
         run: |
-          curl -fsSL https://raw.githubusercontent.com/nodetool-ai/nodetool-core/main/build.py -o build.py
+          curl -fsSL "https://raw.githubusercontent.com/nodetool-ai/nodetool-core/${CORE_BUILD_REF}/build.py" -o build.py
 
-      - name: Download wheel artifact
+      - name: Download dist artifact
         uses: actions/download-artifact@v8
         with:
-          name: wheel-${{ env.PACKAGE_NAME }}-${{ needs.validate.outputs.version }}
+          name: dist-${{ env.PACKAGE_NAME }}-${{ needs.validate.outputs.version }}
           path: dist/
 
       - name: Generate release notes
@@ -181,21 +199,16 @@ jobs:
     permissions:
       id-token: write # required for OIDC trusted publishing
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - name: Download dist artifact
+        uses: actions/download-artifact@v8
         with:
-          ref: ${{ needs.validate.outputs.tag-name }}
+          name: dist-${{ env.PACKAGE_NAME }}-${{ needs.validate.outputs.version }}
+          path: dist/
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          python-version: "3.11"
-
-      - name: Build sdist + wheel
-        run: uv build
-
-      - name: Validate distributions
-        run: uvx twine check dist/*
+      # PyPI accepts only distributions; the .metadata sidecar is for the
+      # GitHub Release.
+      - name: Drop the metadata sidecar
+        run: rm -f dist/*.metadata
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -211,18 +224,14 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - name: Download dist artifact
+        uses: actions/download-artifact@v8
         with:
-          ref: ${{ needs.validate.outputs.tag-name }}
+          name: dist-${{ env.PACKAGE_NAME }}-${{ needs.validate.outputs.version }}
+          path: dist/
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          python-version: "3.11"
-
-      - name: Build sdist + wheel
-        run: uv build
+      - name: Drop the metadata sidecar
+        run: rm -f dist/*.metadata
 
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
