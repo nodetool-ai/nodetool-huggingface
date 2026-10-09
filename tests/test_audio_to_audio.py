@@ -5,11 +5,13 @@ downloaded and no real inference runs.
 """
 
 import asyncio
+import os
 import sys
 from pathlib import Path
 
 import numpy as np
 import pytest
+from huggingface_hub import constants as hf_constants
 
 if __package__ is None or __package__ == "":
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -138,7 +140,7 @@ def test_sample_rate_falls_back_to_repo_id():
 
 
 def test_savedir_is_under_hf_cache(monkeypatch, tmp_path):
-    monkeypatch.setenv("HUGGINGFACE_HUB_CACHE", str(tmp_path))
+    monkeypatch.setattr(hf_constants, "HF_HUB_CACHE", str(tmp_path))
     savedir = _speechbrain_savedir("speechbrain/sepformer-wsj02mix")
     assert savedir == str(tmp_path / "speechbrain" / "speechbrain--sepformer-wsj02mix")
 
@@ -269,7 +271,7 @@ def test_process_rejects_empty_audio():
 
 
 def test_preload_model_uses_context_device_and_cache(monkeypatch, tmp_path):
-    monkeypatch.setenv("HUGGINGFACE_HUB_CACHE", str(tmp_path))
+    monkeypatch.setattr(hf_constants, "HF_HUB_CACHE", str(tmp_path))
     captured: dict = {}
 
     class _FakeSepformerClass:
@@ -299,3 +301,11 @@ def test_move_to_device_is_a_noop():
     node._model = sentinel
     asyncio.run(node.move_to_device("cpu"))
     assert node._model is sentinel
+
+
+def test_hf_home_is_not_mistaken_for_the_hub_cache(monkeypatch, tmp_path):
+    """HF_HOME is the parent of hub/; checkpoints must land beside the hub cache."""
+    monkeypatch.setenv("HF_HOME", str(tmp_path))
+    monkeypatch.setattr(hf_constants, "HF_HUB_CACHE", str(tmp_path / "hub"))
+    savedir = _speechbrain_savedir("speechbrain/sepformer-wsj02mix")
+    assert savedir.startswith(str(tmp_path / "hub") + os.sep)
