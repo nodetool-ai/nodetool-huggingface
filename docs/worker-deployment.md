@@ -28,7 +28,7 @@ web UI ──ws──► TS server (host :7777) ──► createPythonBridge()
 ## Prerequisites
 
 - **Docker** with Compose v2 (`docker compose`, not `docker-compose`).
-- A **NodeTool TS server** checkout (the `nodetool2` repo) to act as the front end and
+- A **NodeTool TS server** checkout (the `nodetool` repo) to act as the front end and
   bridge client.
 - For the `nodetool-core:local` base image: the **`nodetool-core`** sibling repo
   checked out at `../nodetool-core` (relative to this repo). The published
@@ -51,23 +51,21 @@ The HF image installs the released `nodetool-huggingface` package from PyPI and 
 # 1. Build the base worker image (from the nodetool-core sibling repo).
 make build-core
 #   docker build -t nodetool-core:local ../nodetool-core
-#
-#   Alternatively, pull a published image and re-tag it:
-#     docker pull ghcr.io/nodetool-ai/nodetool:<tag>
-#     docker tag  ghcr.io/nodetool-ai/nodetool:<tag> nodetool-core:local
 
 # 2. Build the HuggingFace worker image on top of it.
 make build-hf
 #   docker build -t nodetool-hf:local --build-arg CORE_IMAGE=nodetool-core:local .
 ```
 
-`HF_VERSION` (default `0.7.5`) pins the PyPI release. To build a different version,
-pass it through Docker directly:
+`HF_VERSION` pins the PyPI release. It defaults to this checkout's version (the
+`version` in `pyproject.toml`), and `docker-compose.yaml` uses the same value. Release
+0.8.2 and newer install torch 2.14. To build a different version, pass it through
+Docker directly:
 
 ```bash
 docker build -t nodetool-hf:local \
   --build-arg CORE_IMAGE=nodetool-core:local \
-  --build-arg HF_VERSION=0.7.5 .
+  --build-arg HF_VERSION=<version> .
 ```
 
 Base HF dependencies only — optional extras (`ocr`, `hunyuan3d`, `triposg`, …) are not
@@ -114,7 +112,7 @@ This is not usable on macOS Docker.
 
 Setting `NODETOOL_WORKER_URL` switches the whole TS server onto the remote worker:
 `createPythonBridge()` returns a reconnecting `WebsocketPythonBridge` instead of
-spawning a local stdio worker. Start the server (in the `nodetool2` repo) with:
+spawning a local stdio worker. Start the server (in the `nodetool` repo) with:
 
 ```bash
 NODETOOL_WORKER_URL=ws://localhost:8787 \
