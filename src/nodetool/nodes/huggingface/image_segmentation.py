@@ -119,6 +119,19 @@ class Segmentation(HuggingFacePipelineNode):
         return await asyncio.gather(*[convert_output(item) for item in result])
 
 
+# `sam2` is an optional extra: it ships only as an sdist that compiles against
+# torch, so it is not part of the base install.
+SAM2_INSTALL_HINT = (
+    "SAM2 Segmentation needs Meta's `sam2` package, which is not installed by "
+    "default because it compiles against torch at install time. Install it into "
+    "the NodeTool Python environment, building against the installed torch: "
+    '`pip install --no-build-isolation "nodetool-huggingface[sam2]"` '
+    "(with uv: `uv pip install --no-build-isolation-package sam2 "
+    '"nodetool-huggingface[sam2]"`). The Mask Generation (SAM) node runs '
+    "SAM 2.1 through transformers and needs no extra package."
+)
+
+
 class SAM2Segmentation(HuggingFacePipelineNode):
     """
     Performs automatic instance segmentation using Meta's Segment Anything Model 2 (SAM2).
@@ -173,8 +186,10 @@ class SAM2Segmentation(HuggingFacePipelineNode):
         return self.model.repo_id
 
     async def preload_model(self, context: ProcessingContext):
-        import torch
-        from sam2.sam2_image_predictor import SAM2ImagePredictor
+        try:
+            from sam2.sam2_image_predictor import SAM2ImagePredictor
+        except ImportError as exc:
+            raise ImportError(SAM2_INSTALL_HINT) from exc
 
         torch_dtype = available_torch_dtype()
         self._pipeline = await self.load_model(

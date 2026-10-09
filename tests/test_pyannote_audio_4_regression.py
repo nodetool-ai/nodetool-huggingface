@@ -58,7 +58,7 @@ from nodetool.nodes.huggingface.speaker_diarization import (  # noqa: E402
 # The last pyannote.audio release whose import breaks on torchaudio 2.9.
 LAST_BROKEN_PYANNOTE = (3, 4, 0)
 # 4.0.2 and 4.0.3 pin torch==2.8.0 / torchaudio==2.8.0, which contradicts this
-# package's torch==2.9.0. 4.0.4 relaxed them back to >=2.8.0.
+# package's torch. 4.0.4 relaxed them back to >=2.8.0.
 FIRST_USABLE_PYANNOTE = (4, 0, 4)
 
 
@@ -89,15 +89,24 @@ def test_pyannote_floor_excludes_every_release_that_reads_audiometadata():
     )
     assert floor >= FIRST_USABLE_PYANNOTE, (
         "pyannote.audio 4.0.2 and 4.0.3 pin torch==2.8.0, which contradicts "
-        "this package's torch==2.9.0"
+        "this package's torch"
     )
 
 
+# torchcodec 0.12 is the first release built on the libtorch stable ABI; each
+# release before it matched exactly one torch minor version.
+FIRST_STABLE_ABI_TORCHCODEC = (0, 12)
+
+
 def test_torchcodec_is_declared_for_pyannote_4s_audio_io():
-    """pyannote.audio 4 decodes through torchcodec, which links against libtorch."""
+    """pyannote.audio 4 decodes through torchcodec, which links against libtorch.
+
+    A floor is enough only while it excludes the releases that were each built
+    for one torch minor version.
+    """
     requirement = _requirement("torchcodec")
-    assert "==" in requirement, (
-        f"torchcodec must be pinned to the torch 2.9 build, got {requirement!r}"
+    assert _floor(requirement) >= FIRST_STABLE_ABI_TORCHCODEC, (
+        f"torchcodec floor must exclude pre-stable-ABI builds, got {requirement!r}"
     )
 
 

@@ -25,7 +25,6 @@ from nodetool.workflows.types import NodeProgress
 
 if TYPE_CHECKING:
     import torch
-    import torchaudio
     from diffusers.pipelines.audioldm2.pipeline_audioldm2 import AudioLDM2Pipeline
     from diffusers import AudioLDMPipeline
     from diffusers.pipelines.pipeline_utils import DiffusionPipeline

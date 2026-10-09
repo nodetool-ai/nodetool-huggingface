@@ -12,31 +12,42 @@ requires-python = ">=3.11"
 
 dependencies = [
     "nodetool-core>=0.8.1",
-    "torch==2.9.0",
+    # torch 2.14 is the stack-wide target: nodetool-mlx's mflux needs
+    # torch>=2.13, and the desktop installer resolves this pack and MLX into
+    # one environment. A floor range, not `==`, so the installer's CUDA index
+    # can satisfy it with a `+cuXXX` local build.
+    "torch>=2.14,<2.15",
     "torchsde",
-    "torchvision==0.24.0",
-    "torchaudio==2.9.0",
+    "torchvision>=0.29,<0.30",
+    # torchaudio lags torch (2.11 is the newest release). Nothing in this
+    # package imports it, but pyannote.audio and speechbrain both declare it.
+    # Since 2.11 its wheels carry no torch pin, and its remaining extension
+    # is built on the libtorch stable ABI, so it loads under torch 2.14.
+    "torchaudio>=2.11",
     "hf_xet",
     "kokoro>=0.9.4",
-    # MiniMax-H3 is not included in Diffusers 0.39.0 yet. Keep released package
-    # dependencies publishable; use requirements/hf-latest.txt for local
-    # MiniMax-H3 testing until the integration reaches a Diffusers release.
-    "diffusers[torch]>=0.39.0,<1",
-    "llama-index-embeddings-huggingface>=0.6.1",
-    "transformers>=5.15.0,<6",
-    "mistral-common[image]>=1.10.0,<2",
-    "huggingface_hub>=1.11.0,<2",
-    "accelerate>=1.13.0,<2",
-    "safetensors>=0.7.0,<1",
-    "tokenizers>=0.22.2,<1",
-    "peft>=0.19.1,<1",
+    # Keep released package dependencies publishable; use
+    # requirements/hf-latest.txt to test integrations that exist only on the
+    # transformers/diffusers main branches.
+    "diffusers[torch]>=0.41.0,<1",
+    "llama-index-embeddings-huggingface>=0.8.0",
+    "transformers>=5.19.0,<6",
+    "mistral-common[image]>=1.12.0,<2",
+    # diffusers 0.41 caps huggingface_hub below 2.0, so hub 2.x cannot be used
+    # here yet.
+    "huggingface_hub>=1.33.0,<2",
+    "accelerate>=1.15.0,<2",
+    "safetensors>=0.8.0,<1",
+    "tokenizers>=0.23.3,<1",
+    "peft>=0.21.2,<1",
     "sentencepiece",
     # PyAV: muxing generated video with its generated soundtrack, and decoding
     # MiniMax-H3 reference media at the rates the container reports.
     "av",
     "pydub>=0.25.1",
-    "sam2",
-    "accelerate",
+    # sam2 is NOT here: it ships only as an sdist that compiles against torch
+    # in an isolated build, so a plain install downloaded a second torch just
+    # to build it. It lives in the `sam2` extra. See that extra for details.
     "qwen-vl-utils",
     "bitsandbytes",
     "timm",
@@ -49,14 +60,13 @@ dependencies = [
     # 4.0 is required, not preferred: pyannote.audio 3.x does
     # `from torchaudio import AudioMetaData` at import time and torchaudio 2.9
     # removed the symbol, so `import pyannote.audio` raises AttributeError.
-    # 4.0 switched audio I/O to torchcodec and dropped the reference. The floor
-    # is 4.0.4 because 4.0.2 and 4.0.3 pin `torch==2.8.0` and
-    # `torchaudio==2.8.0`, which contradict this package's torch 2.9.
-    "pyannote.audio>=4.0.4,<5",
-    # pyannote.audio 4 decodes audio through torchcodec. Pin it to the build
-    # that matches torch 2.9 -- torchcodec links against libtorch, and pip
-    # would otherwise resolve a wheel built for a newer torch.
-    "torchcodec==0.9.1",
+    # 4.0 switched audio I/O to torchcodec and dropped the reference. 4.0.2 and
+    # 4.0.3 pin `torch==2.8.0`; 4.0.7 declares only `torch>=2.8.0`.
+    "pyannote.audio>=4.0.7,<5",
+    # pyannote.audio 4 decodes audio through torchcodec. torchcodec 0.12 and
+    # later build on the libtorch stable ABI and support every torch >= 2.11,
+    # so a floor is enough; before 0.12 each release matched one torch minor.
+    "torchcodec>=0.17",
     "speechbrain>=1.0,<2",
     # transformers' document-question-answering pipeline runs Tesseract OCR
     # itself whenever it is handed an image without word_boxes, which is the
@@ -122,7 +132,22 @@ dependencies = [
     #   to marching cubes, so it stays in the triposg extra.
 ]
 
+[project.urls]
+Repository = "https://github.com/nodetool-ai/nodetool-huggingface"
+
+# The worker's node loader reads this group. The value is the comma-separated
+# list of namespaces under src/nodetool/nodes/ (what the directory scan yields).
+[project.entry-points."nodetool.namespaces"]
+huggingface = "huggingface"
+
 [project.optional-dependencies]
+# SAM2Segmentation runs Meta's `sam2` package. It ships only as an sdist whose
+# build imports torch and compiles a CUDA extension, so it is kept out of the
+# base install. Build it against the torch that is already installed:
+#   pip install --no-build-isolation "nodetool-huggingface[sam2]"
+#   uv pip install --no-build-isolation-package sam2 "nodetool-huggingface[sam2]"
+# MaskGeneration covers SAM 2.1 through transformers without this package.
+sam2 = ["sam2>=1.1.0"]
 ocr = [
     "paddleocr",
     "paddlepaddle",
@@ -173,6 +198,17 @@ shape = []
 all-3d-pypi = ["nodetool-huggingface[hunyuan3d,triposg]"]
 all-3d = ["nodetool-huggingface[hunyuan3d,triposg,sf3d,triposr]"]
 
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.10",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/nodetool", "src/RealESRGAN", "src/triposg"]
 include = [
@@ -212,7 +248,10 @@ nodetool = [
 
 [tool.uv.extra-build-dependencies]
 # diso imports torch from setup.py but does not declare its build requirements.
-diso = ["setuptools", "torch"]
+# match-runtime builds it (and sam2) against the torch the environment resolves
+# instead of whatever torch an isolated build would download.
+diso = ["setuptools", { requirement = "torch", match-runtime = true }]
+sam2 = [{ requirement = "torch", match-runtime = true }]
 
 [tool.ruff]
 # Exclude auto-generated files and notebooks.
