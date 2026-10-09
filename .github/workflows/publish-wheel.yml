@@ -31,7 +31,9 @@ on:
 env:
   PACKAGE_NAME: ${{ github.event.repository.name }} # e.g., "nodetool-base"
   # build.py comes from a nodetool-core release tag, never from main, so a
-  # release of this package is reproducible. Bump it deliberately.
+  # release of this package is reproducible. Bump it deliberately. It is saved
+  # as nodetool_build.py because a build.py in the repo root would shadow
+  # `python -m build`.
   CORE_BUILD_REF: v0.8.1
 
 jobs:
@@ -84,7 +86,7 @@ jobs:
 
       - name: Download build helper
         run: |
-          curl -fsSL "https://raw.githubusercontent.com/nodetool-ai/nodetool-core/${CORE_BUILD_REF}/build.py" -o build.py
+          curl -fsSL "https://raw.githubusercontent.com/nodetool-ai/nodetool-core/${CORE_BUILD_REF}/build.py" -o nodetool_build.py
 
       - name: Check version
         run: |
@@ -103,7 +105,7 @@ jobs:
           echo "🏗️ Building ${{ env.PACKAGE_NAME }}"
           rm -rf dist
           python -m build --sdist --wheel --outdir dist .
-          python build.py sidecar
+          python nodetool_build.py sidecar
 
       - name: Validate distributions
         run: |
@@ -132,7 +134,7 @@ jobs:
 
       - name: Download build helper
         run: |
-          curl -fsSL "https://raw.githubusercontent.com/nodetool-ai/nodetool-core/${CORE_BUILD_REF}/build.py" -o build.py
+          curl -fsSL "https://raw.githubusercontent.com/nodetool-ai/nodetool-core/${CORE_BUILD_REF}/build.py" -o nodetool_build.py
 
       - name: Download dist artifact
         uses: actions/download-artifact@v8
@@ -142,7 +144,7 @@ jobs:
 
       - name: Generate release notes
         run: |
-          python build.py release-notes \
+          python nodetool_build.py release-notes \
             --package "${{ env.PACKAGE_NAME }}" \
             --version "${{ needs.validate.outputs.version }}" \
             --tag "${{ needs.validate.outputs.tag-name }}" \
@@ -170,7 +172,7 @@ jobs:
           REGISTRY_UPDATE_TOKEN: ${{ secrets.REGISTRY_UPDATE_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python build.py notify-registry \
+          python nodetool_build.py notify-registry \
             --package "${{ env.PACKAGE_NAME }}" \
             --version "${{ needs.validate.outputs.version }}" \
             --tag "${{ needs.validate.outputs.tag-name }}" \
@@ -179,7 +181,7 @@ jobs:
 
       - name: Create success summary
         run: |
-          python build.py summary \
+          python nodetool_build.py summary \
             --package "${{ env.PACKAGE_NAME }}" \
             --version "${{ needs.validate.outputs.version }}" \
             --tag "${{ needs.validate.outputs.tag-name }}" \
