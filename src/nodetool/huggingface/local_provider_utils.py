@@ -819,13 +819,19 @@ def _apply_vae_optimizations(pipeline: Any, enable_tiling: bool = False):
 _VRAM_HEADROOM_GB = 2.0
 
 
-def _cuda_free_vram_gb() -> float:
-    """Free VRAM on the current CUDA device in GiB, 0.0 when CUDA is absent."""
+def _cuda_free_vram_gb(device: str | None = None) -> float:
+    """Free VRAM in GiB on ``device`` (default: the resolved torch device).
+
+    Returns 0.0 when CUDA is absent. A device without an index, or a non-CUDA
+    device, reads the current CUDA device.
+    """
     try:
         torch = _get_torch()
         if not _is_cuda_available():
             return 0.0
-        free_bytes, _total = torch.cuda.mem_get_info()
+        from nodetool.huggingface.memory_utils import offload_gpu_id
+
+        free_bytes, _total = torch.cuda.mem_get_info(offload_gpu_id(device))
         return free_bytes / (1024**3)
     except Exception:
         return 0.0
@@ -886,7 +892,7 @@ def _apply_memory_optimizations(
     sizes = _pipeline_component_sizes_gb(pipeline)
     total_gb = sum(sizes)
     largest_gb = max(sizes, default=0.0)
-    budget_gb = max(_cuda_free_vram_gb() - _VRAM_HEADROOM_GB, 0.0)
+    budget_gb = max(_cuda_free_vram_gb(device) - _VRAM_HEADROOM_GB, 0.0)
 
     if not force_cpu_offload and total_gb <= budget_gb:
         _apply_vae_optimizations(pipeline)
@@ -902,7 +908,7 @@ def _apply_memory_optimizations(
         )
         # Tiling keeps the VAE decode within budget at high resolutions.
         _apply_vae_optimizations(pipeline, enable_tiling=True)
-        apply_cpu_offload_if_needed(pipeline, method="model")
+        apply_cpu_offload_if_needed(pipeline, method="model", device=device)
         return True
 
     if hasattr(pipeline, "enable_sequential_cpu_offload"):
@@ -913,7 +919,7 @@ def _apply_memory_optimizations(
             budget_gb,
         )
         _apply_vae_optimizations(pipeline, enable_tiling=True)
-        apply_cpu_offload_if_needed(pipeline, method="sequential")
+        apply_cpu_offload_if_needed(pipeline, method="sequential", device=device)
         return True
 
     _apply_vae_optimizations(pipeline)

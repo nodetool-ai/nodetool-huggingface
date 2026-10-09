@@ -56,6 +56,14 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 
+def _offload_kwargs(device: str) -> dict[str, int]:
+    """``gpu_id`` for ``enable_model_cpu_offload`` when ``device`` is ``cuda:<n>``."""
+    from nodetool.huggingface.memory_utils import offload_gpu_id
+
+    gpu_id = offload_gpu_id(device)
+    return {} if gpu_id is None else {"gpu_id": gpu_id}
+
+
 class ShapEImageTo3D(HuggingFacePipelineNode):
     """
     Generate 3D models from images using OpenAI Shap-E.
@@ -514,7 +522,7 @@ class Hunyuan3D(HuggingFacePipelineNode):
                         "scheduler": pipeline.scheduler,
                         "image_processor": pipeline.image_processor,
                     }
-                pipeline.enable_model_cpu_offload()
+                pipeline.enable_model_cpu_offload(**_offload_kwargs(device))
             except Exception as exc:
                 log.warning(
                     "low_vram_mode unavailable for this hy3dgen version "
@@ -791,7 +799,7 @@ class StableFast3D(HuggingFacePipelineNode):
         # Enable CPU offloading if requested
         if self.low_vram_mode and hasattr(model, "enable_model_cpu_offload"):
             try:
-                model.enable_model_cpu_offload()
+                model.enable_model_cpu_offload(**_offload_kwargs(device))
             except Exception as exc:
                 log.warning(
                     "low_vram_mode: enable_model_cpu_offload failed (%s). "
@@ -1611,7 +1619,7 @@ class TripoSG(HuggingFacePipelineNode):
             offloaded = False
             if self.low_vram_mode and hasattr(pipeline, "enable_model_cpu_offload"):
                 try:
-                    pipeline.enable_model_cpu_offload()
+                    pipeline.enable_model_cpu_offload(**_offload_kwargs(device))
                     offloaded = True
                 except Exception as exc:
                     log.warning(

@@ -556,12 +556,14 @@ class Flux(HuggingFacePipelineNode):
             if self.enable_cpu_offload:
                 if device == "cpu":
                     pipeline_ref.to(device)
-                elif device in ("cuda", "mps"):
+                elif device.startswith("cuda") or device == "mps":
                     from nodetool.huggingface.memory_utils import (
                         apply_cpu_offload_if_needed,
                     )
 
-                    apply_cpu_offload_if_needed(pipeline_ref, method="sequential")
+                    apply_cpu_offload_if_needed(
+                        pipeline_ref, method="sequential", device=device
+                    )
             else:
                 pipeline_ref.to(device)
             _apply_vae_optimizations(pipeline_ref)
@@ -850,8 +852,10 @@ class Chroma(HuggingFacePipelineNode):
                             "Enable 'CPU offload' in the advanced node properties or reduce image size/steps."
                         ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
-                elif device in ["cuda", "mps"]:
-                    apply_cpu_offload_if_needed(self._pipeline, method="model")
+                elif device.startswith("cuda") or device == "mps":
+                    apply_cpu_offload_if_needed(
+                        self._pipeline, method="model", device=device
+                    )
             else:
                 # Normal device movement without CPU offload
                 try:
@@ -1096,8 +1100,10 @@ class Bria(HuggingFacePipelineNode):
                             "Enable 'CPU offload' in the advanced node properties or reduce image size/steps."
                         ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
-                elif device in ["cuda", "mps"]:
-                    apply_cpu_offload_if_needed(self._pipeline, method="model")
+                elif device.startswith("cuda") or device == "mps":
+                    apply_cpu_offload_if_needed(
+                        self._pipeline, method="model", device=device
+                    )
             else:
                 # Normal device movement without CPU offload
                 try:
@@ -1288,8 +1294,10 @@ class BriaFibo(HuggingFacePipelineNode):
                         "VRAM out of memory while moving FIBO pipeline to device. "
                         "Reduce image size/steps."
                     ) from e
-            elif device in ["cuda", "mps"]:
-                apply_cpu_offload_if_needed(self._pipeline, method="model")
+            elif device.startswith("cuda") or device == "mps":
+                apply_cpu_offload_if_needed(
+                    self._pipeline, method="model", device=device
+                )
         else:
             try:
                 move_pipeline_to_device(self._pipeline, device)
@@ -1636,12 +1644,14 @@ class FluxControl(HuggingFacePipelineNode):
                             "Enable 'CPU offload' in the advanced node properties or reduce image size."
                         ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
-                elif device in ["cuda", "mps"]:
+                elif device.startswith("cuda") or device == "mps":
                     from nodetool.huggingface.memory_utils import (
                         apply_cpu_offload_if_needed,
                     )
 
-                    apply_cpu_offload_if_needed(self._pipeline, method="sequential")
+                    apply_cpu_offload_if_needed(
+                        self._pipeline, method="sequential", device=device
+                    )
             else:
                 # Normal device movement without CPU offload
                 try:
