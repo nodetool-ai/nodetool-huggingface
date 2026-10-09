@@ -1,14 +1,15 @@
-# Latest Hugging Face stack snapshot as of 2026-08-13.
+# Latest Hugging Face stack snapshot as of 2026-10-09.
 # Use for local compatibility testing, not as the library's install contract.
 #
-# transformers and diffusers are installed from their upstream main branches:
-# MiniMax-H3 is a main-only integration (see nodes/huggingface/text_to_video.py).
+# transformers and diffusers are installed from their upstream main branches
+# for integrations that have not reached a release yet. huggingface_hub stays
+# on 1.x because diffusers caps it below 2.0.
 transformers @ git+https://github.com/huggingface/transformers.git@main
 diffusers @ git+https://github.com/huggingface/diffusers.git@main
-huggingface_hub==1.11.0
-accelerate==1.13.0
-safetensors==0.7.0
-tokenizers==0.22.2
-mistral-common[image]==1.11.0
-peft==0.19.1
-sentence-transformers==5.4.1
+huggingface_hub==1.33.0
+accelerate==1.15.0
+safetensors==0.8.0
+tokenizers==0.23.3
+mistral-common[image]==1.12.0
+peft==0.21.2
+sentence-transformers==6.1.0
