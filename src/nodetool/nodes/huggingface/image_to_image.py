@@ -1662,11 +1662,9 @@ class StableDiffusionXLControlNetImg2ImgNode(StableDiffusionXLImg2Img):
         if self._pipeline is not None:
             move_pipeline_to_device(self._pipeline, context.device)
 
-    class OutputType(TypedDict):
-        image: ImageRef | None
-        latent: TorchTensor | None
-
-    async def process(self, context: ProcessingContext) -> OutputType:
+    async def process(
+        self, context: ProcessingContext
+    ) -> StableDiffusionXLImg2Img.OutputType:
         control_image = await context.image_to_pil(self.control_image)
         init_image = await context.image_to_pil(self.init_image)
         init_image = init_image.resize((self.width, self.height))
