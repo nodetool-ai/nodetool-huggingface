@@ -107,7 +107,8 @@ Most nodes work out of the box. A few pull in heavier or gated dependencies and 
 | `f5-tts` | `F5TTS` voice cloning |
 | `hunyuan3d` | `Hunyuan3D` mesh generation |
 | `triposg` | Optional flash decoder + background removal for `TripoSG` |
-| `sf3d` / `triposr` | Companion deps for `StableFast3D` / `TripoSR` (the packages themselves install from `requirements/*.txt`, see below) |
+| `sam2` | `SAM2Segmentation` (Meta's `sam2`, built against the installed torch, see below) |
+| `sf3d` / `triposr` | Companion deps for `StableFast3D` / `TripoSR` (the upstream code is installed by hand, see below) |
 | `all-3d-pypi` / `all-3d` | Convenience bundles of the above 3D extras |
 
 ```bash
@@ -115,17 +116,23 @@ pip install "nodetool-huggingface[kokoro-ja]"
 pip install "nodetool-huggingface[all-3d-pypi]"
 ```
 
-Some 3D nodes (`StableFast3D`, `TripoSR`, `Trellis2`) depend on packages that are not published to PyPI. Install those from the pinned requirement files in `requirements/` before using the corresponding node, e.g.:
+`sam2` is published only as source and compiles against torch, so build it against the torch that is already installed:
 
 ```bash
-pip install -r requirements/sf3d.txt
-pip install -r requirements/trellis2.txt
+pip install --no-build-isolation "nodetool-huggingface[sam2]"
 ```
+
+`MaskGeneration` runs SAM 2.1 through transformers and needs no extra.
+
+Some 3D nodes (`StableFast3D`, `TripoSR`, `Trellis2`) use upstream code that is not on PyPI and has no Python packaging. `requirements/sf3d.txt`, `requirements/triposr.txt` and `requirements/trellis2.txt` give the steps for each: install the compiled helpers with `pip install --no-build-isolation -r requirements/<name>.txt` where the file lists any, then clone the upstream repository at the pinned commit and add it to the import path.
+
+Nunchaku (SVDQuant) model variants need the nunchaku runtime, which is not installed by default and runs only on NVIDIA GPUs. `requirements/nunchaku.txt` explains how to pick a wheel that matches the installed torch or build one from source. Do not `pip install nunchaku`: that PyPI package is unrelated.
 
 ## Requirements
 
-- Python 3.11+
-- PyTorch 2.9.0 (installed automatically; CUDA build recommended for GPU inference)
+- Python 3.11. This is the version the desktop app, Docker images and CI use. Python 3.13 does not install, because `curated-tokenizers` (pulled in by `kokoro`) has no 3.13 wheel and its source build fails.
+- PyTorch 2.14.x (installed automatically; CUDA build recommended for GPU inference). The same torch is used by `nodetool-mlx`, so both packs can share one environment.
+- Linux (x86_64, aarch64), Windows (x86_64), or macOS 14 or later on Apple Silicon. Intel Macs are not supported, because torch 2.14 has no Intel macOS build.
 - See `pyproject.toml` for the full dependency list
 - Some nodes (gated Hub models, pyannote checkpoints) require an `HF_TOKEN`
 
@@ -249,8 +256,13 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ```bash
 git clone https://github.com/nodetool-ai/nodetool-huggingface.git
 cd nodetool-huggingface
-pip install -e .
+uv sync --locked       # installs the locked dependency set plus dev tools
+uv run pytest -q
+uv run ruff check .
 ```
+
+After adding or changing nodes, regenerate the package metadata with
+`uv run nodetool-pkg scan --write`. CI fails when it is out of date.
 
 ### Adding New Nodes
 1. Create a new node class in `src/nodetool/nodes/huggingface/`
