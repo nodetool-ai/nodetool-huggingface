@@ -87,14 +87,15 @@ def _sample_rate_from_model(model: Any, repo_id: str) -> int:
 
 
 def _hf_cache_dir() -> str:
-    """The HF cache root, resolved the same way as the rest of the package."""
-    return os.environ.get(
-        "HUGGINGFACE_HUB_CACHE",
-        os.environ.get(
-            "HF_HOME",
-            os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub"),
-        ),
-    )
+    """The hub cache directory huggingface_hub itself downloads into.
+
+    ``HF_HOME`` is the parent of the hub cache, not the cache itself, so it is
+    never read directly; huggingface_hub resolves HF_HUB_CACHE, the legacy
+    HUGGINGFACE_HUB_CACHE and HF_HOME into this one constant.
+    """
+    from huggingface_hub import constants
+
+    return constants.HF_HUB_CACHE
 
 
 def _speechbrain_savedir(repo_id: str) -> str:

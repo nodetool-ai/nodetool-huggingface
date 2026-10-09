@@ -31,9 +31,10 @@ web UI ──ws──► TS server (host :7777) ──► createPythonBridge()
 - A **NodeTool TS server** checkout (the `nodetool2` repo) to act as the front end and
   bridge client.
 - For the `nodetool-core:local` base image: the **`nodetool-core`** sibling repo
-  checked out at `../nodetool-core` (relative to this repo), **or** a published image
-  (`ghcr.io/nodetool-ai/nodetool:<tag>`) you re-tag as `nodetool-core:local`.
-- Disk: the HF image is **multi-GB** (torch 2.9, diffusers, transformers, accelerate,
+  checked out at `../nodetool-core` (relative to this repo). The published
+  `ghcr.io/nodetool-ai/nodetool:<tag>` image is the TypeScript server, not a Python
+  worker, so it cannot stand in for `nodetool-core:local`.
+- Disk: the HF image is **multi-GB** (torch 2.14, diffusers, transformers, accelerate,
   bitsandbytes, …). The first build is slow; budget accordingly.
 - **macOS note:** Docker on macOS is **CPU-only**. The smoke test below runs on CPU.
   GPU-only nodes (most diffusers / 3D) are expected to fail locally — that path is the
@@ -241,7 +242,8 @@ dynamic endpoint resolution and a first-class deploy target are not built here.
   tunnel** (Tailscale / WireGuard / SSH) with the worker bound to the tunnel interface.
   Never expose a token-only port over plain `ws://` on the public internet.
 
-- **GPU / host selection.** Filter for **CUDA ≥ 12.x** (torch 2.9) — RunPod
+- **GPU / host selection.** Filter for **CUDA ≥ 13.0** (the PyPI torch 2.14 Linux
+  wheels are built for CUDA 13.0, which needs NVIDIA driver 580 or newer) — RunPod
   `allowedCudaVersions` / UI filter; Vast `cuda_vers>=… driver_version>=…` — or the
   container can land on an old-driver host and fail to use the GPU.
 

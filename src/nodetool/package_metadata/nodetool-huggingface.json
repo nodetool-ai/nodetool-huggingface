@@ -4035,7 +4035,6 @@
     {
       "basic_fields": [
         "model",
-        "quantization",
         "image",
         "mask_image",
         "prompt",
@@ -4077,21 +4076,6 @@
           "title": "Model",
           "type": {
             "type": "hf.inpainting"
-          }
-        },
-        {
-          "default": "fp16",
-          "description": "Quantization level for the FLUX Fill transformer.",
-          "name": "quantization",
-          "title": "Quantization",
-          "type": {
-            "type": "enum",
-            "type_name": "nodetool.nodes.huggingface.image_to_image.FluxFillQuantization",
-            "values": [
-              "fp16",
-              "fp4",
-              "int4"
-            ]
           }
         },
         {
@@ -4210,33 +4194,9 @@
       ],
       "recommended_models": [
         {
-          "allow_patterns": [
-            "*.json",
-            "*.txt",
-            "scheduler/*",
-            "vae/*",
-            "text_encoder/*",
-            "tokenizer/*",
-            "tokenizer_2/*",
-            "transformer/config.json"
-          ],
           "id": "black-forest-labs/FLUX.1-Fill-dev",
           "name": "black-forest-labs/FLUX.1-Fill-dev",
           "repo_id": "black-forest-labs/FLUX.1-Fill-dev",
-          "type": "hf.inpainting"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-flux.1-fill-dev:svdq-int4_r32-flux.1-fill-dev.safetensors",
-          "name": "nunchaku-ai/nunchaku-flux.1-fill-dev",
-          "path": "svdq-int4_r32-flux.1-fill-dev.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-flux.1-fill-dev",
-          "type": "hf.inpainting"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-flux.1-fill-dev:svdq-fp4_r32-flux.1-fill-dev.safetensors",
-          "name": "nunchaku-ai/nunchaku-flux.1-fill-dev",
-          "path": "svdq-fp4_r32-flux.1-fill-dev.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-flux.1-fill-dev",
           "type": "hf.inpainting"
         }
       ],
@@ -4246,8 +4206,7 @@
       "basic_fields": [
         "image",
         "prompt",
-        "guidance_scale",
-        "quantization"
+        "guidance_scale"
       ],
       "body": "content_card",
       "description": "Performs image editing using FLUX Kontext models for context-aware image generation.\n    image, editing, flux, kontext, context-aware, generation\n\n    Use cases:\n    - Edit images based on reference context\n    - Add elements to images guided by prompts\n    - Context-aware image modifications\n    - High-quality image editing with FLUX models",
@@ -4302,21 +4261,6 @@
           }
         },
         {
-          "default": "int4",
-          "description": "Quantization level for the FLUX Kontext transformer.",
-          "name": "quantization",
-          "title": "Quantization",
-          "type": {
-            "type": "enum",
-            "type_name": "nodetool.nodes.huggingface.image_to_image.FluxKontextQuantization",
-            "values": [
-              "fp16",
-              "fp4",
-              "int4"
-            ]
-          }
-        },
-        {
           "default": -1,
           "description": "Seed for the random number generator. Use -1 for a random seed",
           "min": -1.0,
@@ -4338,40 +4282,10 @@
       ],
       "recommended_models": [
         {
-          "allow_patterns": [
-            "*.json",
-            "*.txt",
-            "scheduler/*",
-            "vae/*",
-            "text_encoder/*",
-            "tokenizer/*",
-            "tokenizer_2/*"
-          ],
           "id": "black-forest-labs/FLUX.1-Kontext-dev",
           "name": "black-forest-labs/FLUX.1-Kontext-dev",
           "repo_id": "black-forest-labs/FLUX.1-Kontext-dev",
           "type": "hf.flux_kontext"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-flux.1-kontext-dev:svdq-int4_r32-flux.1-kontext-dev.safetensors",
-          "name": "nunchaku-ai/nunchaku-flux.1-kontext-dev",
-          "path": "svdq-int4_r32-flux.1-kontext-dev.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-flux.1-kontext-dev",
-          "type": "hf.flux_kontext"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-flux.1-kontext-dev:svdq-fp4_r32-flux.1-kontext-dev.safetensors",
-          "name": "nunchaku-ai/nunchaku-flux.1-kontext-dev",
-          "path": "svdq-fp4_r32-flux.1-kontext-dev.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-flux.1-kontext-dev",
-          "type": "hf.flux_kontext"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
-          "name": "nunchaku-ai/nunchaku-t5",
-          "path": "awq-int4-flux.1-t5xxl.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-t5",
-          "type": "hf.t5"
         }
       ],
       "title": "Flux Kontext"
@@ -4840,97 +4754,14 @@
         "image",
         "prompt",
         "negative_prompt",
-        "true_cfg_scale",
-        "quantization"
+        "true_cfg_scale"
       ],
       "body": "content_card",
-      "description": "Performs image editing using the Qwen Image Edit model with support for Nunchaku quantization.\n    image, editing, semantic, appearance, qwen, multimodal, quantization\n\n    Use cases:\n    - Semantic editing (object rotation, style transfer)\n    - Appearance editing (adding/removing elements)\n    - Precise text modifications in images\n    - Background and clothing changes\n    - Complex image transformations guided by text\n    - Memory-efficient editing using Nunchaku quantization",
+      "description": "Performs image editing using the Qwen Image Edit model.\n    image, editing, semantic, appearance, qwen, multimodal\n\n    Use cases:\n    - Semantic editing (object rotation, style transfer)\n    - Appearance editing (adding/removing elements)\n    - Precise text modifications in images\n    - Background and clothing changes\n    - Complex image transformations guided by text",
       "input_fields": [
         "image",
         "prompt",
         "negative_prompt"
-      ],
-      "model_packs": [
-        {
-          "category": "image_editing",
-          "description": "Qwen-Image-Edit with INT4 quantization via Nunchaku for memory-efficient image editing.",
-          "id": "qwen_image_edit_nunchaku_int4",
-          "models": [
-            {
-              "allow_patterns": [
-                "*.json",
-                "*.txt",
-                "scheduler/*",
-                "vae/*",
-                "text_encoder/*",
-                "text_encoder_2/*",
-                "tokenizer/*",
-                "tokenizer_2/*"
-              ],
-              "id": "Qwen/Qwen-Image-Edit",
-              "name": "Qwen-Image-Edit Base (configs/VAE/tokenizer/text_encoder)",
-              "repo_id": "Qwen/Qwen-Image-Edit",
-              "type": "hf.qwen_image_edit"
-            },
-            {
-              "id": "nunchaku-ai/nunchaku-qwen-image-edit:svdq-int4_r32-qwen-image-edit.safetensors",
-              "name": "Nunchaku Qwen-Image-Edit Transformer (INT4)",
-              "path": "svdq-int4_r32-qwen-image-edit.safetensors",
-              "repo_id": "nunchaku-ai/nunchaku-qwen-image-edit",
-              "size_on_disk": 6500000000,
-              "type": "hf.qwen_image_edit"
-            }
-          ],
-          "tags": [
-            "qwen",
-            "image-to-image",
-            "int4",
-            "nunchaku",
-            "editing"
-          ],
-          "title": "Qwen-Image-Edit (Nunchaku INT4)",
-          "total_size": 6500000000
-        },
-        {
-          "category": "image_editing",
-          "description": "Qwen-Image-Edit with FP4 quantization via Nunchaku for memory-efficient image editing.",
-          "id": "qwen_image_edit_nunchaku_fp4",
-          "models": [
-            {
-              "allow_patterns": [
-                "*.json",
-                "*.txt",
-                "scheduler/*",
-                "vae/*",
-                "text_encoder/*",
-                "text_encoder_2/*",
-                "tokenizer/*",
-                "tokenizer_2/*"
-              ],
-              "id": "Qwen/Qwen-Image-Edit",
-              "name": "Qwen-Image-Edit Base (configs/VAE/tokenizer/text_encoder)",
-              "repo_id": "Qwen/Qwen-Image-Edit",
-              "type": "hf.qwen_image_edit"
-            },
-            {
-              "id": "nunchaku-ai/nunchaku-qwen-image-edit:svdq-fp4_r32-qwen-image-edit.safetensors",
-              "name": "Nunchaku Qwen-Image-Edit Transformer (FP4)",
-              "path": "svdq-fp4_r32-qwen-image-edit.safetensors",
-              "repo_id": "nunchaku-ai/nunchaku-qwen-image-edit",
-              "size_on_disk": 6500000000,
-              "type": "hf.qwen_image_edit"
-            }
-          ],
-          "tags": [
-            "qwen",
-            "image-to-image",
-            "fp4",
-            "nunchaku",
-            "editing"
-          ],
-          "title": "Qwen-Image-Edit (Nunchaku FP4)",
-          "total_size": 6500000000
-        }
       ],
       "namespace": "huggingface.image_to_image",
       "node_type": "huggingface.image_to_image.QwenImageEdit",
@@ -4999,21 +4830,6 @@
           }
         },
         {
-          "default": "int4",
-          "description": "Quantization level for the Qwen Image Edit transformer.",
-          "name": "quantization",
-          "title": "Quantization",
-          "type": {
-            "type": "enum",
-            "type_name": "nodetool.nodes.huggingface.image_to_image.QwenImageEditQuantization",
-            "values": [
-              "fp16",
-              "fp4",
-              "int4"
-            ]
-          }
-        },
-        {
           "default": -1,
           "description": "Seed for the random number generator. Use -1 for a random seed",
           "min": -1.0,
@@ -5044,47 +4860,9 @@
       ],
       "recommended_models": [
         {
-          "allow_patterns": [
-            "*.json",
-            "*.txt",
-            "scheduler/*",
-            "vae/*",
-            "text_encoder/*",
-            "text_encoder_2/*",
-            "tokenizer/*",
-            "tokenizer_2/*"
-          ],
           "id": "Qwen/Qwen-Image-Edit",
           "name": "Qwen/Qwen-Image-Edit",
           "repo_id": "Qwen/Qwen-Image-Edit",
-          "type": "hf.qwen_image_edit"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-qwen-image-edit:svdq-int4_r32-qwen-image-edit.safetensors",
-          "name": "nunchaku-ai/nunchaku-qwen-image-edit",
-          "path": "svdq-int4_r32-qwen-image-edit.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-qwen-image-edit",
-          "type": "hf.qwen_image_edit"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-qwen-image-edit:svdq-fp4_r32-qwen-image-edit.safetensors",
-          "name": "nunchaku-ai/nunchaku-qwen-image-edit",
-          "path": "svdq-fp4_r32-qwen-image-edit.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-qwen-image-edit",
-          "type": "hf.qwen_image_edit"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-qwen-image-edit-2509:svdq-int4_r32-qwen-image-edit-2509.safetensors",
-          "name": "nunchaku-ai/nunchaku-qwen-image-edit-2509",
-          "path": "svdq-int4_r32-qwen-image-edit-2509.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-qwen-image-edit-2509",
-          "type": "hf.qwen_image_edit"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-qwen-image-edit-2509:svdq-fp4_r32-qwen-image-edit-2509.safetensors",
-          "name": "nunchaku-ai/nunchaku-qwen-image-edit-2509",
-          "path": "svdq-fp4_r32-qwen-image-edit-2509.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-qwen-image-edit-2509",
           "type": "hf.qwen_image_edit"
         }
       ],
@@ -7560,7 +7338,6 @@
     {
       "basic_fields": [
         "model",
-        "quantization",
         "prompt",
         "width",
         "height",
@@ -7607,21 +7384,6 @@
           "title": "Model",
           "type": {
             "type": "hf.stable_diffusion_xl"
-          }
-        },
-        {
-          "default": "fp16",
-          "description": "Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet).",
-          "name": "quantization",
-          "title": "Quantization",
-          "type": {
-            "type": "enum",
-            "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization",
-            "values": [
-              "fp16",
-              "fp4",
-              "int4"
-            ]
           }
         },
         {
@@ -8245,7 +8007,6 @@
     {
       "basic_fields": [
         "model",
-        "quantization",
         "prompt",
         "width",
         "height",
@@ -8295,21 +8056,6 @@
           "title": "Model",
           "type": {
             "type": "hf.stable_diffusion_xl"
-          }
-        },
-        {
-          "default": "fp16",
-          "description": "Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet).",
-          "name": "quantization",
-          "title": "Quantization",
-          "type": {
-            "type": "enum",
-            "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization",
-            "values": [
-              "fp16",
-              "fp4",
-              "int4"
-            ]
           }
         },
         {
@@ -8959,7 +8705,6 @@
     {
       "basic_fields": [
         "model",
-        "quantization",
         "prompt",
         "width",
         "height",
@@ -9005,21 +8750,6 @@
           "title": "Model",
           "type": {
             "type": "hf.stable_diffusion_xl"
-          }
-        },
-        {
-          "default": "fp16",
-          "description": "Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet).",
-          "name": "quantization",
-          "title": "Quantization",
-          "type": {
-            "type": "enum",
-            "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization",
-            "values": [
-              "fp16",
-              "fp4",
-              "int4"
-            ]
           }
         },
         {
@@ -9325,20 +9055,6 @@
           "path": "RealVisXL_V5.0_fp16.safetensors",
           "repo_id": "SG161222/RealVisXL_V5.0",
           "type": "hf.stable_diffusion_xl"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-sdxl:svdq-int4_r32-sdxl.safetensors",
-          "name": "nunchaku-ai/nunchaku-sdxl",
-          "path": "svdq-int4_r32-sdxl.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-sdxl",
-          "type": "hf.stable_diffusion_xl"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-sdxl-turbo:svdq-int4_r32-sdxl-turbo.safetensors",
-          "name": "nunchaku-ai/nunchaku-sdxl-turbo",
-          "path": "svdq-int4_r32-sdxl-turbo.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-sdxl-turbo",
-          "type": "hf.stable_diffusion_xl"
         }
       ],
       "title": "Stable Diffusion XL (Img2Img)"
@@ -9346,7 +9062,6 @@
     {
       "basic_fields": [
         "model",
-        "quantization",
         "prompt",
         "width",
         "height",
@@ -9394,21 +9109,6 @@
           "title": "Model",
           "type": {
             "type": "hf.stable_diffusion_xl"
-          }
-        },
-        {
-          "default": "fp16",
-          "description": "Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet).",
-          "name": "quantization",
-          "title": "Quantization",
-          "type": {
-            "type": "enum",
-            "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization",
-            "values": [
-              "fp16",
-              "fp4",
-              "int4"
-            ]
           }
         },
         {
@@ -9728,20 +9428,6 @@
           "name": "SG161222/RealVisXL_V5.0",
           "path": "RealVisXL_V5.0_fp16.safetensors",
           "repo_id": "SG161222/RealVisXL_V5.0",
-          "type": "hf.stable_diffusion_xl"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-sdxl:svdq-int4_r32-sdxl.safetensors",
-          "name": "nunchaku-ai/nunchaku-sdxl",
-          "path": "svdq-int4_r32-sdxl.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-sdxl",
-          "type": "hf.stable_diffusion_xl"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-sdxl-turbo:svdq-int4_r32-sdxl-turbo.safetensors",
-          "name": "nunchaku-ai/nunchaku-sdxl-turbo",
-          "path": "svdq-int4_r32-sdxl-turbo.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-sdxl-turbo",
           "type": "hf.stable_diffusion_xl"
         }
       ],
@@ -16877,111 +16563,15 @@
     {
       "basic_fields": [
         "variant",
-        "quantization",
         "prompt",
         "height",
         "width",
         "seed"
       ],
       "body": "content_card",
-      "description": "Generates high-quality images using Black Forest Labs' FLUX diffusion models with Nunchaku quantization.\n    image, generation, AI, text-to-image, flux, quantization, high-quality\n\n    Use cases:\n    - Generate high-fidelity images with excellent text rendering\n    - Create images with memory-efficient INT4/FP4 quantization\n    - Fast generation with FLUX.1-schnell (4 steps)\n    - High-quality generation with FLUX.1-dev\n    - Build production image generation systems",
+      "description": "Generates high-quality images using Black Forest Labs' FLUX diffusion models.\n    image, generation, AI, text-to-image, flux, high-quality\n\n    Use cases:\n    - Generate high-fidelity images with excellent text rendering\n    - Fast generation with FLUX.1-schnell (4 steps)\n    - High-quality generation with FLUX.1-dev\n    - Build production image generation systems",
       "input_fields": [
         "prompt"
-      ],
-      "model_packs": [
-        {
-          "description": "Fast 4-step Flux with INT4 quantization via Nunchaku. Requires base Schnell repo + quantized transformer + T5 encoder.",
-          "id": "flux_schnell_nunchaku_int4",
-          "models": [
-            {
-              "allow_patterns": [
-                "*.json",
-                "*.txt",
-                "scheduler/*",
-                "vae/*",
-                "text_encoder/*",
-                "tokenizer/*",
-                "tokenizer_2/*"
-              ],
-              "id": "black-forest-labs/FLUX.1-schnell",
-              "name": "Flux Schnell Base (configs/VAE/tokenizer)",
-              "repo_id": "black-forest-labs/FLUX.1-schnell",
-              "type": "hf.flux"
-            },
-            {
-              "id": "nunchaku-ai/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
-              "name": "Nunchaku Schnell Transformer (INT4)",
-              "path": "svdq-int4_r32-flux.1-schnell.safetensors",
-              "repo_id": "nunchaku-ai/nunchaku-flux.1-schnell",
-              "size_on_disk": 6400000000,
-              "type": "hf.flux"
-            },
-            {
-              "id": "nunchaku-ai/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
-              "name": "Nunchaku T5-XXL Encoder (INT4)",
-              "path": "awq-int4-flux.1-t5xxl.safetensors",
-              "repo_id": "nunchaku-ai/nunchaku-t5",
-              "size_on_disk": 5000000000,
-              "type": "hf.t5"
-            }
-          ],
-          "tags": [
-            "flux",
-            "text-to-image",
-            "int4",
-            "nunchaku",
-            "fast",
-            "4-step"
-          ],
-          "title": "Flux Schnell (Nunchaku INT4)",
-          "total_size": 11400000000
-        },
-        {
-          "description": "High-quality Flux Dev with INT4 quantization via Nunchaku. Requires base Dev repo + quantized transformer + T5 encoder.",
-          "id": "flux_dev_nunchaku_int4",
-          "models": [
-            {
-              "allow_patterns": [
-                "*.json",
-                "*.txt",
-                "scheduler/*",
-                "vae/*",
-                "text_encoder/*",
-                "tokenizer/*",
-                "tokenizer_2/*"
-              ],
-              "id": "black-forest-labs/FLUX.1-dev",
-              "name": "Flux Dev Base (configs/VAE/tokenizer)",
-              "repo_id": "black-forest-labs/FLUX.1-dev",
-              "type": "hf.flux"
-            },
-            {
-              "id": "nunchaku-ai/nunchaku-flux.1-dev:svdq-int4_r32-flux.1-dev.safetensors",
-              "name": "Nunchaku Dev Transformer (INT4)",
-              "path": "svdq-int4_r32-flux.1-dev.safetensors",
-              "repo_id": "nunchaku-ai/nunchaku-flux.1-dev",
-              "size_on_disk": 6400000000,
-              "type": "hf.flux"
-            },
-            {
-              "id": "nunchaku-ai/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
-              "name": "Nunchaku T5-XXL Encoder (INT4)",
-              "path": "awq-int4-flux.1-t5xxl.safetensors",
-              "repo_id": "nunchaku-ai/nunchaku-t5",
-              "size_on_disk": 5000000000,
-              "type": "hf.t5"
-            }
-          ],
-          "tags": [
-            "flux",
-            "text-to-image",
-            "int4",
-            "nunchaku",
-            "high-quality"
-          ],
-          "title": "Flux Dev (Nunchaku INT4)",
-          "total_size": 11400000000
-        }
       ],
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.Flux",
@@ -17009,23 +16599,8 @@
           }
         },
         {
-          "default": "int4",
-          "description": "Quantization level: INT4/FP4 for lower VRAM, FP16 for full precision.",
-          "name": "quantization",
-          "title": "Quantization",
-          "type": {
-            "type": "enum",
-            "type_name": "nodetool.nodes.huggingface.text_to_image.FluxQuantization",
-            "values": [
-              "fp16",
-              "fp4",
-              "int4"
-            ]
-          }
-        },
-        {
           "default": false,
-          "description": "Offload model components to CPU to reduce VRAM usage. Leave off for Nunchaku INT4/FP4 on 8GB+ GPUs; enable only if you hit OOM.",
+          "description": "Offload model components to CPU to reduce VRAM usage. Enable if you hit OOM.",
           "name": "enable_cpu_offload",
           "title": "Enable Cpu Offload",
           "type": {
@@ -17109,69 +16684,16 @@
       ],
       "recommended_models": [
         {
-          "allow_patterns": [
-            "*.json",
-            "*.txt",
-            "scheduler/*",
-            "vae/*",
-            "text_encoder/*",
-            "tokenizer/*",
-            "tokenizer_2/*"
-          ],
           "id": "black-forest-labs/FLUX.1-schnell",
           "name": "black-forest-labs/FLUX.1-schnell",
           "repo_id": "black-forest-labs/FLUX.1-schnell",
           "type": "hf.flux"
         },
         {
-          "allow_patterns": [
-            "*.json",
-            "*.txt",
-            "scheduler/*",
-            "vae/*",
-            "text_encoder/*",
-            "tokenizer/*",
-            "tokenizer_2/*"
-          ],
           "id": "black-forest-labs/FLUX.1-dev",
           "name": "black-forest-labs/FLUX.1-dev",
           "repo_id": "black-forest-labs/FLUX.1-dev",
           "type": "hf.flux"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
-          "name": "nunchaku-ai/nunchaku-flux.1-schnell",
-          "path": "svdq-int4_r32-flux.1-schnell.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-flux.1-schnell",
-          "type": "hf.flux"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-flux.1-schnell:svdq-fp4_r32-flux.1-schnell.safetensors",
-          "name": "nunchaku-ai/nunchaku-flux.1-schnell",
-          "path": "svdq-fp4_r32-flux.1-schnell.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-flux.1-schnell",
-          "type": "hf.flux"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-flux.1-dev:svdq-int4_r32-flux.1-dev.safetensors",
-          "name": "nunchaku-ai/nunchaku-flux.1-dev",
-          "path": "svdq-int4_r32-flux.1-dev.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-flux.1-dev",
-          "type": "hf.flux"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-flux.1-dev:svdq-fp4_r32-flux.1-dev.safetensors",
-          "name": "nunchaku-ai/nunchaku-flux.1-dev",
-          "path": "svdq-fp4_r32-flux.1-dev.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-flux.1-dev",
-          "type": "hf.flux"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
-          "name": "nunchaku-ai/nunchaku-t5",
-          "path": "awq-int4-flux.1-t5xxl.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-t5",
-          "type": "hf.t5"
         }
       ],
       "title": "Flux"
@@ -17439,7 +16961,6 @@
     {
       "basic_fields": [
         "model",
-        "quantization",
         "prompt",
         "control_image",
         "height",
@@ -17566,90 +17087,20 @@
           "type": {
             "type": "bool"
           }
-        },
-        {
-          "default": "int4",
-          "description": "Quantization level for the FLUX Control transformer.",
-          "name": "quantization",
-          "title": "Quantization",
-          "type": {
-            "type": "enum",
-            "type_name": "nodetool.nodes.huggingface.text_to_image.FluxControlQuantization",
-            "values": [
-              "fp16",
-              "fp4",
-              "int4"
-            ]
-          }
         }
       ],
       "recommended_models": [
         {
-          "allow_patterns": [
-            "*.json",
-            "*.txt",
-            "scheduler/*",
-            "vae/*",
-            "text_encoder/*",
-            "tokenizer/*",
-            "tokenizer_2/*",
-            "transformer/config.json"
-          ],
           "id": "black-forest-labs/FLUX.1-Depth-dev",
           "name": "black-forest-labs/FLUX.1-Depth-dev",
           "repo_id": "black-forest-labs/FLUX.1-Depth-dev",
           "type": "hf.controlnet_flux"
         },
         {
-          "allow_patterns": [
-            "*.json",
-            "*.txt",
-            "scheduler/*",
-            "vae/*",
-            "text_encoder/*",
-            "tokenizer/*",
-            "tokenizer_2/*",
-            "transformer/config.json"
-          ],
           "id": "black-forest-labs/FLUX.1-Canny-dev",
           "name": "black-forest-labs/FLUX.1-Canny-dev",
           "repo_id": "black-forest-labs/FLUX.1-Canny-dev",
           "type": "hf.controlnet_flux"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-flux.1-depth-dev:svdq-int4_r32-flux.1-depth-dev.safetensors",
-          "name": "nunchaku-ai/nunchaku-flux.1-depth-dev",
-          "path": "svdq-int4_r32-flux.1-depth-dev.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-flux.1-depth-dev",
-          "type": "hf.controlnet_flux"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-flux.1-depth-dev:svdq-fp4_r32-flux.1-depth-dev.safetensors",
-          "name": "nunchaku-ai/nunchaku-flux.1-depth-dev",
-          "path": "svdq-fp4_r32-flux.1-depth-dev.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-flux.1-depth-dev",
-          "type": "hf.controlnet_flux"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-flux.1-canny-dev:svdq-int4_r32-flux.1-canny-dev.safetensors",
-          "name": "nunchaku-ai/nunchaku-flux.1-canny-dev",
-          "path": "svdq-int4_r32-flux.1-canny-dev.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-flux.1-canny-dev",
-          "type": "hf.controlnet_flux"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-flux.1-canny-dev:svdq-fp4_r32-flux.1-canny-dev.safetensors",
-          "name": "nunchaku-ai/nunchaku-flux.1-canny-dev",
-          "path": "svdq-fp4_r32-flux.1-canny-dev.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-flux.1-canny-dev",
-          "type": "hf.controlnet_flux"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
-          "name": "nunchaku-ai/nunchaku-t5",
-          "path": "awq-int4-flux.1-t5xxl.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-t5",
-          "type": "hf.t5"
         }
       ],
       "title": "Flux Control"
@@ -18129,7 +17580,6 @@
     },
     {
       "basic_fields": [
-        "quantization",
         "prompt",
         "negative_prompt",
         "height",
@@ -18137,50 +17587,10 @@
         "num_inference_steps"
       ],
       "body": "content_card",
-      "description": "Generates images from text prompts using Alibaba's Qwen-Image model with Nunchaku quantization support.\n    image, generation, AI, text-to-image, qwen, quantization, multilingual\n\n    Use cases:\n    - Generate high-quality images with strong multilingual prompt support\n    - Memory-efficient generation using INT4/FP4 quantization\n    - Create images with precise semantic understanding\n    - Build production image generation systems",
+      "description": "Generates images from text prompts using Alibaba's Qwen-Image model.\n    image, generation, AI, text-to-image, qwen, multilingual\n\n    Use cases:\n    - Generate high-quality images with strong multilingual prompt support\n    - Create images with precise semantic understanding\n    - Build production image generation systems",
       "input_fields": [
         "prompt",
         "negative_prompt"
-      ],
-      "model_packs": [
-        {
-          "description": "Qwen-Image with INT4 quantization via Nunchaku. Requires base Qwen-Image repo + quantized transformer.",
-          "id": "qwen_image_nunchaku_int4",
-          "models": [
-            {
-              "allow_patterns": [
-                "*.json",
-                "*.txt",
-                "scheduler/*",
-                "vae/*",
-                "text_encoder/*",
-                "text_encoder_2/*",
-                "tokenizer/*",
-                "tokenizer_2/*"
-              ],
-              "id": "Qwen/Qwen-Image",
-              "name": "Qwen-Image Base (configs/VAE/tokenizer/text_encoder)",
-              "repo_id": "Qwen/Qwen-Image",
-              "type": "hf.qwen_image"
-            },
-            {
-              "id": "nunchaku-ai/nunchaku-qwen-image:svdq-int4_r32-qwen-image.safetensors",
-              "name": "Nunchaku Qwen Transformer (INT4)",
-              "path": "svdq-int4_r32-qwen-image.safetensors",
-              "repo_id": "nunchaku-ai/nunchaku-qwen-image",
-              "size_on_disk": 6500000000,
-              "type": "hf.qwen_image"
-            }
-          ],
-          "tags": [
-            "qwen",
-            "text-to-image",
-            "int4",
-            "nunchaku"
-          ],
-          "title": "Qwen-Image (Nunchaku INT4)",
-          "total_size": 6500000000
-        }
       ],
       "namespace": "huggingface.text_to_image",
       "node_type": "huggingface.text_to_image.QwenImage",
@@ -18193,21 +17603,6 @@
         }
       ],
       "properties": [
-        {
-          "default": "int4",
-          "description": "Quantization level: INT4/FP4 for lower VRAM, FP16 for full precision.",
-          "name": "quantization",
-          "title": "Quantization",
-          "type": {
-            "type": "enum",
-            "type_name": "nodetool.nodes.huggingface.text_to_image.QwenQuantization",
-            "values": [
-              "fp16",
-              "fp4",
-              "int4"
-            ]
-          }
-        },
         {
           "default": "A cat holding a sign that says hello world",
           "description": "Text description of the image to generate.",
@@ -18283,33 +17678,9 @@
       ],
       "recommended_models": [
         {
-          "allow_patterns": [
-            "*.json",
-            "*.txt",
-            "scheduler/*",
-            "vae/*",
-            "text_encoder/*",
-            "text_encoder_2/*",
-            "tokenizer/*",
-            "tokenizer_2/*"
-          ],
           "id": "Qwen/Qwen-Image",
           "name": "Qwen/Qwen-Image",
           "repo_id": "Qwen/Qwen-Image",
-          "type": "hf.qwen_image"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-qwen-image:svdq-int4_r32-qwen-image.safetensors",
-          "name": "nunchaku-ai/nunchaku-qwen-image",
-          "path": "svdq-int4_r32-qwen-image.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-qwen-image",
-          "type": "hf.qwen_image"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-qwen-image:svdq-fp4_r32-qwen-image.safetensors",
-          "name": "nunchaku-ai/nunchaku-qwen-image",
-          "path": "svdq-fp4_r32-qwen-image.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-qwen-image",
           "type": "hf.qwen_image"
         }
       ],
@@ -18860,7 +18231,6 @@
     {
       "basic_fields": [
         "model",
-        "quantization",
         "prompt",
         "width",
         "height"
@@ -18903,21 +18273,6 @@
           "title": "Model",
           "type": {
             "type": "hf.stable_diffusion_xl"
-          }
-        },
-        {
-          "default": "fp16",
-          "description": "Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet).",
-          "name": "quantization",
-          "title": "Quantization",
-          "type": {
-            "type": "enum",
-            "type_name": "nodetool.nodes.huggingface.stable_diffusion_base.StableDiffusionXLQuantization",
-            "values": [
-              "fp16",
-              "fp4",
-              "int4"
-            ]
           }
         },
         {
@@ -19196,20 +18551,6 @@
           "name": "SG161222/RealVisXL_V5.0",
           "path": "RealVisXL_V5.0_fp16.safetensors",
           "repo_id": "SG161222/RealVisXL_V5.0",
-          "type": "hf.stable_diffusion_xl"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-sdxl:svdq-int4_r32-sdxl.safetensors",
-          "name": "nunchaku-ai/nunchaku-sdxl",
-          "path": "svdq-int4_r32-sdxl.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-sdxl",
-          "type": "hf.stable_diffusion_xl"
-        },
-        {
-          "id": "nunchaku-ai/nunchaku-sdxl-turbo:svdq-int4_r32-sdxl-turbo.safetensors",
-          "name": "nunchaku-ai/nunchaku-sdxl-turbo",
-          "path": "svdq-int4_r32-sdxl-turbo.safetensors",
-          "repo_id": "nunchaku-ai/nunchaku-sdxl-turbo",
           "type": "hf.stable_diffusion_xl"
         }
       ],
@@ -22516,6 +21857,6 @@
       "title": "HF Video Classifier"
     }
   ],
-  "repo_id": "",
+  "repo_id": "nodetool-ai/nodetool-huggingface",
   "version": "0.8.1"
 }

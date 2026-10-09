@@ -56,6 +56,10 @@ WITHHELD = {
     "paddleocr": "stays in the ocr extra with paddlepaddle",
     "pyopenjtalk": "sdist-only, compiles; stays in kokoro-ja",
     "opencv-python": "cv2 already resolves via opencv-python-headless",
+    "sam2": (
+        "sdist-only, its build imports torch, so an isolated build downloads "
+        "a second torch; it stays in the sam2 extra"
+    ),
     "f5-tts": (
         "weighed and declined: 41 of the 74 packages a plain install would "
         "gain come from its subtree alone (wandb, datasets, boto3, "
@@ -181,3 +185,18 @@ def test_the_git_only_nodes_are_still_honestly_unavailable():
             f"{distribution} cannot be a dependency: it has no PyPI release "
             "(triposg is vendored at src/triposg instead)"
         )
+
+
+def test_sam2_extra_installs_sam2():
+    extras = _project()["optional-dependencies"]
+    assert {_normalise(s) for s in extras["sam2"]} == {"sam2"}
+
+
+@pytest.mark.asyncio
+async def test_sam2_node_names_its_extra_when_sam2_is_missing(monkeypatch):
+    from nodetool.nodes.huggingface.image_segmentation import SAM2Segmentation
+
+    monkeypatch.setitem(sys.modules, "sam2", None)
+    monkeypatch.setitem(sys.modules, "sam2.sam2_image_predictor", None)
+    with pytest.raises(ImportError, match=r"nodetool-huggingface\[sam2\]"):
+        await SAM2Segmentation().preload_model(None)  # type: ignore[arg-type]

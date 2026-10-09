@@ -81,17 +81,6 @@ EXPLICITLY_EXEMPT = {
         "present, and falls back to OpenCV with an actionable error "
         "otherwise. Guarded, just not with a try/except at the import site."
     ),
-    "nunchaku": (
-        "The SVDQuant nunchaku runtime has no PyPI extra in this package — "
-        "it is a manual/BYO install like the git-only 3D backends "
-        "(requirements/nunchaku.txt), not something 'pip install "
-        "nodetool-huggingface[...]' can resolve today. nunchaku_pipelines.py "
-        "probes availability via is_nunchaku_available() before use; the "
-        "call sites this scan flags in image_to_image.py are reached only "
-        "after that probe passes. Pre-existing gap, tracked separately — "
-        "out of scope here (see nodetool-huggingface#65: the docker/extras "
-        "question is the maintainer's to answer)."
-    ),
     "cv2": (
         "TripoSG._prepare_image uses cv2 unguarded, gated only by the "
         "class's own runtime_availability()/preload_model contract, not a "

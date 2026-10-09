@@ -332,19 +332,15 @@ def _check_disk_space(estimated_gb: float, cache_dir: str | None = None) -> None
         Approximate download size in GiB.
     cache_dir:
         Override for the cache directory to check.  When ``None``,
-        resolves from ``HF_HOME`` / ``HUGGINGFACE_HUB_CACHE`` env vars,
-        falling back to ``~/.cache/huggingface/hub``.
+        uses ``huggingface_hub.constants.HF_HUB_CACHE``, the directory the
+        hub downloads into (``HF_HUB_CACHE``, else ``$HF_HOME/hub``).
     """
     import os
 
     if cache_dir is None:
-        cache_dir = os.environ.get(
-            "HUGGINGFACE_HUB_CACHE",
-            os.environ.get(
-                "HF_HOME",
-                os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub"),
-            ),
-        )
+        from huggingface_hub import constants
+
+        cache_dir = constants.HF_HUB_CACHE
     os.makedirs(cache_dir, exist_ok=True)
     usage = shutil.disk_usage(cache_dir)
     free_gb = usage.free / (1 << 30)
@@ -354,7 +350,7 @@ def _check_disk_space(estimated_gb: float, cache_dir: str | None = None) -> None
             f"Not enough disk space to download model weights. "
             f"Need ~{needed:.1f} GB free, but only {free_gb:.1f} GB available "
             f"in {cache_dir}. Free up space or set HF_HOME / "
-            f"HUGGINGFACE_HUB_CACHE to a volume with more room."
+            f"HF_HUB_CACHE to a volume with more room."
         )
 
 

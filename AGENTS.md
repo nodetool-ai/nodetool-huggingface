@@ -23,10 +23,12 @@ conda activate nodetool
 
 ## Commands
 
-After adding or changing nodes run this command to generate metadata.
+After adding or changing nodes run this command to regenerate
+`src/nodetool/package_metadata/nodetool-huggingface.json`. CI fails when the
+committed file is out of date.
 
 ```bash
-nodetool package scan
+uv run nodetool-pkg scan --write
 ```
 
 ## Linting and Tests
@@ -34,9 +36,12 @@ nodetool package scan
 Before submitting a pull request, run the following checks:
 
 ```bash
-ruff check .
-black --check .
-pytest -q
+uv lock --check
+uv run ruff check .
+uv run pytest -q
 ```
+
+After changing dependencies in `pyproject.toml`, run `uv lock` and commit
+`uv.lock`.
 
 Formatting issues or lint errors should be fixed before committing. Test coverage is expected to be added when applicable.

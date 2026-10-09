@@ -11,7 +11,6 @@ from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nodetool.config.logging_config import get_logger
 from nodetool.workflows.memory_utils import log_memory, run_gc
 from nodetool.metadata.types import (
-    HFT5,
     HFFlux,
     HFQwenImage,
     HFStableDiffusionXL,
@@ -197,14 +196,10 @@ class StableDiffusionXL(StableDiffusionXLBase):
         )
 
         torch_dtype = self.get_torch_dtype()
-        base_model, pipeline_model_id, transformer_model = self._prepare_sdxl_models()
         await self._load_sdxl_pipeline(
             context=context,
             pipeline_class=StableDiffusionXLPipeline,
             torch_dtype=torch_dtype,
-            base_model=base_model,
-            pipeline_model_id=pipeline_model_id,
-            transformer_model=transformer_model,
             variant=None,
         )
         assert self._pipeline is not None
@@ -411,20 +406,13 @@ class FluxVariant(Enum):
     DEV = "dev"
 
 
-class FluxQuantization(Enum):
-    FP16 = "fp16"
-    FP4 = "fp4"
-    INT4 = "int4"
-
-
 class Flux(HuggingFacePipelineNode):
     """
-    Generates high-quality images using Black Forest Labs' FLUX diffusion models with Nunchaku quantization.
-    image, generation, AI, text-to-image, flux, quantization, high-quality
+    Generates high-quality images using Black Forest Labs' FLUX diffusion models.
+    image, generation, AI, text-to-image, flux, high-quality
 
     Use cases:
     - Generate high-fidelity images with excellent text rendering
-    - Create images with memory-efficient INT4/FP4 quantization
     - Fast generation with FLUX.1-schnell (4 steps)
     - High-quality generation with FLUX.1-dev
     - Build production image generation systems
@@ -434,14 +422,10 @@ class Flux(HuggingFacePipelineNode):
         default=FluxVariant.DEV,
         description="FLUX variant: 'schnell' for fast 4-step generation, 'dev' for higher quality with more steps.",
     )
-    quantization: FluxQuantization = Field(
-        default=FluxQuantization.INT4,
-        description="Quantization level: INT4/FP4 for lower VRAM, FP16 for full precision.",
-    )
     enable_cpu_offload: bool = Field(
         default=False,
         description="Offload model components to CPU to reduce VRAM usage. "
-        "Leave off for Nunchaku INT4/FP4 on 8GB+ GPUs; enable only if you hit OOM.",
+        "Enable if you hit OOM.",
     )
     prompt: str = Field(
         default="A cat holding a sign that says hello world",
@@ -493,7 +477,6 @@ class Flux(HuggingFacePipelineNode):
     def get_basic_fields(cls) -> list[str]:
         return [
             "variant",
-            "quantization",
             "prompt",
             "height",
             "width",
@@ -516,193 +499,13 @@ class Flux(HuggingFacePipelineNode):
 
     @classmethod
     def get_recommended_models(cls) -> list[HFFlux]:
-        allow_patterns = [
-            "*.json",
-            "*.txt",
-            "scheduler/*",
-            "vae/*",
-            "text_encoder/*",
-            "tokenizer/*",
-            "tokenizer_2/*",
-        ]
         return [
-            HFFlux(
-                repo_id="black-forest-labs/FLUX.1-schnell",
-                allow_patterns=allow_patterns,
-            ),
-            HFFlux(
-                repo_id="black-forest-labs/FLUX.1-dev",
-                allow_patterns=allow_patterns,
-            ),
-            HFFlux(
-                repo_id="nunchaku-ai/nunchaku-flux.1-schnell",
-                path="svdq-int4_r32-flux.1-schnell.safetensors",
-            ),
-            HFFlux(
-                repo_id="nunchaku-ai/nunchaku-flux.1-schnell",
-                path="svdq-fp4_r32-flux.1-schnell.safetensors",
-            ),
-            HFFlux(
-                repo_id="nunchaku-ai/nunchaku-flux.1-dev",
-                path="svdq-int4_r32-flux.1-dev.safetensors",
-            ),
-            HFFlux(
-                repo_id="nunchaku-ai/nunchaku-flux.1-dev",
-                path="svdq-fp4_r32-flux.1-dev.safetensors",
-            ),
-            HFT5(
-                repo_id="nunchaku-ai/nunchaku-t5",
-                path="awq-int4-flux.1-t5xxl.safetensors",
-            ),
+            HFFlux(repo_id="black-forest-labs/FLUX.1-schnell"),
+            HFFlux(repo_id="black-forest-labs/FLUX.1-dev"),
         ]
-
-    @classmethod
-    def get_model_packs(cls):
-        """Return curated Flux model packs for one-click download."""
-        from nodetool.types.model import ModelPack, UnifiedModel
-
-        FLUX_SCHNELL_ALLOW_PATTERNS = [
-            "*.json",
-            "*.txt",
-            "scheduler/*",
-            "vae/*",
-            "text_encoder/*",
-            "tokenizer/*",
-            "tokenizer_2/*",
-        ]
-        FLUX_DEV_ALLOW_PATTERNS = FLUX_SCHNELL_ALLOW_PATTERNS
-
-        return [
-            ModelPack(
-                id="flux_schnell_nunchaku_int4",
-                title="Flux Schnell (Nunchaku INT4)",
-                description="Fast 4-step Flux with INT4 quantization via Nunchaku. Requires base Schnell repo + quantized transformer + T5 encoder.",
-                category="image_generation",
-                tags=["flux", "text-to-image", "int4", "nunchaku", "fast", "4-step"],
-                models=[
-                    UnifiedModel(
-                        id="black-forest-labs/FLUX.1-schnell",
-                        type="hf.flux",
-                        name="Flux Schnell Base (configs/VAE/tokenizer)",
-                        repo_id="black-forest-labs/FLUX.1-schnell",
-                        allow_patterns=FLUX_SCHNELL_ALLOW_PATTERNS,
-                    ),
-                    UnifiedModel(
-                        # Composite ID (repo_id:filename) used to distinguish this specific file variant
-                        # from other files in the same repo, ensuring unique identification in State.
-                        id="nunchaku-ai/nunchaku-flux.1-schnell:svdq-int4_r32-flux.1-schnell.safetensors",
-                        type="hf.flux",
-                        name="Nunchaku Schnell Transformer (INT4)",
-                        repo_id="nunchaku-ai/nunchaku-flux.1-schnell",
-                        path="svdq-int4_r32-flux.1-schnell.safetensors",
-                        size_on_disk=6400000000,
-                    ),
-                    UnifiedModel(
-                        # Composite ID for T5 encoder variant
-                        id="nunchaku-ai/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
-                        type="hf.t5",
-                        name="Nunchaku T5-XXL Encoder (INT4)",
-                        repo_id="nunchaku-ai/nunchaku-t5",
-                        path="awq-int4-flux.1-t5xxl.safetensors",
-                        size_on_disk=5000000000,
-                    ),
-                ],
-                total_size=11400000000,
-            ),
-            ModelPack(
-                id="flux_dev_nunchaku_int4",
-                title="Flux Dev (Nunchaku INT4)",
-                description="High-quality Flux Dev with INT4 quantization via Nunchaku. Requires base Dev repo + quantized transformer + T5 encoder.",
-                category="image_generation",
-                tags=["flux", "text-to-image", "int4", "nunchaku", "high-quality"],
-                models=[
-                    UnifiedModel(
-                        id="black-forest-labs/FLUX.1-dev",
-                        type="hf.flux",
-                        name="Flux Dev Base (configs/VAE/tokenizer)",
-                        repo_id="black-forest-labs/FLUX.1-dev",
-                        allow_patterns=FLUX_DEV_ALLOW_PATTERNS,
-                    ),
-                    UnifiedModel(
-                        id="nunchaku-ai/nunchaku-flux.1-dev:svdq-int4_r32-flux.1-dev.safetensors",
-                        type="hf.flux",
-                        name="Nunchaku Dev Transformer (INT4)",
-                        repo_id="nunchaku-ai/nunchaku-flux.1-dev",
-                        path="svdq-int4_r32-flux.1-dev.safetensors",
-                        size_on_disk=6400000000,
-                    ),
-                    UnifiedModel(
-                        id="nunchaku-ai/nunchaku-t5:awq-int4-flux.1-t5xxl.safetensors",
-                        type="hf.t5",
-                        name="Nunchaku T5-XXL Encoder (INT4)",
-                        repo_id="nunchaku-ai/nunchaku-t5",
-                        path="awq-int4-flux.1-t5xxl.safetensors",
-                        size_on_disk=5000000000,
-                    ),
-                ],
-                total_size=11400000000,
-            ),
-        ]
-
-    def _resolve_model_config(self) -> tuple[HFFlux, HFT5]:
-        """
-        Resolve flux and t5 models based on variant and quantization.
-        Returns: (flux_model, t5_model)
-        """
-        if self.quantization == FluxQuantization.FP4:
-            if self.variant == FluxVariant.SCHNELL:
-                return (
-                    HFFlux(
-                        repo_id="nunchaku-ai/nunchaku-flux.1-schnell",
-                        path="svdq-fp4_r32-flux.1-schnell.safetensors",
-                    ),
-                    HFT5(
-                        repo_id="nunchaku-ai/nunchaku-t5",
-                        path="awq-int4-flux.1-t5xxl.safetensors",
-                    ),
-                )
-            else:
-                return (
-                    HFFlux(
-                        repo_id="nunchaku-ai/nunchaku-flux.1-dev",
-                        path="svdq-fp4_r32-flux.1-dev.safetensors",
-                    ),
-                    HFT5(
-                        repo_id="nunchaku-ai/nunchaku-t5",
-                        path="awq-int4-flux.1-t5xxl.safetensors",
-                    ),
-                )
-        elif self.quantization == FluxQuantization.INT4:
-            if self.variant == FluxVariant.SCHNELL:
-                return (
-                    HFFlux(
-                        repo_id="nunchaku-ai/nunchaku-flux.1-schnell",
-                        path="svdq-int4_r32-flux.1-schnell.safetensors",
-                    ),
-                    HFT5(
-                        repo_id="nunchaku-ai/nunchaku-t5",
-                        path="awq-int4-flux.1-t5xxl.safetensors",
-                    ),
-                )
-            else:
-                return (
-                    HFFlux(
-                        repo_id="nunchaku-ai/nunchaku-flux.1-dev",
-                        path="svdq-int4_r32-flux.1-dev.safetensors",
-                    ),
-                    HFT5(
-                        repo_id="nunchaku-ai/nunchaku-t5",
-                        path="awq-int4-flux.1-t5xxl.safetensors",
-                    ),
-                )
-        else:
-            # FP16
-            base_model = self._get_base_model(self.variant)
-            return base_model, None
 
     def get_model_id(self) -> str:
-        flux_model, _ = self._resolve_model_config()
-        return flux_model.repo_id
+        return self._get_base_model(self.variant).repo_id
 
     async def preload_model(self, context: ProcessingContext):
         # Diffusers' lazy Flux import chain hangs on Windows when triggered
@@ -710,79 +513,29 @@ class Flux(HuggingFacePipelineNode):
         # it on the main thread at startup, so this is just a cache lookup.
         from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 
-        transformer_model, text_encoder_model = self._resolve_model_config()
-
         torch_dtype = available_torch_dtype()
 
         log.info(f"Using torch_dtype: {torch_dtype}")
 
-        if (
-            self.quantization == FluxQuantization.INT4
-            or self.quantization == FluxQuantization.FP4
-        ):
-            assert transformer_model is not None
-            assert text_encoder_model is not None
+        repo_id = self.get_model_id()
+        # Ensure model is present in cache
+        if not await HF_FAST_CACHE.resolve(repo_id, "model_index.json"):
+            raise ValueError(f"Model {repo_id} must be downloaded")
 
-            # Ensure models are present in cache
-            if not await HF_FAST_CACHE.resolve(
-                transformer_model.repo_id, transformer_model.path
-            ):
-                raise ValueError(
-                    f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded"
-                )
+        hf_token = await context.get_secret("HF_TOKEN")
+        log.info(f"Loading FLUX pipeline from {repo_id}...")
+        self._pipeline = await self.load_model(
+            context=context,
+            model_id=repo_id,
+            model_class=FluxPipeline,
+            torch_dtype=torch_dtype,
+            variant=None,
+            device="cpu",
+            token=hf_token,
+        )
 
-            if not await HF_FAST_CACHE.resolve(
-                text_encoder_model.repo_id, text_encoder_model.path
-            ):
-                raise ValueError(
-                    f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded"
-                )
-
-            base_model = self._get_base_model(self.variant)
-            if not await HF_FAST_CACHE.resolve(base_model.repo_id, "model_index.json"):
-                raise ValueError(
-                    f"Base Flux model {base_model.repo_id} must be downloaded "
-                    "(configs, VAE, CLIP tokenizer). Use the Flux Schnell (Nunchaku INT4) model pack."
-                )
-
-            from nodetool.huggingface.nunchaku_pipelines import (
-                load_nunchaku_flux_pipeline,
-            )
-
-            cache_key = (
-                f"{base_model.repo_id}:{self.variant.value}:{self.quantization.value}"
-            )
-
-            self._pipeline = await load_nunchaku_flux_pipeline(
-                context=context,
-                repo_id=transformer_model.repo_id,
-                transformer_path=transformer_model.path,
-                node_id=self.id,
-                cache_key=cache_key,
-            )
-
-        else:
-            # Standard loading (FP16)
-            # transformer_model contains the base model for FP16 case
-            repo_id = transformer_model.repo_id
-            # Ensure model is present in cache
-            if not await HF_FAST_CACHE.resolve(repo_id, "model_index.json"):
-                raise ValueError(f"Model {repo_id} must be downloaded")
-
-            hf_token = await context.get_secret("HF_TOKEN")
-            log.info(f"Loading FLUX pipeline from {repo_id}...")
-            self._pipeline = await self.load_model(
-                context=context,
-                model_id=repo_id,
-                model_class=FluxPipeline,
-                torch_dtype=torch_dtype,
-                variant=None,
-                device="cpu",
-                token=hf_token,
-            )
-
-            _enable_pytorch2_attention(self._pipeline)
-            _apply_vae_optimizations(self._pipeline)
+        _enable_pytorch2_attention(self._pipeline)
+        _apply_vae_optimizations(self._pipeline)
 
         # Apply CPU offload if enabled and not already configured
         if self._pipeline is not None and self.enable_cpu_offload:
@@ -894,8 +647,7 @@ class Flux(HuggingFacePipelineNode):
         # Run GC before inference to free any unused memory
         run_gc("Before Flux inference", log_before_after=True)
 
-        # VAE tiling for >1MP images only — tiling on small images with the
-        # Nunchaku-wrapped pipeline triggers a very slow code path on Windows.
+        # VAE tiling for >1MP images only; small images do not need it.
         large_image = self.width * self.height > 1024 * 1024
         if large_image and hasattr(self._pipeline, "vae"):
             try:
@@ -931,7 +683,7 @@ class Flux(HuggingFacePipelineNode):
                 return result
 
         # Use a per-step timeout: if no progress is made within this time,
-        # the inference is considered stuck (e.g. nunchaku hang).
+        # the inference is considered stuck.
         # Allow generous time per step for slow GPUs.
         per_step_timeout = 120  # seconds per inference step
         total_timeout = (
@@ -951,7 +703,7 @@ class Flux(HuggingFacePipelineNode):
             raise RuntimeError(
                 f"Flux inference timed out after {total_timeout}s. "
                 "The pipeline may be stuck. Try restarting the server, "
-                "reducing image size, or switching quantization mode."
+                "or reducing image size."
             )
         except torch.OutOfMemoryError as e:
             cancel_event.set()
@@ -1594,12 +1346,6 @@ class BriaFibo(HuggingFacePipelineNode):
         ]
 
 
-class QwenQuantization(str, Enum):
-    FP16 = "fp16"
-    FP4 = "fp4"
-    INT4 = "int4"
-
-
 class QwenTextEncoderQuantization(str, Enum):
     NF4 = "nf4"
     NF8 = "nf8"
@@ -1608,20 +1354,15 @@ class QwenTextEncoderQuantization(str, Enum):
 
 class QwenImage(HuggingFacePipelineNode):
     """
-    Generates images from text prompts using Alibaba's Qwen-Image model with Nunchaku quantization support.
-    image, generation, AI, text-to-image, qwen, quantization, multilingual
+    Generates images from text prompts using Alibaba's Qwen-Image model.
+    image, generation, AI, text-to-image, qwen, multilingual
 
     Use cases:
     - Generate high-quality images with strong multilingual prompt support
-    - Memory-efficient generation using INT4/FP4 quantization
     - Create images with precise semantic understanding
     - Build production image generation systems
     """
 
-    quantization: QwenQuantization = Field(
-        default=QwenQuantization.INT4,
-        description="Quantization level: INT4/FP4 for lower VRAM, FP16 for full precision.",
-    )
     prompt: str = Field(
         default="A cat holding a sign that says hello world",
         description="Text description of the image to generate.",
@@ -1664,74 +1405,7 @@ class QwenImage(HuggingFacePipelineNode):
 
     @classmethod
     def get_recommended_models(cls) -> list[HFQwenImage]:
-        allow_patterns = [
-            "*.json",
-            "*.txt",
-            "scheduler/*",
-            "vae/*",
-            "text_encoder/*",
-            "text_encoder_2/*",
-            "tokenizer/*",
-            "tokenizer_2/*",
-        ]
-        return [
-            HFQwenImage(
-                repo_id="Qwen/Qwen-Image",
-                allow_patterns=allow_patterns,
-            ),
-            HFQwenImage(
-                repo_id="nunchaku-ai/nunchaku-qwen-image",
-                path="svdq-int4_r32-qwen-image.safetensors",
-            ),
-            HFQwenImage(
-                repo_id="nunchaku-ai/nunchaku-qwen-image",
-                path="svdq-fp4_r32-qwen-image.safetensors",
-            ),
-        ]
-
-    @classmethod
-    def get_model_packs(cls):
-        """Return curated Qwen-Image model packs for one-click download."""
-        from nodetool.types.model import ModelPack, UnifiedModel
-
-        QWEN_IMAGE_ALLOW_PATTERNS = [
-            "*.json",
-            "*.txt",
-            "scheduler/*",
-            "vae/*",
-            "text_encoder/*",
-            "text_encoder_2/*",
-            "tokenizer/*",
-            "tokenizer_2/*",
-        ]
-
-        return [
-            ModelPack(
-                id="qwen_image_nunchaku_int4",
-                title="Qwen-Image (Nunchaku INT4)",
-                description="Qwen-Image with INT4 quantization via Nunchaku. Requires base Qwen-Image repo + quantized transformer.",
-                category="image_generation",
-                tags=["qwen", "text-to-image", "int4", "nunchaku"],
-                models=[
-                    UnifiedModel(
-                        id="Qwen/Qwen-Image",
-                        type="hf.qwen_image",
-                        name="Qwen-Image Base (configs/VAE/tokenizer/text_encoder)",
-                        repo_id="Qwen/Qwen-Image",
-                        allow_patterns=QWEN_IMAGE_ALLOW_PATTERNS,
-                    ),
-                    UnifiedModel(
-                        id="nunchaku-ai/nunchaku-qwen-image:svdq-int4_r32-qwen-image.safetensors",
-                        type="hf.qwen_image",
-                        name="Nunchaku Qwen Transformer (INT4)",
-                        repo_id="nunchaku-ai/nunchaku-qwen-image",
-                        path="svdq-int4_r32-qwen-image.safetensors",
-                        size_on_disk=6500000000,
-                    ),
-                ],
-                total_size=6500000000,
-            ),
-        ]
+        return [HFQwenImage(repo_id="Qwen/Qwen-Image")]
 
     @classmethod
     def get_title(cls) -> str:
@@ -1740,7 +1414,6 @@ class QwenImage(HuggingFacePipelineNode):
     @classmethod
     def get_basic_fields(cls) -> list[str]:
         return [
-            "quantization",
             "prompt",
             "negative_prompt",
             "height",
@@ -1748,43 +1421,16 @@ class QwenImage(HuggingFacePipelineNode):
             "num_inference_steps",
         ]
 
-    def _resolve_model_config(self) -> HFQwenImage:
-        if self.quantization == QwenQuantization.FP4:
-            return HFQwenImage(
-                repo_id="nunchaku-ai/nunchaku-qwen-image",
-                path="svdq-fp4_r32-qwen-image.safetensors",
-            )
-        elif self.quantization == QwenQuantization.INT4:
-            return HFQwenImage(
-                repo_id="nunchaku-ai/nunchaku-qwen-image",
-                path="svdq-int4_r32-qwen-image.safetensors",
-            )
-        else:
-            return HFQwenImage(repo_id="Qwen/Qwen-Image")
-
     def get_model_id(self) -> str:
-        model = self._resolve_model_config()
-        return model.repo_id
-
-    def _is_nunchaku_model(self) -> bool:
-        """Detect Nunchaku SVDQ transformers via repo or filename."""
-        model = self._resolve_model_config()
-        repo_has_svdq = model.repo_id and "svdq" in model.repo_id.lower()
-        path_has_svdq = model.path and "svdq" in model.path.lower()
-        return bool(repo_has_svdq or path_has_svdq)
+        return "Qwen/Qwen-Image"
 
     async def preload_model(self, context: ProcessingContext):
-        if self._is_nunchaku_model():
-            await self._load_nunchaku_model(context, available_torch_dtype())
-        else:
-            await self._load_full_precision_pipeline(context)
+        await self._load_full_precision_pipeline(context)
 
     async def _load_full_precision_pipeline(self, context: ProcessingContext):
         from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
 
-        log.info(
-            f"Loading Qwen-Image pipeline from {self.get_model_id()} without quantization..."
-        )
+        log.info(f"Loading Qwen-Image pipeline from {self.get_model_id()}...")
 
         torch_dtype = available_torch_dtype()
 
@@ -1805,38 +1451,10 @@ class QwenImage(HuggingFacePipelineNode):
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
 
-    async def _load_nunchaku_model(
-        self,
-        context: ProcessingContext,
-        torch_dtype: torch.dtype,
-    ):
-        """Load Qwen-Image pipeline using a Nunchaku SVDQ transformer file."""
-        from nodetool.huggingface.nunchaku_pipelines import (
-            load_nunchaku_qwen_pipeline,
-        )
-        from diffusers.pipelines.qwenimage.pipeline_qwenimage import QwenImagePipeline
-
-        model = self._resolve_model_config()
-
-        self._pipeline = await load_nunchaku_qwen_pipeline(
-            context=context,
-            repo_id=model.repo_id,
-            transformer_path=model.path,
-            node_id=self.id,
-            pipeline_class=QwenImagePipeline,
-            base_model_id="Qwen/Qwen-Image",
-            torch_dtype=torch_dtype,
-        )
-
     async def move_to_device(self, device: str):
-        # The nunchaku path builds its transformer straight onto
-        # `context.device`, so there is nothing left to move — which is why
-        # this override existed. The full-precision path is the opposite: it
-        # loads with `device="cpu"` and relies on this call to place the
-        # pipeline. A blanket `pass` covered both, so fp16 Qwen-Image ran a 20B
-        # model on the CPU while a GPU sat idle next to it.
-        if self._is_nunchaku_model():
-            return
+        # The pipeline loads with `device="cpu"` and relies on this call to be
+        # placed. A blanket `pass` here once ran a 20B model on the CPU while a
+        # GPU sat idle next to it.
         if self._pipeline is not None:
             move_pipeline_to_device(self._pipeline, device)
 
@@ -1880,25 +1498,6 @@ class QwenImage(HuggingFacePipelineNode):
     def required_inputs(self):
         """Return list of required inputs that must be connected."""
         return []  # No required inputs - IP adapter image is optional
-
-
-FLUX_CONTROL_BASE_ALLOW_PATTERNS = [
-    "*.json",
-    "*.txt",
-    "scheduler/*",
-    "vae/*",
-    "text_encoder/*",
-    "tokenizer/*",
-    "tokenizer_2/*",
-    "controlnet/*",
-    "transformer/config.json",
-]
-
-
-class FluxControlQuantization(Enum):
-    FP16 = "fp16"
-    FP4 = "fp4"
-    INT4 = "int4"
 
 
 class FluxControl(HuggingFacePipelineNode):
@@ -1952,17 +1551,12 @@ class FluxControl(HuggingFacePipelineNode):
         default=True,
         description="Enable CPU offload to reduce VRAM usage.",
     )
-    quantization: FluxControlQuantization = Field(
-        default=FluxControlQuantization.INT4,
-        description="Quantization level for the FLUX Control transformer.",
-    )
     _pipeline: Any = None
 
     @classmethod
     def get_basic_fields(cls) -> list[str]:
         return [
             "model",
-            "quantization",
             "prompt",
             "control_image",
             "height",
@@ -1972,46 +1566,10 @@ class FluxControl(HuggingFacePipelineNode):
         ]
 
     @classmethod
-    def get_recommended_models(cls) -> list[HFControlNetFlux | HFT5]:
-        allow_patterns = [
-            "*.json",
-            "*.txt",
-            "scheduler/*",
-            "vae/*",
-            "text_encoder/*",
-            "tokenizer/*",
-            "tokenizer_2/*",
-            "transformer/config.json",
-        ]
+    def get_recommended_models(cls) -> list[HFControlNetFlux]:
         return [
-            HFControlNetFlux(
-                repo_id="black-forest-labs/FLUX.1-Depth-dev",
-                allow_patterns=allow_patterns,
-            ),
-            HFControlNetFlux(
-                repo_id="black-forest-labs/FLUX.1-Canny-dev",
-                allow_patterns=allow_patterns,
-            ),
-            HFControlNetFlux(
-                repo_id="nunchaku-ai/nunchaku-flux.1-depth-dev",
-                path="svdq-int4_r32-flux.1-depth-dev.safetensors",
-            ),
-            HFControlNetFlux(
-                repo_id="nunchaku-ai/nunchaku-flux.1-depth-dev",
-                path="svdq-fp4_r32-flux.1-depth-dev.safetensors",
-            ),
-            HFControlNetFlux(
-                repo_id="nunchaku-ai/nunchaku-flux.1-canny-dev",
-                path="svdq-int4_r32-flux.1-canny-dev.safetensors",
-            ),
-            HFControlNetFlux(
-                repo_id="nunchaku-ai/nunchaku-flux.1-canny-dev",
-                path="svdq-fp4_r32-flux.1-canny-dev.safetensors",
-            ),
-            HFT5(
-                repo_id="nunchaku-ai/nunchaku-t5",
-                path="awq-int4-flux.1-t5xxl.safetensors",
-            ),
+            HFControlNetFlux(repo_id="black-forest-labs/FLUX.1-Depth-dev"),
+            HFControlNetFlux(repo_id="black-forest-labs/FLUX.1-Canny-dev"),
         ]
 
     @classmethod
@@ -2019,9 +1577,7 @@ class FluxControl(HuggingFacePipelineNode):
         return "Flux Control"
 
     def get_model_id(self) -> str:
-        quantization = self._resolve_effective_quantization()
-        base_model, _, _ = self._resolve_model_config(quantization)
-        return base_model.repo_id or "black-forest-labs/FLUX.1-Depth-dev"
+        return self.model.repo_id or "black-forest-labs/FLUX.1-Depth-dev"
 
     def required_inputs(self):
         return ["control_image"]
@@ -2037,66 +1593,23 @@ class FluxControl(HuggingFacePipelineNode):
             )
 
         torch_dtype = torch.bfloat16
-        quantization = self._resolve_effective_quantization()
-        base_model, transformer_model, text_encoder_model = self._resolve_model_config(
-            quantization
+        model_id = self.get_model_id()
+        path = self.model.path if self.model.repo_id else None
+
+        log.info("Loading FLUX Control pipeline from %s", model_id)
+        if not await HF_FAST_CACHE.resolve(model_id, "model_index.json"):
+            raise ValueError(f"Model {model_id} must be downloaded")
+
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=FluxControlPipeline,
+            model_id=model_id,
+            path=path,
+            torch_dtype=torch_dtype,
+            device="cpu",
+            token=hf_token,
+            local_files_only=True,
         )
-
-        log.info(
-            "Loading FLUX Control pipeline from %s (quantization=%s)",
-            base_model.repo_id,
-            quantization.value,
-        )
-        if transformer_model is not None and text_encoder_model is not None:
-            if not await HF_FAST_CACHE.resolve(base_model.repo_id, "model_index.json"):
-                raise ValueError(
-                    f"Base Flux Control model {base_model.repo_id} must be downloaded"
-                )
-
-            if not await HF_FAST_CACHE.resolve(
-                transformer_model.repo_id, transformer_model.path
-            ):
-                raise ValueError(
-                    f"Transformer model {transformer_model.repo_id}/{transformer_model.path} must be downloaded"
-                )
-
-            if not await HF_FAST_CACHE.resolve(
-                text_encoder_model.repo_id, text_encoder_model.path
-            ):
-                raise ValueError(
-                    f"Text encoder model {text_encoder_model.repo_id}/{text_encoder_model.path} must be downloaded"
-                )
-
-            from nodetool.huggingface.nunchaku_pipelines import (
-                load_nunchaku_flux_pipeline,
-            )
-            from nodetool.ml.core.model_manager import ModelManager
-
-            # Cache key for controlnet variant
-            cache_key = f"{base_model.repo_id}:{quantization.value}:control-v1"
-
-            self._pipeline = await load_nunchaku_flux_pipeline(
-                context=context,
-                repo_id=transformer_model.repo_id,
-                transformer_path=transformer_model.path,
-                node_id=self.id,
-                pipeline_class=FluxControlPipeline,
-                cache_key=cache_key,
-            )
-        else:
-            if not await HF_FAST_CACHE.resolve(base_model.repo_id, "model_index.json"):
-                raise ValueError(f"Model {base_model.repo_id} must be downloaded")
-
-            self._pipeline = await self.load_model(
-                context=context,
-                model_class=FluxControlPipeline,
-                model_id=base_model.repo_id,
-                path=base_model.path,
-                torch_dtype=torch_dtype,
-                device="cpu",
-                token=hf_token,
-                local_files_only=True,
-            )
 
         _enable_pytorch2_attention(self._pipeline)
         _apply_vae_optimizations(self._pipeline)
@@ -2104,60 +1617,6 @@ class FluxControl(HuggingFacePipelineNode):
             from nodetool.huggingface.memory_utils import apply_cpu_offload_if_needed
 
             apply_cpu_offload_if_needed(self._pipeline, method="sequential")
-
-    def _is_nunchaku_model(self) -> bool:
-        return self._resolve_effective_quantization() != FluxControlQuantization.FP16
-
-    def _detect_legacy_quantization(self) -> FluxControlQuantization | None:
-        repo = (self.model.repo_id or "").lower()
-        path = (self.model.path or "").lower()
-        if "svdq" not in repo and "svdq" not in path:
-            return None
-        if "fp4" in repo or "fp4" in path:
-            return FluxControlQuantization.FP4
-        return FluxControlQuantization.INT4
-
-    def _resolve_effective_quantization(self) -> FluxControlQuantization:
-        quantization = self.quantization
-        legacy_quantization = self._detect_legacy_quantization()
-        if (
-            quantization == FluxControlQuantization.FP16
-            and legacy_quantization is not None
-        ):
-            quantization = legacy_quantization
-
-        return quantization
-
-    def _detect_flux_control_variant(self) -> tuple[str, str]:
-        repo_id = (self.model.repo_id or "").lower()
-        path = (self.model.path or "").lower()
-        if "canny" in repo_id or "canny" in path:
-            return "canny-dev", "black-forest-labs/FLUX.1-Canny-dev"
-        return "depth-dev", "black-forest-labs/FLUX.1-Depth-dev"
-
-    def _resolve_model_config(
-        self, quantization: FluxControlQuantization
-    ) -> tuple[HFControlNetFlux, HFControlNetFlux | None, HFT5 | None]:
-        variant_key, base_model_id = self._detect_flux_control_variant()
-        if quantization == FluxControlQuantization.FP16:
-            if self.model.repo_id:
-                return self.model, None, None
-            return HFControlNetFlux(repo_id=base_model_id), None, None
-
-        precision = "fp4" if quantization == FluxControlQuantization.FP4 else "int4"
-        transformer_model = HFControlNetFlux(
-            repo_id=f"nunchaku-ai/nunchaku-flux.1-{variant_key}",
-            path=f"svdq-{precision}_r32-flux.1-{variant_key}.safetensors",
-        )
-        text_encoder_model = HFT5(
-            repo_id="nunchaku-ai/nunchaku-t5",
-            path="awq-int4-flux.1-t5xxl.safetensors",
-        )
-        base_model = HFControlNetFlux(
-            repo_id=base_model_id,
-            allow_patterns=FLUX_CONTROL_BASE_ALLOW_PATTERNS,
-        )
-        return base_model, transformer_model, text_encoder_model
 
     async def move_to_device(self, device: str):
         if self._pipeline is not None:

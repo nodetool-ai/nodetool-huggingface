@@ -40,11 +40,6 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from nodetool.huggingface.flux_utils import (
-    is_nunchaku_flux_transformer,
-    is_nunchaku_qwen_transformer,
-    is_nunchaku_transformer,
-)
 from nodetool.huggingface.local_provider_utils import (
     _apply_memory_optimizations,
     _detect_cached_variant,
@@ -52,12 +47,9 @@ from nodetool.huggingface.local_provider_utils import (
     _ensure_model_on_device,
     _get_torch,
     _is_cuda_available,
+    _select_pipeline_dtype,
     _is_node_model,
     _resolve_hf_device,
-)
-from nodetool.huggingface.nunchaku_pipelines import (
-    load_nunchaku_flux_pipeline,
-    load_nunchaku_qwen_pipeline,
 )
 from nodetool.huggingface.single_file_models import (
     SingleFileLoadPlan,
@@ -141,7 +133,7 @@ async def load_local_single_file_pipeline(
 
     plan = plan or detect_single_file_checkpoint(checkpoint_path)
     torch = _get_torch()
-    dtype = getattr(torch, plan.dtype) if _is_cuda_available() else torch.float32
+    dtype = _select_pipeline_dtype(prefer_bf16=plan.dtype == "bfloat16")
 
     pipeline_cls = getattr(
         importlib.import_module(plan.pipeline_module), plan.pipeline_class
@@ -250,76 +242,28 @@ async def load_text_to_image_pipeline(
         from nodetool.nodes.huggingface.text_to_image import Flux, QwenImage
 
         if _is_node_model(model_id, model_path, Flux):
-            if is_nunchaku_transformer(model_id, model_path):
-                pipeline = await load_nunchaku_flux_pipeline(
-                    context=context,
-                    repo_id=model_id,
-                    transformer_path=model_path,
-                    node_id=node_id,
-                )
-            else:
-                from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+            from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 
-                torch = _get_torch()
-                pipeline = await asyncio.to_thread(
-                    FluxPipeline.from_single_file,
-                    str(cache_path),
-                    torch_dtype=(
-                        torch.bfloat16 if _is_cuda_available() else torch.float32
-                    ),
-                )
+            pipeline = await asyncio.to_thread(
+                FluxPipeline.from_single_file,
+                str(cache_path),
+                torch_dtype=_select_pipeline_dtype(prefer_bf16=True),
+            )
         elif _is_node_model(model_id, model_path, QwenImage):
             from diffusers.pipelines.qwenimage.pipeline_qwenimage import (
                 QwenImagePipeline,
             )
 
-            if is_nunchaku_transformer(model_id, model_path):
-                pipeline = await load_nunchaku_qwen_pipeline(
-                    context=context,
-                    repo_id=model_id,
-                    transformer_path=model_path,
-                    node_id=node_id,
-                    pipeline_class=QwenImagePipeline,
-                    base_model_id="Qwen/Qwen-Image",
-                    torch_dtype=_get_torch().bfloat16,
-                )
-                use_cpu_offload = True
-            else:
-                torch = _get_torch()
-                pipeline = await asyncio.to_thread(
-                    QwenImagePipeline.from_single_file,
-                    str(cache_path),
-                    torch_dtype=torch.bfloat16,
-                )
-                use_cpu_offload = True
-        else:
             torch = _get_torch()
-            # Check for Nunchaku transformers before tag-based routing
-            # Nunchaku models may not be in the Flux/QwenImage node's recommended
-            # list, but they still need the special Nunchaku pipeline
-            if is_nunchaku_qwen_transformer(model_id, model_path):
-                from diffusers.pipelines.qwenimage.pipeline_qwenimage import (
-                    QwenImagePipeline,
-                )
-
-                pipeline = await load_nunchaku_qwen_pipeline(
-                    context=context,
-                    repo_id=model_id,
-                    transformer_path=model_path,
-                    node_id=node_id,
-                    pipeline_class=QwenImagePipeline,
-                    base_model_id="Qwen/Qwen-Image",
-                    torch_dtype=torch.bfloat16,
-                )
-                use_cpu_offload = True
-            elif is_nunchaku_flux_transformer(model_id, model_path):
-                pipeline = await load_nunchaku_flux_pipeline(
-                    context=context,
-                    repo_id=model_id,
-                    transformer_path=model_path,
-                    node_id=node_id,
-                )
-            elif "diffusers:StableDiffusionXLPipeline" in model_info.tags:
+            pipeline = await asyncio.to_thread(
+                QwenImagePipeline.from_single_file,
+                str(cache_path),
+                # Qwen-Image overflows in float16, so it keeps bfloat16.
+                torch_dtype=torch.bfloat16,
+            )
+            use_cpu_offload = True
+        else:
+            if "diffusers:StableDiffusionXLPipeline" in model_info.tags:
                 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
                     StableDiffusionXLPipeline,
                 )
@@ -327,9 +271,7 @@ async def load_text_to_image_pipeline(
                 pipeline = await asyncio.to_thread(
                     StableDiffusionXLPipeline.from_single_file,
                     str(cache_path),
-                    torch_dtype=(
-                        torch.float16 if _is_cuda_available() else torch.float32
-                    ),
+                    torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
                 )
             elif "diffusers:StableDiffusionPipeline" in model_info.tags:
                 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
@@ -339,9 +281,7 @@ async def load_text_to_image_pipeline(
                 pipeline = await asyncio.to_thread(
                     StableDiffusionPipeline.from_single_file,
                     str(cache_path),
-                    torch_dtype=(
-                        torch.float16 if _is_cuda_available() else torch.float32
-                    ),
+                    torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
                 )
             elif "diffusers:StableDiffusion3Pipeline" in model_info.tags:
                 from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import (
@@ -351,9 +291,7 @@ async def load_text_to_image_pipeline(
                 pipeline = await asyncio.to_thread(
                     StableDiffusion3Pipeline.from_single_file,
                     str(cache_path),
-                    torch_dtype=(
-                        torch.float16 if _is_cuda_available() else torch.float32
-                    ),
+                    torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
                 )
             elif "flux" in model_info.tags:
                 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
@@ -361,9 +299,7 @@ async def load_text_to_image_pipeline(
                 pipeline = await asyncio.to_thread(
                     FluxPipeline.from_single_file,
                     str(cache_path),
-                    torch_dtype=(
-                        torch.bfloat16 if _is_cuda_available() else torch.float32
-                    ),
+                    torch_dtype=_select_pipeline_dtype(prefer_bf16=True),
                 )
             elif model_info.pipeline_tag == "text-to-image":
                 # Fallback for generic text-to-image models (likely SDXL or SD1.5) if no specific diffusers tag found
@@ -384,9 +320,7 @@ async def load_text_to_image_pipeline(
                     pipeline = await asyncio.to_thread(
                         StableDiffusionXLPipeline.from_single_file,
                         str(cache_path),
-                        torch_dtype=(
-                            torch.float16 if _is_cuda_available() else torch.float32
-                        ),
+                        torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
                     )
                 elif _is_node_model(
                     model_id, model_path, StableDiffusion
@@ -398,9 +332,7 @@ async def load_text_to_image_pipeline(
                     pipeline = await asyncio.to_thread(
                         StableDiffusionPipeline.from_single_file,
                         str(cache_path),
-                        torch_dtype=(
-                            torch.float16 if _is_cuda_available() else torch.float32
-                        ),
+                        torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
                     )
                 else:
                     # Attempt to load as SDXL first as it's common for single-file safetensors
@@ -412,9 +344,7 @@ async def load_text_to_image_pipeline(
                         pipeline = await asyncio.to_thread(
                             StableDiffusionXLPipeline.from_single_file,
                             str(cache_path),
-                            torch_dtype=(
-                                torch.float16 if _is_cuda_available() else torch.float32
-                            ),
+                            torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
                         )
                     except Exception:
                         # Fallback to standard SD
@@ -425,9 +355,7 @@ async def load_text_to_image_pipeline(
                         pipeline = await asyncio.to_thread(
                             StableDiffusionPipeline.from_single_file,
                             str(cache_path),
-                            torch_dtype=(
-                                torch.float16 if _is_cuda_available() else torch.float32
-                            ),
+                            torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
                         )
             else:
                 raise ValueError(
@@ -443,7 +371,7 @@ async def load_text_to_image_pipeline(
             pipeline = await asyncio.to_thread(
                 explicit_cls.from_pretrained,
                 model_id,
-                torch_dtype=torch.bfloat16 if _is_cuda_available() else torch.float32,
+                torch_dtype=_select_pipeline_dtype(prefer_bf16=True),
             )
         else:
             from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
@@ -451,7 +379,7 @@ async def load_text_to_image_pipeline(
             pipeline = await asyncio.to_thread(
                 AutoPipelineForText2Image.from_pretrained,
                 model_id,
-                torch_dtype=torch.float16 if _is_cuda_available() else torch.float32,
+                torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
                 variant=await _detect_cached_variant(model_id),
             )
 

@@ -1,11 +1,36 @@
-# Pinned requirements for Stability AI / VAST TripoSR
-#
-# TripoSR is not published to PyPI. Install from the upstream git repo.
-# Requires torchmcubes (C++ extension, CUDA recommended).
+# VAST TripoSR for the TripoSR node.
 #
 # Repository: https://github.com/VAST-AI-Research/TripoSR
 # License:    MIT
-# Pinned:     2024-05-14 (last upstream commit)
+# Pinned:     d26e33181947bbbc4c6fc0f5734e1ec6c080956e (2024-05-14)
+#
+# The repository root has no setup.py or pyproject.toml, so its `tsr` package
+# cannot be pip-installed. Install it in two steps, inside the NodeTool Python
+# environment:
+#
+# 1. Install torchmcubes and the runtime dependencies listed below.
+#    torchmcubes is a C++/CUDA extension whose build imports torch, so build it
+#    against the installed torch (a C++ compiler is required, and the CUDA
+#    toolkit for GPU marching cubes). Its build backend must be installed
+#    first, because a non-isolated build does not fetch it:
+#      pip install scikit-build-core pybind11 cmake ninja
+#      pip install --no-build-isolation -r requirements/triposr.txt
+#
+# 2. Clone the source at the pinned commit and put it on the import path with a
+#    .pth file:
+#      git clone https://github.com/VAST-AI-Research/TripoSR
+#      git -C TripoSR checkout d26e33181947bbbc4c6fc0f5734e1ec6c080956e
+#      python -c "import pathlib, sys, sysconfig; pathlib.Path(sysconfig.get_paths()['purelib'], 'triposr.pth').write_text(str(pathlib.Path(sys.argv[1]).resolve()))" TripoSR
+#
+# Upstream's requirements.txt pins old versions (transformers 4.35,
+# Pillow 10.1) that conflict with this package, so the runtime dependencies
+# below are unpinned.
 
-tsr @ git+https://github.com/VAST-AI-Research/TripoSR.git@d26e33181947bbbc4c6fc0f5734e1ec6c080956e
+torchmcubes @ git+https://github.com/tatsy/torchmcubes@879926d0ef58e6ce0ac2630fdecb5e53af7ed3ff
+omegaconf
+einops
+trimesh
+xatlas
+moderngl
+imageio[ffmpeg]
 rembg

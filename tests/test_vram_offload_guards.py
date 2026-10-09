@@ -166,20 +166,20 @@ def test_ensure_model_on_device_keeps_offload():
     assert pipeline.moved_to == []
 
 
-def test_component_cache_suffix_separates_quantizations():
+def test_component_cache_suffix_separates_swapped_components():
     """Two pipelines differing only by a swapped transformer need distinct keys."""
     from nodetool.huggingface.local_provider_utils import _component_cache_suffix
 
-    int4 = _Component()
-    int4._nodetool_cache_key = "repo_NunchakuUNet_svdq-int4.safetensors"
-    fp4 = _Component()
-    fp4._nodetool_cache_key = "repo_NunchakuUNet_svdq-fp4.safetensors"
+    first = _Component()
+    first._nodetool_cache_key = "repo_UNet2DConditionModel_unet-a.safetensors"
+    second = _Component()
+    second._nodetool_cache_key = "repo_UNet2DConditionModel_unet-b.safetensors"
 
-    suffix_int4 = _component_cache_suffix({"unet": int4})
-    suffix_fp4 = _component_cache_suffix({"unet": fp4})
+    suffix_first = _component_cache_suffix({"unet": first})
+    suffix_second = _component_cache_suffix({"unet": second})
 
-    assert suffix_int4 and suffix_fp4
-    assert suffix_int4 != suffix_fp4
+    assert suffix_first and suffix_second
+    assert suffix_first != suffix_second
     # A full-precision load passes no component at all.
     assert _component_cache_suffix({"use_safetensors": True}) == ""
 
