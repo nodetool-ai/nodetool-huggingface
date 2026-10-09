@@ -40,11 +40,6 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from nodetool.huggingface.flux_utils import (
-    is_nunchaku_flux_transformer,
-    is_nunchaku_qwen_transformer,
-    is_nunchaku_transformer,
-)
 from nodetool.huggingface.local_provider_utils import (
     _apply_memory_optimizations,
     _detect_cached_variant,
@@ -55,10 +50,6 @@ from nodetool.huggingface.local_provider_utils import (
     _select_pipeline_dtype,
     _is_node_model,
     _resolve_hf_device,
-)
-from nodetool.huggingface.nunchaku_pipelines import (
-    load_nunchaku_flux_pipeline,
-    load_nunchaku_qwen_pipeline,
 )
 from nodetool.huggingface.single_file_models import (
     SingleFileLoadPlan,
@@ -251,75 +242,28 @@ async def load_text_to_image_pipeline(
         from nodetool.nodes.huggingface.text_to_image import Flux, QwenImage
 
         if _is_node_model(model_id, model_path, Flux):
-            if is_nunchaku_transformer(model_id, model_path):
-                pipeline = await load_nunchaku_flux_pipeline(
-                    context=context,
-                    repo_id=model_id,
-                    transformer_path=model_path,
-                    node_id=node_id,
-                )
-            else:
-                from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
+            from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 
-                torch = _get_torch()
-                pipeline = await asyncio.to_thread(
-                    FluxPipeline.from_single_file,
-                    str(cache_path),
-                    torch_dtype=_select_pipeline_dtype(prefer_bf16=True),
-                )
+            pipeline = await asyncio.to_thread(
+                FluxPipeline.from_single_file,
+                str(cache_path),
+                torch_dtype=_select_pipeline_dtype(prefer_bf16=True),
+            )
         elif _is_node_model(model_id, model_path, QwenImage):
             from diffusers.pipelines.qwenimage.pipeline_qwenimage import (
                 QwenImagePipeline,
             )
 
-            if is_nunchaku_transformer(model_id, model_path):
-                pipeline = await load_nunchaku_qwen_pipeline(
-                    context=context,
-                    repo_id=model_id,
-                    transformer_path=model_path,
-                    node_id=node_id,
-                    pipeline_class=QwenImagePipeline,
-                    base_model_id="Qwen/Qwen-Image",
-                    torch_dtype=_get_torch().bfloat16,
-                )
-                use_cpu_offload = True
-            else:
-                torch = _get_torch()
-                pipeline = await asyncio.to_thread(
-                    QwenImagePipeline.from_single_file,
-                    str(cache_path),
-                    # Qwen-Image overflows in float16, so it keeps bfloat16.
-                    torch_dtype=torch.bfloat16,
-                )
-                use_cpu_offload = True
-        else:
             torch = _get_torch()
-            # Check for Nunchaku transformers before tag-based routing
-            # Nunchaku models may not be in the Flux/QwenImage node's recommended
-            # list, but they still need the special Nunchaku pipeline
-            if is_nunchaku_qwen_transformer(model_id, model_path):
-                from diffusers.pipelines.qwenimage.pipeline_qwenimage import (
-                    QwenImagePipeline,
-                )
-
-                pipeline = await load_nunchaku_qwen_pipeline(
-                    context=context,
-                    repo_id=model_id,
-                    transformer_path=model_path,
-                    node_id=node_id,
-                    pipeline_class=QwenImagePipeline,
-                    base_model_id="Qwen/Qwen-Image",
-                    torch_dtype=torch.bfloat16,
-                )
-                use_cpu_offload = True
-            elif is_nunchaku_flux_transformer(model_id, model_path):
-                pipeline = await load_nunchaku_flux_pipeline(
-                    context=context,
-                    repo_id=model_id,
-                    transformer_path=model_path,
-                    node_id=node_id,
-                )
-            elif "diffusers:StableDiffusionXLPipeline" in model_info.tags:
+            pipeline = await asyncio.to_thread(
+                QwenImagePipeline.from_single_file,
+                str(cache_path),
+                # Qwen-Image overflows in float16, so it keeps bfloat16.
+                torch_dtype=torch.bfloat16,
+            )
+            use_cpu_offload = True
+        else:
+            if "diffusers:StableDiffusionXLPipeline" in model_info.tags:
                 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
                     StableDiffusionXLPipeline,
                 )

@@ -30,12 +30,6 @@ _ALLOW_DOWNLOAD_VALUES = {"1", "true", "yes", "on"}
 _PREFERRED_HF_DEVICE = "mps"
 
 
-def _loads_safetensors_via_pretrained(model_class: type) -> bool:
-    """Nunchaku SVDQ weights load via ``from_pretrained(path.safetensors)``, not diffusers ``from_single_file``."""
-    module = getattr(model_class, "__module__", "")
-    return module.startswith("nunchaku.")
-
-
 def _get_torch():
     """Lazy import for torch."""
     import torch
@@ -264,10 +258,9 @@ def _dtype_cache_suffix(torch_dtype: Any) -> str:
     """Derive a cache-key suffix from the requested dtype.
 
     ``torch_dtype`` is a named parameter, so it never reached the derived key.
-    Every FLUX variant asks for the same nunchaku T5 encoder but not the same
-    dtype — bfloat16 for schnell and dev, float16 for fill, canny, depth and
-    kontext — and whichever ran first won. The later pipeline then fed bf16
-    hidden states into fp16 layers: "Input type (c10::BFloat16) and bias type
+    Two loads of the same weights in different dtypes would share one entry
+    and whichever ran first won. The later pipeline then fed bf16 hidden
+    states into fp16 layers: "Input type (c10::BFloat16) and bias type
     (c10::Half) should be the same".
     """
     if torch_dtype is None:
@@ -314,8 +307,8 @@ def _component_identity(component: Any) -> str:
 
     Components loaded through :func:`load_model` carry the cache key they were
     stored under, which already encodes repo, class, path and quantization.
-    That is the only discriminator fine-grained enough to tell, say, an INT4
-    Nunchaku UNet from an FP4 one — both share a class name.
+    That is the only discriminator fine-grained enough to tell apart two
+    components of the same class loaded from different weights.
     """
     marker = getattr(component, "_nodetool_cache_key", None)
     if isinstance(marker, str) and marker:
@@ -666,17 +659,6 @@ async def load_model(
     def _load_sync() -> T:
         if path:
             assert cache_path is not None
-            if _loads_safetensors_via_pretrained(model_class):
-                nunchaku_kwargs = dict(load_kwargs)
-                if device is not None:
-                    # Nunchaku loads its quantized weights directly onto the
-                    # requested device.
-                    nunchaku_kwargs["device"] = device
-                return model_class.from_pretrained(  # type: ignore[attr-defined]
-                    cache_path,
-                    torch_dtype=torch_dtype,
-                    **nunchaku_kwargs,
-                )
             if hasattr(model_class, "from_single_file"):
                 return model_class.from_single_file(  # type: ignore
                     cache_path,
@@ -923,7 +905,7 @@ def _apply_memory_optimizations(
     )
 
     if has_cpu_offload_enabled(pipeline):
-        # Nunchaku loaders install their own offload strategy; exactly one
+        # The loader already installed an offload strategy; exactly one
         # strategy may exist per pipeline.
         _apply_vae_optimizations(pipeline)
         return True

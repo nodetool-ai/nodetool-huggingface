@@ -129,28 +129,7 @@ HF_STABLE_DIFFUSION_XL_MODELS = [
         repo_id="SG161222/RealVisXL_V5.0",
         path="RealVisXL_V5.0_fp16.safetensors",
     ),
-    HFStableDiffusionXL(
-        repo_id="nunchaku-ai/nunchaku-sdxl",
-        path="svdq-int4_r32-sdxl.safetensors",
-    ),
-    HFStableDiffusionXL(
-        repo_id="nunchaku-ai/nunchaku-sdxl-turbo",
-        path="svdq-int4_r32-sdxl-turbo.safetensors",
-    ),
 ]
-
-SDXL_BASE_ALLOW_PATTERNS = [
-    "*.json",
-    "*.txt",
-    "scheduler/*",
-    "text_encoder/*",
-    "text_encoder_2/*",
-    "tokenizer/*",
-    "tokenizer_2/*",
-    "vae/*",
-    "unet/config.json",
-]
-
 
 HF_CONTROLNET_MODELS: list[HFControlNet] = [
     # Original ControlNet models
@@ -420,12 +399,6 @@ class StableDiffusionDetailLevel(str, Enum):
     LOW = "Low"
     MEDIUM = "Medium"
     HIGH = "High"
-
-
-class StableDiffusionXLQuantization(Enum):
-    FP16 = "fp16"
-    FP4 = "fp4"
-    INT4 = "int4"
 
 
 def lora_adapter_name(path: str) -> str:
@@ -1212,10 +1185,6 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         default=HFStableDiffusionXL(),
         description="The Stable Diffusion XL model to use for generation.",
     )
-    quantization: StableDiffusionXLQuantization = Field(
-        default=StableDiffusionXLQuantization.FP16,
-        description="Quantization level for Stable Diffusion XL (enable INT4/FP4 to use a Nunchaku UNet).",
-    )
     prompt: str = Field(default="", description="The prompt for image generation.")
     negative_prompt: str = Field(
         default="",
@@ -1293,7 +1262,7 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
 
     @classmethod
     def get_basic_fields(cls):
-        return ["model", "quantization", "prompt", "width", "height"]
+        return ["model", "prompt", "width", "height"]
 
     @classmethod
     def get_recommended_models(cls):
@@ -1317,162 +1286,30 @@ class StableDiffusionXLBase(HuggingFacePipelineNode):
         """Keep LoRA/IP-Adapter variants in distinct — but still cached — entries."""
         return adapter_cache_suffix(self.loras, self.ip_adapter_model)
 
-    def _resolve_effective_quantization(self) -> StableDiffusionXLQuantization:
-        quantization = self.quantization
-        legacy_quantization = self._detect_legacy_quantization()
-        if (
-            quantization == StableDiffusionXLQuantization.FP16
-            and legacy_quantization is not None
-        ):
-            quantization = legacy_quantization
-
-        smoke_mode = os.getenv("NODETOOL_SMOKE_TEST", "").lower() in {
-            "1",
-            "true",
-            "yes",
-            "on",
-        }
-        if smoke_mode and quantization != StableDiffusionXLQuantization.FP16:
-            log.info(
-                "Smoke test detected, forcing Stable Diffusion XL quantization to fp16"
-            )
-            return StableDiffusionXLQuantization.FP16
-        return quantization
-
-    def _detect_legacy_quantization(self) -> StableDiffusionXLQuantization | None:
-        repo = (self.model.repo_id or "").lower()
-        path = (self.model.path or "").lower()
-        if "svdq" not in repo and "svdq" not in path:
-            return None
-        if "fp4" in repo or "fp4" in path:
-            return StableDiffusionXLQuantization.FP4
-        return StableDiffusionXLQuantization.INT4
-
-    def _get_base_model(
-        self, quantization: StableDiffusionXLQuantization
-    ) -> HFStableDiffusionXL:
-        if quantization == StableDiffusionXLQuantization.FP16:
-            if self.model.repo_id:
-                return self.model
-            return HFStableDiffusionXL(
-                repo_id="stabilityai/stable-diffusion-xl-base-1.0",
-                path="sd_xl_base_1.0.safetensors",
-            )
-
+    def _sdxl_base_model(self) -> HFStableDiffusionXL:
+        if self.model.repo_id:
+            return self.model
         return HFStableDiffusionXL(
             repo_id="stabilityai/stable-diffusion-xl-base-1.0",
-            allow_patterns=SDXL_BASE_ALLOW_PATTERNS,
+            path="sd_xl_base_1.0.safetensors",
         )
-
-    def _resolve_transformer_model(
-        self,
-        quantization: StableDiffusionXLQuantization,
-        use_legacy_transformer: bool,
-    ) -> HFStableDiffusionXL | None:
-        if quantization == StableDiffusionXLQuantization.FP16:
-            return None
-
-        if use_legacy_transformer:
-            if not self.model.repo_id or not self.model.path:
-                raise ValueError(
-                    "Legacy Nunchaku SDXL configuration requires model.repo_id and model.path"
-                )
-            return self.model
-
-        is_turbo = "turbo" in (self.model.repo_id or "").lower()
-        if is_turbo:
-            path = (
-                "svdq-fp4_r32-sdxl-turbo.safetensors"
-                if quantization == StableDiffusionXLQuantization.FP4
-                else "svdq-int4_r32-sdxl-turbo.safetensors"
-            )
-            return HFStableDiffusionXL(
-                repo_id="nunchaku-ai/nunchaku-sdxl-turbo",
-                path=path,
-            )
-
-        path = (
-            "svdq-fp4_r32-sdxl.safetensors"
-            if quantization == StableDiffusionXLQuantization.FP4
-            else "svdq-int4_r32-sdxl.safetensors"
-        )
-
-        return HFStableDiffusionXL(
-            repo_id="nunchaku-ai/nunchaku-sdxl",
-            path=path,
-        )
-
-    def _resolve_sdxl_pipeline_model_id(self, base_model: HFStableDiffusionXL) -> str:
-        repo_id = base_model.repo_id or "stabilityai/stable-diffusion-xl-base-1.0"
-        repo_id_lower = repo_id.lower()
-        if "nunchaku" in repo_id_lower and "sdxl" in repo_id_lower:
-            return "stabilityai/stable-diffusion-xl-base-1.0"
-        return repo_id
-
-    def _prepare_sdxl_models(
-        self,
-    ) -> tuple[HFStableDiffusionXL, str, HFStableDiffusionXL | None]:
-        quantization = self._resolve_effective_quantization()
-        legacy_quantization = self._detect_legacy_quantization()
-        use_legacy_transformer = (
-            legacy_quantization is not None
-            and self.quantization == StableDiffusionXLQuantization.FP16
-            and quantization != StableDiffusionXLQuantization.FP16
-        )
-        base_model = self._get_base_model(quantization)
-        pipeline_model_id = self._resolve_sdxl_pipeline_model_id(base_model)
-        transformer_model = self._resolve_transformer_model(
-            quantization, use_legacy_transformer
-        )
-        return base_model, pipeline_model_id, transformer_model
 
     async def _load_sdxl_pipeline(
         self,
         context: ProcessingContext,
         pipeline_class: type,
         torch_dtype,
-        base_model: HFStableDiffusionXL,
-        pipeline_model_id: str,
-        transformer_model: HFStableDiffusionXL | None,
         **pipeline_kwargs,
     ):
-        if transformer_model is not None:
-            if not transformer_model.path:
-                raise ValueError("Nunchaku SDXL requires a transformer path to be set")
-
-            from nodetool.huggingface.nunchaku_pipelines import (
-                get_nunchaku_transformer,
-                get_nunchaku_sdxl_unet_class,
-            )
-
-            transformer = await get_nunchaku_transformer(
-                context=context,
-                model_class=get_nunchaku_sdxl_unet_class(),
-                node_id=self.id,
-                repo_id=transformer_model.repo_id,
-                path=transformer_model.path,
-            )
-            hf_token = await context.get_secret("HF_TOKEN")
-            self._pipeline = await self.load_model(
-                context=context,
-                model_class=pipeline_class,
-                model_id=pipeline_model_id,
-                path=base_model.path,
-                torch_dtype=torch_dtype,
-                unet=transformer,
-                use_safetensors=True,
-                token=hf_token,
-                **pipeline_kwargs,
-            )
-        else:
-            self._pipeline = await self.load_model(
-                context=context,
-                model_class=pipeline_class,
-                model_id=pipeline_model_id,
-                path=base_model.path,
-                torch_dtype=torch_dtype,
-                **pipeline_kwargs,
-            )
+        base_model = self._sdxl_base_model()
+        self._pipeline = await self.load_model(
+            context=context,
+            model_class=pipeline_class,
+            model_id=base_model.repo_id,
+            path=base_model.path,
+            torch_dtype=torch_dtype,
+            **pipeline_kwargs,
+        )
 
         _apply_vae_optimizations(self._pipeline)
         self._set_scheduler(self.scheduler)

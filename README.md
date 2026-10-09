@@ -11,7 +11,7 @@ This package ships well over 100 nodes spanning image generation and editing, vi
 ### 🎨 Text-to-Image Generation
 
 - **Stable Diffusion** / **Stable Diffusion XL** — classic and XL diffusion pipelines, with LoRA, IP-Adapter and ControlNet support
-- **Flux**, **Flux2**, **Flux2 Klein**, **Flux Control** — Black Forest Labs' FLUX family, with Nunchaku (FP16/FP4/INT4) and GGUF quantization and CPU offload for constrained VRAM
+- **Flux**, **Flux2**, **Flux2 Klein**, **Flux Control** — Black Forest Labs' FLUX family, with CPU offload for constrained VRAM
 - **Chroma** — Flux-based architecture with enhanced attention-based color control
 - **Qwen-Image**, **Qwen-Image-Layered** — Alibaba's Qwen-Image, including a mode that decomposes an image into separate RGBA layers
 - **Bria**, **Bria FIBO** — commercial-ready generation, including structured-JSON-prompt control with FIBO
@@ -126,8 +126,6 @@ pip install --no-build-isolation "nodetool-huggingface[sam2]"
 
 Some 3D nodes (`StableFast3D`, `TripoSR`, `Trellis2`) use upstream code that is not on PyPI and has no Python packaging. `requirements/sf3d.txt`, `requirements/triposr.txt` and `requirements/trellis2.txt` give the steps for each: install the compiled helpers with `pip install --no-build-isolation -r requirements/<name>.txt` where the file lists any, then clone the upstream repository at the pinned commit and add it to the import path.
 
-Nunchaku (SVDQuant) model variants need the nunchaku runtime, which is not installed by default and runs only on NVIDIA GPUs. `requirements/nunchaku.txt` explains how to pick a wheel that matches the installed torch or build one from source. Do not `pip install nunchaku`: that PyPI package is unrelated.
-
 ## Requirements
 
 - Python 3.11. This is the version the desktop app, Docker images and CI use. Python 3.13 does not install, because `curated-tokenizers` (pulled in by `kokoro`) has no 3.13 wheel and its source build fails.
@@ -221,7 +219,7 @@ Some models (FLUX, pyannote checkpoints, etc.) require accepting terms on the Hu
 ## Performance Tips
 
 ### Memory
-- Use quantized checkpoints (Nunchaku FP4/INT4, GGUF, BitsAndBytes 4-bit) where a node supports them
+- Use quantized checkpoints (GGUF, BitsAndBytes 4-bit) where a node supports them
 - Enable CPU offload for large diffusion/video pipelines
 - Prefer smaller model variants when possible
 

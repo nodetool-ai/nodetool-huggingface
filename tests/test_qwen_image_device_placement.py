@@ -1,10 +1,8 @@
 """Regression: fp16 Qwen-Image was left running on the CPU.
 
-`QwenImage.move_to_device` was a blanket `pass`. That is correct for the
-nunchaku path, which builds its transformer straight onto `context.device` —
-but the full-precision path deliberately loads with `device="cpu"` and relies
-on this call to place the pipeline. With the override swallowing both, a 20B
-model ran on the CPU while the GPU sat idle.
+`QwenImage.move_to_device` was a blanket `pass`. The pipeline deliberately
+loads with `device="cpu"` and relies on this call to place it, so a 20B model
+ran on the CPU while the GPU sat idle.
 """
 
 import sys
@@ -17,7 +15,7 @@ if __package__ is None or __package__ == "":
 import pytest
 
 from nodetool.nodes.huggingface import text_to_image
-from nodetool.nodes.huggingface.text_to_image import QwenImage, QwenQuantization
+from nodetool.nodes.huggingface.text_to_image import QwenImage
 
 
 class _FakePipeline:
@@ -42,7 +40,6 @@ def record_moves(monkeypatch):
 async def test_fp16_pipeline_is_moved_to_the_device(record_moves):
     """The whole bug: this list stayed empty, so the model never left the CPU."""
     node = QwenImage()
-    node.quantization = QwenQuantization.FP16
     node._pipeline = _FakePipeline()
 
     await node.move_to_device("cuda")
@@ -51,21 +48,8 @@ async def test_fp16_pipeline_is_moved_to_the_device(record_moves):
 
 
 @pytest.mark.asyncio
-async def test_nunchaku_pipeline_is_left_alone(record_moves):
-    """It already loaded onto the target device; moving it again is wrong."""
-    node = QwenImage()
-    node.quantization = QwenQuantization.INT4
-    node._pipeline = _FakePipeline()
-
-    await node.move_to_device("cuda")
-
-    assert record_moves == []
-
-
-@pytest.mark.asyncio
 async def test_no_pipeline_is_not_an_error(record_moves):
     node = QwenImage()
-    node.quantization = QwenQuantization.FP16
     node._pipeline = None
 
     await node.move_to_device("cuda")
