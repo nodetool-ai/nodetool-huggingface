@@ -2,8 +2,8 @@
 #
 # Image layering: nodetool-core:local (base worker) -> nodetool-hf:local (adds
 # the HuggingFace node stack). build-hf depends on build-core having produced
-# nodetool-core:local (or pull a published ghcr.io/nodetool-ai/nodetool:<tag>
-# and tag it nodetool-core:local).
+# nodetool-core:local. ghcr.io/nodetool-ai/nodetool:<tag> is the TypeScript
+# server image, not a Python worker, so it cannot stand in for it.
 #
 # Local run publishes the worker on host port 8787 (the TS server owns 7777):
 #   NODETOOL_WORKER_URL=ws://localhost:8787
