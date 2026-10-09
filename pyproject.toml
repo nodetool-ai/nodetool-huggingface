@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nodetool-huggingface"
-version = "0.8.1"
+version = "0.8.2"
 description = "HuggingFace nodes for Nodetool"
 readme = "README.md"
 authors = [{ name = "Matthias Georgi", email = "matti.georgi@gmail.com" }]
 requires-python = ">=3.11"
 
 dependencies = [
-    "nodetool-core>=0.8.1",
+    "nodetool-core>=0.8.2",
     # torch 2.14 is the stack-wide target: nodetool-mlx's mflux needs
     # torch>=2.13, and the desktop installer resolves this pack and MLX into
     # one environment. A floor range, not `==`, so the installer's CUDA index
