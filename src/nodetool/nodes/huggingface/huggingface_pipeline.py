@@ -31,20 +31,24 @@ _pipeline_thread_pool = concurrent.futures.ThreadPoolExecutor(
 )
 
 
-def select_inference_dtype() -> "torch.dtype":
+def select_inference_dtype(device: str | None = None) -> "torch.dtype":
     """
-    Prefer bfloat16 when supported; otherwise fall back to float16 on GPUs and
-    float32 on CPU. Keeps pipelines on a safe dtype for the current hardware.
+    Pick the dtype for the device a pipeline runs on: bfloat16 on CUDA when
+    supported, else float16; float16 on MPS; float32 on CPU. ``device``
+    defaults to ``resolve_torch_device()``, so ``NODETOOL_TORCH_DEVICE=cpu``
+    loads in float32 even when a GPU is present.
     """
     import torch
+    from nodetool.workflows.torch_support import resolve_torch_device
 
-    if torch.cuda.is_available():
+    kind = str(device or resolve_torch_device()).split(":", 1)[0]
+    if kind == "cuda":
         is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
         if callable(is_bf16_supported) and is_bf16_supported():
             return torch.bfloat16
         return torch.float16
 
-    if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+    if kind == "mps":
         return torch.float16
 
     return torch.float32

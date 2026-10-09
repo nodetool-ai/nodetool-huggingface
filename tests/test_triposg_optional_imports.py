@@ -95,7 +95,7 @@ def never_downloads(monkeypatch):
 @pytest.fixture
 def runnable_node(monkeypatch):
     """A TripoSG that believes it is on a CUDA box with an input image."""
-    monkeypatch.setattr(image_to_3d, "_resolve_device", lambda: "cuda")
+    monkeypatch.setattr(image_to_3d, "_resolve_device", lambda *a: "cuda")
     monkeypatch.setattr(image_to_3d, "_warn_platform", lambda *a, **k: None)
     monkeypatch.setattr(image_to_3d, "_warn_vram", lambda *a, **k: None)
     monkeypatch.setattr(image_to_3d, "_report_stage", lambda *a, **k: None)

@@ -48,7 +48,6 @@ from nodetool.huggingface.image_to_image_pipelines import (
 from nodetool.huggingface.local_provider_utils import (
     _ensure_model_on_device,
     _get_torch,
-    _is_cuda_available,
     _resolve_hf_device,
     load_model,
     load_pipeline,
@@ -631,8 +630,12 @@ class HuggingFaceLocalProvider(BaseProvider):
                 pipeline as create_pipeline,
             )
 
-            # Determine torch dtype based on device
-            torch_dtype = torch.float16 if _is_cuda_available() else torch.float32
+            # fp16 on CUDA, fp32 elsewhere, keyed on the device it runs on.
+            torch_dtype = (
+                torch.float16
+                if str(context.device).startswith("cuda")
+                else torch.float32
+            )
 
             # Load model using helper
             hf_model = await load_model(

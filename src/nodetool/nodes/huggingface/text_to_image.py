@@ -599,7 +599,11 @@ class Flux(HuggingFacePipelineNode):
         # Set up the generator for reproducibility
         generator = None
         if self.seed != -1:
-            gen_device = "cuda" if torch.cuda.is_available() else "cpu"
+            # The generator must live where the pipeline draws its latents, or
+            # diffusers rejects it (a cuda generator for cpu latents).
+            gen_device = (
+                getattr(self._pipeline, "_execution_device", None) or context.device
+            )
             generator = torch.Generator(device=gen_device).manual_seed(self.seed)
 
         # Cancellation event for signalling the inference thread to stop.

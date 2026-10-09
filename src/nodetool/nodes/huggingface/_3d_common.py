@@ -354,15 +354,15 @@ def _check_disk_space(estimated_gb: float, cache_dir: str | None = None) -> None
         )
 
 
-def _resolve_device() -> str:
-    """Return the best available torch device string (cuda > mps > cpu)."""
-    import torch
+def _resolve_device(context: Any = None) -> str:
+    """Return the torch device the 3D nodes run on.
 
-    if torch.cuda.is_available():
-        return "cuda"
-    if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
-        return "mps"
-    return "cpu"
+    Uses ``context.device`` when given, else ``resolve_torch_device()``, so
+    ``NODETOOL_TORCH_DEVICE`` applies (then MPS, CUDA, CPU).
+    """
+    from nodetool.workflows.torch_support import resolve_torch_device
+
+    return resolve_torch_device(getattr(context, "device", None))
 
 
 def _warn_vram(min_vram_gb: int, node_name: str) -> None:

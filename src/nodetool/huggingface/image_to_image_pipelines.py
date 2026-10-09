@@ -83,10 +83,10 @@ async def load_image_to_image_pipeline(
             use_cpu_offload = True
 
     cache_key = cache_key or f"image-to-image:{model_id}:{model_path or 'repo'}"
+    target_device = _resolve_hf_device(context, device or context.device)
     cached = ModelManager.get_model(cache_key)
     if cached:
         # VRAM reclaim may have moved an idle cached pipeline to the CPU.
-        target_device = _resolve_hf_device(context, device or context.device)
         return _ensure_model_on_device(cached, target_device), use_cpu_offload
 
     pipeline: Any
@@ -107,7 +107,7 @@ async def load_image_to_image_pipeline(
             pipeline = await asyncio.to_thread(
                 FluxFillPipeline.from_single_file,
                 str(cache_path),
-                torch_dtype=_select_pipeline_dtype(prefer_bf16=True),
+                torch_dtype=_select_pipeline_dtype(prefer_bf16=True, device=target_device),
             )
         elif _is_node_model(model_id, model_path, QwenImageEdit):
             from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit import (
@@ -137,7 +137,7 @@ async def load_image_to_image_pipeline(
                 pipeline = await asyncio.to_thread(
                     StableDiffusionImg2ImgPipeline.from_single_file,
                     str(cache_path),
-                    torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+                    torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
                 )
             elif "diffusers:StableDiffusionXLPipeline" in model_info.tags:
                 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
@@ -147,7 +147,7 @@ async def load_image_to_image_pipeline(
                 pipeline = await asyncio.to_thread(
                     StableDiffusionXLImg2ImgPipeline.from_single_file,
                     str(cache_path),
-                    torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+                    torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
                 )
             elif "diffusers:StableDiffusion3Pipeline" in model_info.tags:
                 from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3_img2img import (
@@ -157,7 +157,7 @@ async def load_image_to_image_pipeline(
                 pipeline = await asyncio.to_thread(
                     StableDiffusion3Img2ImgPipeline.from_single_file,
                     str(cache_path),
-                    torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+                    torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
                 )
             elif "flux" in model_info.tags:
                 from diffusers.pipelines.flux.pipeline_flux_img2img import (
@@ -167,7 +167,7 @@ async def load_image_to_image_pipeline(
                 pipeline = await asyncio.to_thread(
                     FluxImg2ImgPipeline.from_single_file,
                     str(cache_path),
-                    torch_dtype=_select_pipeline_dtype(prefer_bf16=True),
+                    torch_dtype=_select_pipeline_dtype(prefer_bf16=True, device=target_device),
                 )
             elif model_info.pipeline_tag in ["text-to-image", "image-to-image"]:
                 # Fallback for generic models
@@ -189,7 +189,7 @@ async def load_image_to_image_pipeline(
                     pipeline = await asyncio.to_thread(
                         StableDiffusionXLImg2ImgPipeline.from_single_file,
                         str(cache_path),
-                        torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+                        torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
                     )
                 elif (
                     _is_node_model(model_id, model_path, StableDiffusion)
@@ -206,7 +206,7 @@ async def load_image_to_image_pipeline(
                     pipeline = await asyncio.to_thread(
                         StableDiffusionImg2ImgPipeline.from_single_file,
                         str(cache_path),
-                        torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+                        torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
                     )
                 else:
                     try:
@@ -217,7 +217,7 @@ async def load_image_to_image_pipeline(
                         pipeline = await asyncio.to_thread(
                             StableDiffusionXLImg2ImgPipeline.from_single_file,
                             str(cache_path),
-                            torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+                            torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
                         )
                     except Exception:
                         from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import (
@@ -227,7 +227,7 @@ async def load_image_to_image_pipeline(
                         pipeline = await asyncio.to_thread(
                             StableDiffusionImg2ImgPipeline.from_single_file,
                             str(cache_path),
-                            torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+                            torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
                         )
             else:
                 raise ValueError(
@@ -240,7 +240,7 @@ async def load_image_to_image_pipeline(
         pipeline = await asyncio.to_thread(
             AutoPipelineForImage2Image.from_pretrained,
             model_id,
-            torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+            torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
             variant=await _detect_cached_variant(model_id),
         )
 
@@ -248,7 +248,6 @@ async def load_image_to_image_pipeline(
     # (Flux, SD3, Qwen-Image-Edit, ...) don't fit on GPUs with less than 24GB
     # VRAM in full precision, so CPU offload is installed automatically when
     # the weights exceed the budget instead of moving them wholesale.
-    target_device = _resolve_hf_device(context, device or context.device)
     use_cpu_offload = _apply_memory_optimizations(
         pipeline, target_device, force_cpu_offload=use_cpu_offload
     )

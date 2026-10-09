@@ -151,8 +151,8 @@ class ShapEImageTo3D(HuggingFacePipelineNode):
         import torch
         from diffusers import ShapEImg2ImgPipeline
 
-        device = _resolve_device()
-        torch_dtype = torch.float16 if device == "cuda" else torch.float32
+        device = _resolve_device(context)
+        torch_dtype = torch.float16 if device.startswith("cuda") else torch.float32
         return await self.load_model(
             context=context,
             model_class=ShapEImg2ImgPipeline,
@@ -490,9 +490,10 @@ class Hunyuan3D(HuggingFacePipelineNode):
         # stays on CPU while the user-supplied generator lives on CUDA, and the
         # device/dtype mismatch can crash hy3dgen's native CUDA kernels with a
         # Windows access violation (exit code 3221225477 / 0xC0000005).
-        if not self.low_vram_mode and torch.cuda.is_available():
+        device = _resolve_device()
+        if not self.low_vram_mode and device.startswith("cuda"):
             try:
-                pipeline.to("cuda", dtype=torch.float16)
+                pipeline.to(device, dtype=torch.float16)
             except Exception as exc:
                 log.warning(
                     "Could not move Hunyuan3D pipeline to cuda+fp16 (%s). "
@@ -588,7 +589,7 @@ class Hunyuan3D(HuggingFacePipelineNode):
             pipeline_device = str(getattr(pipeline, "device", "cpu"))
         except Exception:
             pipeline_device = "cpu"
-        gen_device = "cuda" if pipeline_device.startswith("cuda") else "cpu"
+        gen_device = pipeline_device if pipeline_device.startswith("cuda") else "cpu"
         generator = torch.Generator(device=gen_device).manual_seed(seed)
 
         # Generate 3D mesh. Wrap the pipeline call so any native crash with a
@@ -757,7 +758,7 @@ class StableFast3D(HuggingFacePipelineNode):
         from nodetool.ml.core.model_manager import ModelManager
 
         device = _resolve_device()
-        if device != "cuda":
+        if not device.startswith("cuda"):
             log.warning(
                 "SF3D running on %s — experimental, may be slow or fail. "
                 "CUDA is the only fully supported device.",
@@ -861,14 +862,16 @@ class StableFast3D(HuggingFacePipelineNode):
 
         _report_stage(context, self.id, "inference")
         # Generate 3D mesh
-        device = _resolve_device()
+        device = _resolve_device(context)
         # MPS only supports float16 autocast; CUDA uses bfloat16 for best quality
         autocast_dtype = torch.float16 if device == "mps" else torch.bfloat16
 
         def _run_image():
             # no_grad and autocast are thread-local, so they wrap the call here.
             with torch.no_grad():
-                with torch.autocast(device_type=device, dtype=autocast_dtype):
+                with torch.autocast(
+                    device_type=device.split(":", 1)[0], dtype=autocast_dtype
+                ):
                     return model.run_image(
                         [image],
                         bake_resolution=self.texture_resolution,
@@ -999,7 +1002,7 @@ class TripoSR(HuggingFacePipelineNode):
         from nodetool.ml.core.model_manager import ModelManager
 
         device = _resolve_device()
-        if device != "cuda":
+        if not device.startswith("cuda"):
             log.warning(
                 "TripoSR running on %s — experimental, may be slow or fail. "
                 "CUDA is the only fully supported device.",
@@ -1067,7 +1070,7 @@ class TripoSR(HuggingFacePipelineNode):
         image_io = await context.asset_to_io(self.image)
         input_image = _open_pil_image(image_io, mode="RGBA")
 
-        device = _resolve_device()
+        device = _resolve_device(context)
 
         _report_stage(context, self.id, "loading_model")
         # Load model from ModelManager
@@ -1250,7 +1253,7 @@ class Trellis2(HuggingFacePipelineNode):
         from nodetool.ml.core.model_manager import ModelManager
 
         device = _resolve_device()
-        if device != "cuda":
+        if not device.startswith("cuda"):
             raise UnsupportedPlatformError(
                 "TRELLIS.2 requires a CUDA-capable GPU with at least 24GB memory"
             )
@@ -1562,7 +1565,7 @@ class TripoSG(HuggingFacePipelineNode):
         from triposg.pipelines.pipeline_triposg import TripoSGPipeline
         from triposg.briarmbg import BriaRMBG
 
-        device = "cuda"
+        device = _resolve_device()
 
         # Load RMBG model for background removal
         if ModelManager.get_model(self.RMBG_CACHE_KEY) is None:
@@ -1650,9 +1653,7 @@ class TripoSG(HuggingFacePipelineNode):
         )
 
     async def preload_model(self, context: ProcessingContext):
-        import torch
-
-        if not torch.cuda.is_available():
+        if not _resolve_device(context).startswith("cuda"):
             return
         if self._dependency_error() is not None:
             # Same contract as the Hunyuan3D / StableFast3D / Trellis2 siblings:
@@ -1799,8 +1800,8 @@ class TripoSG(HuggingFacePipelineNode):
         if self.image.is_empty():
             raise InvalidInputError("Input image is required")
 
-        device = _resolve_device()
-        if device != "cuda":
+        device = _resolve_device(context)
+        if not device.startswith("cuda"):
             raise UnsupportedPlatformError(
                 "TripoSG requires a CUDA-capable GPU with at least 8GB VRAM"
             )

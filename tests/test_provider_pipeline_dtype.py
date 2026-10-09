@@ -3,7 +3,8 @@
 The provider used ``bfloat16 if cuda else float32``: float32 on Apple Silicon
 (about 48 GB for the FLUX transformer) and bf16 on CUDA cards that emulate or
 reject it. The nodes use fp16 on MPS, bf16 only where CUDA supports it, and
-fp32 on CPU.
+fp32 on CPU. The dtype follows the device the pipeline runs on, so a CPU run
+on a GPU machine loads float32.
 """
 
 from __future__ import annotations
@@ -24,26 +25,27 @@ PIPELINE_MODULES = [
 ]
 
 
-def _hardware(monkeypatch, *, cuda: bool, mps: bool, bf16: bool = False) -> None:
-    monkeypatch.setattr(local_provider_utils, "_is_cuda_available", lambda: cuda)
-    monkeypatch.setattr(local_provider_utils, "_is_mps_available", lambda: mps)
-    monkeypatch.setattr(torch.cuda, "is_bf16_supported", lambda *a, **k: bf16)
-
-
 @pytest.mark.parametrize(
-    "cuda,mps,bf16,prefer_bf16,expected",
+    "device,bf16,prefer_bf16,expected",
     [
-        (True, False, True, True, torch.bfloat16),
-        (True, False, False, True, torch.float16),  # pre-Ampere
-        (True, False, True, False, torch.float16),
-        (False, True, False, True, torch.float16),  # Apple Silicon
-        (False, True, False, False, torch.float16),
-        (False, False, False, True, torch.float32),  # CPU
+        ("cuda", True, True, torch.bfloat16),
+        ("cuda", False, True, torch.float16),  # pre-Ampere
+        ("cuda:1", True, False, torch.float16),
+        ("mps", False, True, torch.float16),  # Apple Silicon
+        ("mps", False, False, torch.float16),
+        ("cpu", True, True, torch.float32),  # CPU, even with a GPU present
     ],
 )
-def test_select_pipeline_dtype(monkeypatch, cuda, mps, bf16, prefer_bf16, expected):
-    _hardware(monkeypatch, cuda=cuda, mps=mps, bf16=bf16)
-    assert _select_pipeline_dtype(prefer_bf16=prefer_bf16) is expected
+def test_select_pipeline_dtype(monkeypatch, device, bf16, prefer_bf16, expected):
+    monkeypatch.setattr(torch.cuda, "is_bf16_supported", lambda *a, **k: bf16)
+    assert _select_pipeline_dtype(prefer_bf16=prefer_bf16, device=device) is expected
+
+
+def test_select_pipeline_dtype_defaults_to_resolved_device(monkeypatch):
+    monkeypatch.setattr(
+        local_provider_utils, "resolve_torch_device", lambda *a: "cpu"
+    )
+    assert _select_pipeline_dtype(prefer_bf16=True) is torch.float32
 
 
 @pytest.mark.parametrize("path", PIPELINE_MODULES, ids=lambda p: p.name)

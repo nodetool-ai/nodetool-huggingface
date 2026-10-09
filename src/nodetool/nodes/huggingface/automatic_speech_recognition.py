@@ -28,21 +28,6 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-def _is_cuda_available() -> bool:
-    """Safely check if CUDA is available, handling cases where PyTorch is not compiled with CUDA support."""
-    try:
-        import torch
-
-        # Check if cuda module exists
-        if not hasattr(torch, "cuda"):
-            return False
-        # Try to check availability - this can raise RuntimeError if CUDA is not compiled
-        return torch.cuda.is_available()
-    except (RuntimeError, AttributeError):
-        # PyTorch not compiled with CUDA support or other CUDA-related error
-        return False
-
-
 class WhisperLanguage(str, Enum):
     NONE = "auto_detect"
     SPANISH = "spanish"
@@ -237,7 +222,9 @@ class Whisper(HuggingFacePipelineNode):
             logger.info("Reusing cached Whisper pipeline.")
             return
 
-        torch_dtype = torch.float16 if _is_cuda_available() else torch.float32
+        torch_dtype = (
+            torch.float16 if str(context.device).startswith("cuda") else torch.float32
+        )
 
         # Debug: Track VRAM through initialization
         if torch.cuda.is_available():

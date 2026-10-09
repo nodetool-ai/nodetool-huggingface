@@ -123,6 +123,7 @@ async def load_local_single_file_pipeline(
     checkpoint_path: str,
     *,
     plan: SingleFileLoadPlan | None = None,
+    device: str | None = None,
 ) -> Any:
     """Build a text-to-image pipeline from one checkpoint file on disk.
 
@@ -133,7 +134,7 @@ async def load_local_single_file_pipeline(
 
     plan = plan or detect_single_file_checkpoint(checkpoint_path)
     torch = _get_torch()
-    dtype = _select_pipeline_dtype(prefer_bf16=plan.dtype == "bfloat16")
+    dtype = _select_pipeline_dtype(prefer_bf16=plan.dtype == "bfloat16", device=device)
 
     pipeline_cls = getattr(
         importlib.import_module(plan.pipeline_module), plan.pipeline_class
@@ -196,7 +197,9 @@ async def load_text_to_image_pipeline(
                 _ensure_model_on_device(cached, target_device),
                 offload_kind(cached) is not None,
             )
-        pipeline = await load_local_single_file_pipeline(local_checkpoint, plan=plan)
+        pipeline = await load_local_single_file_pipeline(
+            local_checkpoint, plan=plan, device=target_device
+        )
         use_cpu_offload = _apply_memory_optimizations(
             pipeline,
             target_device,
@@ -215,10 +218,10 @@ async def load_text_to_image_pipeline(
             use_cpu_offload = True
 
     cache_key = cache_key or f"text-to-image:{model_id}:{model_path or 'repo'}"
+    target_device = _resolve_hf_device(context, device or context.device)
     cached = ModelManager.get_model(cache_key)
     if cached:
         # VRAM reclaim may have moved an idle cached pipeline to the CPU.
-        target_device = _resolve_hf_device(context, device or context.device)
         return _ensure_model_on_device(cached, target_device), use_cpu_offload
 
     pipeline: Any
@@ -247,7 +250,7 @@ async def load_text_to_image_pipeline(
             pipeline = await asyncio.to_thread(
                 FluxPipeline.from_single_file,
                 str(cache_path),
-                torch_dtype=_select_pipeline_dtype(prefer_bf16=True),
+                torch_dtype=_select_pipeline_dtype(prefer_bf16=True, device=target_device),
             )
         elif _is_node_model(model_id, model_path, QwenImage):
             from diffusers.pipelines.qwenimage.pipeline_qwenimage import (
@@ -271,7 +274,7 @@ async def load_text_to_image_pipeline(
                 pipeline = await asyncio.to_thread(
                     StableDiffusionXLPipeline.from_single_file,
                     str(cache_path),
-                    torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+                    torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
                 )
             elif "diffusers:StableDiffusionPipeline" in model_info.tags:
                 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
@@ -281,7 +284,7 @@ async def load_text_to_image_pipeline(
                 pipeline = await asyncio.to_thread(
                     StableDiffusionPipeline.from_single_file,
                     str(cache_path),
-                    torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+                    torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
                 )
             elif "diffusers:StableDiffusion3Pipeline" in model_info.tags:
                 from diffusers.pipelines.stable_diffusion_3.pipeline_stable_diffusion_3 import (
@@ -291,7 +294,7 @@ async def load_text_to_image_pipeline(
                 pipeline = await asyncio.to_thread(
                     StableDiffusion3Pipeline.from_single_file,
                     str(cache_path),
-                    torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+                    torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
                 )
             elif "flux" in model_info.tags:
                 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
@@ -299,7 +302,7 @@ async def load_text_to_image_pipeline(
                 pipeline = await asyncio.to_thread(
                     FluxPipeline.from_single_file,
                     str(cache_path),
-                    torch_dtype=_select_pipeline_dtype(prefer_bf16=True),
+                    torch_dtype=_select_pipeline_dtype(prefer_bf16=True, device=target_device),
                 )
             elif model_info.pipeline_tag == "text-to-image":
                 # Fallback for generic text-to-image models (likely SDXL or SD1.5) if no specific diffusers tag found
@@ -320,7 +323,7 @@ async def load_text_to_image_pipeline(
                     pipeline = await asyncio.to_thread(
                         StableDiffusionXLPipeline.from_single_file,
                         str(cache_path),
-                        torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+                        torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
                     )
                 elif _is_node_model(
                     model_id, model_path, StableDiffusion
@@ -332,7 +335,7 @@ async def load_text_to_image_pipeline(
                     pipeline = await asyncio.to_thread(
                         StableDiffusionPipeline.from_single_file,
                         str(cache_path),
-                        torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+                        torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
                     )
                 else:
                     # Attempt to load as SDXL first as it's common for single-file safetensors
@@ -344,7 +347,7 @@ async def load_text_to_image_pipeline(
                         pipeline = await asyncio.to_thread(
                             StableDiffusionXLPipeline.from_single_file,
                             str(cache_path),
-                            torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+                            torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
                         )
                     except Exception:
                         # Fallback to standard SD
@@ -355,7 +358,7 @@ async def load_text_to_image_pipeline(
                         pipeline = await asyncio.to_thread(
                             StableDiffusionPipeline.from_single_file,
                             str(cache_path),
-                            torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+                            torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
                         )
             else:
                 raise ValueError(
@@ -371,7 +374,7 @@ async def load_text_to_image_pipeline(
             pipeline = await asyncio.to_thread(
                 explicit_cls.from_pretrained,
                 model_id,
-                torch_dtype=_select_pipeline_dtype(prefer_bf16=True),
+                torch_dtype=_select_pipeline_dtype(prefer_bf16=True, device=target_device),
             )
         else:
             from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
@@ -379,7 +382,7 @@ async def load_text_to_image_pipeline(
             pipeline = await asyncio.to_thread(
                 AutoPipelineForText2Image.from_pretrained,
                 model_id,
-                torch_dtype=_select_pipeline_dtype(prefer_bf16=False),
+                torch_dtype=_select_pipeline_dtype(prefer_bf16=False, device=target_device),
                 variant=await _detect_cached_variant(model_id),
             )
 
@@ -387,7 +390,6 @@ async def load_text_to_image_pipeline(
     # (Flux, SD3, Flux.2, Qwen-Image, ...) don't fit on GPUs with less than
     # 24GB VRAM in full precision, so CPU offload is installed automatically
     # when the weights exceed the budget instead of moving them wholesale.
-    target_device = _resolve_hf_device(context, device or context.device)
     use_cpu_offload = _apply_memory_optimizations(
         pipeline, target_device, force_cpu_offload=use_cpu_offload
     )
