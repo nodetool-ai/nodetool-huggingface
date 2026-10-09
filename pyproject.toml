@@ -253,6 +253,30 @@ nodetool = [
 diso = ["setuptools", { requirement = "torch", match-runtime = true }]
 sam2 = [{ requirement = "torch", match-runtime = true }]
 
+# match-runtime needs each package's metadata without building it, and the
+# diso and sam2 sdists declare none statically. These entries copy
+# install_requires and python_requires from each sdist's setup.py. Update them
+# when either package is upgraded.
+[[tool.uv.dependency-metadata]]
+name = "diso"
+version = "0.1.4"
+requires-python = ">=3.6"
+requires-dist = ["trimesh"]
+
+[[tool.uv.dependency-metadata]]
+name = "sam2"
+version = "1.1.0"
+requires-python = ">=3.10.0"
+requires-dist = [
+    "torch>=2.5.1",
+    "torchvision>=0.20.1",
+    "numpy>=1.24.4",
+    "tqdm>=4.66.1",
+    "hydra-core>=1.3.2",
+    "iopath>=0.1.10",
+    "pillow>=9.4.0",
+]
+
 [tool.ruff]
 # Exclude auto-generated files and notebooks.
 # NOTE: vendored third-party trees (src/triposg/, src/RealESRGAN/), scripts/ and

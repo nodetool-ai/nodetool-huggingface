@@ -20,6 +20,20 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform == 'darwin'",
 ]
 
+[manifest]
+
+[[manifest.dependency-metadata]]
+name = "diso"
+version = "0.1.4"
+requires-dist = ["trimesh"]
+requires-python = ">=3.6"
+
+[[manifest.dependency-metadata]]
+name = "sam2"
+version = "1.1.0"
+requires-dist = ["torch>=2.5.1", "torchvision>=0.20.1", "numpy>=1.24.4", "tqdm>=4.66.1", "hydra-core>=1.3.2", "iopath>=0.1.10", "pillow>=9.4.0"]
+requires-python = ">=3.10.0"
+
 [[package]]
 name = "accelerate"
 version = "1.15.0"
@@ -4112,11 +4126,12 @@ wheels = [
 
 [[package]]
 name = "nodetool-core"
-version = "0.8.1"
+version = "0.8.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
     { name = "aiohttp" },
+    { name = "audioop-lts", marker = "python_full_version >= '3.13'" },
     { name = "brotli" },
     { name = "hf-transfer" },
     { name = "hf-xet" },
@@ -4129,19 +4144,21 @@ dependencies = [
     { name = "psutil" },
     { name = "pycares" },
     { name = "pydantic" },
+    { name = "pydub" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
+    { name = "safetensors" },
     { name = "tqdm" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4c/5c/034a8d2f111e3707e89fa15b597d95566dccac9328cd33a33fd898d12d36/nodetool_core-0.8.1.tar.gz", hash = "sha256:c1075774e3d0b53807617330adee8cee85a5c5d2e3a42ae1a2bfba33c7691ad2", size = 2282899, upload-time = "2026-10-07T23:01:58.438Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/65/cd/2bdc8001d398975673dac04cc2e2e3a75d2892bef54af8351d6c9a98d574/nodetool_core-0.8.2.tar.gz", hash = "sha256:42390c68a9fd82aa8e5bfafd75839b2d01eddfe926ed29d09eab227e44ec7bf5", size = 2343664, upload-time = "2026-10-09T19:01:35.652Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1e/05/01e0b9e12e5266523ce61dfbad6c960c9f2591a81ef4902eca30c31d6c28/nodetool_core-0.8.1-py3-none-any.whl", hash = "sha256:4d47de6af672bd5d70e42227ee85785811109ab2504d43908b63db39d8bc76da", size = 577278, upload-time = "2026-10-07T23:01:56.373Z" },
+    { url = "https://files.pythonhosted.org/packages/62/d9/f5a31918a7d69898d20d7b24ace844221d0f8907b1ed8023ca1856094292/nodetool_core-0.8.2-py3-none-any.whl", hash = "sha256:3d2c3c95fd7f83a0ecd99acd498d264d17a3e4cb971009f9f710ba0877e258f8", size = 583395, upload-time = "2026-10-09T19:01:33.705Z" },
 ]
 
 [[package]]
 name = "nodetool-huggingface"
-version = "0.8.1"
+version = "0.8.2"
 source = { editable = "." }
 dependencies = [
     { name = "accelerate" },
@@ -4242,7 +4259,7 @@ requires-dist = [
     { name = "llama-index-embeddings-huggingface", specifier = ">=0.8.0" },
     { name = "misaki", extras = ["ja"], marker = "extra == 'kokoro-ja'" },
     { name = "mistral-common", extras = ["image"], specifier = ">=1.12.0,<2" },
-    { name = "nodetool-core", specifier = ">=0.8.1" },
+    { name = "nodetool-core", specifier = ">=0.8.2" },
     { name = "nodetool-huggingface", extras = ["hunyuan3d", "triposg"], marker = "extra == 'all-3d-pypi'" },
     { name = "nodetool-huggingface", extras = ["hunyuan3d", "triposg", "sf3d", "triposr"], marker = "extra == 'all-3d'" },
     { name = "paddleocr", marker = "extra == 'ocr'" },
