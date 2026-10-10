@@ -15,6 +15,7 @@ from nodetool.config.logging_config import get_logger
 from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
 from nodetool.ml.core.model_manager import ModelManager
 from nodetool.workflows.processing_context import ProcessingContext
+from nodetool.workflows.torch_support import resolve_torch_device
 from nodetool.workflows.types import JobUpdate, NodeProgress
 from huggingface_hub import _CACHED_NO_EXIST, hf_hub_download
 
@@ -27,7 +28,6 @@ log = get_logger(__name__)
 
 ALLOW_DOWNLOAD_ENV = "NODETOOL_HF_ALLOW_DOWNLOAD"
 _ALLOW_DOWNLOAD_VALUES = {"1", "true", "yes", "on"}
-_PREFERRED_HF_DEVICE = "mps"
 
 
 def _get_torch():
@@ -48,35 +48,24 @@ def _is_cuda_available() -> bool:
         return False
 
 
-def _is_mps_available() -> bool:
-    """Detect whether the Apple Metal backend is available."""
-    try:
-        import torch
-
-        return (
-            hasattr(torch, "backends")
-            and hasattr(torch.backends, "mps")
-            and torch.backends.mps.is_available()
-        )
-    except Exception:
-        return False
-
-
-def _select_pipeline_dtype(prefer_bf16: bool) -> Any:
+def _select_pipeline_dtype(prefer_bf16: bool, device: str | None = None) -> Any:
     """Pick the load dtype for a provider pipeline, matching the nodes' rule.
 
+    The dtype follows the device the pipeline runs on (``device``, or
+    ``resolve_torch_device()`` when None), not the hardware present.
     CUDA: bfloat16 when the model prefers it and the GPU supports it, else
     float16 (pre-Ampere cards emulate or reject bf16). MPS: float16, so a 12B
     FLUX transformer does not load in float32. CPU: float32.
     """
     torch = _get_torch()
-    if _is_cuda_available():
+    kind = str(device or resolve_torch_device()).split(":", 1)[0]
+    if kind == "cuda":
         if prefer_bf16:
             is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
             if callable(is_bf16_supported) and is_bf16_supported():
                 return torch.bfloat16
         return torch.float16
-    if _is_mps_available():
+    if kind == "mps":
         return torch.float16
     return torch.float32
 
@@ -86,35 +75,12 @@ def _resolve_hf_device(
     requested_device: str | None = None,
 ) -> str:
     """
-    Force HuggingFace workloads onto the MPS device when available.
+    Pick the device for a HuggingFace workload.
 
-    Falls back to an explicitly requested device or CPU when Apple Metal is not
-    present so execution can continue on other platforms.
+    Order: the requested device, then ``context.device``, then
+    ``resolve_torch_device()`` (``NODETOOL_TORCH_DEVICE``, then MPS, CUDA, CPU).
     """
-    if _is_mps_available():
-        if requested_device and requested_device != _PREFERRED_HF_DEVICE:
-            log.debug(
-                "Ignoring requested device %s in favor of %s",
-                requested_device,
-                _PREFERRED_HF_DEVICE,
-            )
-        return _PREFERRED_HF_DEVICE
-
-    fallback = None
-    if requested_device and requested_device != _PREFERRED_HF_DEVICE:
-        fallback = requested_device
-    elif context.device and context.device != _PREFERRED_HF_DEVICE:
-        fallback = context.device
-
-    if fallback:
-        return fallback
-
-    fallback = "cuda" if _is_cuda_available() else "cpu"
-    log.warning(
-        "MPS backend unavailable; falling back to %s for HuggingFace execution",
-        fallback,
-    )
-    return fallback
+    return resolve_torch_device(requested_device or getattr(context, "device", None))
 
 
 def _allow_downloads() -> bool:
@@ -853,13 +819,19 @@ def _apply_vae_optimizations(pipeline: Any, enable_tiling: bool = False):
 _VRAM_HEADROOM_GB = 2.0
 
 
-def _cuda_free_vram_gb() -> float:
-    """Free VRAM on the current CUDA device in GiB, 0.0 when CUDA is absent."""
+def _cuda_free_vram_gb(device: str | None = None) -> float:
+    """Free VRAM in GiB on ``device`` (default: the resolved torch device).
+
+    Returns 0.0 when CUDA is absent. A device without an index, or a non-CUDA
+    device, reads the current CUDA device.
+    """
     try:
         torch = _get_torch()
         if not _is_cuda_available():
             return 0.0
-        free_bytes, _total = torch.cuda.mem_get_info()
+        from nodetool.huggingface.memory_utils import offload_gpu_id
+
+        free_bytes, _total = torch.cuda.mem_get_info(offload_gpu_id(device))
         return free_bytes / (1024**3)
     except Exception:
         return 0.0
@@ -920,7 +892,7 @@ def _apply_memory_optimizations(
     sizes = _pipeline_component_sizes_gb(pipeline)
     total_gb = sum(sizes)
     largest_gb = max(sizes, default=0.0)
-    budget_gb = max(_cuda_free_vram_gb() - _VRAM_HEADROOM_GB, 0.0)
+    budget_gb = max(_cuda_free_vram_gb(device) - _VRAM_HEADROOM_GB, 0.0)
 
     if not force_cpu_offload and total_gb <= budget_gb:
         _apply_vae_optimizations(pipeline)
@@ -936,7 +908,7 @@ def _apply_memory_optimizations(
         )
         # Tiling keeps the VAE decode within budget at high resolutions.
         _apply_vae_optimizations(pipeline, enable_tiling=True)
-        apply_cpu_offload_if_needed(pipeline, method="model")
+        apply_cpu_offload_if_needed(pipeline, method="model", device=device)
         return True
 
     if hasattr(pipeline, "enable_sequential_cpu_offload"):
@@ -947,7 +919,7 @@ def _apply_memory_optimizations(
             budget_gb,
         )
         _apply_vae_optimizations(pipeline, enable_tiling=True)
-        apply_cpu_offload_if_needed(pipeline, method="sequential")
+        apply_cpu_offload_if_needed(pipeline, method="sequential", device=device)
         return True
 
     _apply_vae_optimizations(pipeline)

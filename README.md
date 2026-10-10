@@ -128,7 +128,7 @@ Some 3D nodes (`StableFast3D`, `TripoSR`, `Trellis2`) use upstream code that is 
 
 ## Requirements
 
-- Python 3.11. This is the version the desktop app, Docker images and CI use. Python 3.13 does not install, because `curated-tokenizers` (pulled in by `kokoro`) has no 3.13 wheel and its source build fails.
+- Python 3.11 or newer (`requires-python = ">=3.11"`). The desktop app and CI use 3.11. Python 3.11, 3.12 and 3.13 resolve to prebuilt wheels on Linux, macOS and Windows. On 3.14, `xatlas` has no wheel and builds from source.
 - PyTorch 2.14.x (installed automatically; CUDA build recommended for GPU inference). The same torch is used by `nodetool-mlx`, so both packs can share one environment.
 - Linux (x86_64, aarch64), Windows (x86_64), or macOS 14 or later on Apple Silicon. Intel Macs are not supported, because torch 2.14 has no Intel macOS build.
 - See `pyproject.toml` for the full dependency list
@@ -136,59 +136,94 @@ Some 3D nodes (`StableFast3D`, `TripoSR`, `Trellis2`) use upstream code that is 
 
 ## Usage Examples
 
+NodeTool normally runs these nodes inside a workflow. To call one from Python,
+create a `ProcessingContext`, load the model with `preload_model`, move it to
+the context's device, then call `process`. Run the snippets inside an `async`
+function, for example with `asyncio.run(main())`.
+
 ### Text Generation
 ```python
+from nodetool.metadata.types import HFTextGeneration
 from nodetool.nodes.huggingface.text_generation import TextGeneration
 from nodetool.workflows.processing_context import ProcessingContext
 
-text_gen = TextGeneration(
-    model=HFTextGeneration(repo_id="Qwen/Qwen3-8B"),
-    prompt="Write a short story about a robot learning to paint",
-    max_new_tokens=512,
-    temperature=0.8,
-    top_p=0.9,
-)
-result = await text_gen.process(context)
+
+async def main():
+    context = ProcessingContext()
+    text_gen = TextGeneration(
+        model=HFTextGeneration(repo_id="Qwen/Qwen3-8B"),
+        prompt="Write a short story about a robot learning to paint",
+        max_new_tokens=512,
+        temperature=0.8,
+        top_p=0.9,
+    )
+    await text_gen.preload_model(context)
+    await text_gen.move_to_device(context.device)
+    text = await text_gen.process(context)  # str
 ```
 
 ### Image Generation with Flux
 ```python
-from nodetool.nodes.huggingface.text_to_image import Flux
+from nodetool.nodes.huggingface.text_to_image import Flux, FluxVariant
+from nodetool.workflows.processing_context import ProcessingContext
 
-flux = Flux(
-    prompt="A serene landscape with mountains and a lake at sunset, highly detailed",
-    width=1024,
-    height=1024,
-    num_inference_steps=25,
-    seed=42,
-)
-output = await flux.process(context)
-# output.image contains the generated ImageRef
+
+async def main():
+    context = ProcessingContext()
+    flux = Flux(
+        variant=FluxVariant.SCHNELL,
+        prompt="A serene landscape with mountains and a lake at sunset, highly detailed",
+        width=1024,
+        height=1024,
+        seed=42,
+    )
+    await flux.preload_model(context)
+    await flux.move_to_device(context.device)
+    image = await flux.process(context)  # ImageRef
 ```
 
 ### Speech-to-Text Transcription
 ```python
-from nodetool.nodes.huggingface.automatic_speech_recognition import Whisper, WhisperLanguage, Task, Timestamps
-
-whisper = Whisper(
-    model=HFAutomaticSpeechRecognition(repo_id="openai/whisper-large-v3"),
-    audio=audio_input,
-    task=Task.TRANSCRIBE,
-    language=WhisperLanguage.ENGLISH,
-    timestamps=Timestamps.WORD,
+from nodetool.metadata.types import AudioRef, HFAutomaticSpeechRecognition
+from nodetool.nodes.huggingface.automatic_speech_recognition import (
+    Task,
+    Timestamps,
+    Whisper,
+    WhisperLanguage,
 )
-result = await whisper.process(context)
+from nodetool.workflows.processing_context import ProcessingContext
+
+
+async def main():
+    context = ProcessingContext()
+    whisper = Whisper(
+        model=HFAutomaticSpeechRecognition(repo_id="openai/whisper-large-v3"),
+        audio=AudioRef(uri="file:///path/to/speech.wav"),
+        task=Task.TRANSCRIBE,
+        language=WhisperLanguage.ENGLISH,
+        timestamps=Timestamps.WORD,
+    )
+    await whisper.preload_model(context)
+    await whisper.move_to_device(context.device)
+    result = await whisper.process(context)  # {"text": ..., "chunks": [...]}
 ```
 
 ### Image Classification
 ```python
+from nodetool.metadata.types import HFImageClassification, ImageRef
 from nodetool.nodes.huggingface.image_classification import ImageClassifier
+from nodetool.workflows.processing_context import ProcessingContext
 
-classifier = ImageClassifier(
-    model=HFImageClassification(repo_id="google/vit-base-patch16-224"),
-    image=image_input,
-)
-results = await classifier.process(context)
+
+async def main():
+    context = ProcessingContext()
+    classifier = ImageClassifier(
+        model=HFImageClassification(repo_id="google/vit-base-patch16-224"),
+        image=ImageRef(uri="file:///path/to/photo.jpg"),
+    )
+    await classifier.preload_model(context)
+    await classifier.move_to_device(context.device)
+    scores = await classifier.process(context)  # {label: score}
 ```
 
 ## Available Workflow Examples
@@ -207,8 +242,8 @@ Pre-built example workflows live in `src/nodetool/examples/nodetool-huggingface/
 
 Models are downloaded from the HuggingFace Hub automatically on first use.
 
-1. Set `HF_TOKEN` (environment variable or Nodetool secrets) for gated models
-2. Or authenticate with `huggingface-cli login`
+1. Set the `HF_TOKEN` setting in NodeTool Settings, or the `HF_TOKEN` environment variable, for gated models
+2. Or authenticate with `hf auth login` (`huggingface-cli` no longer works in huggingface_hub 1.x)
 3. Models are cached under `~/.cache/huggingface/` by default
 
 ### Gated Models

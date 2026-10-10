@@ -98,6 +98,25 @@ jobs:
               raise SystemExit(f"Version mismatch: pyproject.toml has {actual}, expected {expected}")
           PY
 
+      # The release bump must also update the files that repeat the version:
+      # the Docker build defaults (tests/test_docker_defaults.py), the package
+      # metadata (`uv run nodetool-pkg scan --write`) and the lock (`uv lock`).
+      - name: Check files that repeat the version
+        run: |
+          python - <<'PY'
+          import json, re, tomllib
+          expected = "${{ needs.validate.outputs.version }}"
+          found = {
+              "Dockerfile ARG HF_VERSION": re.findall(r"^ARG HF_VERSION=(\S+)$", open("Dockerfile").read(), re.M),
+              "docker-compose.yaml HF_VERSION": re.findall(r'HF_VERSION: "([^"]+)"', open("docker-compose.yaml").read()),
+              "package metadata": [json.load(open("src/nodetool/package_metadata/nodetool-huggingface.json"))["version"]],
+              "uv.lock": [p["version"] for p in tomllib.load(open("uv.lock", "rb"))["package"] if p["name"] == "nodetool-huggingface"],
+          }
+          bad = {k: v for k, v in found.items() if not v or set(v) != {expected}}
+          if bad:
+              raise SystemExit(f"Expected version {expected} in every file, found {bad}")
+          PY
+
       # One build produces every file that ships: the GitHub Release and PyPI
       # both receive these exact files.
       - name: Build sdist and wheel

@@ -176,7 +176,25 @@ def has_cpu_offload_enabled(pipeline) -> bool:
     return offload_kind(pipeline) is not None
 
 
-def apply_cpu_offload_if_needed(pipeline, method: str = "sequential") -> bool:
+def offload_gpu_id(device: str | None = None) -> int | None:
+    """CUDA index for diffusers' ``gpu_id`` offload argument, or None.
+
+    ``device`` defaults to ``resolve_torch_device()``. Only an indexed
+    ``cuda:<n>`` returns a value, so diffusers keeps its own default otherwise.
+    """
+    if device is None:
+        from nodetool.workflows.torch_support import resolve_torch_device
+
+        device = resolve_torch_device()
+    kind, _, index = str(device).partition(":")
+    if kind == "cuda" and index.isdigit():
+        return int(index)
+    return None
+
+
+def apply_cpu_offload_if_needed(
+    pipeline, method: str = "sequential", device: str | None = None
+) -> bool:
     """
     Apply CPU offload to a pipeline if not already configured.
 
@@ -184,6 +202,9 @@ def apply_cpu_offload_if_needed(pipeline, method: str = "sequential") -> bool:
         pipeline: A diffusers pipeline object.
         method: "sequential" for enable_sequential_cpu_offload,
                 "model" for enable_model_cpu_offload.
+        device: The device the offloaded modules execute on. Defaults to
+                ``resolve_torch_device()``; a ``cuda:<n>`` device offloads
+                onto that GPU instead of diffusers' default ``cuda:0``.
 
     Returns:
         True if offload was applied, False if already configured.
@@ -210,10 +231,12 @@ def apply_cpu_offload_if_needed(pipeline, method: str = "sequential") -> bool:
 
     log_memory(f"Before {method}_cpu_offload")
 
+    gpu_id = offload_gpu_id(device)
+    kwargs = {} if gpu_id is None else {"gpu_id": gpu_id}
     if method == "sequential":
-        pipeline.enable_sequential_cpu_offload()
+        pipeline.enable_sequential_cpu_offload(**kwargs)
     else:
-        pipeline.enable_model_cpu_offload()
+        pipeline.enable_model_cpu_offload(**kwargs)
 
     pipeline._nodetool_cpu_offload_applied = True
     pipeline._nodetool_offload_kind = method

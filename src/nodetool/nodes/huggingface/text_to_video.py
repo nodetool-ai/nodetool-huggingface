@@ -1619,7 +1619,6 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
     async def preload_model(self, context: ProcessingContext):
         import asyncio
 
-        import torch
         from nodetool.ml.core.model_manager import ModelManager
 
         # Refuse an impossible request before pulling 60+GB of weights.
@@ -1627,7 +1626,8 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
 
         _, components_manager_class, modular_pipeline_class = _load_minimax_h3_runtime()
 
-        offload = self.enable_cpu_offload and torch.cuda.is_available()
+        device = context.device
+        offload = self.enable_cpu_offload and device.startswith("cuda")
         cache_key = (
             f"{MINIMAX_H3_REPO_ID}_ModularPipeline_{self._workflow}_offload{offload}"
         )
@@ -1637,7 +1637,7 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
             self._pipeline = cached
             return
 
-        dtype = select_inference_dtype()
+        dtype = select_inference_dtype(device)
 
         def _load() -> Any:
             # No download patterns here: `from_pretrained` reads
@@ -1653,7 +1653,7 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
             )
             pipeline.load_components(dtype=dtype)
             if manager is not None:
-                manager.enable_auto_cpu_offload(device="cuda")
+                manager.enable_auto_cpu_offload(device=device)
             return pipeline
 
         self._pipeline = await asyncio.to_thread(_load)

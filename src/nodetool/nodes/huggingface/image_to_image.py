@@ -1662,11 +1662,9 @@ class StableDiffusionXLControlNetImg2ImgNode(StableDiffusionXLImg2Img):
         if self._pipeline is not None:
             move_pipeline_to_device(self._pipeline, context.device)
 
-    class OutputType(TypedDict):
-        image: ImageRef | None
-        latent: TorchTensor | None
-
-    async def process(self, context: ProcessingContext) -> OutputType:
+    async def process(
+        self, context: ProcessingContext
+    ) -> StableDiffusionXLImg2Img.OutputType:
         control_image = await context.image_to_pil(self.control_image)
         init_image = await context.image_to_pil(self.init_image)
         init_image = init_image.resize((self.width, self.height))
@@ -1975,8 +1973,10 @@ class QwenImageEdit(HuggingFacePipelineNode):
                 if device == "cpu":
                     move_pipeline_to_device(self._pipeline, device)
                 # When moving to GPU with CPU offload, re-enable CPU offload
-                elif device in ["cuda", "mps"]:
-                    apply_cpu_offload_if_needed(self._pipeline, method="model")
+                elif device.startswith("cuda") or device == "mps":
+                    apply_cpu_offload_if_needed(
+                        self._pipeline, method="model", device=device
+                    )
             else:
                 # Normal device movement without CPU offload
                 try:
@@ -2174,12 +2174,14 @@ class FluxFill(HuggingFacePipelineNode):
                             "Enable 'CPU offload' in the advanced node properties or reduce image size/steps."
                         ) from e
                 # When moving to GPU with CPU offload, re-enable CPU offload
-                elif device in ["cuda", "mps"]:
+                elif device.startswith("cuda") or device == "mps":
                     from nodetool.huggingface.memory_utils import (
                         apply_cpu_offload_if_needed,
                     )
 
-                    apply_cpu_offload_if_needed(self._pipeline, method="sequential")
+                    apply_cpu_offload_if_needed(
+                        self._pipeline, method="sequential", device=device
+                    )
             else:
                 # Normal device movement without CPU offload
                 try:
@@ -2347,8 +2349,10 @@ class FluxKontext(HuggingFacePipelineNode):
                 if device == "cpu":
                     move_pipeline_to_device(self._pipeline, device)
                 # When moving to GPU with CPU offload, re-enable CPU offload
-                elif device in ["cuda", "mps"]:
-                    apply_cpu_offload_if_needed(self._pipeline, method="model")
+                elif device.startswith("cuda") or device == "mps":
+                    apply_cpu_offload_if_needed(
+                        self._pipeline, method="model", device=device
+                    )
             else:
                 # Normal device movement without CPU offload
                 try:

@@ -127,8 +127,8 @@ class ShapETextTo3D(HuggingFacePipelineNode):
         import torch
         from diffusers import ShapEPipeline
 
-        device = _resolve_device()
-        torch_dtype = torch.float16 if device == "cuda" else torch.float32
+        device = _resolve_device(context)
+        torch_dtype = torch.float16 if device.startswith("cuda") else torch.float32
         return await self.load_model(
             context=context,
             model_class=ShapEPipeline,

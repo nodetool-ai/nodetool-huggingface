@@ -30,7 +30,10 @@ from nodetool.metadata.types import (
     TorchTensor,
 )
 
-from nodetool.nodes.huggingface.huggingface_pipeline import HuggingFacePipelineNode
+from nodetool.nodes.huggingface.huggingface_pipeline import (
+    HuggingFacePipelineNode,
+    select_inference_dtype,
+)
 from nodetool.huggingface.local_provider_utils import _apply_vae_optimizations
 from nodetool.huggingface.memory_utils import (
     apply_cpu_offload_if_needed,
@@ -584,22 +587,9 @@ def upscale_latents(latents: torch.Tensor, scale_factor: int = 2) -> torch.Tenso
     return upscaled
 
 
-def available_torch_dtype() -> "torch.dtype":
-    import torch
-
-    # Prefer BF16 on capable GPUs (PyTorch 2 optimization path), otherwise fall back.
-    try:
-        if torch.cuda.is_available():
-            is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
-            if callable(is_bf16_supported) and is_bf16_supported():
-                return torch.bfloat16
-            return torch.float16
-        if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
-            return torch.float16
-    except Exception:
-        pass
-
-    return torch.float32
+def available_torch_dtype(device: str | None = None) -> "torch.dtype":
+    """Dtype for the device the pipeline runs on. See ``select_inference_dtype``."""
+    return select_inference_dtype(device)
 
 
 def is_mps_device() -> bool:
