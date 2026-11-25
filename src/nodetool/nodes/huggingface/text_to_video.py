@@ -53,10 +53,13 @@ if TYPE_CHECKING:
 log = get_logger(__name__)
 
 
-try:
-    from nodetool.metadata.types import HFLoraLTX  # ty: ignore[missing-module-member]
-    from nodetool.metadata.types import HFLoraLTXConfig  # ty: ignore[missing-module-member]
-except ImportError:  # nodetool-core releases before the LTX LoRA types
+# nodetool-core releases before the LTX LoRA types lack them: define the same
+# two classes here. Looked up by name, so type checkers pass on either release.
+_CORE_TYPES = importlib.import_module("nodetool.metadata.types")
+if hasattr(_CORE_TYPES, "HFLoraLTXConfig"):
+    HFLoraLTX = _CORE_TYPES.HFLoraLTX
+    HFLoraLTXConfig = _CORE_TYPES.HFLoraLTXConfig
+else:
 
     class HFLoraLTX(HuggingFaceModel):
         """A LoRA for the LTX-2 video models: a character or style LoRA, or an IC-LoRA."""
