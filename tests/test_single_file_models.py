@@ -232,6 +232,7 @@ class TestPipelineRouting:
         built = {}
 
         async def fake_build(checkpoint_path, *, plan=None, device=None):
+            assert plan is not None
             built["path"] = checkpoint_path
             built["family"] = plan.family
             return object()

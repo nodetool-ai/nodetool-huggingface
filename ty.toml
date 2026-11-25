@@ -3,13 +3,13 @@
 
 [rules]
 # Ignore unresolved imports since dependencies are not always installed in CI
-unresolved-import = "ignore"
+import-not-found = "ignore"
 # Ignore type errors until codebase is fully typed
 invalid-argument-type = "ignore"
-invalid-return-type = "ignore"
-unresolved-attribute = "ignore"
+invalid-explicit-return = "ignore"
+missing-attribute = "ignore"
 possibly-missing-attribute = "ignore"
 # Intentional covariant return type overrides (e.g. get_recommended_models, process)
-invalid-method-override = "ignore"
+incompatible-method-override = "ignore"
 invalid-assignment = "ignore"
 redundant-cast = "ignore"
