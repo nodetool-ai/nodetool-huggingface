@@ -10174,6 +10174,409 @@
     },
     {
       "basic_fields": [
+        "image",
+        "last_image",
+        "prompt",
+        "num_frames"
+      ],
+      "body": "content_card",
+      "description": "Animates an image into a video with a matching soundtrack using LTX-2.5, optionally ending on a second image.\n    video, audio, generation, AI, image-to-video, first-last-frame, ltx, ltx-2.5, Lightricks\n\n    Use cases:\n    - Animate a photo or a generated still into a clip with sound\n    - Generate a transition from a start frame to an end frame\n    - Keep a shot's composition while adding motion, dialogue or ambience",
+      "input_fields": [
+        "prompt",
+        "negative_prompt",
+        "image",
+        "last_image"
+      ],
+      "namespace": "huggingface.image_to_video",
+      "node_type": "huggingface.image_to_video.LTX25ImageToVideo",
+      "outputs": [
+        {
+          "name": "video",
+          "type": {
+            "type": "video"
+          }
+        },
+        {
+          "name": "audio",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "Lightricks/LTX-2.5-Diffusers",
+            "type": "hf.text_to_video",
+            "variant": null
+          },
+          "description": "The gated LTX-2.5 Diffusers checkpoint.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_video"
+          }
+        },
+        {
+          "default": "A majestic eagle soaring over snow-capped mountains at sunrise, cinematic, highly detailed.",
+          "description": "Detailed text description of the video to generate.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
+          "description": "Describe what to avoid in the video.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 121,
+          "description": "Total frames in the output. More frames = longer video.",
+          "max": 257.0,
+          "min": 9.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 24.0,
+          "description": "Frame rate the model generates at (also used for the output file).",
+          "max": 60.0,
+          "min": 1.0,
+          "name": "frame_rate",
+          "title": "Frame Rate",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "Fixed at 1.0: LTX-2.5 is distilled and guidance degrades it.",
+          "max": 1.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Fixed by the distilled sigma schedule LTX-2.5 denoises on.",
+          "max": 8.0,
+          "min": 8.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 512,
+          "description": "Output video height in pixels.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 768,
+          "description": "Output video width in pixels.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "image",
+            "uri": ""
+          },
+          "description": "The image the video starts from.",
+          "name": "image",
+          "title": "Image",
+          "type": {
+            "type": "image"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "image",
+            "uri": ""
+          },
+          "description": "Optional image the video ends on.",
+          "name": "last_image",
+          "title": "Last Image",
+          "type": {
+            "type": "image"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "How strongly the clip holds to the images. 1.0 reproduces them exactly.",
+          "max": 1.0,
+          "min": 0.0,
+          "name": "strength",
+          "title": "Strength",
+          "type": {
+            "type": "float"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "Lightricks/LTX-2.5-Diffusers",
+          "name": "Lightricks/LTX-2.5-Diffusers",
+          "repo_id": "Lightricks/LTX-2.5-Diffusers",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "LTX-2.5 (Image-to-Video)"
+    },
+    {
+      "basic_fields": [
+        "keyframes",
+        "prompt",
+        "num_frames"
+      ],
+      "body": "content_card",
+      "description": "Generates a video with a matching soundtrack that passes through 2 to 8 keyframes using LTX-2.5.\n    video, audio, generation, AI, keyframes, interpolation, image-to-video, ltx, ltx-2.5, Lightricks\n\n    The keyframes are spread evenly from the first frame to the last.\n\n    Use cases:\n    - Plan a shot as a sequence of stills and let the model fill the motion\n    - Hold a character or a layout at fixed points in a clip\n    - Interpolate between storyboard frames",
+      "input_fields": [
+        "prompt",
+        "negative_prompt"
+      ],
+      "namespace": "huggingface.image_to_video",
+      "node_type": "huggingface.image_to_video.LTX25Keyframes",
+      "outputs": [
+        {
+          "name": "video",
+          "type": {
+            "type": "video"
+          }
+        },
+        {
+          "name": "audio",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "Lightricks/LTX-2.5-Diffusers",
+            "type": "hf.text_to_video",
+            "variant": null
+          },
+          "description": "The gated LTX-2.5 Diffusers checkpoint.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_video"
+          }
+        },
+        {
+          "default": "A majestic eagle soaring over snow-capped mountains at sunrise, cinematic, highly detailed.",
+          "description": "Detailed text description of the video to generate.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
+          "description": "Describe what to avoid in the video.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 121,
+          "description": "Total frames in the output. More frames = longer video.",
+          "max": 257.0,
+          "min": 9.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 24.0,
+          "description": "Frame rate the model generates at (also used for the output file).",
+          "max": 60.0,
+          "min": 1.0,
+          "name": "frame_rate",
+          "title": "Frame Rate",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "Fixed at 1.0: LTX-2.5 is distilled and guidance degrades it.",
+          "max": 1.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Fixed by the distilled sigma schedule LTX-2.5 denoises on.",
+          "max": 8.0,
+          "min": 8.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 512,
+          "description": "Output video height in pixels.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 768,
+          "description": "Output video width in pixels.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": [],
+          "description": "2 to 8 images, in order. The first opens the clip and the last closes it.",
+          "name": "keyframes",
+          "title": "Keyframes",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "image"
+              }
+            ]
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "How strongly the clip holds to each keyframe.",
+          "max": 1.0,
+          "min": 0.0,
+          "name": "strength",
+          "title": "Strength",
+          "type": {
+            "type": "float"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "Lightricks/LTX-2.5-Diffusers",
+          "name": "Lightricks/LTX-2.5-Diffusers",
+          "repo_id": "Lightricks/LTX-2.5-Diffusers",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "LTX-2.5 (Keyframes)"
+    },
+    {
+      "basic_fields": [
         "input_image",
         "prompt",
         "num_frames",
@@ -21855,6 +22258,202 @@
         }
       ],
       "title": "HF Video Classifier"
+    },
+    {
+      "basic_fields": [
+        "video",
+        "prompt",
+        "num_frames"
+      ],
+      "body": "content_card",
+      "description": "Continues a video past its last frame, with a matching soundtrack, using LTX-2.5.\n    video, audio, generation, AI, extend, continuation, video-to-video, ltx, ltx-2.5, Lightricks\n\n    The last frames of the source condition the start of a new clip. The output\n    holds only the new frames and their sound, so join it after the source with\n    a video concat node.\n\n    Use cases:\n    - Make a clip longer without a visible cut\n    - Continue a generated shot with a new action or line of dialogue\n    - Chain several generations into one long take",
+      "input_fields": [
+        "prompt",
+        "negative_prompt",
+        "video"
+      ],
+      "namespace": "huggingface.video_to_video",
+      "node_type": "huggingface.video_to_video.LTX25Extend",
+      "outputs": [
+        {
+          "name": "video",
+          "type": {
+            "type": "video"
+          }
+        },
+        {
+          "name": "audio",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "Lightricks/LTX-2.5-Diffusers",
+            "type": "hf.text_to_video",
+            "variant": null
+          },
+          "description": "The gated LTX-2.5 Diffusers checkpoint.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_video"
+          }
+        },
+        {
+          "default": "A majestic eagle soaring over snow-capped mountains at sunrise, cinematic, highly detailed.",
+          "description": "Detailed text description of the video to generate.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
+          "description": "Describe what to avoid in the video.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 145,
+          "description": "Frames to generate, including the context frames, which are dropped from the output.",
+          "max": 257.0,
+          "min": 9.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 24.0,
+          "description": "Frame rate the model generates at (also used for the output file).",
+          "max": 60.0,
+          "min": 1.0,
+          "name": "frame_rate",
+          "title": "Frame Rate",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "Fixed at 1.0: LTX-2.5 is distilled and guidance degrades it.",
+          "max": 1.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Fixed by the distilled sigma schedule LTX-2.5 denoises on.",
+          "max": 8.0,
+          "min": 8.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 512,
+          "description": "Output video height in pixels.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 768,
+          "description": "Output video width in pixels.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "duration": null,
+            "format": null,
+            "metadata": null,
+            "type": "video",
+            "uri": ""
+          },
+          "description": "The clip to continue.",
+          "name": "video",
+          "title": "Video",
+          "type": {
+            "type": "video"
+          }
+        },
+        {
+          "default": 17,
+          "description": "Frames from the end of the source that the continuation starts from. Snapped to 8n+1. More frames keep motion smoother and cost more memory.",
+          "max": 65.0,
+          "min": 9.0,
+          "name": "context_frames",
+          "title": "Context Frames",
+          "type": {
+            "type": "int"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "Lightricks/LTX-2.5-Diffusers",
+          "name": "Lightricks/LTX-2.5-Diffusers",
+          "repo_id": "Lightricks/LTX-2.5-Diffusers",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "LTX-2.5 (Extend)"
     }
   ],
   "repo_id": "nodetool-ai/nodetool-huggingface",

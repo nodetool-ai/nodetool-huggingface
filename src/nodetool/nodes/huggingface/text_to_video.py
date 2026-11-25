@@ -711,9 +711,12 @@ class LTX2(HuggingFacePipelineNode):
     def get_model_id(self) -> str:
         return self.model.repo_id or "Lightricks/LTX-2"
 
-    async def preload_model(self, context: ProcessingContext):
+    def _pipeline_class(self) -> Any:
         from diffusers.pipelines.ltx2.pipeline_ltx2 import LTX2Pipeline
 
+        return LTX2Pipeline
+
+    async def preload_model(self, context: ProcessingContext):
         if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
             raise ValueError(
                 f"Model {self.get_model_id()} must be downloaded first from the recommended models"
@@ -721,7 +724,7 @@ class LTX2(HuggingFacePipelineNode):
 
         self._pipeline = await self.load_model(
             context=context,
-            model_class=LTX2Pipeline,
+            model_class=self._pipeline_class(),
             model_id=self.get_model_id(),
             torch_dtype=available_torch_dtype(),
             device="cpu",
@@ -884,11 +887,24 @@ class LTX25(LTX2):
                 self._generator(), self._progress_callback(context)
             )
         )
+        return await self._video_and_audio(context, output)
 
+    async def _video_and_audio(
+        self, context: ProcessingContext, output: Any, skip_frames: int = 0
+    ) -> OutputType:
+        """Mux the pipeline's frames and soundtrack, dropping ``skip_frames`` from the start."""
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        fps = int(self.frame_rate)
+        sample_rate = int(self._pipeline.vocoder.config.output_sampling_rate)
         frames = output.frames[0]
         waveform = output.audio[0].float().cpu()
-        sample_rate = int(self._pipeline.vocoder.config.output_sampling_rate)
-        fps = int(self.frame_rate)
+        if skip_frames:
+            frames = frames[skip_frames:]
+            waveform = waveform[
+                ..., round(skip_frames * sample_rate / self.frame_rate) :
+            ]
 
         video = await video_from_frames_with_audio(
             context,
@@ -905,6 +921,69 @@ class LTX25(LTX2):
         )
         run_gc("After LTX-2.5 inference", log_before_after=False)
         return {"video": video, "audio": audio}
+
+
+def ltx2_latent_index(pixel_frame: int) -> int:
+    """The latent frame holding ``pixel_frame`` on the LTX-2 8n+1 lattice.
+
+    Latent 0 is pixel frame 0 alone; latent ``k`` covers pixel frames
+    ``8(k-1)+1`` to ``8k``. ``LTX2VideoCondition.index`` is a latent index.
+    """
+    if pixel_frame <= 0:
+        return 0
+    return (pixel_frame - 1) // LTX2_GEOMETRY.frame_step + 1
+
+
+def ltx2_spread_latent_indices(count: int, num_frames: int) -> list[int]:
+    """Latent indices that spread ``count`` keyframes from the first frame to the last."""
+    last = ltx2_latent_index(num_frames - 1)
+    if count == 1:
+        return [0]
+    return [round(i * last / (count - 1)) for i in range(count)]
+
+
+class LTX25Conditioned(LTX25):
+    """LTX-2.5 conditioned on images or frames at chosen positions in the clip.
+
+    Runs Diffusers' ``LTX2ConditionPipeline``, which takes a list of
+    ``LTX2VideoCondition`` items: a still or a run of frames, the latent index
+    it lands on and how strongly it binds. A condition at index 0 replaces the
+    first frame; any other index is appended as a keyframe the clip passes
+    through. Subclasses build that list.
+    """
+
+    @classmethod
+    def is_visible(cls) -> bool:
+        return cls is not LTX25Conditioned
+
+    def _pipeline_class(self) -> Any:
+        from diffusers.pipelines.ltx2.pipeline_ltx2_condition import (
+            LTX2ConditionPipeline,
+        )
+
+        return LTX2ConditionPipeline
+
+    def _snapped_num_frames(self) -> int:
+        return snap_video_frames(self.num_frames, LTX2_GEOMETRY, self.get_title())
+
+    async def _conditions(self, context: ProcessingContext) -> list[Any]:
+        raise NotImplementedError
+
+    async def _generate(
+        self, context: ProcessingContext, conditions: list[Any], skip_frames: int = 0
+    ) -> LTX25.OutputType:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        kwargs = self._build_pipeline_kwargs(
+            self._generator(), self._progress_callback(context)
+        )
+        kwargs["conditions"] = conditions
+        output = await self.run_pipeline_in_thread(**kwargs)
+        return await self._video_and_audio(context, output, skip_frames=skip_frames)
+
+    async def process(self, context: ProcessingContext) -> LTX25.OutputType:
+        return await self._generate(context, await self._conditions(context))
 
 
 LTX_VIDEO_GEOMETRY = VideoGeometry(
