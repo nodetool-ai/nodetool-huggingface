@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import asyncio
+import copy
 import importlib
+import math
 import inspect
-from typing import Any, NamedTuple, TypedDict, TYPE_CHECKING
+from typing import Any, Literal, NamedTuple, TypedDict, TYPE_CHECKING
 from enum import Enum
 from pydantic import Field
 from nodetool.config.logging_config import get_logger
@@ -10,6 +13,7 @@ from nodetool.workflows.base_node import BaseNode
 from nodetool.workflows.processing_context import ProcessingContext
 from nodetool.metadata.types import (
     AudioRef,
+    BaseType,
     HuggingFaceModel,
     HFTextToVideo,
     ImageRef,
@@ -47,6 +51,84 @@ if TYPE_CHECKING:
 
 
 log = get_logger(__name__)
+
+
+try:
+    from nodetool.metadata.types import HFLoraLTX  # ty: ignore[missing-module-member]
+    from nodetool.metadata.types import HFLoraLTXConfig  # ty: ignore[missing-module-member]
+except ImportError:  # nodetool-core releases before the LTX LoRA types
+
+    class HFLoraLTX(HuggingFaceModel):
+        """A LoRA for the LTX-2 video models: a character or style LoRA, or an IC-LoRA."""
+
+        type: Literal["hf.lora_ltx"] = "hf.lora_ltx"
+
+    class HFLoraLTXConfig(BaseType):
+        type: Literal["hf.lora_ltx_config"] = "hf.lora_ltx_config"
+        lora: HFLoraLTX = Field(
+            default=HFLoraLTX(),
+            description="The LoRA file: a repo and the .safetensors path in it.",
+        )
+        strength: float = Field(
+            default=1.0, ge=0.0, le=3.0, description="LoRA strength"
+        )
+
+
+class LoraAdapter(NamedTuple):
+    """A LoRA file bound to a pipeline under ``name`` at ``strength``."""
+
+    name: str
+    repo_id: str
+    path: str
+    strength: float
+
+
+def ltx_lora_adapters(loras: list[HFLoraLTXConfig]) -> list[LoraAdapter]:
+    """Adapters for the LoRAs a node lists, skipping empty entries."""
+    adapters = []
+    for config in loras:
+        if not config.lora.is_set():
+            continue
+        if not config.lora.path:
+            raise ValueError(
+                f"LoRA {config.lora.repo_id} needs the path of its .safetensors file."
+            )
+        adapters.append(
+            LoraAdapter(
+                f"lora_{len(adapters)}",
+                config.lora.repo_id,
+                config.lora.path,
+                float(config.strength),
+            )
+        )
+    return adapters
+
+
+def lora_cache_suffix(adapters: list[LoraAdapter]) -> str:
+    """Keeps a pipeline with these adapters bound apart from other pipelines."""
+    return "".join(
+        f"_{adapter.name}_{adapter.repo_id}/{adapter.path}@{adapter.strength:g}"
+        for adapter in adapters
+    )
+
+
+async def bind_lora_adapters(pipeline: Any, adapters: list[LoraAdapter]) -> None:
+    """Load ``adapters`` into a pipeline once. Call before offload installs its hooks."""
+    key = lora_cache_suffix(adapters)
+    if not adapters or getattr(pipeline, "_nodetool_adapters", None) == key:
+        return
+    for adapter in adapters:
+        path = await HF_FAST_CACHE.resolve(adapter.repo_id, adapter.path)
+        if path is None:
+            raise ValueError(
+                f"Download {adapter.repo_id}/{adapter.path} from the recommended models first."
+            )
+        pipeline.load_lora_weights(path, adapter_name=adapter.name)
+    pipeline.set_adapters(
+        [adapter.name for adapter in adapters],
+        adapter_weights=[adapter.strength for adapter in adapters],
+    )
+    pipeline._nodetool_adapters = key
 
 
 class VideoGeometry(NamedTuple):
@@ -688,6 +770,10 @@ class LTX2(HuggingFacePipelineNode):
         default=True,
         description="Offload model components to CPU to reduce VRAM usage.",
     )
+    loras: list[HFLoraLTXConfig] = Field(
+        default=[],
+        description="Character or style LoRAs trained for this LTX version. Download each first.",
+    )
 
     _pipeline: Any = None
 
@@ -711,8 +797,16 @@ class LTX2(HuggingFacePipelineNode):
     def get_model_id(self) -> str:
         return self.model.repo_id or "Lightricks/LTX-2"
 
+    def _adapters(self) -> list[LoraAdapter]:
+        """The LoRA adapters this node binds."""
+        return ltx_lora_adapters(self.loras)
+
+    def model_cache_suffix(self) -> str:
+        return lora_cache_suffix(self._adapters())
+
     async def _bind_adapters(self, pipeline: Any) -> None:
-        """Bind LoRA adapters to a freshly loaded pipeline. Nothing by default."""
+        """Bind the LoRA adapters to a freshly loaded pipeline."""
+        await bind_lora_adapters(pipeline, self._adapters())
 
     def _pipeline_class(self) -> Any:
         from diffusers.pipelines.ltx2.pipeline_ltx2 import LTX2Pipeline
@@ -899,21 +993,38 @@ class LTX25(LTX2):
         return await self._video_and_audio(context, output)
 
     async def _video_and_audio(
-        self, context: ProcessingContext, output: Any, skip_frames: int = 0
+        self,
+        context: ProcessingContext,
+        output: Any,
+        skip_frames: int = 0,
+        keep_frames: int | None = None,
+        soundtrack: Any = None,
     ) -> OutputType:
-        """Mux the pipeline's frames and soundtrack, dropping ``skip_frames`` from the start."""
+        """Mux the pipeline's frames with a soundtrack.
+
+        Drops ``skip_frames`` from the start and keeps at most ``keep_frames``.
+        ``soundtrack`` is a pydub ``AudioSegment`` that replaces the generated
+        sound, such as the source audio of an edited clip.
+        """
         if self._pipeline is None:
             raise ValueError("Pipeline not initialized")
 
         fps = int(self.frame_rate)
-        sample_rate = int(self._pipeline.vocoder.config.output_sampling_rate)
         frames = output.frames[0]
-        waveform = output.audio[0].float().cpu()
+        if soundtrack is None:
+            sample_rate = int(self._pipeline.vocoder.config.output_sampling_rate)
+            waveform = output.audio[0].float().cpu()
+            if skip_frames:
+                waveform = waveform[
+                    ..., round(skip_frames * sample_rate / self.frame_rate) :
+                ]
+        else:
+            sample_rate, waveform = segment_to_waveform(soundtrack)
         if skip_frames:
             frames = frames[skip_frames:]
-            waveform = waveform[
-                ..., round(skip_frames * sample_rate / self.frame_rate) :
-            ]
+        if keep_frames is not None:
+            frames = frames[:keep_frames]
+        waveform = waveform[..., : round(len(frames) * sample_rate / self.frame_rate)]
 
         video = await video_from_frames_with_audio(
             context,
@@ -930,6 +1041,32 @@ class LTX25(LTX2):
         )
         run_gc("After LTX-2.5 inference", log_before_after=False)
         return {"video": video, "audio": audio}
+
+
+def segment_to_waveform(segment: Any) -> tuple[int, Any]:
+    """(sample rate, float ``[channels, samples]`` tensor) for a pydub segment."""
+    import numpy as np
+    import torch
+
+    samples = np.array(segment.get_array_of_samples(), dtype=np.float32)
+    samples /= float(1 << (8 * segment.sample_width - 1))
+    channels = samples.reshape(-1, segment.channels).T
+    return segment.frame_rate, torch.from_numpy(np.ascontiguousarray(channels))
+
+
+async def source_soundtrack(context: ProcessingContext, video: VideoRef) -> Any:
+    """The audio track of ``video`` as a pydub segment, or ``None`` when it has none."""
+    import io
+
+    from pydub import AudioSegment
+
+    data = await context.asset_to_bytes(video)
+    try:
+        segment = await asyncio.to_thread(AudioSegment.from_file, io.BytesIO(data))
+    except Exception as exc:  # pydub raises CouldntDecodeError and OSError
+        log.info("The clip has no readable audio track: %s", exc)
+        return None
+    return segment if len(segment) else None
 
 
 def ltx2_latent_index(pixel_frame: int) -> int:
@@ -993,6 +1130,249 @@ class LTX25Conditioned(LTX25):
 
     async def process(self, context: ProcessingContext) -> LTX25.OutputType:
         return await self._generate(context, await self._conditions(context))
+
+
+# The LTX-2 audio VAE reads log-magnitude mel spectrograms of 16 kHz stereo:
+# torchaudio's MelSpectrogram with a Slaney scale and norm, as in ltx-2-mlx.
+LTX_AUDIO_SAMPLE_RATE = 16000
+LTX_AUDIO_N_FFT = 1024
+LTX_AUDIO_HOP = 160
+LTX_AUDIO_MELS = 64
+
+
+def slaney_mel_filterbank(
+    sample_rate: int = LTX_AUDIO_SAMPLE_RATE,
+    n_fft: int = LTX_AUDIO_N_FFT,
+    n_mels: int = LTX_AUDIO_MELS,
+) -> Any:
+    """``(n_mels, n_fft // 2 + 1)`` mel filters on the Slaney scale, area-normalized."""
+    import numpy as np
+
+    def hz_to_mel(f: Any) -> Any:
+        f = np.asarray(f, dtype=np.float64)
+        return np.where(
+            f < 1000.0,
+            3.0 * f / 200.0,
+            15.0 + 27.0 * np.log(np.maximum(f, 1e-10) / 1000.0) / np.log(6.4),
+        )
+
+    def mel_to_hz(m: Any) -> Any:
+        m = np.asarray(m, dtype=np.float64)
+        return np.where(
+            m < 15.0, 200.0 * m / 3.0, 1000.0 * np.exp((m - 15.0) * np.log(6.4) / 27.0)
+        )
+
+    hz = mel_to_hz(np.linspace(hz_to_mel(0.0), hz_to_mel(sample_rate / 2.0), n_mels + 2))
+    freqs = np.linspace(0, sample_rate / 2.0, n_fft // 2 + 1)
+    lower, center, upper = hz[:-2, None], hz[1:-1, None], hz[2:, None]
+    rising = (freqs - lower) / (center - lower)
+    falling = (upper - freqs) / (upper - center)
+    filters = np.maximum(0.0, np.minimum(rising, falling))
+    return (filters * (2.0 / (upper - lower))).astype(np.float32)
+
+
+def ltx_audio_mel(waveform: Any) -> Any:
+    """``(1, 2, frames, 64)`` log-mel input of the LTX-2 audio VAE.
+
+    ``waveform`` is a float ``[channels, samples]`` tensor at 16 kHz. Mono is
+    duplicated to stereo.
+    """
+    import torch
+
+    if waveform.shape[0] == 1:
+        waveform = waveform.repeat(2, 1)
+    waveform = waveform[:2].float()
+    spectrum = torch.stft(
+        waveform,
+        n_fft=LTX_AUDIO_N_FFT,
+        hop_length=LTX_AUDIO_HOP,
+        window=torch.hann_window(LTX_AUDIO_N_FFT),
+        center=True,
+        pad_mode="reflect",
+        return_complex=True,
+    ).abs()
+    filters = torch.from_numpy(slaney_mel_filterbank())
+    mel = torch.matmul(filters, spectrum).clamp(min=1e-5).log()
+    return mel.transpose(1, 2).unsqueeze(0)
+
+
+class FrozenAudioScheduler:
+    """An audio scheduler that holds the soundtrack to given clean latents.
+
+    After every step it replaces the denoised audio with the clean latents
+    noised to the next sigma, so the video denoises against the real
+    soundtrack at the noise level the model expects. At the last step the
+    sigma is 0 and the audio is the clean soundtrack.
+    """
+
+    def __init__(self, scheduler: Any, clean: Any, generator: Any = None) -> None:
+        self._scheduler = scheduler
+        self._clean = clean
+        self._generator = generator
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._scheduler, name)
+
+    def step(
+        self,
+        model_output: Any,
+        timestep: Any,
+        sample: Any,
+        *args: Any,
+        return_dict: bool = True,
+        **kwargs: Any,
+    ) -> Any:
+        from diffusers.utils.torch_utils import randn_tensor
+
+        self._scheduler.step(
+            model_output, timestep, sample, *args, return_dict=False, **kwargs
+        )
+        sigma = float(self._scheduler.sigmas[self._scheduler.step_index])
+        clean = self._clean.to(device=sample.device, dtype=sample.dtype)
+        noise = randn_tensor(
+            clean.shape, generator=self._generator, device=clean.device, dtype=clean.dtype
+        )
+        held = sigma * noise + (1.0 - sigma) * clean
+        if return_dict:
+            from diffusers.schedulers.scheduling_flow_match_euler_discrete import (
+                FlowMatchEulerDiscreteSchedulerOutput,
+            )
+
+            return FlowMatchEulerDiscreteSchedulerOutput(prev_sample=held)
+        return (held,)
+
+
+class LTX25AudioToVideo(LTX25Conditioned):
+    """
+    Generates a video for a given soundtrack, such as speech or music, using LTX-2.5. The output keeps the input audio.
+    video, audio, generation, AI, audio-to-video, lip sync, talking head, music video, ltx, ltx-2.5, Lightricks
+
+    The soundtrack is encoded with the LTX-2 audio VAE and held fixed while the
+    video denoises against it, so mouths and motion follow the sound. Phosphene
+    calls this lip-sync.
+
+    Use cases:
+    - Make a talking or singing character from a voice track
+    - Cut visuals to a piece of music
+    """
+
+    audio: AudioRef = Field(
+        default=AudioRef(),
+        description="The soundtrack. With music, isolated vocals sync better.",
+    )
+    image: ImageRef = Field(
+        default=ImageRef(),
+        description="Optional first frame, such as the speaker.",
+    )
+    strength: float = Field(
+        default=1.0,
+        description="How strongly the clip holds to the first frame.",
+        ge=0.0,
+        le=1.0,
+    )
+    num_frames: int = Field(
+        default=0,
+        description="Frames to generate, snapped to 8n+1. 0 covers the audio, up to 257 frames.",
+        ge=0,
+        le=257,
+    )
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "LTX-2.5 (Audio-to-Video)"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["audio", "image", "prompt"]
+
+    # Set by process() from the soundtrack length when num_frames is 0.
+    _audio_frames: int | None = None
+
+    def _snapped_num_frames(self) -> int:
+        if self.num_frames:
+            return snap_video_frames(self.num_frames, LTX2_GEOMETRY, self.get_title())
+        if self._audio_frames is None:
+            raise ValueError("The frame count comes from the soundtrack.")
+        return self._audio_frames
+
+    def _geometry(self) -> tuple[int, int, int]:
+        width, height, _ = snap_video_geometry(
+            self.width, self.height, 9, LTX2_GEOMETRY, self.get_title()
+        )
+        return width, height, self._snapped_num_frames()
+
+    def frames_for_audio(self, duration_ms: float) -> int:
+        """Most frames on the 8n+1 lattice that the soundtrack covers, up to 257."""
+        frames = min(int(duration_ms / 1000.0 * self.frame_rate), LTX2_GEOMETRY.max_frames)
+        if frames < LTX2_GEOMETRY.min_frames:
+            raise ValueError(
+                f"The soundtrack is shorter than {LTX2_GEOMETRY.min_frames} frames "
+                f"at {self.frame_rate:g} fps."
+            )
+        step = LTX2_GEOMETRY.frame_step
+        return (frames - 1) // step * step + 1
+
+    def _encode_audio(self, waveform: Any) -> Any:
+        """Unnormalized ``(1, 8, frames, 16)`` audio latents of a 16 kHz waveform."""
+        import torch
+
+        pipeline = self._pipeline
+        vae = pipeline.audio_vae
+        mel = ltx_audio_mel(waveform).to(
+            device=pipeline._execution_device, dtype=vae.dtype
+        )
+        with torch.no_grad():
+            return vae.encode(mel).latent_dist.mode().float()
+
+    async def process(self, context: ProcessingContext) -> LTX25.OutputType:
+        from diffusers.pipelines.ltx2.pipeline_ltx2_condition import LTX2VideoCondition
+
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+        if self.audio.is_empty():
+            raise ValueError("Connect the soundtrack.")
+
+        segment = await context.audio_to_audio_segment(self.audio)
+        self._audio_frames = self.frames_for_audio(len(segment))
+        num_frames = self._snapped_num_frames()
+        soundtrack = segment[: math.ceil(num_frames / self.frame_rate * 1000)]
+        _, waveform = segment_to_waveform(
+            soundtrack.set_frame_rate(LTX_AUDIO_SAMPLE_RATE)
+        )
+        clean = await asyncio.to_thread(self._encode_audio, waveform)
+
+        conditions = []
+        if not self.image.is_empty():
+            conditions.append(
+                LTX2VideoCondition(
+                    frames=(await context.image_to_pil(self.image)).convert("RGB"),
+                    index=0,
+                    strength=self.strength,
+                )
+            )
+        generator = self._generator()
+        pipeline = self._pipeline
+        original = pipeline.audio_scheduler
+        held = pipeline.prepare_audio_latents(
+            latents=clean, noise_scale=0.0, dtype=clean.dtype
+        )
+        # Bypass DiffusionPipeline.__setattr__, which would rewrite the config.
+        object.__setattr__(
+            pipeline,
+            "audio_scheduler",
+            FrozenAudioScheduler(
+                copy.deepcopy(original or pipeline.scheduler), held, generator
+            ),
+        )
+        try:
+            kwargs = self._build_pipeline_kwargs(
+                generator, self._progress_callback(context)
+            )
+            kwargs.update(conditions=conditions, audio_latents=clean)
+            output = await self.run_pipeline_in_thread(**kwargs)
+        finally:
+            object.__setattr__(pipeline, "audio_scheduler", original)
+        return await self._video_and_audio(context, output, soundtrack=soundtrack)
 
 
 LTX_VIDEO_GEOMETRY = VideoGeometry(

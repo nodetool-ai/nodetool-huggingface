@@ -10324,6 +10324,20 @@
           }
         },
         {
+          "default": [],
+          "description": "Character or style LoRAs trained for this LTX version. Download each first.",
+          "name": "loras",
+          "title": "Loras",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "hf.lora_ltx_config"
+              }
+            ]
+          }
+        },
+        {
           "default": {
             "asset_id": null,
             "data": null,
@@ -10529,6 +10543,20 @@
           "title": "Enable Cpu Offload",
           "type": {
             "type": "bool"
+          }
+        },
+        {
+          "default": [],
+          "description": "Character or style LoRAs trained for this LTX version. Download each first.",
+          "name": "loras",
+          "title": "Loras",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "hf.lora_ltx_config"
+              }
+            ]
           }
         },
         {
@@ -20762,6 +20790,20 @@
           "type": {
             "type": "bool"
           }
+        },
+        {
+          "default": [],
+          "description": "Character or style LoRAs trained for this LTX version. Download each first.",
+          "name": "loras",
+          "title": "Loras",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "hf.lora_ltx_config"
+              }
+            ]
+          }
         }
       ],
       "recommended_models": [
@@ -20931,6 +20973,20 @@
           "type": {
             "type": "bool"
           }
+        },
+        {
+          "default": [],
+          "description": "Character or style LoRAs trained for this LTX version. Download each first.",
+          "name": "loras",
+          "title": "Loras",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "hf.lora_ltx_config"
+              }
+            ]
+          }
         }
       ],
       "recommended_models": [
@@ -20950,6 +21006,230 @@
         }
       ],
       "title": "LTX-2.5"
+    },
+    {
+      "basic_fields": [
+        "audio",
+        "image",
+        "prompt"
+      ],
+      "body": "content_card",
+      "description": "Generates a video for a given soundtrack, such as speech or music, using LTX-2.5. The output keeps the input audio.\n    video, audio, generation, AI, audio-to-video, lip sync, talking head, music video, ltx, ltx-2.5, Lightricks\n\n    The soundtrack is encoded with the LTX-2 audio VAE and held fixed while the\n    video denoises against it, so mouths and motion follow the sound. Phosphene\n    calls this lip-sync.\n\n    Use cases:\n    - Make a talking or singing character from a voice track\n    - Cut visuals to a piece of music",
+      "input_fields": [
+        "prompt",
+        "negative_prompt",
+        "audio",
+        "image"
+      ],
+      "namespace": "huggingface.text_to_video",
+      "node_type": "huggingface.text_to_video.LTX25AudioToVideo",
+      "outputs": [
+        {
+          "name": "video",
+          "type": {
+            "type": "video"
+          }
+        },
+        {
+          "name": "audio",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "Lightricks/LTX-2.5-Diffusers",
+            "type": "hf.text_to_video",
+            "variant": null
+          },
+          "description": "The gated LTX-2.5 Diffusers checkpoint.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_video"
+          }
+        },
+        {
+          "default": "A majestic eagle soaring over snow-capped mountains at sunrise, cinematic, highly detailed.",
+          "description": "Detailed text description of the video to generate.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
+          "description": "Describe what to avoid in the video.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 0,
+          "description": "Frames to generate, snapped to 8n+1. 0 covers the audio, up to 257 frames.",
+          "max": 257.0,
+          "min": 0.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 24.0,
+          "description": "Frame rate the model generates at (also used for the output file).",
+          "max": 60.0,
+          "min": 1.0,
+          "name": "frame_rate",
+          "title": "Frame Rate",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "Fixed at 1.0: LTX-2.5 is distilled and guidance degrades it.",
+          "max": 1.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Fixed by the distilled sigma schedule LTX-2.5 denoises on.",
+          "max": 8.0,
+          "min": 8.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 512,
+          "description": "Output video height in pixels.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 768,
+          "description": "Output video width in pixels.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": [],
+          "description": "Character or style LoRAs trained for this LTX version. Download each first.",
+          "name": "loras",
+          "title": "Loras",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "hf.lora_ltx_config"
+              }
+            ]
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "audio",
+            "uri": ""
+          },
+          "description": "The soundtrack. With music, isolated vocals sync better.",
+          "name": "audio",
+          "title": "Audio",
+          "type": {
+            "type": "audio"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "metadata": null,
+            "type": "image",
+            "uri": ""
+          },
+          "description": "Optional first frame, such as the speaker.",
+          "name": "image",
+          "title": "Image",
+          "type": {
+            "type": "image"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "How strongly the clip holds to the first frame.",
+          "max": 1.0,
+          "min": 0.0,
+          "name": "strength",
+          "title": "Strength",
+          "type": {
+            "type": "float"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "Lightricks/LTX-2.5-Diffusers",
+          "name": "Lightricks/LTX-2.5-Diffusers",
+          "repo_id": "Lightricks/LTX-2.5-Diffusers",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "LTX-2.5 (Audio-to-Video)"
     },
     {
       "basic_fields": [
@@ -22431,6 +22711,20 @@
           }
         },
         {
+          "default": [],
+          "description": "Character or style LoRAs trained for this LTX version. Download each first.",
+          "name": "loras",
+          "title": "Loras",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "hf.lora_ltx_config"
+              }
+            ]
+          }
+        },
+        {
           "default": {
             "asset_id": null,
             "data": null,
@@ -22476,6 +22770,468 @@
         }
       ],
       "title": "LTX-2.5 (Extend)"
+    },
+    {
+      "basic_fields": [
+        "images",
+        "sheet_description",
+        "prompt",
+        "num_frames"
+      ],
+      "body": "content_card",
+      "description": "Generates a video with a matching soundtrack that features the people, objects and places from 1 to 8 reference pictures, using the LTX-2.3 ingredients IC-LoRA.\n    video, audio, generation, AI, references, ingredients, character, product, ic-lora, ltx, Lightricks\n\n    The pictures are tiled onto one reference sheet, as Phosphene does, and the\n    sheet rides along the clip as an IC-LoRA reference. The adapter is a\n    community LoRA from DeepBeepMeep/LTX-2.\n\n    Use cases:\n    - Put a character and a product into one scene\n    - Keep a cast consistent across shots",
+      "input_fields": [
+        "prompt",
+        "negative_prompt"
+      ],
+      "namespace": "huggingface.video_to_video",
+      "node_type": "huggingface.video_to_video.LTXIngredients",
+      "outputs": [
+        {
+          "name": "video",
+          "type": {
+            "type": "video"
+          }
+        },
+        {
+          "name": "audio",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "diffusers/LTX-2.3-Distilled-Diffusers",
+            "type": "hf.text_to_video",
+            "variant": null
+          },
+          "description": "The distilled LTX-2.3 Diffusers checkpoint the ingredients LoRA was trained on.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_video"
+          }
+        },
+        {
+          "default": "",
+          "description": "What happens in the clip, including the sound.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
+          "description": "Describe what to avoid in the video.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 121,
+          "description": "Total frames in the output. More frames = longer video.",
+          "max": 257.0,
+          "min": 9.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 24.0,
+          "description": "Frame rate the model generates at (also used for the output file).",
+          "max": 60.0,
+          "min": 1.0,
+          "name": "frame_rate",
+          "title": "Frame Rate",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "Fixed at 1.0: LTX-2.5 is distilled and guidance degrades it.",
+          "max": 1.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Fixed by the distilled sigma schedule LTX-2.5 denoises on.",
+          "max": 8.0,
+          "min": 8.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 512,
+          "description": "Output video height in pixels.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 768,
+          "description": "Output video width in pixels.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": [],
+          "description": "Character or style LoRAs trained for this LTX version. Download each first.",
+          "name": "loras",
+          "title": "Loras",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "hf.lora_ltx_config"
+              }
+            ]
+          }
+        },
+        {
+          "default": 1.4,
+          "description": "Strength of the ingredients adapter. 1.4 is the recipe value.",
+          "max": 2.0,
+          "min": 0.0,
+          "name": "lora_strength",
+          "title": "Lora Strength",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "How clean the reference looks to the model. Lower values follow it more loosely.",
+          "max": 1.0,
+          "min": 0.0,
+          "name": "reference_strength",
+          "title": "Reference Strength",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": [],
+          "description": "1 to 8 reference pictures.",
+          "name": "images",
+          "title": "Images",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "image"
+              }
+            ]
+          }
+        },
+        {
+          "default": "",
+          "description": "What the reference pictures show, such as 'a red-haired woman, a vintage motorbike'.",
+          "name": "sheet_description",
+          "title": "Sheet Description",
+          "type": {
+            "type": "str"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "diffusers/LTX-2.3-Distilled-Diffusers",
+          "name": "diffusers/LTX-2.3-Distilled-Diffusers",
+          "repo_id": "diffusers/LTX-2.3-Distilled-Diffusers",
+          "type": "hf.text_to_video"
+        },
+        {
+          "id": "DeepBeepMeep/LTX-2:ltx-2.3-22b-ic-lora-ingredients-0.9.safetensors",
+          "name": "DeepBeepMeep/LTX-2",
+          "path": "ltx-2.3-22b-ic-lora-ingredients-0.9.safetensors",
+          "repo_id": "DeepBeepMeep/LTX-2",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "LTX-2.3 Ingredients (IC-LoRA)"
+    },
+    {
+      "basic_fields": [
+        "video",
+        "reference_strength",
+        "frame_rate"
+      ],
+      "body": "content_card",
+      "description": "Doubles the width and height of a video with the LTX-2.5 pixel upscaler IC-LoRA. Keeps the source length and sound.\n    video, upscale, super resolution, x2, video-to-video, ic-lora, ltx, ltx-2.5, Lightricks\n\n    The source rides as the IC-LoRA reference at half the output size. The\n    adapter is gated: accept its license on Hugging Face before downloading.\n\n    Use cases:\n    - Bring a 768x448 LTX draft to 1536x896\n    - Sharpen a low-resolution clip before delivery",
+      "input_fields": [
+        "prompt",
+        "negative_prompt",
+        "video"
+      ],
+      "namespace": "huggingface.video_to_video",
+      "node_type": "huggingface.video_to_video.LTXUpscale",
+      "outputs": [
+        {
+          "name": "video",
+          "type": {
+            "type": "video"
+          }
+        },
+        {
+          "name": "audio",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "Lightricks/LTX-2.5-Diffusers",
+            "type": "hf.text_to_video",
+            "variant": null
+          },
+          "description": "The gated LTX-2.5 Diffusers checkpoint.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_video"
+          }
+        },
+        {
+          "default": "high detail, sharp, clean",
+          "description": "Optional description of the clip. It steers detail the source lacks.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
+          "description": "Describe what to avoid in the video.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 121,
+          "description": "Total frames in the output. More frames = longer video.",
+          "max": 257.0,
+          "min": 9.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 24.0,
+          "description": "Frame rate the model generates at (also used for the output file).",
+          "max": 60.0,
+          "min": 1.0,
+          "name": "frame_rate",
+          "title": "Frame Rate",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "Fixed at 1.0: LTX-2.5 is distilled and guidance degrades it.",
+          "max": 1.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Fixed by the distilled sigma schedule LTX-2.5 denoises on.",
+          "max": 8.0,
+          "min": 8.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 512,
+          "description": "Output video height in pixels.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 768,
+          "description": "Output video width in pixels.",
+          "max": 1280.0,
+          "min": 256.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": [],
+          "description": "Character or style LoRAs trained for this LTX version. Download each first.",
+          "name": "loras",
+          "title": "Loras",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "hf.lora_ltx_config"
+              }
+            ]
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "Strength of the IC-LoRA adapter.",
+          "max": 2.0,
+          "min": 0.0,
+          "name": "lora_strength",
+          "title": "Lora Strength",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "How much of the source to keep. Lower values let the model invent more detail.",
+          "max": 1.0,
+          "min": 0.3,
+          "name": "reference_strength",
+          "title": "Reference Strength",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "duration": null,
+            "format": null,
+            "metadata": null,
+            "type": "video",
+            "uri": ""
+          },
+          "description": "The clip to upscale. Up to 768 pixels on the long side.",
+          "name": "video",
+          "title": "Video",
+          "type": {
+            "type": "video"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "Lightricks/LTX-2.5-Diffusers",
+          "name": "Lightricks/LTX-2.5-Diffusers",
+          "repo_id": "Lightricks/LTX-2.5-Diffusers",
+          "type": "hf.text_to_video"
+        },
+        {
+          "id": "Lightricks/LTX-2.5-22b-IC-LoRA-Pixel-Spatial-Upscaler:ltx-2.5-22b-ic-lora-pixel-spatial-upscaler-x2-1.0.safetensors",
+          "name": "Lightricks/LTX-2.5-22b-IC-LoRA-Pixel-Spatial-Upscaler",
+          "path": "ltx-2.5-22b-ic-lora-pixel-spatial-upscaler-x2-1.0.safetensors",
+          "repo_id": "Lightricks/LTX-2.5-22b-IC-LoRA-Pixel-Spatial-Upscaler",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "LTX-2.5 Upscale x2 (IC-LoRA)"
     },
     {
       "basic_fields": [
@@ -22627,6 +23383,42 @@
           }
         },
         {
+          "default": [],
+          "description": "Character or style LoRAs trained for this LTX version. Download each first.",
+          "name": "loras",
+          "title": "Loras",
+          "type": {
+            "type": "list",
+            "type_args": [
+              {
+                "type": "hf.lora_ltx_config"
+              }
+            ]
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "Strength of the IC-LoRA adapter.",
+          "max": 2.0,
+          "min": 0.0,
+          "name": "lora_strength",
+          "title": "Lora Strength",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "How clean the reference looks to the model. Lower values follow it more loosely.",
+          "max": 1.0,
+          "min": 0.0,
+          "name": "reference_strength",
+          "title": "Reference Strength",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
           "default": "motion_control",
           "description": "Motion control copies the clip's motion and camera. Colorize adds color to black-and-white footage.",
           "name": "control",
@@ -22655,28 +23447,6 @@
           "title": "Video",
           "type": {
             "type": "video"
-          }
-        },
-        {
-          "default": 1.0,
-          "description": "Strength of the IC-LoRA adapter.",
-          "max": 2.0,
-          "min": 0.0,
-          "name": "lora_strength",
-          "title": "Lora Strength",
-          "type": {
-            "type": "float"
-          }
-        },
-        {
-          "default": 1.0,
-          "description": "How clean the clip looks to the model. Lower values follow it more loosely.",
-          "max": 1.0,
-          "min": 0.0,
-          "name": "reference_strength",
-          "title": "Reference Strength",
-          "type": {
-            "type": "float"
           }
         }
       ],
