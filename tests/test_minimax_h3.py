@@ -40,9 +40,17 @@ def test_workflows_select_the_right_checkpoint_partition():
 
 
 def test_recommended_models():
-    for node_class in (MiniMaxH3, MiniMaxH3Reference):
-        models = node_class.get_recommended_models()
-        assert [m.repo_id for m in models] == ["MiniMaxAI/MiniMax-H3"]
+    assert [m.repo_id for m in MiniMaxH3Reference.get_recommended_models()] == [
+        "MiniMaxAI/MiniMax-H3"
+    ]
+    # The text/keyframe node also offers the Fast adapter.
+    assert [(m.repo_id, m.path) for m in MiniMaxH3.get_recommended_models()] == [
+        ("MiniMaxAI/MiniMax-H3", None),
+        (
+            "Kijai/MiniMax-H3_comfy",
+            "loras/minimax_h3_taomate_3step_lora_avg_rank_19_bf16.safetensors",
+        ),
+    ]
 
 
 def test_model_id():
@@ -296,3 +304,60 @@ def test_download_keeps_every_subfolder_the_index_references():
         assert any(f.startswith(f"{subfolder}/") for f in selected), subfolder
     # The root index the modular pipeline reads first.
     assert "modular_model_index.json" in selected
+
+
+def test_fast_denoises_on_four_points_of_each_50_point_grid():
+    from diffusers.schedulers.scheduling_minimax_h3 import MiniMaxH3Scheduler
+
+    subset = MiniMaxH3(speed=MiniMaxH3.Speed.FAST)._sigma_subset()
+    assert subset == (50, 4, (0, 16, 33, 49))
+
+    # The sigmas TaoMate-H3 was distilled on: video shift 12, audio shift 3.
+    for shift, expected in (
+        (12.0, [1.0, 0.96117, 0.85333, 0.0]),
+        (3.0, [1.0, 0.86087, 0.59259, 0.0]),
+    ):
+        scheduler = MiniMaxH3Scheduler(shift=shift)
+        text_to_video.use_sigma_subset(scheduler, subset)
+        scheduler.set_timesteps(4)
+        assert [round(float(s), 5) for s in scheduler.sigmas] == expected
+        assert len(scheduler.timesteps) == 3
+
+        # Back on Best the scheduler builds its own grid again.
+        text_to_video.use_sigma_subset(scheduler, None)
+        scheduler.set_timesteps(4)
+        assert [round(float(s), 5) for s in scheduler.sigmas] != expected
+
+
+def test_best_needs_no_adapter_and_keeps_its_own_cache_entry():
+    best = MiniMaxH3()
+    fast = MiniMaxH3(speed=MiniMaxH3.Speed.FAST)
+    assert best._sigma_subset() is None
+    assert best._adapter_cache_suffix() == ""
+    assert fast._adapter_cache_suffix() == "_fast"
+    assert MiniMaxH3Reference()._sigma_subset() is None
+
+
+@pytest.mark.asyncio
+async def test_fast_requires_the_downloaded_adapter(monkeypatch):
+    async def resolve(_repo_id, _path):
+        return None
+
+    monkeypatch.setattr(text_to_video.HF_FAST_CACHE, "resolve", resolve)
+    assert await MiniMaxH3()._adapter_files() == []
+    with pytest.raises(ValueError, match="Kijai/MiniMax-H3_comfy"):
+        await MiniMaxH3(speed=MiniMaxH3.Speed.FAST)._adapter_files()
+
+
+@pytest.mark.asyncio
+async def test_fast_adapter_resolves_to_the_cached_file(monkeypatch):
+    async def resolve(repo_id, path):
+        return f"/cache/{repo_id}/{path}"
+
+    monkeypatch.setattr(text_to_video.HF_FAST_CACHE, "resolve", resolve)
+    assert await MiniMaxH3(speed=MiniMaxH3.Speed.FAST)._adapter_files() == [
+        (
+            "fast",
+            "/cache/Kijai/MiniMax-H3_comfy/loras/minimax_h3_taomate_3step_lora_avg_rank_19_bf16.safetensors",
+        )
+    ]

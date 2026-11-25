@@ -711,9 +711,15 @@ class LTX2(HuggingFacePipelineNode):
     def get_model_id(self) -> str:
         return self.model.repo_id or "Lightricks/LTX-2"
 
-    async def preload_model(self, context: ProcessingContext):
+    async def _bind_adapters(self, pipeline: Any) -> None:
+        """Bind LoRA adapters to a freshly loaded pipeline. Nothing by default."""
+
+    def _pipeline_class(self) -> Any:
         from diffusers.pipelines.ltx2.pipeline_ltx2 import LTX2Pipeline
 
+        return LTX2Pipeline
+
+    async def preload_model(self, context: ProcessingContext):
         if not await HF_FAST_CACHE.resolve(self.get_model_id(), "model_index.json"):
             raise ValueError(
                 f"Model {self.get_model_id()} must be downloaded first from the recommended models"
@@ -721,12 +727,14 @@ class LTX2(HuggingFacePipelineNode):
 
         self._pipeline = await self.load_model(
             context=context,
-            model_class=LTX2Pipeline,
+            model_class=self._pipeline_class(),
             model_id=self.get_model_id(),
             torch_dtype=available_torch_dtype(),
             device="cpu",
             local_files_only=True,
         )
+        # Adapters must be bound before offload installs its hooks.
+        await self._bind_adapters(self._pipeline)
         maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
         # Keep the VAE decode of 100+ frame videos within the VRAM budget.
         vae = getattr(self._pipeline, "vae", None)
@@ -751,12 +759,16 @@ class LTX2(HuggingFacePipelineNode):
             "guidance_scale": self.guidance_scale,
         }
 
+    def _geometry(self) -> tuple[int, int, int]:
+        """Snapped (width, height, num_frames) for the request."""
+        return snap_video_geometry(
+            self.width, self.height, self.num_frames, LTX2_GEOMETRY, self.get_title()
+        )
+
     def _build_pipeline_kwargs(
         self, generator: Any, callback_on_step_end: Any
     ) -> dict[str, Any]:
-        width, height, num_frames = snap_video_geometry(
-            self.width, self.height, self.num_frames, LTX2_GEOMETRY, self.get_title()
-        )
+        width, height, num_frames = self._geometry()
         kwargs: dict[str, Any] = {
             "prompt": self.prompt,
             "negative_prompt": self.negative_prompt,
@@ -884,11 +896,24 @@ class LTX25(LTX2):
                 self._generator(), self._progress_callback(context)
             )
         )
+        return await self._video_and_audio(context, output)
 
+    async def _video_and_audio(
+        self, context: ProcessingContext, output: Any, skip_frames: int = 0
+    ) -> OutputType:
+        """Mux the pipeline's frames and soundtrack, dropping ``skip_frames`` from the start."""
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        fps = int(self.frame_rate)
+        sample_rate = int(self._pipeline.vocoder.config.output_sampling_rate)
         frames = output.frames[0]
         waveform = output.audio[0].float().cpu()
-        sample_rate = int(self._pipeline.vocoder.config.output_sampling_rate)
-        fps = int(self.frame_rate)
+        if skip_frames:
+            frames = frames[skip_frames:]
+            waveform = waveform[
+                ..., round(skip_frames * sample_rate / self.frame_rate) :
+            ]
 
         video = await video_from_frames_with_audio(
             context,
@@ -905,6 +930,69 @@ class LTX25(LTX2):
         )
         run_gc("After LTX-2.5 inference", log_before_after=False)
         return {"video": video, "audio": audio}
+
+
+def ltx2_latent_index(pixel_frame: int) -> int:
+    """The latent frame holding ``pixel_frame`` on the LTX-2 8n+1 lattice.
+
+    Latent 0 is pixel frame 0 alone; latent ``k`` covers pixel frames
+    ``8(k-1)+1`` to ``8k``. ``LTX2VideoCondition.index`` is a latent index.
+    """
+    if pixel_frame <= 0:
+        return 0
+    return (pixel_frame - 1) // LTX2_GEOMETRY.frame_step + 1
+
+
+def ltx2_spread_latent_indices(count: int, num_frames: int) -> list[int]:
+    """Latent indices that spread ``count`` keyframes from the first frame to the last."""
+    last = ltx2_latent_index(num_frames - 1)
+    if count == 1:
+        return [0]
+    return [round(i * last / (count - 1)) for i in range(count)]
+
+
+class LTX25Conditioned(LTX25):
+    """LTX-2.5 conditioned on images or frames at chosen positions in the clip.
+
+    Runs Diffusers' ``LTX2ConditionPipeline``, which takes a list of
+    ``LTX2VideoCondition`` items: a still or a run of frames, the latent index
+    it lands on and how strongly it binds. A condition at index 0 replaces the
+    first frame; any other index is appended as a keyframe the clip passes
+    through. Subclasses build that list.
+    """
+
+    @classmethod
+    def is_visible(cls) -> bool:
+        return cls is not LTX25Conditioned
+
+    def _pipeline_class(self) -> Any:
+        from diffusers.pipelines.ltx2.pipeline_ltx2_condition import (
+            LTX2ConditionPipeline,
+        )
+
+        return LTX2ConditionPipeline
+
+    def _snapped_num_frames(self) -> int:
+        return snap_video_frames(self.num_frames, LTX2_GEOMETRY, self.get_title())
+
+    async def _conditions(self, context: ProcessingContext) -> list[Any]:
+        raise NotImplementedError
+
+    async def _generate(
+        self, context: ProcessingContext, conditions: list[Any], skip_frames: int = 0
+    ) -> LTX25.OutputType:
+        if self._pipeline is None:
+            raise ValueError("Pipeline not initialized")
+
+        kwargs = self._build_pipeline_kwargs(
+            self._generator(), self._progress_callback(context)
+        )
+        kwargs["conditions"] = conditions
+        output = await self.run_pipeline_in_thread(**kwargs)
+        return await self._video_and_audio(context, output, skip_frames=skip_frames)
+
+    async def process(self, context: ProcessingContext) -> LTX25.OutputType:
+        return await self._generate(context, await self._conditions(context))
 
 
 LTX_VIDEO_GEOMETRY = VideoGeometry(
@@ -1537,6 +1625,48 @@ def _minimax_h3_recommended_models() -> list[HuggingFaceModel]:
     ]
 
 
+# TaoMate-H3 (TaoLiveAIGC) distils H3 onto four points of the shifted 50-point
+# sigma grid, so it runs three model evaluations. Each scheduler takes the
+# points from its own grid: video and audio use different shifts.
+MINIMAX_H3_FAST_GRID = 50
+MINIMAX_H3_FAST_INDICES = (0, 16, 33, 49)
+# Kijai's rank-reduced conversion of the official rank-128 adapter (182 MB
+# instead of 2.48 GB). MiniMax H3 Community License, like the base weights.
+MINIMAX_H3_FAST_LORA = HFTextToVideo(
+    repo_id="Kijai/MiniMax-H3_comfy",
+    path="loras/minimax_h3_taomate_3step_lora_avg_rank_19_bf16.safetensors",
+)
+
+
+def use_sigma_subset(
+    scheduler: Any, subset: tuple[int, int, tuple[int, ...]] | None
+) -> None:
+    """Make ``scheduler.set_timesteps`` pick ``subset`` points of a longer grid, or restore it.
+
+    The modular H3 pipeline only passes ``num_inference_steps`` to the
+    scheduler, so a distilled schedule that lives on a subset of the 50-point
+    grid is applied by wrapping ``set_timesteps`` on the instance.
+    """
+    original = getattr(scheduler, "_nodetool_set_timesteps", None)
+    if original is None:
+        original = scheduler.set_timesteps
+        scheduler._nodetool_set_timesteps = original
+    if subset is None:
+        scheduler.set_timesteps = original
+        return
+
+    grid, steps, indices = subset
+
+    def set_timesteps(num_inference_steps=None, device=None, sigmas=None):
+        if sigmas is not None or num_inference_steps != steps:
+            return original(num_inference_steps, device=device, sigmas=sigmas)
+        original(grid, device="cpu")
+        full = scheduler.sigmas.detach().float().cpu()
+        return original(device=device, sigmas=[float(full[i]) for i in indices])
+
+    scheduler.set_timesteps = set_timesteps
+
+
 class _MiniMaxH3Base(HuggingFacePipelineNode):
     """Shared loading and output handling for the MiniMax-H3 workflows.
 
@@ -1630,6 +1760,7 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
         offload = self.enable_cpu_offload and device.startswith("cuda")
         cache_key = (
             f"{MINIMAX_H3_REPO_ID}_ModularPipeline_{self._workflow}_offload{offload}"
+            f"{self._adapter_cache_suffix()}"
         )
 
         cached = ModelManager.get_model(cache_key)
@@ -1638,6 +1769,7 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
             return
 
         dtype = select_inference_dtype(device)
+        adapters = await self._adapter_files()
 
         def _load() -> Any:
             # No download patterns here: `from_pretrained` reads
@@ -1652,6 +1784,9 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
                 components_manager=manager,
             )
             pipeline.load_components(dtype=dtype)
+            # Adapters go in before offload installs its hooks.
+            for name, path in adapters:
+                pipeline.load_lora_weights(path, adapter_name=name)
             if manager is not None:
                 manager.enable_auto_cpu_offload(device=device)
             return pipeline
@@ -1666,6 +1801,18 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
             return
         if hasattr(self._pipeline, "to"):
             move_pipeline_to_device(self._pipeline, device)
+
+    async def _adapter_files(self) -> list[tuple[str, str]]:
+        """(adapter name, local file) pairs bound to the pipeline when it loads."""
+        return []
+
+    def _adapter_cache_suffix(self) -> str:
+        """Keeps a pipeline with adapters bound apart from one without."""
+        return ""
+
+    def _sigma_subset(self) -> tuple[int, int, tuple[int, ...]] | None:
+        """(grid points, steps, indices) to denoise on a subset of a longer schedule."""
+        return None
 
     def _geometry(self) -> tuple[int, int, int]:
         """Snapped (width, height, num_frames); 0x0 leaves the canvas to the model."""
@@ -1734,10 +1881,19 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
 
+        subset = self._sigma_subset()
+        num_inference_steps = self.num_inference_steps
+        if subset is not None:
+            num_inference_steps = subset[1]
+        for scheduler_name in ("scheduler", "audio_scheduler"):
+            scheduler = getattr(self._pipeline, scheduler_name, None)
+            if scheduler is not None:
+                use_sigma_subset(scheduler, subset)
+
         results = await self.run_pipeline_in_thread(
             prompt=self.prompt,
             num_frames=num_frames,
-            num_inference_steps=self.num_inference_steps,
+            num_inference_steps=num_inference_steps,
             generator=generator,
             output=["videos", "audio", "sampling_rate"],
             **self._canvas_kwargs(),
@@ -1786,6 +1942,17 @@ class MiniMaxH3(_MiniMaxH3Base):
 
     _workflow: str = "fl2va"
 
+    class Speed(str, Enum):
+        BEST = "best"
+        FAST = "fast"
+
+    speed: Speed = Field(
+        default=Speed.BEST,
+        description=(
+            "Best runs num_inference_steps. Fast binds the TaoMate 3-step adapter and "
+            "runs three model evaluations, about 4x faster, at some cost to the sound."
+        ),
+    )
     image: ImageRef = Field(
         default=ImageRef(),
         description="Optional keyframe the video starts from. It also sets the canvas aspect ratio.",
@@ -1800,8 +1967,37 @@ class MiniMaxH3(_MiniMaxH3Base):
         return "MiniMax-H3"
 
     @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [*_minimax_h3_recommended_models(), MINIMAX_H3_FAST_LORA]
+
+    async def _adapter_files(self) -> list[tuple[str, str]]:
+        if self.speed != self.Speed.FAST:
+            return []
+        path = await HF_FAST_CACHE.resolve(
+            MINIMAX_H3_FAST_LORA.repo_id, MINIMAX_H3_FAST_LORA.path or ""
+        )
+        if path is None:
+            raise ValueError(
+                f"Download {MINIMAX_H3_FAST_LORA.repo_id}/{MINIMAX_H3_FAST_LORA.path} "
+                "from the recommended models to use Fast."
+            )
+        return [("fast", path)]
+
+    def _adapter_cache_suffix(self) -> str:
+        return "_fast" if self.speed == self.Speed.FAST else ""
+
+    def _sigma_subset(self) -> tuple[int, int, tuple[int, ...]] | None:
+        if self.speed != self.Speed.FAST:
+            return None
+        return (
+            MINIMAX_H3_FAST_GRID,
+            len(MINIMAX_H3_FAST_INDICES),
+            MINIMAX_H3_FAST_INDICES,
+        )
+
+    @classmethod
     def get_basic_fields(cls) -> list[str]:
-        return ["prompt", "image", "num_frames"]
+        return ["prompt", "image", "num_frames", "speed"]
 
     async def process(self, context: ProcessingContext) -> _MiniMaxH3Base.OutputType:
         self._check_pixel_budget()

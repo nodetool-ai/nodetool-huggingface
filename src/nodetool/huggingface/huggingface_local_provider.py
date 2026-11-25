@@ -73,6 +73,7 @@ from nodetool.metadata.types import (
     MessageTextContent,
     MessageImageContent,
     HFTextToSpeech,
+    ImageRef,
     LanguageModel,
     VideoModel,
     VideoRef,
@@ -94,6 +95,66 @@ log = get_logger(__name__)
 # else to WanPipeline; ``text_to_audio`` routes LongCat to its node and
 # everything else to ACE-Step.
 _TEXT_TO_VIDEO_CLASS_NAMES = {"WanPipeline", "LTX2Pipeline", "Kandinsky5T2VPipeline"}
+
+# MiniMax-H3 is a Modular Diffusers repo: it ships `modular_model_index.json`
+# and no `model_index.json`, so it is matched by id. The `:fast` suffix selects
+# the TaoMate 3-step adapter.
+_MINIMAX_H3_FAST_SUFFIX = ":fast"
+
+# Short side, in pixels, for each `resolution` an image-to-video request can name.
+_RESOLUTION_SHORT_SIDE = {"480p": 480, "540p": 544, "576p": 576, "720p": 720}
+_LTX25_DEFAULT_LONG_SIDE = 768
+
+
+def _is_ltx25_repo(model: str) -> bool:
+    return "ltx-2.5" in model.lower()
+
+
+def _minimax_h3_speed(model: str) -> str | None:
+    """``"best"`` or ``"fast"`` for a MiniMax-H3 model id, ``None`` for any other model."""
+    from nodetool.nodes.huggingface.text_to_video import MINIMAX_H3_REPO_ID
+
+    if model == MINIMAX_H3_REPO_ID:
+        return "best"
+    if model == MINIMAX_H3_REPO_ID + _MINIMAX_H3_FAST_SUFFIX:
+        return "fast"
+    return None
+
+
+def ltx_canvas_for_image(
+    size: tuple[int, int],
+    resolution: str | None,
+    multiple: int = 32,
+    max_side: int = 1280,
+) -> tuple[int, int]:
+    """(width, height) that keep an image's aspect ratio on the LTX grid.
+
+    Without a known ``resolution`` the long side is 768 pixels.
+    """
+    image_width, image_height = size
+    short_side = _RESOLUTION_SHORT_SIDE.get((resolution or "").lower())
+    if short_side is not None:
+        scale = short_side / min(image_width, image_height)
+    else:
+        scale = _LTX25_DEFAULT_LONG_SIDE / max(image_width, image_height)
+    scale = min(scale, max_side / max(image_width, image_height))
+
+    def snap(value: float) -> int:
+        return max(multiple * 8, round(value / multiple) * multiple)
+
+    return snap(image_width * scale), snap(image_height * scale)
+
+
+def _frames_for(
+    num_frames: int | None, duration_seconds: float | None, fps: float, default: int
+) -> int:
+    if num_frames:
+        return int(num_frames)
+    if duration_seconds:
+        return round(float(duration_seconds) * fps)
+    return default
+
+
 _TEXT_TO_AUDIO_CLASS_NAMES = {"AceStepPipeline", "LongCatAudioDiTPipeline"}
 
 
@@ -815,6 +876,18 @@ class HuggingFaceLocalProvider(BaseProvider):
         # Newer text-to-video pipelines (LTX-2, Kandinsky 5) have dedicated nodes;
         # reuse them so the provider matches node behavior (MPS handling, progress,
         # output conversion). The Wan path below stays the default for everything else.
+        h3_speed = _minimax_h3_speed(model)
+        if h3_speed is not None:
+            return await self._minimax_h3_video(
+                context,
+                speed=h3_speed,
+                prompt=prompt,
+                num_frames=num_frames,
+                height=height,
+                width=width,
+                seed=seed,
+            )
+
         node_video = await self._maybe_text_to_video_via_node(
             model=model,
             prompt=prompt,
@@ -935,6 +1008,124 @@ class HuggingFaceLocalProvider(BaseProvider):
         video_ref = await video_from_frames(context, frames, fps=fps)
 
         return video_ref
+
+    async def _minimax_h3_video(
+        self,
+        context: ProcessingContext,
+        *,
+        speed: str,
+        prompt: str,
+        num_frames: int,
+        seed: int | None,
+        height: int = 0,
+        width: int = 0,
+        image: ImageRef | None = None,
+        last_image: ImageRef | None = None,
+    ) -> VideoRef:
+        """Generate through the MiniMax-H3 node, snapping the frame count into its 5-15 s window."""
+        from nodetool.nodes.huggingface.text_to_video import (
+            MINIMAX_H3_GEOMETRY,
+            MiniMaxH3,
+        )
+
+        frames = min(
+            max(int(num_frames), MINIMAX_H3_GEOMETRY.min_frames),
+            MINIMAX_H3_GEOMETRY.max_frames,
+        )
+        node = MiniMaxH3(
+            prompt=prompt,
+            num_frames=frames,
+            height=height,
+            width=width,
+            seed=seed if seed is not None else -1,
+            speed=MiniMaxH3.Speed(speed),
+            image=image or ImageRef(),
+            last_image=last_image or ImageRef(),
+        )
+        await node.preload_model(context)
+        output = await node.process(context)
+        return output["video"]
+
+    async def image_to_video(  # type: ignore[override]
+        self,
+        image: bytes,
+        params: Any,
+        timeout_s: int | None = None,
+        context: ProcessingContext | None = None,
+        node_id: str | None = None,
+        **kwargs: Any,
+    ) -> VideoRef:
+        """Animate an image with LTX-2.5 or MiniMax-H3, optionally ending on a second image.
+
+        ``params`` is an ``ImageToVideoParams``. An ``end_image`` (bytes) extra
+        field sets the last frame. Both models generate their soundtrack too;
+        the video carries it.
+        """
+        if context is None:
+            raise ValueError(
+                "ProcessingContext is required for HuggingFace image-to-video generation"
+            )
+
+        model = params.model.id
+        extra = params.model_extra or {}
+        end_image = extra.get("end_image")
+        start = ImageRef(data=image)
+        last = ImageRef(data=end_image) if end_image else ImageRef()
+        seed = params.seed if params.seed is not None else -1
+
+        h3_speed = _minimax_h3_speed(model)
+        if h3_speed is not None:
+            from nodetool.nodes.huggingface.text_to_video import MINIMAX_H3_FPS
+
+            return await self._minimax_h3_video(
+                context,
+                speed=h3_speed,
+                prompt=params.prompt or "",
+                num_frames=_frames_for(
+                    params.num_frames,
+                    extra.get("duration_seconds"),
+                    MINIMAX_H3_FPS,
+                    124,
+                ),
+                seed=params.seed,
+                image=start,
+                last_image=last,
+            )
+
+        if not _is_ltx25_repo(model):
+            raise ValueError(
+                f"{model} does not support image-to-video in the HuggingFace "
+                "provider; use an LTX-2.5 or MiniMax-H3 model"
+            )
+
+        from nodetool.metadata.types import HFTextToVideo
+        from nodetool.nodes.huggingface.image_to_video import LTX25ImageToVideo
+
+        with Image.open(BytesIO(image)) as opened:
+            width, height = ltx_canvas_for_image(opened.size, params.resolution)
+        fps = 24.0
+        node = LTX25ImageToVideo(
+            model=HFTextToVideo(repo_id=model),
+            image=start,
+            last_image=last,
+            prompt=params.prompt or "",
+            num_frames=min(
+                max(
+                    _frames_for(
+                        params.num_frames, extra.get("duration_seconds"), fps, 121
+                    ),
+                    9,
+                ),
+                257,
+            ),
+            frame_rate=fps,
+            width=width,
+            height=height,
+            seed=seed,
+        )
+        await node.preload_model(context)
+        output = await node.process(context)
+        return output["video"]
 
     async def _read_model_index_class_name(self, model: str) -> str | None:
         """Read the diffusers ``_class_name`` from a cached repo's model_index.json."""
@@ -1061,13 +1252,50 @@ class HuggingFaceLocalProvider(BaseProvider):
         Lists only the Wan, LTX-2 and Kandinsky 5 text-to-video repos that
         ``text_to_video`` can load.
         """
-        models = await get_text_to_video_models_from_hf_cache()
-        return [
+        models = [
             m
-            for m in models
+            for m in await get_text_to_video_models_from_hf_cache()
             if await self._read_model_index_class_name(m.id)
             in _TEXT_TO_VIDEO_CLASS_NAMES
         ]
+        for m in models:
+            if _is_ltx25_repo(m.id):
+                m.supported_tasks = ["text_to_video", "image_to_video"]
+        return models + await self._minimax_h3_video_models()
+
+    async def _minimax_h3_video_models(self) -> List[VideoModel]:
+        """MiniMax-H3 and its Fast variant, when their files are in the cache."""
+        from nodetool.integrations.huggingface.huggingface_models import HF_FAST_CACHE
+        from nodetool.nodes.huggingface.text_to_video import (
+            MINIMAX_H3_FAST_LORA,
+            MINIMAX_H3_REPO_ID,
+        )
+
+        if not await HF_FAST_CACHE.resolve(
+            MINIMAX_H3_REPO_ID, "modular_model_index.json"
+        ):
+            return []
+        tasks = ["text_to_video", "image_to_video"]
+        models = [
+            VideoModel(
+                id=MINIMAX_H3_REPO_ID,
+                name="MiniMax-H3",
+                provider=Provider.HuggingFace,
+                supported_tasks=tasks,
+            )
+        ]
+        if await HF_FAST_CACHE.resolve(
+            MINIMAX_H3_FAST_LORA.repo_id, MINIMAX_H3_FAST_LORA.path or ""
+        ):
+            models.append(
+                VideoModel(
+                    id=MINIMAX_H3_REPO_ID + _MINIMAX_H3_FAST_SUFFIX,
+                    name="MiniMax-H3 Fast",
+                    provider=Provider.HuggingFace,
+                    supported_tasks=tasks,
+                )
+            )
+        return models
 
     async def get_available_audio_models(self) -> List[AudioModel]:
         """Get available HuggingFace text-to-audio (music) models from the local cache.
@@ -1271,9 +1499,7 @@ class HuggingFaceLocalProvider(BaseProvider):
                     provider=Provider.HuggingFace,
                     languages=[language_code],
                     sample_rate=16_000,
-                    adapter=get_tts_adapter_info(
-                        f"facebook/mms-tts-{language_code}"
-                    ),
+                    adapter=get_tts_adapter_info(f"facebook/mms-tts-{language_code}"),
                 )
             )
 

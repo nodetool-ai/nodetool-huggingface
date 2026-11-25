@@ -24,6 +24,11 @@ from nodetool.huggingface.memory_utils import (
     move_pipeline_to_device,
 )
 from .huggingface_pipeline import HuggingFacePipelineNode
+from .text_to_video import (
+    LTX25Conditioned,
+    ltx2_latent_index,
+    ltx2_spread_latent_indices,
+)
 
 if TYPE_CHECKING:
     import torch
@@ -1079,3 +1084,123 @@ class HunyuanVideo15I2V(HuggingFacePipelineNode):
 
         run_gc("After HunyuanVideo 1.5 I2V inference", log_before_after=False)
         return await video_from_frames(context, output.frames[0], fps=self.fps)
+
+
+LTX25_MAX_KEYFRAMES = 8
+
+
+class LTX25ImageToVideo(LTX25Conditioned):
+    """
+    Animates an image into a video with a matching soundtrack using LTX-2.5, optionally ending on a second image.
+    video, audio, generation, AI, image-to-video, first-last-frame, ltx, ltx-2.5, Lightricks
+
+    Use cases:
+    - Animate a photo or a generated still into a clip with sound
+    - Generate a transition from a start frame to an end frame
+    - Keep a shot's composition while adding motion, dialogue or ambience
+    """
+
+    image: ImageRef = Field(
+        default=ImageRef(),
+        description="The image the video starts from.",
+    )
+    last_image: ImageRef = Field(
+        default=ImageRef(),
+        description="Optional image the video ends on.",
+    )
+    strength: float = Field(
+        default=1.0,
+        description="How strongly the clip holds to the images. 1.0 reproduces them exactly.",
+        ge=0.0,
+        le=1.0,
+    )
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "LTX-2.5 (Image-to-Video)"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["image", "last_image", "prompt", "num_frames"]
+
+    async def _conditions(self, context: ProcessingContext) -> list[Any]:
+        from diffusers.pipelines.ltx2.pipeline_ltx2_condition import LTX2VideoCondition
+
+        if self.image.is_empty():
+            raise ValueError("Connect the image the video starts from.")
+
+        conditions = [
+            LTX2VideoCondition(
+                frames=(await context.image_to_pil(self.image)).convert("RGB"),
+                index=0,
+                strength=self.strength,
+            )
+        ]
+        if not self.last_image.is_empty():
+            conditions.append(
+                LTX2VideoCondition(
+                    frames=(await context.image_to_pil(self.last_image)).convert("RGB"),
+                    index=ltx2_latent_index(self._snapped_num_frames() - 1),
+                    strength=self.strength,
+                )
+            )
+        return conditions
+
+
+class LTX25Keyframes(LTX25Conditioned):
+    """
+    Generates a video with a matching soundtrack that passes through 2 to 8 keyframes using LTX-2.5.
+    video, audio, generation, AI, keyframes, interpolation, image-to-video, ltx, ltx-2.5, Lightricks
+
+    The keyframes are spread evenly from the first frame to the last.
+
+    Use cases:
+    - Plan a shot as a sequence of stills and let the model fill the motion
+    - Hold a character or a layout at fixed points in a clip
+    - Interpolate between storyboard frames
+    """
+
+    keyframes: list[ImageRef] = Field(
+        default=[],
+        description="2 to 8 images, in order. The first opens the clip and the last closes it.",
+    )
+    strength: float = Field(
+        default=1.0,
+        description="How strongly the clip holds to each keyframe.",
+        ge=0.0,
+        le=1.0,
+    )
+
+    @classmethod
+    def get_title(cls) -> str:
+        return "LTX-2.5 (Keyframes)"
+
+    @classmethod
+    def get_basic_fields(cls) -> list[str]:
+        return ["keyframes", "prompt", "num_frames"]
+
+    async def _conditions(self, context: ProcessingContext) -> list[Any]:
+        from diffusers.pipelines.ltx2.pipeline_ltx2_condition import LTX2VideoCondition
+
+        keyframes = [image for image in self.keyframes if not image.is_empty()]
+        if not 2 <= len(keyframes) <= LTX25_MAX_KEYFRAMES:
+            raise ValueError(
+                f"LTX-2.5 keyframes takes 2 to {LTX25_MAX_KEYFRAMES} images, got {len(keyframes)}."
+            )
+
+        num_frames = self._snapped_num_frames()
+        indices = ltx2_spread_latent_indices(len(keyframes), num_frames)
+        if len(set(indices)) != len(indices):
+            raise ValueError(
+                f"{len(keyframes)} keyframes do not fit in {num_frames} frames. "
+                "Raise num_frames or use fewer keyframes."
+            )
+
+        return [
+            LTX2VideoCondition(
+                frames=(await context.image_to_pil(image)).convert("RGB"),
+                index=index,
+                strength=self.strength,
+            )
+            for image, index in zip(keyframes, indices)
+        ]
