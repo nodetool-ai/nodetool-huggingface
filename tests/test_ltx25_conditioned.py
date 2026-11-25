@@ -204,4 +204,5 @@ async def test_extend_drops_the_context_frames_and_their_sound(monkeypatch):
     assert len(captured["frames"]) == 32
     # 17 frames at 24 fps is 17000 samples at 24 kHz.
     assert captured["audio"].shape == (2, 32_000)
+    assert context.audio_samples is not None
     assert context.audio_samples.shape == (32_000, 2)
