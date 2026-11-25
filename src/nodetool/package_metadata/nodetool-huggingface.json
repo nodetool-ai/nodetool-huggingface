@@ -22454,6 +22454,241 @@
         }
       ],
       "title": "LTX-2.5 (Extend)"
+    },
+    {
+      "basic_fields": [
+        "video",
+        "control",
+        "prompt"
+      ],
+      "body": "content_card",
+      "description": "Re-renders a video under LTX-2.3 IC-LoRA control: copy its motion and camera, or colorize it.\n    video, audio, generation, AI, video-to-video, motion control, pose, depth, canny, colorize, ic-lora, ltx, Lightricks\n\n    Motion control runs Lightricks' Union-Control adapter: the output keeps the\n    clip's motion, camera move, composition and pose, and the prompt paints a\n    new subject and scene onto it. It reads raw video as well as canny, depth\n    or pose sequences. Colorize runs the Colorization adapter on black-and-white\n    footage. The output matches the clip's aspect ratio and, up to num_frames,\n    its length.\n\n    Use cases:\n    - Restage a shot with a new character or setting, keeping the camera move\n    - Drive a generation from a pose, depth or edge sequence\n    - Colorize archival or black-and-white footage",
+      "input_fields": [
+        "prompt",
+        "negative_prompt",
+        "video"
+      ],
+      "namespace": "huggingface.video_to_video",
+      "node_type": "huggingface.video_to_video.LTXVideoControl",
+      "outputs": [
+        {
+          "name": "video",
+          "type": {
+            "type": "video"
+          }
+        },
+        {
+          "name": "audio",
+          "type": {
+            "type": "audio"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "default": {
+            "allow_patterns": null,
+            "ignore_patterns": null,
+            "path": null,
+            "repo_id": "diffusers/LTX-2.3-Distilled-Diffusers",
+            "type": "hf.text_to_video",
+            "variant": null
+          },
+          "description": "The distilled LTX-2.3 Diffusers checkpoint the IC-LoRAs were trained on.",
+          "name": "model",
+          "title": "Model",
+          "type": {
+            "type": "hf.text_to_video"
+          }
+        },
+        {
+          "default": "A monk in orange robes on a white salt flat at dawn",
+          "description": "The new subject and scene. Leave the camera move out: the clip sets it.",
+          "name": "prompt",
+          "title": "Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": "worst quality, inconsistent motion, blurry, jittery, distorted",
+          "description": "Describe what to avoid in the video.",
+          "name": "negative_prompt",
+          "title": "Negative Prompt",
+          "type": {
+            "type": "str"
+          }
+        },
+        {
+          "default": 121,
+          "description": "Most frames to generate. A shorter clip sets a shorter output.",
+          "max": 257.0,
+          "min": 9.0,
+          "name": "num_frames",
+          "title": "Num Frames",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 24.0,
+          "description": "Frame rate the model generates at (also used for the output file).",
+          "max": 60.0,
+          "min": 1.0,
+          "name": "frame_rate",
+          "title": "Frame Rate",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "Fixed at 1.0: LTX-2.5 is distilled and guidance degrades it.",
+          "max": 1.0,
+          "min": 1.0,
+          "name": "guidance_scale",
+          "title": "Guidance Scale",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 8,
+          "description": "Fixed by the distilled sigma schedule LTX-2.5 denoises on.",
+          "max": 8.0,
+          "min": 8.0,
+          "name": "num_inference_steps",
+          "title": "Num Inference Steps",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 0,
+          "description": "Output height. 0 keeps the clip's aspect ratio.",
+          "max": 1280.0,
+          "min": 0.0,
+          "name": "height",
+          "title": "Height",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": 0,
+          "description": "Output width. 0 keeps the clip's aspect ratio at 768 pixels on the long side.",
+          "max": 1280.0,
+          "min": 0.0,
+          "name": "width",
+          "title": "Width",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": -1,
+          "description": "Random seed for reproducible generation. Use -1 for random.",
+          "min": -1.0,
+          "name": "seed",
+          "title": "Seed",
+          "type": {
+            "type": "int"
+          }
+        },
+        {
+          "default": true,
+          "description": "Offload model components to CPU to reduce VRAM usage.",
+          "name": "enable_cpu_offload",
+          "title": "Enable Cpu Offload",
+          "type": {
+            "type": "bool"
+          }
+        },
+        {
+          "default": "motion_control",
+          "description": "Motion control copies the clip's motion and camera. Colorize adds color to black-and-white footage.",
+          "name": "control",
+          "title": "Control",
+          "type": {
+            "type": "enum",
+            "type_name": "nodetool.nodes.huggingface.video_to_video.LTXControl",
+            "values": [
+              "motion_control",
+              "colorize"
+            ]
+          }
+        },
+        {
+          "default": {
+            "asset_id": null,
+            "data": null,
+            "duration": null,
+            "format": null,
+            "metadata": null,
+            "type": "video",
+            "uri": ""
+          },
+          "description": "The clip that drives the output.",
+          "name": "video",
+          "title": "Video",
+          "type": {
+            "type": "video"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "Strength of the IC-LoRA adapter.",
+          "max": 2.0,
+          "min": 0.0,
+          "name": "lora_strength",
+          "title": "Lora Strength",
+          "type": {
+            "type": "float"
+          }
+        },
+        {
+          "default": 1.0,
+          "description": "How clean the clip looks to the model. Lower values follow it more loosely.",
+          "max": 1.0,
+          "min": 0.0,
+          "name": "reference_strength",
+          "title": "Reference Strength",
+          "type": {
+            "type": "float"
+          }
+        }
+      ],
+      "recommended_models": [
+        {
+          "allow_patterns": [
+            "**/*.safetensors",
+            "**/*.json",
+            "**/*.txt",
+            "**/*.model",
+            "**/*.jinja",
+            "*.json"
+          ],
+          "id": "diffusers/LTX-2.3-Distilled-Diffusers",
+          "name": "diffusers/LTX-2.3-Distilled-Diffusers",
+          "repo_id": "diffusers/LTX-2.3-Distilled-Diffusers",
+          "type": "hf.text_to_video"
+        },
+        {
+          "id": "Lightricks/LTX-2.3-22b-IC-LoRA-Union-Control:ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors",
+          "name": "Lightricks/LTX-2.3-22b-IC-LoRA-Union-Control",
+          "path": "ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors",
+          "repo_id": "Lightricks/LTX-2.3-22b-IC-LoRA-Union-Control",
+          "type": "hf.text_to_video"
+        },
+        {
+          "id": "Lightricks/LTX-2.3-22b-IC-LoRA-Colorization:ltx-2.3-22b-ic-lora-colorization-0.9.safetensors",
+          "name": "Lightricks/LTX-2.3-22b-IC-LoRA-Colorization",
+          "path": "ltx-2.3-22b-ic-lora-colorization-0.9.safetensors",
+          "repo_id": "Lightricks/LTX-2.3-22b-IC-LoRA-Colorization",
+          "type": "hf.text_to_video"
+        }
+      ],
+      "title": "LTX-2.3 Video Control (IC-LoRA)"
     }
   ],
   "repo_id": "nodetool-ai/nodetool-huggingface",

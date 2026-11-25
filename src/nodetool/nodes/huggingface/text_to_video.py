@@ -711,6 +711,9 @@ class LTX2(HuggingFacePipelineNode):
     def get_model_id(self) -> str:
         return self.model.repo_id or "Lightricks/LTX-2"
 
+    async def _bind_adapters(self, pipeline: Any) -> None:
+        """Bind LoRA adapters to a freshly loaded pipeline. Nothing by default."""
+
     def _pipeline_class(self) -> Any:
         from diffusers.pipelines.ltx2.pipeline_ltx2 import LTX2Pipeline
 
@@ -730,6 +733,8 @@ class LTX2(HuggingFacePipelineNode):
             device="cpu",
             local_files_only=True,
         )
+        # Adapters must be bound before offload installs its hooks.
+        await self._bind_adapters(self._pipeline)
         maybe_enable_cpu_offload(self._pipeline, self.enable_cpu_offload)
         # Keep the VAE decode of 100+ frame videos within the VRAM budget.
         vae = getattr(self._pipeline, "vae", None)
@@ -754,12 +759,16 @@ class LTX2(HuggingFacePipelineNode):
             "guidance_scale": self.guidance_scale,
         }
 
+    def _geometry(self) -> tuple[int, int, int]:
+        """Snapped (width, height, num_frames) for the request."""
+        return snap_video_geometry(
+            self.width, self.height, self.num_frames, LTX2_GEOMETRY, self.get_title()
+        )
+
     def _build_pipeline_kwargs(
         self, generator: Any, callback_on_step_end: Any
     ) -> dict[str, Any]:
-        width, height, num_frames = snap_video_geometry(
-            self.width, self.height, self.num_frames, LTX2_GEOMETRY, self.get_title()
-        )
+        width, height, num_frames = self._geometry()
         kwargs: dict[str, Any] = {
             "prompt": self.prompt,
             "negative_prompt": self.negative_prompt,
