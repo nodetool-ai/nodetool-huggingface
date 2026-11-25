@@ -215,6 +215,11 @@ def test_video_models_list_only_loadable_pipelines(monkeypatch):
     monkeypatch.setattr(
         provider_module, "get_text_to_video_models_from_hf_cache", fake_cache
     )
+
+    async def no_h3(self):
+        return []
+
+    monkeypatch.setattr(HuggingFaceLocalProvider, "_minimax_h3_video_models", no_h3)
     models = asyncio.run(HuggingFaceLocalProvider().get_available_video_models())
     assert [m.id for m in models] == ["a/wan", "a/ltx2", "a/k5"]
 
