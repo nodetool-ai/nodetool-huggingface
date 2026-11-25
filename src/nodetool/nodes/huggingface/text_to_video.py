@@ -1625,6 +1625,48 @@ def _minimax_h3_recommended_models() -> list[HuggingFaceModel]:
     ]
 
 
+# TaoMate-H3 (TaoLiveAIGC) distils H3 onto four points of the shifted 50-point
+# sigma grid, so it runs three model evaluations. Each scheduler takes the
+# points from its own grid: video and audio use different shifts.
+MINIMAX_H3_FAST_GRID = 50
+MINIMAX_H3_FAST_INDICES = (0, 16, 33, 49)
+# Kijai's rank-reduced conversion of the official rank-128 adapter (182 MB
+# instead of 2.48 GB). MiniMax H3 Community License, like the base weights.
+MINIMAX_H3_FAST_LORA = HFTextToVideo(
+    repo_id="Kijai/MiniMax-H3_comfy",
+    path="loras/minimax_h3_taomate_3step_lora_avg_rank_19_bf16.safetensors",
+)
+
+
+def use_sigma_subset(
+    scheduler: Any, subset: tuple[int, int, tuple[int, ...]] | None
+) -> None:
+    """Make ``scheduler.set_timesteps`` pick ``subset`` points of a longer grid, or restore it.
+
+    The modular H3 pipeline only passes ``num_inference_steps`` to the
+    scheduler, so a distilled schedule that lives on a subset of the 50-point
+    grid is applied by wrapping ``set_timesteps`` on the instance.
+    """
+    original = getattr(scheduler, "_nodetool_set_timesteps", None)
+    if original is None:
+        original = scheduler.set_timesteps
+        scheduler._nodetool_set_timesteps = original
+    if subset is None:
+        scheduler.set_timesteps = original
+        return
+
+    grid, steps, indices = subset
+
+    def set_timesteps(num_inference_steps=None, device=None, sigmas=None):
+        if sigmas is not None or num_inference_steps != steps:
+            return original(num_inference_steps, device=device, sigmas=sigmas)
+        original(grid, device="cpu")
+        full = scheduler.sigmas.detach().float().cpu()
+        return original(device=device, sigmas=[float(full[i]) for i in indices])
+
+    scheduler.set_timesteps = set_timesteps
+
+
 class _MiniMaxH3Base(HuggingFacePipelineNode):
     """Shared loading and output handling for the MiniMax-H3 workflows.
 
@@ -1718,6 +1760,7 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
         offload = self.enable_cpu_offload and device.startswith("cuda")
         cache_key = (
             f"{MINIMAX_H3_REPO_ID}_ModularPipeline_{self._workflow}_offload{offload}"
+            f"{self._adapter_cache_suffix()}"
         )
 
         cached = ModelManager.get_model(cache_key)
@@ -1726,6 +1769,7 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
             return
 
         dtype = select_inference_dtype(device)
+        adapters = await self._adapter_files()
 
         def _load() -> Any:
             # No download patterns here: `from_pretrained` reads
@@ -1740,6 +1784,9 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
                 components_manager=manager,
             )
             pipeline.load_components(dtype=dtype)
+            # Adapters go in before offload installs its hooks.
+            for name, path in adapters:
+                pipeline.load_lora_weights(path, adapter_name=name)
             if manager is not None:
                 manager.enable_auto_cpu_offload(device=device)
             return pipeline
@@ -1754,6 +1801,18 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
             return
         if hasattr(self._pipeline, "to"):
             move_pipeline_to_device(self._pipeline, device)
+
+    async def _adapter_files(self) -> list[tuple[str, str]]:
+        """(adapter name, local file) pairs bound to the pipeline when it loads."""
+        return []
+
+    def _adapter_cache_suffix(self) -> str:
+        """Keeps a pipeline with adapters bound apart from one without."""
+        return ""
+
+    def _sigma_subset(self) -> tuple[int, int, tuple[int, ...]] | None:
+        """(grid points, steps, indices) to denoise on a subset of a longer schedule."""
+        return None
 
     def _geometry(self) -> tuple[int, int, int]:
         """Snapped (width, height, num_frames); 0x0 leaves the canvas to the model."""
@@ -1822,10 +1881,19 @@ class _MiniMaxH3Base(HuggingFacePipelineNode):
         if self.seed != -1:
             generator = generator.manual_seed(self.seed)
 
+        subset = self._sigma_subset()
+        num_inference_steps = self.num_inference_steps
+        if subset is not None:
+            num_inference_steps = subset[1]
+        for scheduler_name in ("scheduler", "audio_scheduler"):
+            scheduler = getattr(self._pipeline, scheduler_name, None)
+            if scheduler is not None:
+                use_sigma_subset(scheduler, subset)
+
         results = await self.run_pipeline_in_thread(
             prompt=self.prompt,
             num_frames=num_frames,
-            num_inference_steps=self.num_inference_steps,
+            num_inference_steps=num_inference_steps,
             generator=generator,
             output=["videos", "audio", "sampling_rate"],
             **self._canvas_kwargs(),
@@ -1874,6 +1942,17 @@ class MiniMaxH3(_MiniMaxH3Base):
 
     _workflow: str = "fl2va"
 
+    class Speed(str, Enum):
+        BEST = "best"
+        FAST = "fast"
+
+    speed: Speed = Field(
+        default=Speed.BEST,
+        description=(
+            "Best runs num_inference_steps. Fast binds the TaoMate 3-step adapter and "
+            "runs three model evaluations, about 4x faster, at some cost to the sound."
+        ),
+    )
     image: ImageRef = Field(
         default=ImageRef(),
         description="Optional keyframe the video starts from. It also sets the canvas aspect ratio.",
@@ -1888,8 +1967,37 @@ class MiniMaxH3(_MiniMaxH3Base):
         return "MiniMax-H3"
 
     @classmethod
+    def get_recommended_models(cls) -> list[HuggingFaceModel]:
+        return [*_minimax_h3_recommended_models(), MINIMAX_H3_FAST_LORA]
+
+    async def _adapter_files(self) -> list[tuple[str, str]]:
+        if self.speed != self.Speed.FAST:
+            return []
+        path = await HF_FAST_CACHE.resolve(
+            MINIMAX_H3_FAST_LORA.repo_id, MINIMAX_H3_FAST_LORA.path or ""
+        )
+        if path is None:
+            raise ValueError(
+                f"Download {MINIMAX_H3_FAST_LORA.repo_id}/{MINIMAX_H3_FAST_LORA.path} "
+                "from the recommended models to use Fast."
+            )
+        return [("fast", path)]
+
+    def _adapter_cache_suffix(self) -> str:
+        return "_fast" if self.speed == self.Speed.FAST else ""
+
+    def _sigma_subset(self) -> tuple[int, int, tuple[int, ...]] | None:
+        if self.speed != self.Speed.FAST:
+            return None
+        return (
+            MINIMAX_H3_FAST_GRID,
+            len(MINIMAX_H3_FAST_INDICES),
+            MINIMAX_H3_FAST_INDICES,
+        )
+
+    @classmethod
     def get_basic_fields(cls) -> list[str]:
-        return ["prompt", "image", "num_frames"]
+        return ["prompt", "image", "num_frames", "speed"]
 
     async def process(self, context: ProcessingContext) -> _MiniMaxH3Base.OutputType:
         self._check_pixel_budget()

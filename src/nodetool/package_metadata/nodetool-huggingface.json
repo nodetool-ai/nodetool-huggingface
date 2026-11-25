@@ -21332,7 +21332,8 @@
       "basic_fields": [
         "prompt",
         "image",
-        "num_frames"
+        "num_frames",
+        "speed"
       ],
       "body": "content_card",
       "description": "Generates a video and its soundtrack together from a text prompt and optional keyframes using MiniMax-H3.\n    video, audio, generation, AI, text-to-video, keyframe, soundtrack, minimax\n\n    Use cases:\n    - Create short clips that come with their own synchronized audio\n    - Animate a still image into a video that starts from it\n    - Generate a transition that ends on a given frame\n    - Produce sounded video content for social media and storytelling\n\n    **Note:** MiniMax-H3 is guidance-distilled, so there is no negative prompt and\n    no guidance scale. It generates 5 to 15 seconds at 24 fps. Leave both keyframes\n    empty for text-to-video-and-audio.",
@@ -21431,6 +21432,20 @@
           }
         },
         {
+          "default": "best",
+          "description": "Best runs num_inference_steps. Fast binds the TaoMate 3-step adapter and runs three model evaluations, about 4x faster, at some cost to the sound.",
+          "name": "speed",
+          "title": "Speed",
+          "type": {
+            "type": "enum",
+            "type_name": "nodetool.nodes.huggingface.text_to_video.MiniMaxH3.Speed",
+            "values": [
+              "best",
+              "fast"
+            ]
+          }
+        },
+        {
           "default": {
             "asset_id": null,
             "data": null,
@@ -21478,6 +21493,13 @@
           ],
           "name": "MiniMaxAI/MiniMax-H3",
           "repo_id": "MiniMaxAI/MiniMax-H3",
+          "type": "hf.text_to_video"
+        },
+        {
+          "id": "Kijai/MiniMax-H3_comfy:loras/minimax_h3_taomate_3step_lora_avg_rank_19_bf16.safetensors",
+          "name": "Kijai/MiniMax-H3_comfy",
+          "path": "loras/minimax_h3_taomate_3step_lora_avg_rank_19_bf16.safetensors",
+          "repo_id": "Kijai/MiniMax-H3_comfy",
           "type": "hf.text_to_video"
         }
       ],
