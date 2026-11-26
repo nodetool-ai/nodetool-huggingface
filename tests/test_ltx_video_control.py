@@ -99,7 +99,7 @@ async def test_bind_adapters_loads_the_lora_once(monkeypatch):
     async def resolve(repo_id, path):
         return f"/cache/{repo_id}/{path}"
 
-    monkeypatch.setattr(video_to_video.HF_FAST_CACHE, "resolve", resolve)
+    monkeypatch.setattr(text_to_video.HF_FAST_CACHE, "resolve", resolve)
     node = LTXVideoControl(lora_strength=0.8)
     pipeline = Pipeline()
 
@@ -118,7 +118,7 @@ async def test_bind_adapters_requires_the_downloaded_lora(monkeypatch):
     async def resolve(_repo_id, _path):
         return None
 
-    monkeypatch.setattr(video_to_video.HF_FAST_CACHE, "resolve", resolve)
+    monkeypatch.setattr(text_to_video.HF_FAST_CACHE, "resolve", resolve)
     with pytest.raises(ValueError, match="Union-Control"):
         await LTXVideoControl()._bind_adapters(SimpleNamespace())
 

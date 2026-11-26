@@ -35,7 +35,7 @@ This package ships well over 100 nodes spanning image generation and editing, vi
 
 ### 🎬 Video Generation
 
-- **CogVideoX**, **Wan (T2V/I2V/FLF2V)**, **LTX-Video**, **LTX-2 / LTX-2.5 / LTX-2 Video**, **LTX-2.5 Image-to-Video / Keyframes / Extend**, **LTX-2.3 Video Control (motion control, colorize)**, **Kandinsky 5.0 Video**, **HunyuanVideo 1.5 (T2V/I2V)** — text-to-video and image-to-video diffusion transformers
+- **CogVideoX**, **Wan (T2V/I2V/FLF2V)**, **LTX-Video**, **LTX-2 / LTX-2.5 / LTX-2 Video**, **LTX-2.5 Image-to-Video / Keyframes / Extend / Audio-to-Video (lip-sync)**, **LTX-2.3 Video Control (motion control, colorize)**, **LTX-2.3 Ingredients**, **LTX-2.5 Upscale x2**, character and style LoRAs on every LTX-2 node, **Kandinsky 5.0 Video**, **HunyuanVideo 1.5 (T2V/I2V)** — text-to-video and image-to-video diffusion transformers
 - **MiniMax-H3** / **MiniMax-H3 Reference** — joint video + soundtrack generation (5–15s @ 24fps) from a prompt, optional keyframes, or image/video/audio references; `speed=fast` runs the TaoMate 3-step adapter
 - **VideoClassifier** — action/scene recognition (VideoMAE, TimeSformer, V-JEPA 2)
 
